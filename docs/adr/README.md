@@ -1,0 +1,41 @@
+# ADR：架構決策紀錄
+
+ADR（Architecture Decision Record）記錄「決定了什麼、為什麼、放棄了什麼」。一個決策一份，一頁以內。
+
+## 什麼時候寫
+
+符合任一條件就寫：
+
+- 難以反悔（資料庫、框架、資料模型、部署平台）。
+- coding agent 可能想「改正」它。
+- 曾在幾個選項之間猶豫。
+
+其他決定寫在 Issue 或 PR 即可。
+
+## 規則
+
+- 檔名：`NNNN-<kebab-case-title>.md`，編號遞增不重用。ADR 0001 是技術選型。
+- 狀態：`Proposed` → `Accepted`／`Rejected`；被取代時改為 `Superseded by ADR NNNN`，不刪除舊檔。
+- 已 `Accepted` 的 ADR 不改寫決策內容；改方向就新增一份 ADR 取代它。
+- 單人專案可先以 `Proposed` 合併，隔天重看再改 `Accepted`（選用的冷卻期）。
+- 以 PR 提交，不能走快速通道。
+
+## 範本
+
+```markdown
+# ADR NNNN：標題
+
+- 狀態：Proposed
+- 日期：YYYY-MM-DD
+- 相關：Issue／PR／RFC
+
+## 背景
+## 選項
+## 決定
+## 後果（好處、代價、後續工作）
+```
+
+## 索引
+
+| 編號 | 決策 | 狀態 |
+| --- | --- | --- |

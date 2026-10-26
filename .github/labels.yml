@@ -1,0 +1,26 @@
+# 標籤定義：bootstrap 腳本依此建立。新增標籤時同步更新本檔與 docs/workflow/constitution.md 第 7 節。
+# 群組對應模組（docs/workflow/modules.md）：core＝核心、online＝上線、collab＝協作、automation＝自動化；只建立已啟用模組的群組。
+# phase:* 與 area:* 由各專案的 RFC 0001 決定，初始化時由決策 agent 建立（MCP 不能用時以 /pm-apply 建立）。
+
+core:
+  - { name: "type:feat", color: "1d76db", description: "新功能" }
+  - { name: "type:fix", color: "d73a4a", description: "錯誤修正" }
+  - { name: "type:docs", color: "0075ca", description: "文件" }
+  - { name: "type:chore", color: "cfd3d7", description: "維護、設定、工具" }
+  - { name: "type:epic", color: "5319e7", description: "階段目標，任務掛為 sub-issue" }
+  - { name: "blocked", color: "b60205", description: "開發中卡住，或 agent 停下等待 ## 決定" }
+  - { name: "changes-requested", color: "e99695", description: "PR 有待修正的審查要求" }
+  - { name: "needs-human", color: "fbca04", description: "合併後有人工待辦，完成前不關 Issue" }
+  - { name: "rfc", color: "c5def5", description: "需要討論的提案或決策" }
+  - { name: "plan-first", color: "f9d0c4", description: "agent 先留言計畫，經人同意才實作" }
+  - { name: "fast-lane", color: "c2e0c6", description: "快速通道 PR，不需對應 Issue" }
+
+online:
+  - { name: "needs-setup", color: "d4c5f9", description: "程式完成，合併前需外部設定，保持 Draft" }
+
+collab:
+  - { name: "sync", color: "bfdadc", description: "同步會議議程" }
+
+automation:
+  - { name: "agent:ready", color: "0e8a16", description: "可以交給 agent；由人加，或決策 agent 經人確認後加" }
+  - { name: "agent:working", color: "1f883d", description: "runner 處理中；由 runner 加、由 runner 移除" }

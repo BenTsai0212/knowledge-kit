@@ -1,0 +1,24 @@
+# PR 描述檢查：本文要有 Closes／Refs #N，帶 fast-lane 的 PR 除外（憲法第 6、7 節）。
+# PR 本文與標籤只經環境變數傳入，不插進 shell 指令（避免指令注入）。
+name: PR body
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  pr-body:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 檢查 PR 描述是否連到 Issue
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: node tools/workflow/check-pr-body.mjs

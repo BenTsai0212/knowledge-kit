@@ -1,0 +1,18 @@
+{
+  "repo": "owner/name",
+  "account": "your-github-login",
+  "worktree": "../name-runner",
+  "board": { "owner": "your-github-login", "number": 1 },
+  "hours": [9, 18],
+  "lastStart": [17, 0],
+  "timeoutMinutes": 45,
+  "staleHours": 2,
+  "maxOpenPrs": 3,
+  "maxPerRun": 5,
+  "env": {},
+  "agentNotes": [],
+  "skipBranchPrefixes": ["codex/"],
+  "extraAllow": [],
+  "extraAllowedDomains": [],
+  "sandboxExcludedCommands": []
+}

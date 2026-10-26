@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  agent runner 的 launchd 排程範本：每 30 分鐘啟動一次；runner 自己只在設定檔的執行時段內執行，且一次只做一件。
+  安裝前替換四個欄位（見 README「排程（launchd）」）：
+    __ACCOUNT__   GitHub 帳號
+    __REPO__      repo 名稱（排程名稱包含 repo，避免與同一台電腦上其他專案的排程撞名）
+    __REPO_DIR__  repo 的絕對路徑
+    __PATH__      node、claude、gh、git 所在的資料夾，以 : 分隔
+  複製到 ~/Library/LaunchAgents/com.__ACCOUNT__.agent-runner.__REPO__.plist
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.__ACCOUNT__.agent-runner.__REPO__</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/env</string>
+    <string>node</string>
+    <string>__REPO_DIR__/tools/workflow/runner/agent-runner.mjs</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>__REPO_DIR__</string>
+
+  <!-- launchd 不會讀 .zshrc，需自行給 PATH -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>__PATH__</string>
+  </dict>
+
+  <key>StartInterval</key>
+  <integer>1800</integer>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>StandardOutPath</key>
+  <string>__REPO_DIR__/tools/workflow/runner/logs/launchd.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>__REPO_DIR__/tools/workflow/runner/logs/launchd.err.log</string>
+</dict>
+</plist>
