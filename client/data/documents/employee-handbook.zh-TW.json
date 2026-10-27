@@ -1,0 +1,25 @@
+{
+  "id": "employee-handbook-zh",
+  "title": "員工手冊",
+  "language": "zh-TW",
+  "date": "2026-01-05",
+  "visibility": "public",
+  "passages": [
+    {
+      "id": "employee-handbook-zh-01",
+      "text": "範例公司是一家約 150 人的辦公家具製造商，設有產品研發部、營運部、人資部與業務部四個部門。"
+    },
+    {
+      "id": "employee-handbook-zh-02",
+      "text": "上班時間為週一至週五上午九點到下午六點，中午休息一小時。可依部門規定申請彈性上下班。"
+    },
+    {
+      "id": "employee-handbook-zh-03",
+      "text": "年假依年資計算：到職滿半年有 3 天，滿一年有 7 天。請假須在系統中提出，由直屬主管核准。"
+    },
+    {
+      "id": "employee-handbook-zh-04",
+      "text": "人資部由陳美玲擔任經理，負責招募、教育訓練與員工關係。對本手冊有疑問，請洽人資部。"
+    }
+  ]
+}

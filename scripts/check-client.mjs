@@ -1,6 +1,6 @@
-// 以 client/schema/ 的 JSON Schema 驗證 client/ 的設定，再檢查跨檔規則。
+// 以 client/schema/ 的 JSON Schema 驗證 client/ 的設定與資料集，再檢查跨檔規則。
 // 用法：node scripts/check-client.mjs [設定資料夾，預設 client/]
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import Ajv from "ajv";
 
@@ -16,18 +16,32 @@ export const CONFIG_FILES = {
   "scenarios.json": "scenarios.schema.json",
 };
 
+// 資料集（client.json 的 dataset.path）內的檔名 → Schema；documents/*.json 一律用 DOCUMENT_SCHEMA
+export const DATASET_FILES = {
+  "entities.json": "data/entities.schema.json",
+  "relations.json": "data/relations.schema.json",
+};
+const DOCUMENT_SCHEMA = "data/document.schema.json";
+const DOCUMENT_PATH = /^documents\/[^/]+\.json$/;
+
 function readJson(url) {
   return JSON.parse(readFileSync(url, "utf8"));
 }
 
 function loadSchemas() {
-  return readdirSync(SCHEMA_DIR)
-    .filter((name) => name.endsWith(".schema.json"))
-    .map((name) => readJson(new URL(name, SCHEMA_DIR)));
+  return ["", "data/"].flatMap((sub) =>
+    readdirSync(new URL(sub, SCHEMA_DIR))
+      .filter((name) => name.endsWith(".schema.json"))
+      .map((name) => readJson(new URL(`${sub}${name}`, SCHEMA_DIR))),
+  );
 }
 
-// files：{ 設定檔名: 解析後的 JSON }。回傳 [{ file, path, message }]，沒有錯誤時為空陣列。
-export function validateClient(files) {
+const RELATIVE_PATH = new RegExp(readJson(new URL("common.schema.json", SCHEMA_DIR)).definitions.RelativePath.pattern);
+
+// files：{ 設定檔名: 解析後的 JSON }。
+// dataset：{ root: dataset.path, files: { 相對於 root 的路徑: 解析後的 JSON } }；省略時不驗證資料集。
+// 回傳 [{ file, path, message }]，沒有錯誤時為空陣列。
+export function validateClient(files, dataset) {
   const errors = [];
   const client = files["client.json"];
   const languages = Array.isArray(client?.languages) ? client.languages : null;
@@ -78,7 +92,31 @@ export function validateClient(files) {
   if (languages && defaultLanguage && !languages.includes(defaultLanguage)) {
     errors.push({ file: "client.json", path: "/defaultLanguage", message: `${defaultLanguage} 不在 languages 內` });
   }
+  if (dataset) errors.push(...validateDataset(ajv, dataset));
   return [...errors, ...checkReferences(valid)];
+}
+
+// 資料集只驗證 Schema；語言、類型、可見等級等跨檔規則由匯入程式檢查（docs/dataset.md）。
+function validateDataset(ajv, { root, files }) {
+  const errors = [];
+  const label = (rel) => `${root}${rel}`;
+  const check = (rel, schemaId) => {
+    const validate = ajv.getSchema(schemaId);
+    if (!validate(files[rel])) {
+      for (const e of validate.errors) errors.push({ file: label(rel), path: e.instancePath || "/", message: describe(e) });
+    }
+  };
+  for (const [rel, schemaId] of Object.entries(DATASET_FILES)) {
+    if (rel in files) check(rel, schemaId);
+    else errors.push({ file: label(rel), path: "/", message: "缺少資料檔" });
+  }
+  const documents = Object.keys(files).filter((rel) => DOCUMENT_PATH.test(rel));
+  if (documents.length === 0) errors.push({ file: label("documents/"), path: "/", message: "至少要有一份文件" });
+  for (const rel of documents) check(rel, DOCUMENT_SCHEMA);
+  for (const rel of Object.keys(files)) {
+    if (!(rel in DATASET_FILES) && !DOCUMENT_PATH.test(rel)) errors.push({ file: label(rel), path: "/", message: "未知的資料檔" });
+  }
+  return errors;
 }
 
 // 跨檔規則：同一清單內 id 不重複、可見等級的 rank 不重複、參照的 id 必須存在。
@@ -148,20 +186,41 @@ function describe(e) {
   return e.message;
 }
 
-// 讀取資料夾中所有頂層 .json 檔再驗證。
+// 讀取資料夾中所有頂層 .json 檔與資料集再驗證；dataset.path、evals.path 必須存在。
 export function checkClient(dir = DEFAULT_CLIENT_DIR) {
   const base = new URL(dir.toString().endsWith("/") ? dir : `${dir}/`);
   const files = {};
   const errors = [];
-  for (const entry of readdirSync(base, { withFileTypes: true })) {
-    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+  const read = (url, file, into, key) => {
     try {
-      files[entry.name] = readJson(new URL(entry.name, base));
+      into[key] = readJson(url);
     } catch (err) {
-      errors.push({ file: entry.name, path: "/", message: `JSON 格式錯誤：${err.message}` });
+      errors.push({ file, path: "/", message: `JSON 格式錯誤：${err.message}` });
+    }
+  };
+  for (const entry of readdirSync(base, { withFileTypes: true })) {
+    if (entry.isFile() && entry.name.endsWith(".json")) read(new URL(entry.name, base), entry.name, files, entry.name);
+  }
+
+  const paths = {};
+  for (const key of ["dataset", "evals"]) {
+    const value = files["client.json"]?.[key]?.path;
+    // 格式不對時由 Schema 回報
+    if (typeof value !== "string" || !RELATIVE_PATH.test(value)) continue;
+    const root = value.endsWith("/") ? value : `${value}/`;
+    if (existsSync(new URL(root, base)) && statSync(new URL(root, base)).isDirectory()) paths[key] = root;
+    else errors.push({ file: "client.json", path: `/${key}/path`, message: `資料夾 ${value} 不存在` });
+  }
+
+  let dataset;
+  if (paths.dataset) {
+    const root = paths.dataset;
+    dataset = { root, files: {} };
+    for (const rel of readdirSync(new URL(root, base), { recursive: true })) {
+      if (rel.endsWith(".json")) read(new URL(`${root}${rel}`, base), `${root}${rel}`, dataset.files, rel);
     }
   }
-  return [...errors, ...validateClient(files)];
+  return [...errors, ...validateClient(files, dataset)];
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

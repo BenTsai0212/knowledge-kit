@@ -1,0 +1,11 @@
+{
+  "relations": [
+    {
+      "id": "chen-meiling-member-of-people",
+      "type": "member-of",
+      "from": "person-chen-meiling",
+      "to": "team-people",
+      "sources": ["employee-handbook-zh-04", "employee-handbook-en-04"]
+    }
+  ]
+}

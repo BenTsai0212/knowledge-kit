@@ -1,0 +1,18 @@
+{
+  "entities": [
+    {
+      "id": "team-people",
+      "type": "team",
+      "name": "人資部",
+      "aliases": ["People team"],
+      "sources": ["employee-handbook-zh-01", "employee-handbook-zh-04", "employee-handbook-en-01", "employee-handbook-en-04"]
+    },
+    {
+      "id": "person-chen-meiling",
+      "type": "person",
+      "name": "陳美玲",
+      "aliases": ["Meiling Chen"],
+      "sources": ["employee-handbook-zh-04", "employee-handbook-en-04"]
+    }
+  ]
+}

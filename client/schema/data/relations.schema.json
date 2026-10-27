@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "data/relations.schema.json",
+  "title": "data/relations.json：關係",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["relations"],
+  "properties": {
+    "relations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "type", "from", "to", "sources"],
+        "properties": {
+          "id": { "$ref": "../common.schema.json#/definitions/Id" },
+          "type": { "description": "knowledge-model.json 的關係類型 id", "$ref": "../common.schema.json#/definitions/Id" },
+          "from": { "description": "起點實體的 id", "$ref": "../common.schema.json#/definitions/Id" },
+          "to": { "description": "終點實體的 id", "$ref": "../common.schema.json#/definitions/Id" },
+          "sources": { "$ref": "entities.schema.json#/definitions/Sources" }
+        }
+      }
+    }
+  }
+}

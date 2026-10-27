@@ -1,0 +1,25 @@
+{
+  "id": "employee-handbook-en",
+  "title": "Employee Handbook",
+  "language": "en",
+  "date": "2026-01-05",
+  "visibility": "public",
+  "passages": [
+    {
+      "id": "employee-handbook-en-01",
+      "text": "Example Co. is an office furniture manufacturer with about 150 employees and four departments: Product Development, Operations, People, and Sales."
+    },
+    {
+      "id": "employee-handbook-en-02",
+      "text": "Office hours are 9 a.m. to 6 p.m., Monday to Friday, with a one-hour lunch break."
+    },
+    {
+      "id": "employee-handbook-en-03",
+      "text": "Annual leave depends on length of service: 3 days after six months and 7 days after one year."
+    },
+    {
+      "id": "employee-handbook-en-04",
+      "text": "The People team is managed by Meiling Chen, who handles recruiting, training, and employee relations."
+    }
+  ]
+}
