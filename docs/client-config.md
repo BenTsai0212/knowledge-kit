@@ -49,7 +49,7 @@ npm run check:client
 | `displayName` | 是 | `LocalizedText` | 客戶的顯示名稱，用在頁面標題等處。一律使用虛構名稱 |
 | `defaultLanguage` | 是 | `LanguageCode` | 預設語言；必須在 `languages` 內 |
 | `languages` | 是 | `LanguageCode` 陣列，至少 1 個、不重複 | 支援的語言。範本預設 `["zh-TW", "en"]` |
-| `model` | 是 | `ModelCode` | 問答使用的模型代號。只能填 Worker 端白名單中的代號；白名單、實際模型名稱與 `max_tokens` 由 Worker 決定（ADR 0001），在 `/api/ask` 的 Issue 實作。目前只檢查格式 |
+| `model` | 是 | `ModelCode` | 問答使用的模型代號。只能填 Worker 端白名單（`worker/src/models.ts` 的 `MODELS`）中的代號；實際模型名稱與 `max_tokens` 由 Worker 決定（ADR 0001）。`check:client` 只檢查格式，代號是否在白名單由 `worker/src/models.test.ts` 檢查 |
 | `dataset.path` | 是 | `RelativePath` | 資料集的資料夾，必須存在。格式見 [docs/dataset.md](dataset.md) |
 | `evals.path` | 是 | `RelativePath` | 評測題庫的資料夾，必須存在。題庫格式在評測台的 Issue 加入 |
 
