@@ -10,6 +10,7 @@
     "check:client": "node scripts/check-client.mjs"
   },
   "dependencies": {
+    "@electric-sql/pglite": "^0.5.12",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
