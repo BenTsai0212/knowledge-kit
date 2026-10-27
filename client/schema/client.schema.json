@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "client.schema.json",
+  "title": "client.json：基本資訊、語言、模型、資料位置",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["displayName", "defaultLanguage", "languages", "model", "dataset", "evals"],
+  "properties": {
+    "displayName": { "$ref": "common.schema.json#/definitions/LocalizedText" },
+    "defaultLanguage": { "$ref": "common.schema.json#/definitions/LanguageCode" },
+    "languages": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "common.schema.json#/definitions/LanguageCode" },
+      "default": ["zh-TW", "en"]
+    },
+    "model": { "$ref": "common.schema.json#/definitions/ModelCode" },
+    "dataset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": { "path": { "$ref": "common.schema.json#/definitions/RelativePath" } }
+    },
+    "evals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": { "path": { "$ref": "common.schema.json#/definitions/RelativePath" } }
+    }
+  }
+}

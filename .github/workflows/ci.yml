@@ -20,6 +20,8 @@ jobs:
           cache: npm
       - name: 安裝
         run: npm ci
+      - name: client 設定檢查
+        run: npm run check:client
       - name: 型別檢查
         run: npm run typecheck
       - name: 單元測試

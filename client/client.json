@@ -1,0 +1,8 @@
+{
+  "displayName": { "zh-TW": "範例公司", "en": "Example Co." },
+  "defaultLanguage": "zh-TW",
+  "languages": ["zh-TW", "en"],
+  "model": "standard",
+  "dataset": { "path": "data/" },
+  "evals": { "path": "evals/" }
+}

@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "common.schema.json",
+  "title": "共用定義",
+  "definitions": {
+    "LanguageCode": {
+      "description": "BCP 47 語言代碼，例如 zh-TW、en",
+      "type": "string",
+      "pattern": "^[a-z]{2,3}(-[A-Z][a-z]{3})?(-[A-Z]{2})?$"
+    },
+    "LocalizedText": {
+      "description": "顯示給使用者的文字，鍵為語言代碼；鍵必須屬於 client.json 的 languages，且包含 defaultLanguage",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/definitions/LanguageCode" },
+      "additionalProperties": { "type": "string", "minLength": 1 },
+      "localizedText": true
+    },
+    "Id": {
+      "description": "設定內的識別碼：小寫英數與連字號，英文字母開頭",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,62}$"
+    },
+    "ModelCode": {
+      "description": "Worker 端模型白名單的代號",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,31}$"
+    },
+    "RelativePath": {
+      "description": "相對於 client/ 的路徑，不可用 / 開頭或包含 ..",
+      "type": "string",
+      "pattern": "^(?!/)(?!(.*/)?\\.\\.(/|$))[A-Za-z0-9._/-]+$"
+    }
+  }
+}
