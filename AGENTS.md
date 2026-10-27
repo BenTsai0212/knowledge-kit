@@ -38,7 +38,7 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 | `app/src/dataset/` | 資料集（`client/data/`）的型別、鍵清單、讀取（`load.ts`）、跨檔檢查（`validate.ts`）與匯入（`seed.ts`） |
 | `app/src/db/` | 資料層（PGlite＋RLS）：`database.ts` 是唯一入口，`migrations/*.sql` 是 migration；說明見 `docs/data-model.md` |
 | `app/tests/` | 需要放在 `app/src/` 之外的測試（例如會用到被禁止 SQL 的越權測試） |
-| `worker/` | Cloudflare Worker（TypeScript）：`GET /api/health`，其他請求交給 `dist/` 靜態檔 |
+| `worker/` | Cloudflare Worker（TypeScript）：`GET /api/health`、`POST /api/ask`（`ask.ts`：同站、邀請碼、body、每日次數的檢查；上游呼叫尚未實作，回 501）；`models.ts` 是模型白名單，`usage.ts` 是計數用的 Durable Object；其他請求交給 `dist/` 靜態檔。本機的 secret 與變數放在不進版本控制的 `.dev.vars`（格式見 `.dev.vars.example`） |
 | `client/` | 客戶設定（`*.json`）、JSON Schema（`schema/`）、虛構資料集（`data/`）與評測題庫（`evals/`）；換客戶只改這裡，說明見 `docs/client-config.md`、`docs/dataset.md` |
 | `scripts/` | 專案腳本（Node ESM，不在 `typecheck` 範圍內）：`check-client.mjs`；`fixtures/invalid-client/` 是故意寫錯的測試資料 |
 | `package.json`、`vite.config.ts`、`vitest.config.ts`、`tsconfig.node.json`、`wrangler.jsonc` | 根目錄的指令與設定（單一 `package.json`，不用 workspaces） |

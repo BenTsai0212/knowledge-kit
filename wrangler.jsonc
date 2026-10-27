@@ -8,5 +8,10 @@
     "binding": "ASSETS",
     "run_worker_first": ["/api/*"],
     "not_found_handling": "single-page-application"
-  }
+  },
+  // 每個邀請碼的每日次數（worker/src/usage.ts）；免費方案只能用 SQLite 後端
+  "durable_objects": {
+    "bindings": [{ "name": "USAGE", "class_name": "UsageCounter" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["UsageCounter"] }]
 }

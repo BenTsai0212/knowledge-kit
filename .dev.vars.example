@@ -1,0 +1,13 @@
+# 本機 wrangler dev 用的 secret 與變數。複製為 .dev.vars（不進版本控制）後填入；不要把真實的值寫進本檔。
+# Anthropic API 金鑰（由人填入）
+ANTHROPIC_API_KEY=
+# 邀請碼：組名:碼,碼;組名:碼（組名小寫英數與 -，碼至少 8 個英數字元）
+ACCESS_CODES=demo:EXAMPLE1
+# 停用的組（逗號分隔）
+DISABLED_GROUPS=
+# 每個邀請碼每日次數上限（UTC 換日），預設 30
+DAILY_LIMIT=30
+# system 與 messages 的字元總數上限，預設 20000
+MAX_PROMPT_CHARS=20000
+# 同站以外允許的 Origin（逗號分隔）；以 npm run dev（Vite）開發時設為 Vite 的網址
+ALLOWED_ORIGINS=http://localhost:5173
