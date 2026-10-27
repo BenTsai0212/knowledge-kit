@@ -1,0 +1,10 @@
+{
+  "scenarios": [
+    {
+      "id": "demo",
+      "title": { "zh-TW": "示範", "fr": "Démo" },
+      "role": "manager",
+      "questions": [{ "id": "q1", "text": { "zh-TW": "問題一" } }]
+    }
+  ]
+}

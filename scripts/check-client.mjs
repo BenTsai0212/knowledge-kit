@@ -11,6 +11,9 @@ const DEFAULT_CLIENT_DIR = new URL("../client/", import.meta.url);
 export const CONFIG_FILES = {
   "client.json": "client.schema.json",
   "theme.json": "theme.schema.json",
+  "knowledge-model.json": "knowledge-model.schema.json",
+  "access.json": "access.schema.json",
+  "scenarios.json": "scenarios.schema.json",
 };
 
 function readJson(url) {
@@ -52,13 +55,17 @@ export function validateClient(files) {
   });
   for (const schema of loadSchemas()) ajv.addSchema(schema);
 
+  // 通過 Schema 的檔才做參照檢查，避免在形狀不對的資料上誤判
+  const valid = {};
   for (const [file, schemaId] of Object.entries(CONFIG_FILES)) {
     if (!(file in files)) {
       errors.push({ file, path: "/", message: "缺少設定檔" });
       continue;
     }
     const validate = ajv.getSchema(schemaId);
-    if (!validate(files[file])) {
+    if (validate(files[file])) {
+      valid[file] = files[file];
+    } else {
       for (const e of validate.errors) {
         errors.push({ file, path: e.instancePath || "/", message: describe(e) });
       }
@@ -70,6 +77,67 @@ export function validateClient(files) {
 
   if (languages && defaultLanguage && !languages.includes(defaultLanguage)) {
     errors.push({ file: "client.json", path: "/defaultLanguage", message: `${defaultLanguage} 不在 languages 內` });
+  }
+  return [...errors, ...checkReferences(valid)];
+}
+
+// 跨檔規則：同一清單內 id 不重複、可見等級的 rank 不重複、參照的 id 必須存在。
+function checkReferences(valid) {
+  const errors = [];
+  const unique = (file, path, items, key = "id") => {
+    const seen = new Set();
+    items.forEach((item, i) => {
+      if (seen.has(item[key])) errors.push({ file, path: `${path}/${i}/${key}`, message: `${key} ${item[key]} 重複` });
+      seen.add(item[key]);
+    });
+  };
+  const exists = (file, path, ids, known, what) => {
+    if (!known) return; // 被參照的檔本身有誤時，錯誤已由 Schema 回報
+    ids.forEach((id, i) => {
+      if (!known.has(id)) errors.push({ file, path: `${path}/${i}`, message: `${what} ${id} 不存在` });
+    });
+  };
+  const ids = (items) => new Set(items.map((item) => item.id));
+
+  const model = valid["knowledge-model.json"];
+  const access = valid["access.json"];
+  const scenarios = valid["scenarios.json"];
+
+  if (model) {
+    const file = "knowledge-model.json";
+    unique(file, "/entityTypes", model.entityTypes);
+    unique(file, "/relationTypes", model.relationTypes);
+    const entityTypes = ids(model.entityTypes);
+    model.relationTypes.forEach((rel, i) => {
+      exists(file, `/relationTypes/${i}/from`, rel.from, entityTypes, "實體類型");
+      exists(file, `/relationTypes/${i}/to`, rel.to, entityTypes, "實體類型");
+    });
+  }
+  if (access) {
+    const file = "access.json";
+    unique(file, "/visibilityLevels", access.visibilityLevels);
+    unique(file, "/visibilityLevels", access.visibilityLevels, "rank");
+    unique(file, "/projects", access.projects);
+    unique(file, "/roles", access.roles);
+    const levels = ids(access.visibilityLevels);
+    const projects = ids(access.projects);
+    access.roles.forEach((role, i) => {
+      if (!levels.has(role.visibility)) {
+        errors.push({ file, path: `/roles/${i}/visibility`, message: `可見等級 ${role.visibility} 不存在` });
+      }
+      exists(file, `/roles/${i}/projects`, role.projects, projects, "專案");
+    });
+  }
+  if (scenarios) {
+    const file = "scenarios.json";
+    unique(file, "/scenarios", scenarios.scenarios);
+    const roles = access && ids(access.roles);
+    scenarios.scenarios.forEach((s, i) => {
+      unique(file, `/scenarios/${i}/questions`, s.questions);
+      if (roles && !roles.has(s.role)) {
+        errors.push({ file, path: `/scenarios/${i}/role`, message: `角色 ${s.role} 不存在` });
+      }
+    });
   }
   return errors;
 }

@@ -1,0 +1,22 @@
+{
+  "scenarios": [
+    {
+      "id": "staff-onboarding",
+      "title": { "zh-TW": "新進員工查詢", "en": "New staff questions" },
+      "description": { "zh-TW": "以一般員工身分查詢專案與部門資訊", "en": "Ask about projects and teams as a staff member" },
+      "role": "staff",
+      "questions": [
+        { "id": "aurora-lead", "text": { "zh-TW": "極光專案的負責人是誰？", "en": "Who leads Project Aurora?" } },
+        { "id": "my-team", "text": { "zh-TW": "我隸屬哪個部門？", "en": "Which team am I on?" } }
+      ]
+    },
+    {
+      "id": "manager-overview",
+      "title": { "zh-TW": "主管總覽", "en": "Manager overview" },
+      "role": "manager",
+      "questions": [
+        { "id": "harbor-status", "text": { "zh-TW": "港灣專案目前的進度如何？", "en": "What is the status of Project Harbor?" } }
+      ]
+    }
+  ]
+}
