@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "knowledge-model.schema.json",
+  "title": "knowledge-model.json：實體類型、關係類型、別名規則",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["entityTypes", "relationTypes"],
+  "properties": {
+    "entityTypes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "aliasRules"],
+        "properties": {
+          "id": { "$ref": "common.schema.json#/definitions/Id" },
+          "label": { "$ref": "common.schema.json#/definitions/LocalizedText" },
+          "aliasRules": {
+            "description": "比對名稱與別名前的正規化",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["ignoreCase", "normalizeWidth", "ignoreWhitespace"],
+            "properties": {
+              "ignoreCase": { "type": "boolean" },
+              "normalizeWidth": { "type": "boolean" },
+              "ignoreWhitespace": { "type": "boolean" }
+            }
+          },
+          "mergeStrategy": {
+            "description": "同名或別名相符時：review 送審、auto 自動合併",
+            "enum": ["review", "auto"],
+            "default": "review"
+          }
+        }
+      }
+    },
+    "relationTypes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "from", "to"],
+        "properties": {
+          "id": { "$ref": "common.schema.json#/definitions/Id" },
+          "label": { "$ref": "common.schema.json#/definitions/LocalizedText" },
+          "from": { "$ref": "#/definitions/EntityTypeRefs" },
+          "to": { "$ref": "#/definitions/EntityTypeRefs" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "EntityTypeRefs": {
+      "description": "實體類型的 id",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "common.schema.json#/definitions/Id" }
+    }
+  }
+}

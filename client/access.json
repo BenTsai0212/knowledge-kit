@@ -1,0 +1,16 @@
+{
+  "visibilityLevels": [
+    { "id": "public", "label": { "zh-TW": "公開", "en": "Public" }, "rank": 0 },
+    { "id": "internal", "label": { "zh-TW": "內部", "en": "Internal" }, "rank": 1 },
+    { "id": "confidential", "label": { "zh-TW": "機密", "en": "Confidential" }, "rank": 2 }
+  ],
+  "projects": [
+    { "id": "aurora", "label": { "zh-TW": "極光專案", "en": "Project Aurora" } },
+    { "id": "harbor", "label": { "zh-TW": "港灣專案", "en": "Project Harbor" } }
+  ],
+  "roles": [
+    { "id": "guest", "label": { "zh-TW": "訪客", "en": "Guest" }, "visibility": "public", "projects": [] },
+    { "id": "staff", "label": { "zh-TW": "一般員工", "en": "Staff" }, "visibility": "internal", "projects": ["aurora"] },
+    { "id": "manager", "label": { "zh-TW": "主管", "en": "Manager" }, "visibility": "confidential", "projects": ["aurora", "harbor"] }
+  ]
+}

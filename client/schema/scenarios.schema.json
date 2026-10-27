@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "scenarios.schema.json",
+  "title": "scenarios.json：示範情境與預設問題",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["scenarios"],
+  "properties": {
+    "scenarios": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "role", "questions"],
+        "properties": {
+          "id": { "$ref": "common.schema.json#/definitions/Id" },
+          "title": { "$ref": "common.schema.json#/definitions/LocalizedText" },
+          "description": { "$ref": "common.schema.json#/definitions/LocalizedText" },
+          "role": { "description": "access.json 的角色 id", "$ref": "common.schema.json#/definitions/Id" },
+          "questions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "text"],
+              "properties": {
+                "id": { "$ref": "common.schema.json#/definitions/Id" },
+                "text": { "$ref": "common.schema.json#/definitions/LocalizedText" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

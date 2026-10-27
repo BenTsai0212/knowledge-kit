@@ -1,0 +1,17 @@
+{
+  "entityTypes": [
+    {
+      "id": "person",
+      "label": { "zh-TW": "人員" },
+      "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true }
+    },
+    {
+      "id": "person",
+      "label": { "zh-TW": "人員（重複）" },
+      "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true }
+    }
+  ],
+  "relationTypes": [
+    { "id": "member-of", "label": { "zh-TW": "隸屬" }, "from": ["person"], "to": ["team"] }
+  ]
+}

@@ -22,8 +22,9 @@ npm run check:client
 | --- | --- | --- |
 | `client.json` | `client.schema.json` | 基本資訊、語言、模型、資料集與評測題庫的位置 |
 | `theme.json` | `theme.schema.json` | 色票、字體 |
-
-知識模型（`knowledge-model.json`）、角色與權限（`access.json`）、示範情境（`scenarios.json`）的設定檔由 #5 的後續 PR 加入。
+| `knowledge-model.json` | `knowledge-model.schema.json` | 實體類型、關係類型、別名規則、合併策略 |
+| `access.json` | `access.schema.json` | 可見等級、專案名單、角色 |
+| `scenarios.json` | `scenarios.schema.json` | 示範情境與預設問題 |
 
 ## 共用格式（`common.schema.json`）
 
@@ -66,6 +67,83 @@ npm run check:client
 | `fonts.heading` | 是 | CSS `font-family` 值 | 標題字體 |
 
 不使用任何合作夥伴的品牌名稱、wordmark 或專屬字體名稱作為預設值（RFC 0001）。
+
+## `knowledge-model.json`
+
+只定義「有哪些類型」；具體的實體（某位人員、某個專案）與它們的別名屬於資料集，不放在這裡。
+
+### `entityTypes[]`（至少 1 個）
+
+| 欄位 | 必填 | 格式 | 說明 |
+| --- | --- | --- | --- |
+| `id` | 是 | `Id`，不可重複 | 例如 `person`、`project` |
+| `label` | 是 | `LocalizedText` | 顯示名稱 |
+| `aliasRules.ignoreCase` | 是 | boolean | 比對名稱與別名時忽略大小寫 |
+| `aliasRules.normalizeWidth` | 是 | boolean | 比對前把全形英數與符號轉為半形 |
+| `aliasRules.ignoreWhitespace` | 是 | boolean | 比對時忽略空白 |
+| `mergeStrategy` | 否 | `review`／`auto`，預設 `review` | 名稱或別名相符時：`review` 放進待審，由人確認後合併；`auto` 直接合併成同一個實體 |
+
+**為什麼預設 `review`**：名稱相符不代表是同一個實體。例如兩位同名的人員，自動合併會把他們合成同一個人，之後的關係、權限與引用都會跟著錯。只有名稱在客戶內部確定唯一的類型（例如部門），才改成 `auto`。
+
+### `relationTypes[]`
+
+| 欄位 | 必填 | 格式 | 說明 |
+| --- | --- | --- | --- |
+| `id` | 是 | `Id`，不可重複 | 例如 `works-on` |
+| `label` | 是 | `LocalizedText` | 顯示名稱 |
+| `from` | 是 | 實體類型 `id` 陣列，至少 1 個 | 關係的起點可以是哪些類型；必須存在於 `entityTypes` |
+| `to` | 是 | 實體類型 `id` 陣列，至少 1 個 | 關係的終點可以是哪些類型；必須存在於 `entityTypes` |
+
+## `access.json`
+
+展示用的權限設定；實際的權限一律由 PostgreSQL RLS 執行（ADR 0001），本檔只提供 RLS 使用的角色與等級。
+
+### `visibilityLevels[]`（至少 1 個）
+
+| 欄位 | 必填 | 格式 | 說明 |
+| --- | --- | --- | --- |
+| `id` | 是 | `Id`，不可重複 | 例如 `internal` |
+| `label` | 是 | `LocalizedText` | 顯示名稱 |
+| `rank` | 是 | 0 以上的整數，不可重複 | 越大越機密。角色看得到 `rank` 小於或等於自己等級的內容 |
+
+### `projects[]`
+
+| 欄位 | 必填 | 格式 | 說明 |
+| --- | --- | --- | --- |
+| `id` | 是 | `Id`，不可重複 | 例如 `aurora` |
+| `label` | 是 | `LocalizedText` | 顯示名稱 |
+
+### `roles[]`（至少 1 個）
+
+| 欄位 | 必填 | 格式 | 說明 |
+| --- | --- | --- | --- |
+| `id` | 是 | `Id`，不可重複 | 例如 `staff` |
+| `label` | 是 | `LocalizedText` | 顯示名稱（切換身分時顯示） |
+| `visibility` | 是 | 可見等級 `id` | 此角色最高可看到的等級；必須存在於 `visibilityLevels` |
+| `projects` | 是 | 專案 `id` 陣列，可為空、不重複 | 此角色可看到的專案；必須存在於 `projects` |
+
+## `scenarios.json`
+
+### `scenarios[]`（至少 1 個）
+
+| 欄位 | 必填 | 格式 | 說明 |
+| --- | --- | --- | --- |
+| `id` | 是 | `Id`，不可重複 | 例如 `staff-onboarding` |
+| `title` | 是 | `LocalizedText` | 情境名稱 |
+| `description` | 否 | `LocalizedText` | 情境說明 |
+| `role` | 是 | 角色 `id` | 進入情境時切換成的身分；必須存在於 `access.json` 的 `roles` |
+| `questions[].id` | 是 | `Id`，同一情境內不可重複 | 例如 `aurora-lead` |
+| `questions[].text` | 是 | `LocalizedText` | 預設問題，至少 1 題 |
+
+## 跨檔規則
+
+JSON Schema 無法參照另一個檔的值，以下由 `scripts/check-client.mjs` 在 Schema 驗證之後檢查。某個檔沒有通過 Schema 時，不對它做參照檢查，先修正 Schema 錯誤。
+
+- `LocalizedText` 的語言（見「共用格式」）、`defaultLanguage` 必須在 `languages` 內
+- 同一個清單內 `id` 不重複；`visibilityLevels` 的 `rank` 不重複
+- 關係類型的 `from`、`to` → `entityTypes`
+- 角色的 `visibility` → `visibilityLevels`；角色的 `projects` → `projects`
+- 情境的 `role` → `roles`
 
 ## 測試資料
 

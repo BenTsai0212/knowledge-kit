@@ -1,0 +1,25 @@
+{
+  "entityTypes": [
+    {
+      "id": "person",
+      "label": { "zh-TW": "人員", "en": "Person" },
+      "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
+      "mergeStrategy": "review"
+    },
+    {
+      "id": "team",
+      "label": { "zh-TW": "部門", "en": "Team" },
+      "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
+      "mergeStrategy": "auto"
+    },
+    {
+      "id": "project",
+      "label": { "zh-TW": "專案", "en": "Project" },
+      "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": false }
+    }
+  ],
+  "relationTypes": [
+    { "id": "member-of", "label": { "zh-TW": "隸屬", "en": "Member of" }, "from": ["person"], "to": ["team"] },
+    { "id": "works-on", "label": { "zh-TW": "參與", "en": "Works on" }, "from": ["person", "team"], "to": ["project"] }
+  ]
+}
