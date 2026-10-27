@@ -105,7 +105,10 @@ export async function seedSample(db: PGliteInterface): Promise<void> {
         [r.id, r.from, r.to],
       );
       for (const s of r.sources) {
-        await tx.query("INSERT INTO kk.relation_sources (relation_id, passage_id) VALUES ($1, $2)", [r.id, s]);
+        await tx.query(
+          "INSERT INTO kk.relation_sources (relation_id, passage_id, from_entity_id, to_entity_id) VALUES ($1, $2, $3, $4)",
+          [r.id, s, r.from, r.to],
+        );
       }
     }
   });

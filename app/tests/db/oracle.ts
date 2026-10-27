@@ -16,9 +16,8 @@ export function expectedVisible(access: AccessFile, data: Sample, identityId: st
   const docs = new Set(data.docs.filter((d) => canSee(d.level, d.project)).map((d) => d.id));
   const passages = new Set(data.passages.filter((p) => canSee(p.level, p.project) && docs.has(p.doc)).map((p) => p.id));
   const entities = new Set(data.entities.filter((e) => e.sources.some((s) => passages.has(s))).map((e) => e.id));
-  const relations = data.relations.filter(
-    (r) => r.sources.some((s) => passages.has(s)) && entities.has(r.from) && entities.has(r.to),
-  );
+  const endpointsVisible = (r: Sample["relations"][number]) => entities.has(r.from) && entities.has(r.to);
+  const relations = data.relations.filter((r) => r.sources.some((s) => passages.has(s)) && endpointsVisible(r));
 
   return {
     visibility_levels: access.visibilityLevels.map((l) => l.id),
@@ -30,7 +29,9 @@ export function expectedVisible(access: AccessFile, data: Sample, identityId: st
     entities: [...entities],
     entity_sources: data.entities.flatMap((e) => e.sources.filter((s) => passages.has(s)).map((s) => `${e.id}|${s}`)),
     relations: relations.map((r) => r.id),
-    relation_sources: data.relations.flatMap((r) => r.sources.filter((s) => passages.has(s)).map((s) => `${r.id}|${s}`)),
+    relation_sources: data.relations
+      .filter(endpointsVisible)
+      .flatMap((r) => r.sources.filter((s) => passages.has(s)).map((s) => `${r.id}|${s}`)),
   };
 }
 

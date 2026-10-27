@@ -120,15 +120,32 @@ describe("各身分的可見範圍", () => {
   });
 });
 
-describe("已知缺口（待決定）", () => {
-  // relation_sources 的 policy 只要求出處段落看得到，不要求關係本身看得到。
-  // 關係因端點看不到而被隱藏時，出處列仍會露出關係的 id。修正需要新的 migration，見 docs/data-model.md。
-  it("關係被隱藏時，出處列仍看得到", async () => {
+describe("關係的出處", () => {
+  // 0003_relation_sources_endpoints.sql：出處列帶上兩端實體，兩端都看得到才看得到出處
+  it("關係被隱藏時，出處列也看不到", async () => {
     const rows = await db.withIdentity("guest", async (tx) => ({
       relations: (await tx.query("SELECT id FROM kk.relations WHERE id = 'r-hidden-endpoint'")).rows.length,
       sources: (await tx.query("SELECT relation_id FROM kk.relation_sources WHERE relation_id = 'r-hidden-endpoint'")).rows.length,
     }));
-    expect(rows).toEqual({ relations: 0, sources: 1 });
+    expect(rows).toEqual({ relations: 0, sources: 0 });
+    // 主管看得到兩端，所以關係與出處都看得到
+    const manager = await db.withIdentity("manager", async (tx) =>
+      (await tx.query("SELECT 1 FROM kk.relation_sources WHERE relation_id = 'r-hidden-endpoint'")).rows.length,
+    );
+    expect(manager).toBe(1);
+  });
+
+  it("出處列的兩端必須與關係一致", async () => {
+    const mismatch = openDatabase(clientConfig, {
+      seed: async (pg) => {
+        await seedSample(pg);
+        await pg.query(
+          "INSERT INTO kk.relation_sources (relation_id, passage_id, from_entity_id, to_entity_id) VALUES ($1, $2, $3, $4)",
+          ["r-public", "doc-internal-none-p0", "e-aurora", "e-mixed"],
+        );
+      },
+    });
+    await expect(mismatch).rejects.toThrow("relation_sources_relation_endpoints_fkey");
   });
 });
 
