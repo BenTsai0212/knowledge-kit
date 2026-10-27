@@ -5,3 +5,6 @@ tools/workflow/runner/config.local.json
 tools/workflow/runner/logs/
 tools/workflow/runner/.generated/
 tools/workflow/runner/PAUSE
+dist/
+.wrangler/
+.dev.vars
