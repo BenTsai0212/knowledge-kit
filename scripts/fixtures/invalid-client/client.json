@@ -1,0 +1,8 @@
+{
+  "displayName": { "zh-TW": "錯誤範例", "fr": "Exemple" },
+  "defaultLanguage": "ja",
+  "languages": ["zh-TW", "en"],
+  "model": "Bad Model",
+  "dataset": { "path": "../outside" },
+  "evals": { "path": "evals/" }
+}

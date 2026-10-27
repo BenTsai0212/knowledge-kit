@@ -11,18 +11,22 @@
 
 ```bash
 npm install
-npm run dev          # 開發伺服器（Vite）
-npm run typecheck    # 型別檢查
-npm test             # 單元測試（Vitest）
-npm run build        # build 到 dist/
-npx wrangler dev     # 以 Worker 在本機提供 dist/ 與 /api/*（先執行 npm run build）
+npm run dev
 ```
+
+- `npm run dev`：開發伺服器（Vite）
+- `npm run typecheck`：型別檢查
+- `npm test`：單元測試（Vitest）
+- `npm run check:client`：驗證 `client/` 的客戶設定（見 [docs/client-config.md](docs/client-config.md)）
+- `npm run build`：build 到 `dist/`
+- `npx wrangler dev`：以 Worker 在本機提供 `dist/` 與 `/api/*`（先執行 `npm run build`）
 
 ## 內容
 
 | 路徑 | 內容 |
 | --- | --- |
 | `app/` | 前端（Vite＋React＋TypeScript） |
+| `client/` | 客戶設定與 JSON Schema |
 | `worker/` | Cloudflare Worker（TypeScript）：提供 `dist/` 靜態檔與 `/api/*` |
 | `docs/rfcs/`、`docs/adr/` | 專案章程與決策紀錄 |
 | `docs/workflow/` | 憲法與 workflow 手冊 |

@@ -1,0 +1,15 @@
+{
+  "colors": {
+    "primary": "#2F5D8A",
+    "onPrimary": "#FFFFFF",
+    "background": "#F7F7F5",
+    "surface": "#FFFFFF",
+    "text": "#1F2328",
+    "textMuted": "#59636E",
+    "border": "#D0D7DE"
+  },
+  "fonts": {
+    "body": "system-ui, \"Noto Sans TC\", sans-serif",
+    "heading": "system-ui, \"Noto Sans TC\", sans-serif"
+  }
+}
