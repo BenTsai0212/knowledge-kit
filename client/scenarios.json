@@ -3,11 +3,19 @@
     {
       "id": "staff-onboarding",
       "title": { "zh-TW": "新進員工查詢", "en": "New staff questions" },
-      "description": { "zh-TW": "以一般員工身分查詢專案與部門資訊", "en": "Ask about projects and teams as a staff member" },
+      "description": { "zh-TW": "以一般員工身分查詢公司規定與部門資訊", "en": "Ask about company policies and teams as a staff member" },
       "role": "staff",
       "questions": [
-        { "id": "aurora-lead", "text": { "zh-TW": "極光專案的負責人是誰？", "en": "Who leads Project Aurora?" } },
-        { "id": "my-team", "text": { "zh-TW": "我隸屬哪個部門？", "en": "Which team am I on?" } }
+        {
+          "id": "people-manager",
+          "text": { "zh-TW": "人資部的經理是誰？", "en": "Who manages the People team?" },
+          "answerPassages": ["employee-handbook-zh-04", "employee-handbook-en-04"]
+        },
+        {
+          "id": "annual-leave",
+          "text": { "zh-TW": "到職滿一年有幾天年假？", "en": "How many days of annual leave do I get after one year?" },
+          "answerPassages": ["employee-handbook-zh-03", "employee-handbook-en-03"]
+        }
       ]
     },
     {
@@ -15,7 +23,11 @@
       "title": { "zh-TW": "主管總覽", "en": "Manager overview" },
       "role": "manager",
       "questions": [
-        { "id": "harbor-status", "text": { "zh-TW": "港灣專案目前的進度如何？", "en": "What is the status of Project Harbor?" } }
+        {
+          "id": "office-hours",
+          "text": { "zh-TW": "公司的上班時間是幾點到幾點？", "en": "What are the office hours?" },
+          "answerPassages": ["employee-handbook-zh-02", "employee-handbook-en-02"]
+        }
       ]
     }
   ]

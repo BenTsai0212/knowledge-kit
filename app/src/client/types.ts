@@ -95,6 +95,7 @@ export interface AccessFile {
 export interface Question {
   id: Id;
   text: LocalizedText;
+  answerPassages: Id[];
 }
 
 export interface Scenario {

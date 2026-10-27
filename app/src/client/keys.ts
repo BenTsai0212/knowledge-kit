@@ -135,6 +135,6 @@ export const manifests: ManifestEntry[] = [
   {
     schema: "scenarios.schema.json",
     pointer: "/properties/scenarios/items/properties/questions/items",
-    keys: { id: "required", text: "required" } satisfies KeyManifest<Question>,
+    keys: { id: "required", text: "required", answerPassages: "required" } satisfies KeyManifest<Question>,
   },
 ];

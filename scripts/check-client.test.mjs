@@ -88,9 +88,9 @@ describe("check-client", () => {
   it("情境的角色與問題 id 會被檢查", () => {
     const files = example();
     files["scenarios.json"].scenarios[0].role = "director";
-    files["scenarios.json"].scenarios[0].questions.push({ id: "aurora-lead", text: { "zh-TW": "重複" } });
+    files["scenarios.json"].scenarios[0].questions.push({ id: "people-manager", text: { "zh-TW": "重複" }, answerPassages: ["employee-handbook-zh-04"] });
     expect(validateClient(files)).toEqual([
-      { file: "scenarios.json", path: "/scenarios/0/questions/2/id", message: "id aurora-lead 重複" },
+      { file: "scenarios.json", path: "/scenarios/0/questions/2/id", message: "id people-manager 重複" },
       { file: "scenarios.json", path: "/scenarios/0/role", message: "角色 director 不存在" },
     ]);
   });
