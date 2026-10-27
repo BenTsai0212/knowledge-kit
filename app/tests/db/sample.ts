@@ -30,7 +30,7 @@ export interface Sample {
 }
 
 const LEVELS = ["public", "internal", "confidential"];
-const PROJECTS = [null, "aurora", "harbor"];
+const PROJECTS = [null, "bluewing", "longpier"];
 
 function build(): Sample {
   const docs: Doc[] = [];
@@ -46,9 +46,9 @@ function build(): Sample {
   // 比文件更機密的段落、比文件寬鬆的段落（仍受文件限制）、與文件不同專案的段落
   passages.push(
     { id: "doc-public-none-p1", doc: "doc-public-none", level: "confidential", project: null },
-    { id: "doc-internal-aurora-p1", doc: "doc-internal-aurora", level: "confidential", project: "aurora" },
+    { id: "doc-internal-bluewing-p1", doc: "doc-internal-bluewing", level: "confidential", project: "bluewing" },
     { id: "doc-confidential-none-p1", doc: "doc-confidential-none", level: "public", project: null },
-    { id: "doc-public-aurora-p1", doc: "doc-public-aurora", level: "public", project: "harbor" },
+    { id: "doc-public-bluewing-p1", doc: "doc-public-bluewing", level: "public", project: "longpier" },
   );
 
   const entities: Entity[] = [
@@ -57,8 +57,8 @@ function build(): Sample {
     { id: "e-confidential-only", sources: ["doc-public-none-p1"] },
     // 同時出現在公開與機密段落：看得到公開段落的人就看得到
     { id: "e-mixed", sources: ["doc-public-none-p0", "doc-confidential-none-p0"] },
-    { id: "e-aurora", sources: ["doc-internal-aurora-p0"] },
-    { id: "e-harbor", sources: ["doc-internal-harbor-p0"] },
+    { id: "e-bluewing", sources: ["doc-internal-bluewing-p0"] },
+    { id: "e-longpier", sources: ["doc-internal-longpier-p0"] },
     // 出處段落寬鬆、但所屬文件機密
     { id: "e-loose-passage", sources: ["doc-confidential-none-p1"] },
     // 沒有出處：沒有人看得到
@@ -68,9 +68,9 @@ function build(): Sample {
     { id: "r-public", from: "e-public", to: "e-mixed", sources: ["doc-public-none-p0"] },
     // 出處公開，但一端的實體只有機密出處
     { id: "r-hidden-endpoint", from: "e-public", to: "e-confidential-only", sources: ["doc-public-none-p0"] },
-    { id: "r-aurora", from: "e-aurora", to: "e-public", sources: ["doc-internal-aurora-p0"] },
+    { id: "r-bluewing", from: "e-bluewing", to: "e-public", sources: ["doc-internal-bluewing-p0"] },
     // 兩端都看得到，但出處只在另一個專案
-    { id: "r-cross-project", from: "e-aurora", to: "e-public", sources: ["doc-internal-harbor-p0"] },
+    { id: "r-cross-project", from: "e-bluewing", to: "e-public", sources: ["doc-internal-longpier-p0"] },
     { id: "r-orphan", from: "e-public", to: "e-mixed", sources: [] },
   ];
   return { docs, passages, entities, relations };

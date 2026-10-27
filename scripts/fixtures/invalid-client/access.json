@@ -3,8 +3,8 @@
     { "id": "public", "label": { "zh-TW": "公開" }, "rank": 0 },
     { "id": "internal", "label": { "zh-TW": "內部" }, "rank": 0 }
   ],
-  "projects": [{ "id": "aurora", "label": { "zh-TW": "極光專案" } }],
+  "projects": [{ "id": "bluewing", "label": { "zh-TW": "青翼專案" } }],
   "roles": [
-    { "id": "staff", "label": { "zh-TW": "一般員工" }, "visibility": "secret", "projects": ["aurora", "unknown"] }
+    { "id": "staff", "label": { "zh-TW": "一般員工" }, "visibility": "secret", "projects": ["bluewing", "unknown"] }
   ]
 }

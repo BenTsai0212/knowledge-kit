@@ -1,0 +1,12 @@
+{
+  "id": "bluewing-press-en",
+  "title": "Example Co. Introduces the Bluewing Adjustable Desk",
+  "language": "en",
+  "date": "2026-06-01",
+  "visibility": "public",
+  "project": "bluewing",
+  "passages": [
+    { "id": "bluewing-press-en-01", "text": "Example Co. today introduced Bluewing, an adjustable desk with a single-knob control panel." },
+    { "id": "bluewing-press-en-02", "text": "Bluewing will be available to business customers later this year." }
+  ]
+}

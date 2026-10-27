@@ -36,7 +36,7 @@ describe("kk_app 無法關閉 RLS", () => {
 
   it("無法以條件讀到其他身分的資料", async () => {
     const rows = await db.withIdentity("guest", async (tx) => ({
-      documents: (await tx.query("SELECT * FROM kk.documents WHERE project_id = 'aurora'")).rows.length,
+      documents: (await tx.query("SELECT * FROM kk.documents WHERE project_id = 'bluewing'")).rows.length,
       identities: (await tx.query("SELECT * FROM kk.identities WHERE id <> 'guest'")).rows.length,
     }));
     expect(rows).toEqual({ documents: 0, identities: 0 });

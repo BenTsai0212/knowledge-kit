@@ -55,7 +55,7 @@ describe("內容涵蓋", () => {
       (p) => rank.get(p.level)! > rank.get(p.doc.visibility)! || (p.doc.project === undefined && p.project !== null),
     );
     expect(stricter.map((p) => p.id)).toEqual(
-      expect.arrayContaining(["aurora-kickoff-zh-03", "harbor-progress-zh-03", "org-chart-zh-05"]),
+      expect.arrayContaining(["bluewing-kickoff-zh-03", "longpier-progress-zh-03", "org-chart-zh-05"]),
     );
   });
 
@@ -89,8 +89,8 @@ describe("內容涵蓋", () => {
     expect(bilingual.length).toBeGreaterThanOrEqual(5);
   });
 
-  it("矛盾：極光桌的上市時間，較新的文件說法不同（docs/dataset.md）", () => {
-    const question = scenarios.scenarios.flatMap((s) => s.questions).find((q) => q.id === "aurora-launch")!;
+  it("矛盾：青翼桌的上市時間，較新的文件說法不同（docs/dataset.md）", () => {
+    const question = scenarios.scenarios.flatMap((s) => s.questions).find((q) => q.id === "bluewing-launch")!;
     const sources = question.answerPassages.map((id) => passages.find((p) => p.id === id)!);
     expect(sources.map((p) => [p.doc.date, p.text.includes("第二季") ? "Q2" : p.text.includes("第三季") ? "Q3" : "?"])).toEqual([
       ["2026-02-10", "Q2"],

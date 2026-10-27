@@ -1,0 +1,12 @@
+{
+  "id": "bluewing-cost-zh",
+  "title": "青翼桌成本估算",
+  "language": "zh-TW",
+  "date": "2026-03-15",
+  "visibility": "confidential",
+  "project": "bluewing",
+  "passages": [
+    { "id": "bluewing-cost-zh-01", "text": "青翼桌單台材料成本估計為新台幣 8,500 元，雙馬達約占 40%。" },
+    { "id": "bluewing-cost-zh-02", "text": "建議售價為新台幣 19,900 元，首年目標銷售 3,000 台。" }
+  ]
+}

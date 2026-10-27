@@ -40,20 +40,20 @@ describe("validateDataset", () => {
     const { config, data } = copy();
     const doc = data.documents[HANDBOOK];
     doc.visibility = "internal";
-    doc.project = "aurora";
+    doc.project = "bluewing";
     doc.passages[0].visibility = "public";
-    doc.passages[1].project = "harbor";
+    doc.passages[1].project = "longpier";
     doc.passages[2].visibility = "confidential";
-    doc.passages[3].project = "aurora";
+    doc.passages[3].project = "bluewing";
     expect(validateDataset(config, data)).toEqual([
       { file: `data/${HANDBOOK}`, path: "/passages/0/visibility", message: "段落比所屬文件寬鬆（public < internal）" },
-      { file: `data/${HANDBOOK}`, path: "/passages/1/project", message: "段落的專案 harbor 與所屬文件的專案 aurora 不同" },
+      { file: `data/${HANDBOOK}`, path: "/passages/1/project", message: "段落的專案 longpier 與所屬文件的專案 bluewing 不同" },
     ]);
   });
 
   it("沒有專案的文件可以有屬於專案的段落", () => {
     const { config, data } = copy();
-    data.documents[HANDBOOK].passages[0].project = "aurora";
+    data.documents[HANDBOOK].passages[0].project = "bluewing";
     expect(validateDataset(config, data)).toEqual([]);
   });
 

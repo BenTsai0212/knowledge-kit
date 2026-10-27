@@ -76,11 +76,11 @@ describe("各身分的可見範圍", () => {
     expect(await ids("guest", "passages")).toEqual(["doc-public-none-p0"]);
   });
 
-  it("一般員工看得到內部等級以下、沒有專案或極光專案的文件", async () => {
+  it("一般員工看得到內部等級以下、沒有專案或青翼專案的文件", async () => {
     expect(await ids("staff", "documents")).toEqual([
-      "doc-internal-aurora",
+      "doc-internal-bluewing",
       "doc-internal-none",
-      "doc-public-aurora",
+      "doc-public-bluewing",
       "doc-public-none",
     ]);
   });
@@ -89,14 +89,14 @@ describe("各身分的可見範圍", () => {
     // 機密文件中的公開段落：一般員工看不到
     expect(await ids("staff", "passages")).not.toContain("doc-confidential-none-p1");
     expect(await ids("manager", "passages")).toContain("doc-confidential-none-p1");
-    // 極光專案文件中屬於港灣專案的段落：一般員工看不到
-    expect(await ids("staff", "passages")).not.toContain("doc-public-aurora-p1");
+    // 青翼專案文件中屬於長堤專案的段落：一般員工看不到
+    expect(await ids("staff", "passages")).not.toContain("doc-public-bluewing-p1");
   });
 
   it("關係要有看得到的出處，且兩端的實體都看得到", async () => {
     expect(await ids("guest", "relations")).toEqual(["r-public"]);
-    expect(await ids("staff", "relations")).toEqual(["r-aurora", "r-public"]);
-    expect(await ids("manager", "relations")).toEqual(["r-aurora", "r-cross-project", "r-hidden-endpoint", "r-public"]);
+    expect(await ids("staff", "relations")).toEqual(["r-bluewing", "r-public"]);
+    expect(await ids("manager", "relations")).toEqual(["r-bluewing", "r-cross-project", "r-hidden-endpoint", "r-public"]);
   });
 });
 
@@ -121,7 +121,7 @@ describe("關係的出處", () => {
         await seedSample(pg);
         await pg.query(
           "INSERT INTO kk.relation_sources (relation_id, passage_id, from_entity_id, to_entity_id) VALUES ($1, $2, $3, $4)",
-          ["r-public", "doc-internal-none-p0", "e-aurora", "e-mixed"],
+          ["r-public", "doc-internal-none-p0", "e-bluewing", "e-mixed"],
         );
       },
     });
