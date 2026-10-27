@@ -35,6 +35,8 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 | 路徑 | 內容 |
 | --- | --- |
 | `app/` | 前端（Vite＋React＋TypeScript）；`index.html` 與 `src/`；`src/client/` 是 `client/` 設定的型別與讀取（改 Schema 時同步修改，見 `docs/client-config.md`） |
+| `app/src/db/` | 資料層（PGlite＋RLS）：`database.ts` 是唯一入口，`migrations/*.sql` 是 migration；說明見 `docs/data-model.md` |
+| `app/tests/` | 需要放在 `app/src/` 之外的測試（例如會用到被禁止 SQL 的越權測試） |
 | `worker/` | Cloudflare Worker（TypeScript）：`GET /api/health`，其他請求交給 `dist/` 靜態檔 |
 | `client/` | 客戶設定（`*.json`）與 JSON Schema（`schema/`）；換客戶只改這裡，欄位說明見 `docs/client-config.md` |
 | `scripts/` | 專案腳本（Node ESM，不在 `typecheck` 範圍內）：`check-client.mjs`；`fixtures/invalid-client/` 是故意寫錯的測試資料 |
@@ -62,6 +64,10 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 - 不合併 PR、不 push 到 `main`；合併由人決定，agent 只在人同意後執行。〔私人 repo 在免費方案沒有分支保護；hook 只管得到 Claude Code，其他 agent 只靠此規則｜GitHub 分支保護可用後〕
 - 不把 secret、token、密碼或連線字串寫進程式、測試、log、PR、Issue。〔通用安全｜不刪〕
 - 不得加入真實客戶資料、客戶名稱或合作夥伴品牌名稱；一律使用虛構資料。〔RFC 0001｜不刪〕
+- 營運開關（feature flag）預設關閉。〔modules.md 高風險｜不刪〕
+- 不修改已套用（已合併到 main）的 migration，改動一律新增 migration；`migrate.ts` 比對 checksum。〔modules.md 高風險｜不刪〕
+- migration 不隨部署自動套用到持久化的資料庫（伺服器端或 `idb://` 等會保留資料的儲存）；瀏覽器記憶體資料庫在載入時從 migration 重建，不在此限。〔modules.md 高風險｜第 3 階段正式系統上線後重新檢討〕
+- 切換資料庫角色或關閉 RLS 的語句（`SET ROLE`、`RESET ROLE`、`SET SESSION AUTHORIZATION`、`row_security`）只寫在 `app/src/db/database.ts`。〔PGlite 的 session user 是 superuser，這類語句能繞過 RLS（#6 決定 2）｜PGlite 能以非 superuser 連線後〕
 - 不宣稱未執行的檢查已通過；無法執行時寫明原因，以 CI 為準。〔agent 曾在本機無法執行檢查｜CI 成為唯一判準後〕
 - 同一個錯誤修三次仍未解決就停止並回報。〔避免無限重試｜不刪〕
 - 停止時在 PR（沒有 PR 時在 Issue）留言回報、加上 `blocked`、@ 決定者；只把加上 `blocked` 之後以 `## 決定` 開頭的留言視為人的決定。〔只在本機回覆時決定會被漏看｜不刪〕
