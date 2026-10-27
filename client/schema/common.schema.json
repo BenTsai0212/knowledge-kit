@@ -26,6 +26,11 @@
       "type": "string",
       "pattern": "^[a-z][a-z0-9-]{0,31}$"
     },
+    "IsoDate": {
+      "description": "ISO 8601 日期 YYYY-MM-DD",
+      "type": "string",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"
+    },
     "RelativePath": {
       "description": "相對於 client/ 的路徑，不可用 / 開頭或包含 ..",
       "type": "string",

@@ -35,10 +35,11 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 | 路徑 | 內容 |
 | --- | --- |
 | `app/` | 前端（Vite＋React＋TypeScript）；`index.html` 與 `src/`；`src/client/` 是 `client/` 設定的型別與讀取（改 Schema 時同步修改，見 `docs/client-config.md`） |
+| `app/src/dataset/` | 資料集（`client/data/`）的型別與鍵清單 |
 | `app/src/db/` | 資料層（PGlite＋RLS）：`database.ts` 是唯一入口，`migrations/*.sql` 是 migration；說明見 `docs/data-model.md` |
 | `app/tests/` | 需要放在 `app/src/` 之外的測試（例如會用到被禁止 SQL 的越權測試） |
 | `worker/` | Cloudflare Worker（TypeScript）：`GET /api/health`，其他請求交給 `dist/` 靜態檔 |
-| `client/` | 客戶設定（`*.json`）與 JSON Schema（`schema/`）；換客戶只改這裡，欄位說明見 `docs/client-config.md` |
+| `client/` | 客戶設定（`*.json`）、JSON Schema（`schema/`）、虛構資料集（`data/`）與評測題庫（`evals/`）；換客戶只改這裡，說明見 `docs/client-config.md`、`docs/dataset.md` |
 | `scripts/` | 專案腳本（Node ESM，不在 `typecheck` 範圍內）：`check-client.mjs`；`fixtures/invalid-client/` 是故意寫錯的測試資料 |
 | `package.json`、`vite.config.ts`、`vitest.config.ts`、`tsconfig.node.json`、`wrangler.jsonc` | 根目錄的指令與設定（單一 `package.json`，不用 workspaces） |
 | `docs/workflow/` | 憲法與 workflow 手冊 |

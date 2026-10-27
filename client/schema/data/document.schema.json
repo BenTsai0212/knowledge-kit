@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "data/document.schema.json",
+  "title": "data/documents/*.json：一份文件與它的段落",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "title", "language", "visibility", "passages"],
+  "properties": {
+    "id": { "$ref": "../common.schema.json#/definitions/Id" },
+    "title": { "type": "string", "minLength": 1 },
+    "language": { "$ref": "../common.schema.json#/definitions/LanguageCode" },
+    "date": { "description": "文件日期，供時間軸使用", "$ref": "../common.schema.json#/definitions/IsoDate" },
+    "visibility": { "description": "access.json 的可見等級 id", "$ref": "../common.schema.json#/definitions/Id" },
+    "project": { "description": "access.json 的專案 id；省略表示沒有專案", "$ref": "../common.schema.json#/definitions/Id" },
+    "passages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "text"],
+        "properties": {
+          "id": { "$ref": "../common.schema.json#/definitions/Id" },
+          "text": { "type": "string", "minLength": 1 },
+          "language": { "description": "省略時沿用文件的值", "$ref": "../common.schema.json#/definitions/LanguageCode" },
+          "visibility": { "description": "省略時沿用文件的值", "$ref": "../common.schema.json#/definitions/Id" },
+          "project": { "description": "省略時沿用文件的值", "$ref": "../common.schema.json#/definitions/Id" }
+        }
+      }
+    }
+  }
+}

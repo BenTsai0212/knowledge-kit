@@ -34,6 +34,7 @@ npm run check:client
 | `LocalizedText` | 物件，鍵為語言代碼，值為非空字串 | `{ "zh-TW": "範例公司", "en": "Example Co." }` |
 | `Id` | 小寫英數與連字號，英文字母開頭，最多 63 字元 | `sales-team` |
 | `ModelCode` | 小寫英數與連字號，英文字母開頭，最多 32 字元 | `standard` |
+| `IsoDate` | ISO 8601 日期 `YYYY-MM-DD` | `2026-01-05` |
 | `RelativePath` | 相對於 `client/` 的路徑，不可用 `/` 開頭或包含 `..` | `data/` |
 
 **顯示給使用者的文字一律用 `LocalizedText`**，並符合：
@@ -49,8 +50,8 @@ npm run check:client
 | `defaultLanguage` | 是 | `LanguageCode` | 預設語言；必須在 `languages` 內 |
 | `languages` | 是 | `LanguageCode` 陣列，至少 1 個、不重複 | 支援的語言。範本預設 `["zh-TW", "en"]` |
 | `model` | 是 | `ModelCode` | 問答使用的模型代號。只能填 Worker 端白名單中的代號；白名單、實際模型名稱與 `max_tokens` 由 Worker 決定（ADR 0001），在 `/api/ask` 的 Issue 實作。目前只檢查格式 |
-| `dataset.path` | 是 | `RelativePath` | 資料集的位置。目前只檢查格式，不檢查是否存在 |
-| `evals.path` | 是 | `RelativePath` | 評測題庫的位置。目前只檢查格式，不檢查是否存在 |
+| `dataset.path` | 是 | `RelativePath` | 資料集的資料夾，必須存在。格式見 [docs/dataset.md](dataset.md) |
+| `evals.path` | 是 | `RelativePath` | 評測題庫的資料夾，必須存在。題庫格式在評測台的 Issue 加入 |
 
 ## `theme.json`
 
@@ -158,7 +159,7 @@ JSON Schema 是唯一正本，型別在 `app/src/client/types.ts` 手寫。加�
 
 1. `client/schema/*.schema.json`
 2. `app/src/client/types.ts`：對應的型別
-3. `app/src/client/keys.ts`：該物件的鍵清單（新物件要新增一筆）
+3. `app/src/client/keys.ts`（資料集為 `app/src/dataset/keys.ts`）：該物件的鍵清單（新物件要新增一筆）
 4. 有預設值的選填欄位：在 `load.ts` 補上預設值
 5. 範例設定、本文件，以及需要時 `scripts/check-client.mjs` 的跨檔規則與測試
 
