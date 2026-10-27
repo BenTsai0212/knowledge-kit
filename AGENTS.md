@@ -34,7 +34,7 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 
 | 路徑 | 內容 |
 | --- | --- |
-| `app/` | 前端（Vite＋React＋TypeScript）；`index.html` 與 `src/` |
+| `app/` | 前端（Vite＋React＋TypeScript）；`index.html` 與 `src/`；`src/client/` 是 `client/` 設定的型別與讀取（改 Schema 時同步修改，見 `docs/client-config.md`） |
 | `worker/` | Cloudflare Worker（TypeScript）：`GET /api/health`，其他請求交給 `dist/` 靜態檔 |
 | `client/` | 客戶設定（`*.json`）與 JSON Schema（`schema/`）；換客戶只改這裡，欄位說明見 `docs/client-config.md` |
 | `scripts/` | 專案腳本（Node ESM，不在 `typecheck` 範圍內）：`check-client.mjs`；`fixtures/invalid-client/` 是故意寫錯的測試資料 |

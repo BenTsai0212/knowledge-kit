@@ -1,0 +1,31 @@
+// 在 build 時讀入 client/*.json。驗證由 npm run check:client（ajv）在 CI 執行，不打包進前端。
+import access from "../../../client/access.json";
+import client from "../../../client/client.json";
+import knowledgeModel from "../../../client/knowledge-model.json";
+import scenarios from "../../../client/scenarios.json";
+import theme from "../../../client/theme.json";
+import type { ClientConfig, ClientFiles } from "./types";
+
+// JSON import 的字串型別會放寬成 string，列舉值無法在編譯時比對；
+// 這裡比對其餘的形狀（缺欄位、型別不符時 typecheck 失敗），列舉值由 ajv 檢查。
+type Widen<T> = T extends string
+  ? string
+  : T extends (infer U)[]
+    ? Widen<U>[]
+    : T extends object
+      ? { [K in keyof T]: Widen<T[K]> }
+      : T;
+
+const files: Widen<ClientFiles> = { client, theme, knowledgeModel, access, scenarios };
+
+export function normalizeClient(raw: ClientFiles): ClientConfig {
+  return {
+    ...raw,
+    knowledgeModel: {
+      ...raw.knowledgeModel,
+      entityTypes: raw.knowledgeModel.entityTypes.map((t) => ({ ...t, mergeStrategy: t.mergeStrategy ?? "review" })),
+    },
+  };
+}
+
+export const clientConfig: ClientConfig = normalizeClient(files as ClientFiles);
