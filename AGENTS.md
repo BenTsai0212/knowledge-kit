@@ -24,7 +24,7 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 - 單元測試：`npm test`（Vitest，`app/**/*.test.ts`、`worker/**/*.test.ts`、`scripts/**/*.test.mjs`）
 - client 設定檢查：`npm run check:client`（以 ajv 依 `client/schema/` 驗證 `client/`，並檢查跨檔規則；見 `docs/client-config.md`）
 - build：`npm run build`（輸出到 `dist/`）
-- 本機 Worker：`npm run build` 後 `npx wrangler dev`（提供 `dist/` 與 `/api/*`；`wrangler.jsonc` 只供本機，不部署）
+- 本機 Worker：`npm run build` 後 `npx wrangler dev`（提供 `dist/` 與 `/api/*`；`wrangler.jsonc` 只供本機，不部署）。secret 與變數放在不進版本控制的 `.dev.vars`（`cp .dev.vars.example .dev.vars`，金鑰由人填入）；與 `npm run dev` 併用時，Vite 把 `/api/*` 轉給 `wrangler dev`（見 `worker/README.md`）
 - workflow 工具測試：`npm test --prefix tools/workflow`（Node 內建 `node --test`，無相依套件）
 - PR 描述檢查：`PR_BODY='Closes #1' PR_LABELS='[]' node tools/workflow/check-pr-body.mjs`（CI 的 `PR body` workflow 在 PR 開啟、編輯、更新與標籤變更時執行）
 - CI 的 `checks` job 依序執行 `npm ci` → `npm run check:client` → `npm run typecheck` → `npm test` → `npm run build` → workflow 工具測試。
@@ -38,7 +38,7 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 | `app/src/dataset/` | 資料集（`client/data/`）的型別、鍵清單、讀取（`load.ts`）、跨檔檢查（`validate.ts`）與匯入（`seed.ts`） |
 | `app/src/db/` | 資料層（PGlite＋RLS）：`database.ts` 是唯一入口，`migrations/*.sql` 是 migration；說明見 `docs/data-model.md` |
 | `app/tests/` | 需要放在 `app/src/` 之外的測試（例如會用到被禁止 SQL 的越權測試） |
-| `worker/` | Cloudflare Worker（TypeScript）：`GET /api/health`、`POST /api/ask`（`ask.ts`：同站、邀請碼、body、每日次數的檢查；上游呼叫尚未實作，回 501）；`models.ts` 是模型白名單，`usage.ts` 是計數用的 Durable Object；其他請求交給 `dist/` 靜態檔。本機的 secret 與變數放在不進版本控制的 `.dev.vars`（格式見 `.dev.vars.example`） |
+| `worker/` | Cloudflare Worker（TypeScript）：`GET /api/health`、`POST /api/ask`（`ask.ts`：同站、邀請碼、body、每日次數的檢查；`upstream.ts`、`sse.ts`：轉發到 Claude Messages API 並轉成精簡的 SSE）；`models.ts` 是模型白名單，`usage.ts` 是計數用的 Durable Object，`testing.ts` 是測試用的假實作；其他請求交給 `dist/` 靜態檔。API 格式、錯誤類型、secret 與已知限制見 `worker/README.md` |
 | `client/` | 客戶設定（`*.json`）、JSON Schema（`schema/`）、虛構資料集（`data/`）與評測題庫（`evals/`）；換客戶只改這裡，說明見 `docs/client-config.md`、`docs/dataset.md` |
 | `scripts/` | 專案腳本（Node ESM，不在 `typecheck` 範圍內）：`check-client.mjs`；`fixtures/invalid-client/` 是故意寫錯的測試資料 |
 | `package.json`、`vite.config.ts`、`vitest.config.ts`、`tsconfig.node.json`、`wrangler.jsonc` | 根目錄的指令與設定（單一 `package.json`，不用 workspaces） |

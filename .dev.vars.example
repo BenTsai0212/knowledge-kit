@@ -1,4 +1,5 @@
-# 本機 wrangler dev 用的 secret 與變數。複製為 .dev.vars（不進版本控制）後填入；不要把真實的值寫進本檔。
+# 本機 wrangler dev 用的 secret 與變數（說明見 worker/README.md）。複製為 .dev.vars（不進版本控制）後填入；不要把真實的值寫進本檔。
+# 正式部署不得沿用這裡的邀請碼，ALLOWED_ORIGINS 應為空值。
 # Anthropic API 金鑰（由人填入）
 ANTHROPIC_API_KEY=
 # 邀請碼：組名:碼,碼;組名:碼（組名小寫英數與 -，碼至少 8 個英數字元）
