@@ -4,7 +4,7 @@
 每個設定檔對應 `client/schema/` 的一份 JSON Schema；跨檔的規則由 `scripts/check-client.mjs` 檢查。
 
 > **發現客戶差異未涵蓋時，先擴充 Schema，不在程式中寫死。**（ADR 0001 後果）
-> 擴充時同步更新本文件與 `scripts/check-client.mjs` 的測試。
+> 擴充步驟見[擴充 Schema](#擴充-schema)。
 
 ## 檢查
 
@@ -144,6 +144,30 @@ JSON Schema 無法參照另一個檔的值，以下由 `scripts/check-client.mjs
 - 關係類型的 `from`、`to` → `entityTypes`
 - 角色的 `visibility` → `visibilityLevels`；角色的 `projects` → `projects`
 - 情境的 `role` → `roles`
+
+## app 如何讀取
+
+`app/src/client/load.ts` 在 build 時以 JSON import 讀入 5 個設定檔，匯出型別為 `ClientConfig` 的 `clientConfig`。
+
+- 執行時不做 ajv 驗證，ajv 不打包進前端；驗證只在 `npm run check:client` 與 CI 執行。
+- 省略的欄位在這裡補上預設值，讀取端拿到的型別一律是必填。目前只有 `mergeStrategy`：省略時補成 `review`。
+
+## 擴充 Schema
+
+JSON Schema 是唯一正本，型別在 `app/src/client/types.ts` 手寫。加欄位或物件時改這幾處：
+
+1. `client/schema/*.schema.json`
+2. `app/src/client/types.ts`：對應的型別
+3. `app/src/client/keys.ts`：該物件的鍵清單（新物件要新增一筆）
+4. 有預設值的選填欄位：在 `load.ts` 補上預設值
+5. 範例設定、本文件，以及需要時 `scripts/check-client.mjs` 的跨檔規則與測試
+
+漏改時會被擋下：
+
+- 型別與鍵清單不一致（多鍵、少鍵、必填標錯）→ `npm run typecheck` 失敗（`satisfies KeyManifest<T>`）
+- 鍵清單與 Schema 的 `properties`、`required` 不一致，或 Schema 中有物件沒有鍵清單 → `npm test` 失敗（`app/src/client/schema-sync.test.ts`）
+- 範例設定缺欄位或型別不符 → `npm run typecheck` 失敗（`load.ts`）
+- 範例設定不符合 Schema（含列舉值）→ `npm run check:client` 失敗
 
 ## 測試資料
 
