@@ -17,7 +17,12 @@ export default {
     }
     if (url.pathname === "/api/ask") {
       if (request.method !== "POST") return errorResponse("method_not_allowed", 405);
-      return handleAsk(request, env, { usage: durableUsage(env.USAGE), now: () => new Date() });
+      return handleAsk(request, env, {
+        usage: durableUsage(env.USAGE),
+        now: () => new Date(),
+        fetch: (input, init) => fetch(input, init),
+        log: (entry) => console.log(JSON.stringify(entry)),
+      });
     }
     if (url.pathname.startsWith("/api/")) {
       return Response.json({ error: "not_found" }, { status: 404 });
