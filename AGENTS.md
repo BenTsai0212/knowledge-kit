@@ -4,11 +4,9 @@
 
 ## 0. 專案設定
 
-<!-- 新專案初始化時改寫本節、第 2 節與第 3 節。 -->
-
-- Repo：`BenTsai0212/dev-workflow-template`（本 repo 即 template 本身）
-- 看板：GitHub Project #3「dev-workflow 範本看板」（https://github.com/users/BenTsai0212/projects/3）；也是新專案複製看板的來源
-- 啟用模組：核心、自動化（試驗中）（見 `docs/workflow/modules.md`；本 repo 的啟用決定見 #20）
+- Repo：`BenTsai0212/knowledge-kit`
+- 看板：GitHub Project #9（https://github.com/users/BenTsai0212/projects/9）
+- 啟用模組：核心、高風險（見 `docs/workflow/modules.md`）
 - 憲法版本：v0.8（`docs/workflow/constitution.md`）
 - 決定者：@BenTsai0212（停止回報與 `plan-first` 時 @ 此帳號）
 
@@ -19,27 +17,31 @@
 
 ## 2. 指令
 
-<!-- 依 ADR 0001 的技術選型填寫：安裝、開發、型別檢查、lint、測試、build。 -->
+Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 
-本 repo 以文件與範本為主；文件的驗證方式是核對內容、路徑、連結與 diff。
-
-- workflow 工具測試：`npm test --prefix tools/workflow`（Node 內建 `node --test`，無相依套件；CI 的 `checks` job 也會執行）
-- runner（自動化模組）：需要不進版本控制的 `tools/workflow/runner/config.local.json`（見該資料夾的 README）
-  - 試跑：`node tools/workflow/runner/agent-runner.mjs --dry-run`（只顯示會挑哪一件）
-  - 手動執行一件：`node tools/workflow/runner/agent-runner.mjs --now`（由人執行；本 repo 未安裝排程）
-- 新 repo 的標籤與看板：`node tools/workflow/bootstrap-github.mjs --repo <owner/name> [--modules core,online,collab,automation] [--dry-run]`（`--modules` 預設 `core`；範本看板的 owner 與編號在 `tools/workflow/config.json`）
+- 開發伺服器：`npm run dev`（Vite，`app/`）
+- 型別檢查：`npm run typecheck`（`app/`、`worker/`、根目錄設定檔各一份 tsconfig）
+- 單元測試：`npm test`（Vitest，`app/**/*.test.ts`、`worker/**/*.test.ts`）
+- build：`npm run build`（輸出到 `dist/`）
+- 本機 Worker：`npm run build` 後 `npx wrangler dev`（提供 `dist/` 與 `/api/*`；`wrangler.jsonc` 只供本機，不部署）
+- workflow 工具測試：`npm test --prefix tools/workflow`（Node 內建 `node --test`，無相依套件）
 - PR 描述檢查：`PR_BODY='Closes #1' PR_LABELS='[]' node tools/workflow/check-pr-body.mjs`（CI 的 `PR body` workflow 在 PR 開啟、編輯、更新與標籤變更時執行）
+- CI 的 `checks` job 依序執行 `npm ci` → `npm run typecheck` → `npm test` → `npm run build` → workflow 工具測試。
+- **不適用，不要執行**：`tools/workflow/runner/`（自動化模組，本專案未啟用）、`tools/workflow/bootstrap-github.mjs` 與其設定 `tools/workflow/config.json`（新 repo 的標籤與看板已建立）。三者隨 template 帶入，其測試仍包含在 `npm test --prefix tools/workflow`。
 
 ## 3. 結構
 
 | 路徑 | 內容 |
 | --- | --- |
+| `app/` | 前端（Vite＋React＋TypeScript）；`index.html` 與 `src/` |
+| `worker/` | Cloudflare Worker（TypeScript）：`GET /api/health`，其他請求交給 `dist/` 靜態檔 |
+| `package.json`、`vite.config.ts`、`vitest.config.ts`、`tsconfig.node.json`、`wrangler.jsonc` | 根目錄的指令與設定（單一 `package.json`，不用 workspaces） |
 | `docs/workflow/` | 憲法與 workflow 手冊 |
 | `docs/rfcs/`、`docs/adr/` | 專案章程與決策紀錄 |
-| `tools/workflow/` | workflow 工具（Node，自帶 `package.json`）；`hooks/confirm-main.mjs` 是合併與 push 到 main 前的確認 hook；`bootstrap-github.mjs` 依 `.github/labels.yml` 建立標籤並複製、連結範本看板（設定在 `config.json`）；`check-pr-body.mjs` 檢查 PR 描述有 `Closes`／`Refs #N`（`fast-lane` 除外）；`runner/` 是自動化模組的 agent runner |
+| `tools/workflow/` | workflow 工具（Node，自帶 `package.json`）；`hooks/confirm-main.mjs` 是合併與 push 到 main 前的確認 hook；`check-pr-body.mjs` 檢查 PR 描述有 `Closes`／`Refs #N`（`fast-lane` 除外）；`runner/`、`bootstrap-github.mjs`、`config.json` 不適用（見第 2 節） |
 | `.claude/settings.json` | Claude Code 設定：在 `PreToolUse`（Bash）註冊確認 hook |
 | `templates/` | Claude Project 範本與預設不啟用的模組檔案 |
-| `.github/` | Issue／PR 範本、標籤定義、CI（`workflows/ci.yml`：`checks` job；`workflows/pr-body.yml`：PR 描述檢查） |
+| `.github/` | Issue／PR 範本、標籤定義、CI（`workflows/ci.yml`：`checks` job；`workflows/pr-body.yml`：PR 描述檢查）；沒有部署 workflow |
 
 ## 4. 工作流程
 
@@ -56,6 +58,7 @@
 
 - 不合併 PR、不 push 到 `main`；合併由人決定，agent 只在人同意後執行。〔私人 repo 在免費方案沒有分支保護；hook 只管得到 Claude Code，其他 agent 只靠此規則｜GitHub 分支保護可用後〕
 - 不把 secret、token、密碼或連線字串寫進程式、測試、log、PR、Issue。〔通用安全｜不刪〕
+- 不得加入真實客戶資料、客戶名稱或合作夥伴品牌名稱；一律使用虛構資料。〔RFC 0001｜不刪〕
 - 不宣稱未執行的檢查已通過；無法執行時寫明原因，以 CI 為準。〔agent 曾在本機無法執行檢查｜CI 成為唯一判準後〕
 - 同一個錯誤修三次仍未解決就停止並回報。〔避免無限重試｜不刪〕
 - 停止時在 PR（沒有 PR 時在 Issue）留言回報、加上 `blocked`、@ 決定者；只把加上 `blocked` 之後以 `## 決定` 開頭的留言視為人的決定。〔只在本機回覆時決定會被漏看｜不刪〕

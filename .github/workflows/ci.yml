@@ -1,4 +1,3 @@
-# CI 佔位：新專案依 ADR 0001 的技術選型填寫步驟（安裝 → 型別檢查 → lint → 測試 → build）。
 # job 名稱固定為 checks，供分支保護或其他檢查引用。
 name: CI
 
@@ -18,7 +17,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+      - name: 安裝
+        run: npm ci
+      - name: 型別檢查
+        run: npm run typecheck
+      - name: 單元測試
+        run: npm test
+      - name: build
+        run: npm run build
       - name: workflow 工具測試
         run: npm test --prefix tools/workflow
-      - name: 尚未設定專案檢查
-        run: echo "::warning::CI 尚未設定專案檢查，請依 ADR 0001 填寫 .github/workflows/ci.yml"
