@@ -64,19 +64,43 @@ template 預設的**虛構**資料：範例公司（Example Co.）的文件、�
 
 ## 檢查
 
-`npm run check:client` 目前檢查：
+**`npm run check:client`**（`scripts/check-client.mjs`，CI 執行）：
 
 - `client.json` 的 `dataset.path`、`evals.path` 指到的資料夾存在
 - 資料集每個檔案符合 Schema；必要的檔案存在、至少一份文件、沒有未知的資料檔
 
-跨檔規則由匯入程式檢查，在 #15 的後續 PR 加入：
+**跨檔規則**（`app/src/dataset/validate.ts`，匯入時執行；`validate.test.ts` 確認 `client/data/` 通過，CI 的 `npm test` 執行）：
 
-- 語言屬於 `languages`
+- 文件與段落的語言屬於 `client.json` 的 `languages`
 - 可見等級與專案存在於 `access.json`
-- 實體與關係類型存在於 `knowledge-model.json`
-- 出處段落存在
-- id 不重複
-- 段落不比文件寬鬆
+- 段落不比所屬文件寬鬆：段落的 rank 不小於文件；文件有專案時，段落的專案必須相同。沒有專案的文件可以有屬於專案的段落
+- 實體與關係的類型存在於 `knowledge-model.json`，關係兩端的實體存在，且類型符合關係類型的 `from`／`to`
+- 實體與關係的出處段落存在
+- 文件、段落、實體、關係的 id 不重複（段落 id 在整個資料集中唯一）
+- `scenarios.json` 每個問題的 `answerPassages` 存在於資料集
+- `dataset.path` 為 `data/`：`import.meta.glob` 的路徑必須是字面值，所以 app 目前只支援這個位置
+
+錯誤的格式與 `check:client` 相同：`<檔名> <JSON 路徑>：<訊息>`，檔名相對於 `client/`。
+
+## 匯入
+
+```ts
+import { clientConfig } from "./client/load";
+import { dataset } from "./dataset/load";
+import { seedDataset } from "./dataset/seed";
+import { openDatabase } from "./db/database";
+
+const db = await openDatabase(clientConfig, { seed: (pg) => seedDataset(pg, clientConfig, dataset) });
+```
+
+- `app/src/dataset/load.ts` 在 build 時讀入 `client/data/`，瀏覽器與 Vitest（Node）共用。
+- `seedDataset` 先執行跨檔檢查。有錯誤時拋出 `DatasetImportError`，訊息逐條列出位置，不寫入任何資料。
+- 段落的語言、可見等級、專案在匯入時套用沿用規則，資料庫中每個段落都有明確的值。
+- 段落的 `ordinal` 是它在 `passages` 中的順序。
+- 目前不寫入資料庫：
+  - 文件的 `date`：供之後的時間軸使用
+  - 實體的 `aliases`：留給萃取與合併或圖譜的 Issue（#15 決定 3）
+  - 兩者都需要新的 migration
 
 ## 替換與擴充
 

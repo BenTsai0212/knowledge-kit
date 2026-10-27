@@ -135,6 +135,7 @@ npm run check:client
 | `role` | 是 | 角色 `id` | 進入情境時切換成的身分；必須存在於 `access.json` 的 `roles` |
 | `questions[].id` | 是 | `Id`，同一情境內不可重複 | 例如 `aurora-lead` |
 | `questions[].text` | 是 | `LocalizedText` | 預設問題，至少 1 題 |
+| `questions[].answerPassages` | 是 | 資料集段落 `id` 陣列，至少 1 個、不重複 | 答案所在的段落；必須存在於資料集（匯入程式檢查），且該情境的角色看得到 |
 
 ## 跨檔規則
 

@@ -8,7 +8,7 @@ import type { ClientConfig, ClientFiles } from "./types";
 
 // JSON import 的字串型別會放寬成 string，列舉值無法在編譯時比對；
 // 這裡比對其餘的形狀（缺欄位、型別不符時 typecheck 失敗），列舉值由 ajv 檢查。
-type Widen<T> = T extends string
+export type Widen<T> = T extends string
   ? string
   : T extends (infer U)[]
     ? Widen<U>[]

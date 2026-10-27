@@ -24,10 +24,17 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["id", "text"],
+              "required": ["id", "text", "answerPassages"],
               "properties": {
                 "id": { "$ref": "common.schema.json#/definitions/Id" },
-                "text": { "$ref": "common.schema.json#/definitions/LocalizedText" }
+                "text": { "$ref": "common.schema.json#/definitions/LocalizedText" },
+                "answerPassages": {
+                  "description": "答案所在的資料集段落 id",
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": { "$ref": "common.schema.json#/definitions/Id" }
+                }
               }
             }
           }
