@@ -5,12 +5,12 @@
     { "id": "confidential", "label": { "zh-TW": "機密", "en": "Confidential" }, "rank": 2 }
   ],
   "projects": [
-    { "id": "aurora", "label": { "zh-TW": "極光專案", "en": "Project Aurora" } },
-    { "id": "harbor", "label": { "zh-TW": "港灣專案", "en": "Project Harbor" } }
+    { "id": "bluewing", "label": { "zh-TW": "青翼專案", "en": "Project Bluewing" } },
+    { "id": "longpier", "label": { "zh-TW": "長堤專案", "en": "Project Longpier" } }
   ],
   "roles": [
     { "id": "guest", "label": { "zh-TW": "訪客", "en": "Guest" }, "visibility": "public", "projects": [] },
-    { "id": "staff", "label": { "zh-TW": "一般員工", "en": "Staff" }, "visibility": "internal", "projects": ["aurora"] },
-    { "id": "manager", "label": { "zh-TW": "主管", "en": "Manager" }, "visibility": "confidential", "projects": ["aurora", "harbor"] }
+    { "id": "staff", "label": { "zh-TW": "一般員工", "en": "Staff" }, "visibility": "internal", "projects": ["bluewing"] },
+    { "id": "manager", "label": { "zh-TW": "主管", "en": "Manager" }, "visibility": "confidential", "projects": ["bluewing", "longpier"] }
   ]
 }

@@ -1,0 +1,13 @@
+{
+  "id": "bluewing-kickoff-zh",
+  "title": "青翼專案啟動會議紀錄",
+  "language": "zh-TW",
+  "date": "2026-02-10",
+  "visibility": "internal",
+  "project": "bluewing",
+  "passages": [
+    { "id": "bluewing-kickoff-zh-01", "text": "青翼專案由產品研發部經理王小明負責，成員包括周大衛與林志明。" },
+    { "id": "bluewing-kickoff-zh-02", "text": "專案目標是開發一款可調式辦公桌「青翼桌」，預計 2026 年第二季上市。" },
+    { "id": "bluewing-kickoff-zh-03", "text": "專案預算為新台幣 1,200 萬元，其中模具費用約占三成。", "visibility": "confidential" }
+  ]
+}

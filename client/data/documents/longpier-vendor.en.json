@@ -1,0 +1,12 @@
+{
+  "id": "longpier-vendor-en",
+  "title": "Longpier Warehouse System Vendor Evaluation",
+  "language": "en",
+  "date": "2026-03-28",
+  "visibility": "confidential",
+  "project": "longpier",
+  "passages": [
+    { "id": "longpier-vendor-en-01", "text": "Project Longpier compared two warehouse system vendors, referred to here as Vendor A and Vendor B." },
+    { "id": "longpier-vendor-en-02", "text": "Yating Chang recommended Vendor B because its barcode module needs less customization." }
+  ]
+}

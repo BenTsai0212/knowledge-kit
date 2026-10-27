@@ -1,0 +1,11 @@
+{
+  "id": "sales-weekly-en",
+  "title": "Sales Team Weekly Notes",
+  "language": "en",
+  "date": "2026-05-08",
+  "visibility": "internal",
+  "passages": [
+    { "id": "sales-weekly-en-01", "text": "Jiaying Li asked the Sales team to collect customer feedback on standing desks before the Bluewing launch." },
+    { "id": "sales-weekly-en-02", "text": "Zhiming Lin from Sales visited three office customers in the northern region this week." }
+  ]
+}

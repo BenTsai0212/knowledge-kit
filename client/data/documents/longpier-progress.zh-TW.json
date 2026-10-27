@@ -1,0 +1,13 @@
+{
+  "id": "longpier-progress-zh",
+  "title": "長堤專案進度報告",
+  "language": "zh-TW",
+  "date": "2026-04-20",
+  "visibility": "internal",
+  "project": "longpier",
+  "passages": [
+    { "id": "longpier-progress-zh-01", "text": "長堤專案由營運部經理張雅婷負責，目標是汰換倉儲管理系統，目前完成約 60%。" },
+    { "id": "longpier-progress-zh-02", "text": "黃建宏已完成條碼掃描流程的測試，下一步是庫存資料轉移。" },
+    { "id": "longpier-progress-zh-03", "text": "系統導入費用預估超支約 15%，主要來自額外的資料轉換工時。", "visibility": "confidential" }
+  ]
+}

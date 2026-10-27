@@ -1,0 +1,12 @@
+{
+  "id": "bluewing-status-zh",
+  "title": "青翼專案進度更新",
+  "language": "zh-TW",
+  "date": "2026-05-15",
+  "visibility": "internal",
+  "project": "bluewing",
+  "passages": [
+    { "id": "bluewing-status-zh-01", "text": "因馬達供應商交期延遲，青翼桌上市時間延後至 2026 年第三季。" },
+    { "id": "bluewing-status-zh-02", "text": "控制面板已完成第二版原型，周大衛將在六月進行使用者測試。" }
+  ]
+}

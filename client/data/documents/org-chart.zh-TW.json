@@ -1,0 +1,17 @@
+{
+  "id": "org-chart-zh",
+  "title": "組織與主管名單",
+  "language": "zh-TW",
+  "date": "2026-01-12",
+  "visibility": "internal",
+  "passages": [
+    { "id": "org-chart-zh-01", "text": "產品研發部由王小明擔任經理，成員包括設計師周大衛與工程師林志明。" },
+    { "id": "org-chart-zh-02", "text": "營運部由張雅婷擔任經理，黃建宏擔任倉儲主管。" },
+    { "id": "org-chart-zh-03", "text": "業務部由李佳穎擔任經理，業務代表林志明負責北區客戶。" },
+    {
+      "id": "org-chart-zh-04",
+      "text": "公司有兩位同名的林志明：一位是產品研發部的工程師，一位是業務部的業務代表。寄信或交辦工作時請註明部門。"
+    },
+    { "id": "org-chart-zh-05", "text": "長堤專案期間，黃建宏每週撥出兩天支援新倉儲系統的導入。", "project": "longpier" }
+  ]
+}

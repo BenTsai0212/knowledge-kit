@@ -1,0 +1,12 @@
+{
+  "id": "info-security-zh",
+  "title": "資訊安全規定",
+  "language": "zh-TW",
+  "date": "2026-02-02",
+  "visibility": "internal",
+  "passages": [
+    { "id": "info-security-zh-01", "text": "公司筆電須開啟磁碟加密，離開座位時必須鎖定螢幕。" },
+    { "id": "info-security-zh-02", "text": "客戶資料只能存放在公司核准的雲端空間，不得以個人信箱或通訊軟體傳送。" },
+    { "id": "info-security-zh-03", "text": "發現可疑郵件或帳號異常時，請立即通報資訊組，不要點擊郵件中的連結。" }
+  ]
+}

@@ -21,7 +21,7 @@ describe("seedDataset", () => {
     await db.close();
     expect(rows.documents).toBe(Object.keys(dataset.documents).length);
     expect(rows.passage).toMatchObject({ ordinal: 3, language: "en", visibility_level_id: "public", project_id: null });
-    expect(rows.passage.content).toContain("Meiling Chen");
+    expect(rows.passage.content).toContain("Yizhen Wu");
     expect(rows.relationSources).toBe(dataset.relations.relations.reduce((n, r) => n + r.sources.length, 0));
   });
 
