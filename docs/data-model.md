@@ -16,11 +16,14 @@ PGlite 的 session user 固定是 superuser `postgres`。以 `username: "kk_app"
 - `SET ROLE postgres`
 - `SET SESSION AUTHORIZATION postgres`
 
+在 `kk_app` 的交易內也一樣：除了上述語句，`set_config('role', 'postgres', …)` 與 `set_config('session_authorization', 'postgres', …)` 等同 `SET ROLE`／`SET SESSION AUTHORIZATION`，同樣能回到 superuser（`app/tests/db/security.test.ts` 實測）。
+
 所以 app 的查詢改成在每個交易開頭 `SET LOCAL ROLE kk_app`（#6 決定 2 的選項 B）。限制與防範：
 
-- 拿到交易的程式若執行 `RESET ROLE` 等語句，就能繞過 RLS。
+- 拿到交易的程式若執行 `RESET ROLE`、以 `set_config` 設定 `role`／`session_authorization` 等，就能繞過 RLS。
 - 防範一：資料層只匯出 `withIdentity()`，不匯出 PGlite 本身。
-- 防範二：`app/tests/db/forbidden-sql.test.ts` 檢查 `app/src/` 中除了 `app/src/db/database.ts` 以外，都沒有出現 `SET ROLE`、`SET LOCAL ROLE`、`RESET ROLE`、`SET SESSION AUTHORIZATION`、`row_security`。
+- 防範二：`app/tests/db/forbidden-sql.test.ts` 檢查 `app/src/` 中除了 `app/src/db/database.ts` 以外，都沒有出現 `SET ROLE`、`SET LOCAL ROLE`、`RESET ROLE`、`SET SESSION AUTHORIZATION`、`row_security`，以及以 `set_config` 設定 `role` 或 `session_authorization` 的寫法（不分大小寫、允許空白）。
+- 檢查的是程式文字，設定名稱以變數或參數傳入時抓不到（例如 `set_config($1, …)`）；這類寫法同樣只能出現在 `database.ts`，靠審查把關。
 - `app/tests/db/security.test.ts` 的「已知限制」測試記錄這個行為；PGlite 改變行為時，該測試會失敗，提醒更新本節。
 
 ## 資料庫角色

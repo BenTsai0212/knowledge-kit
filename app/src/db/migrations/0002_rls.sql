@@ -49,46 +49,47 @@ ALTER TABLE kk.entity_sources FORCE ROW LEVEL SECURITY;
 ALTER TABLE kk.relations FORCE ROW LEVEL SECURITY;
 ALTER TABLE kk.relation_sources FORCE ROW LEVEL SECURITY;
 
+-- policy 中的欄位一律加上表名：子查詢的表日後新增同名欄位時，比對對象才不會悄悄改變
 CREATE POLICY own_identity ON kk.identities FOR SELECT TO kk_app
-  USING (id = kk.current_identity_id());
+  USING (identities.id = kk.current_identity_id());
 
 CREATE POLICY own_identity ON kk.identity_projects FOR SELECT TO kk_app
-  USING (identity_id = kk.current_identity_id());
+  USING (identity_projects.identity_id = kk.current_identity_id());
 
 -- 名單本身不是機密：有身分時全部看得到
 CREATE POLICY has_identity ON kk.visibility_levels FOR SELECT TO kk_app
-  USING (EXISTS (SELECT 1 FROM kk.identities WHERE id = kk.current_identity_id()));
+  USING (EXISTS (SELECT 1 FROM kk.identities i WHERE i.id = kk.current_identity_id()));
 
 CREATE POLICY has_identity ON kk.projects FOR SELECT TO kk_app
-  USING (EXISTS (SELECT 1 FROM kk.identities WHERE id = kk.current_identity_id()));
+  USING (EXISTS (SELECT 1 FROM kk.identities i WHERE i.id = kk.current_identity_id()));
 
 CREATE POLICY can_see ON kk.documents FOR SELECT TO kk_app
-  USING (kk.can_see(visibility_level_id, project_id));
+  USING (kk.can_see(documents.visibility_level_id, documents.project_id));
 
 -- 段落：自己看得到，且所屬文件看得到（documents 的 RLS 在子查詢中同樣生效）
 CREATE POLICY can_see ON kk.passages FOR SELECT TO kk_app
   USING (
-    kk.can_see(visibility_level_id, project_id)
-    AND EXISTS (SELECT 1 FROM kk.documents d WHERE d.id = document_id)
+    kk.can_see(passages.visibility_level_id, passages.project_id)
+    AND EXISTS (SELECT 1 FROM kk.documents d WHERE d.id = passages.document_id)
   );
 
 -- 出處：出處段落看得到
 CREATE POLICY can_see ON kk.entity_sources FOR SELECT TO kk_app
-  USING (EXISTS (SELECT 1 FROM kk.passages p WHERE p.id = passage_id));
+  USING (EXISTS (SELECT 1 FROM kk.passages p WHERE p.id = entity_sources.passage_id));
 
 CREATE POLICY can_see ON kk.relation_sources FOR SELECT TO kk_app
-  USING (EXISTS (SELECT 1 FROM kk.passages p WHERE p.id = passage_id));
+  USING (EXISTS (SELECT 1 FROM kk.passages p WHERE p.id = relation_sources.passage_id));
 
 -- 實體：至少一個出處看得到；沒有出處的實體沒有人看得到
 CREATE POLICY can_see ON kk.entities FOR SELECT TO kk_app
-  USING (EXISTS (SELECT 1 FROM kk.entity_sources s WHERE s.entity_id = id));
+  USING (EXISTS (SELECT 1 FROM kk.entity_sources s WHERE s.entity_id = entities.id));
 
 -- 關係：至少一個出處看得到，且兩端的實體都看得到
 CREATE POLICY can_see ON kk.relations FOR SELECT TO kk_app
   USING (
-    EXISTS (SELECT 1 FROM kk.relation_sources s WHERE s.relation_id = id)
-    AND EXISTS (SELECT 1 FROM kk.entities e WHERE e.id = from_entity_id)
-    AND EXISTS (SELECT 1 FROM kk.entities e WHERE e.id = to_entity_id)
+    EXISTS (SELECT 1 FROM kk.relation_sources s WHERE s.relation_id = relations.id)
+    AND EXISTS (SELECT 1 FROM kk.entities e WHERE e.id = relations.from_entity_id)
+    AND EXISTS (SELECT 1 FROM kk.entities e WHERE e.id = relations.to_entity_id)
   );
 
 GRANT USAGE ON SCHEMA kk TO kk_app;

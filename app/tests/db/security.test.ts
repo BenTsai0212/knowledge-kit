@@ -44,11 +44,15 @@ describe("kk_app 無法關閉 RLS", () => {
 });
 
 describe("已知限制（選項 B）", () => {
-  // PGlite 的 session user 是 superuser，RESET ROLE 能回到 superuser 而繞過 RLS。
+  // PGlite 的 session user 是 superuser，RESET ROLE 或以 set_config 設定 role、session_authorization 都能回到 superuser 而繞過 RLS。
   // 這由 forbidden-sql.test.ts 禁止 app/src/ 寫入這類語句來防範；本測試在 PGlite 行為改變時提醒更新文件。
-  it("RESET ROLE 會回到 superuser", async () => {
+  it.each([
+    ["RESET ROLE", "RESET ROLE"],
+    ["set_config('role', …)", "SELECT set_config('role', 'postgres', true)"],
+    ["set_config('session_authorization', …)", "SELECT set_config('session_authorization', 'postgres', true)"],
+  ])("%s 會回到 superuser", async (_name, sql) => {
     const row = await db.withIdentity("guest", async (tx) => {
-      await tx.exec("RESET ROLE");
+      await tx.exec(sql);
       return (await tx.query<{ me: string; n: number }>("SELECT current_user AS me, (SELECT count(*)::int FROM kk.documents) AS n")).rows[0];
     });
     expect(row).toEqual({ me: "postgres", n: 2 });

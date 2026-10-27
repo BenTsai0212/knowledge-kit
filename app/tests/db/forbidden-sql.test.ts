@@ -9,6 +9,8 @@ const FORBIDDEN = [
   /\bRESET\s+ROLE\b/i,
   /\bSET\s+(LOCAL\s+|SESSION\s+)?SESSION\s+AUTHORIZATION\b/i,
   /\brow_security\b/i,
+  // set_config('role', …) 與 set_config('session_authorization', …) 等同 SET ROLE／SET SESSION AUTHORIZATION
+  /\bset_config\s*\(\s*['"`]\s*(role|session_authorization)\s*['"`]/i,
 ];
 
 const violations = (text: string) => FORBIDDEN.filter((re) => re.test(text)).map(String);
@@ -19,6 +21,11 @@ describe("app/src/ 不得切換資料庫角色或關閉 RLS", () => {
     expect(violations("SET LOCAL ROLE kk_owner")).toHaveLength(1);
     expect(violations("set session authorization postgres")).toHaveLength(1);
     expect(violations("SET row_security = off")).toHaveLength(1);
+    expect(violations("SELECT set_config('role', 'postgres', true)")).toHaveLength(1);
+    expect(violations("select SET_CONFIG ( ' Role ' , 'postgres', false)")).toHaveLength(1);
+    expect(violations("SELECT set_config('session_authorization', 'postgres', false)")).toHaveLength(1);
+    expect(violations('tx.query(`select set_config( "session_authorization", $1, true)`)')).toHaveLength(1);
+    expect(violations("SELECT set_config('kk.identity_id', $1, true)")).toEqual([]);
     expect(violations("ALTER TABLE kk.t FORCE ROW LEVEL SECURITY")).toEqual([]);
   });
 

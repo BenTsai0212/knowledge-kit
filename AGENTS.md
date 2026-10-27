@@ -67,7 +67,7 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 - 營運開關（feature flag）預設關閉。〔modules.md 高風險｜不刪〕
 - 不修改已套用（已合併到 main）的 migration，改動一律新增 migration；`migrate.ts` 比對 checksum。〔modules.md 高風險｜不刪〕
 - migration 不隨部署自動套用到持久化的資料庫（伺服器端或 `idb://` 等會保留資料的儲存）；瀏覽器記憶體資料庫在載入時從 migration 重建，不在此限。〔modules.md 高風險｜第 3 階段正式系統上線後重新檢討〕
-- 切換資料庫角色或關閉 RLS 的語句（`SET ROLE`、`RESET ROLE`、`SET SESSION AUTHORIZATION`、`row_security`）只寫在 `app/src/db/database.ts`。〔PGlite 的 session user 是 superuser，這類語句能繞過 RLS（#6 決定 2）｜PGlite 能以非 superuser 連線後〕
+- 切換資料庫角色或關閉 RLS 的語句（`SET ROLE`、`RESET ROLE`、`SET SESSION AUTHORIZATION`、`row_security`、以 `set_config` 設定 `role`／`session_authorization`）只寫在 `app/src/db/database.ts`。〔PGlite 的 session user 是 superuser，這類語句能繞過 RLS（#6 決定 2）｜PGlite 能以非 superuser 連線後〕
 - 不宣稱未執行的檢查已通過；無法執行時寫明原因，以 CI 為準。〔agent 曾在本機無法執行檢查｜CI 成為唯一判準後〕
 - 同一個錯誤修三次仍未解決就停止並回報。〔避免無限重試｜不刪〕
 - 停止時在 PR（沒有 PR 時在 Issue）留言回報、加上 `blocked`、@ 決定者；只把加上 `blocked` 之後以 `## 決定` 開頭的留言視為人的決定。〔只在本機回覆時決定會被漏看｜不刪〕
