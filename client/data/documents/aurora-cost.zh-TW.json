@@ -1,0 +1,12 @@
+{
+  "id": "aurora-cost-zh",
+  "title": "極光桌成本估算",
+  "language": "zh-TW",
+  "date": "2026-03-15",
+  "visibility": "confidential",
+  "project": "aurora",
+  "passages": [
+    { "id": "aurora-cost-zh-01", "text": "極光桌單台材料成本估計為新台幣 8,500 元，雙馬達約占 40%。" },
+    { "id": "aurora-cost-zh-02", "text": "建議售價為新台幣 19,900 元，首年目標銷售 3,000 台。" }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "id": "aurora-spec-en",
+  "title": "Aurora Desk Specification",
+  "language": "en",
+  "date": "2026-03-03",
+  "visibility": "internal",
+  "project": "aurora",
+  "passages": [
+    { "id": "aurora-spec-en-01", "text": "The Aurora desk adjusts from 65 cm to 125 cm and stores up to four height presets." },
+    { "id": "aurora-spec-en-02", "text": "Ming Wang approved a dual-motor design so the desk can carry up to 120 kg." },
+    { "id": "aurora-spec-en-03", "text": "David Chou is designing the control panel, which uses a single knob instead of buttons." }
+  ]
+}

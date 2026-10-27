@@ -1,0 +1,12 @@
+{
+  "id": "aurora-press-en",
+  "title": "Example Co. Introduces the Aurora Adjustable Desk",
+  "language": "en",
+  "date": "2026-06-01",
+  "visibility": "public",
+  "project": "aurora",
+  "passages": [
+    { "id": "aurora-press-en-01", "text": "Example Co. today introduced Aurora, an adjustable desk with a single-knob control panel." },
+    { "id": "aurora-press-en-02", "text": "Aurora will be available to business customers later this year." }
+  ]
+}

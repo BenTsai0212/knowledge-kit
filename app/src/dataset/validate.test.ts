@@ -73,30 +73,35 @@ describe("validateDataset", () => {
         path: "/passages/0/id",
         message: "段落 id employee-handbook-zh-01 與 data/documents/employee-handbook.en.json 重複",
       },
-      { file: "data/entities.json", path: `/entities/${last(data.entities.entities)}/id`, message: "實體 id team-people 重複" },
+      {
+        file: "data/entities.json",
+        path: `/entities/${last(data.entities.entities)}/id`,
+        message: `實體 id ${data.entities.entities[0].id} 重複`,
+      },
       {
         file: "data/relations.json",
         path: `/relations/${last(data.relations.relations)}/id`,
-        message: "關係 id chen-meiling-member-of-people 重複",
+        message: `關係 id ${data.relations.relations[0].id} 重複`,
       },
     ]);
   });
 
   it("實體與關係的類型必須存在，關係的兩端必須符合關係類型", () => {
     const { config, data } = copy();
-    data.entities.entities.push({ id: "vendor-x", type: "vendor", name: "x", sources: ["employee-handbook-zh-01"] });
+    const e = data.entities.entities.push({ id: "vendor-x", type: "vendor", name: "x", sources: ["employee-handbook-zh-01"] }) - 1;
+    const r = data.relations.relations.length;
     data.relations.relations.push(
-      { id: "r-bad-type", type: "reports-to", from: "person-chen-meiling", to: "team-people", sources: ["employee-handbook-zh-04"] },
+      { id: "r-bad-type", type: "reports-to", from: "person-wu-yizhen", to: "team-people", sources: ["employee-handbook-zh-04"] },
       // member-of 只接受 person → team
-      { id: "r-reversed", type: "member-of", from: "team-people", to: "person-chen-meiling", sources: ["employee-handbook-zh-04"] },
+      { id: "r-reversed", type: "member-of", from: "team-people", to: "person-wu-yizhen", sources: ["employee-handbook-zh-04"] },
       { id: "r-missing", type: "member-of", from: "person-nobody", to: "team-people", sources: ["employee-handbook-zh-04"] },
     );
     expect(validateDataset(config, data)).toEqual([
-      { file: "data/entities.json", path: "/entities/2/type", message: "實體類型 vendor 不存在於 knowledge-model.json" },
-      { file: "data/relations.json", path: "/relations/1/type", message: "關係類型 reports-to 不存在於 knowledge-model.json" },
-      { file: "data/relations.json", path: "/relations/2/from", message: "member-of 的 from 不接受實體類型 team" },
-      { file: "data/relations.json", path: "/relations/2/to", message: "member-of 的 to 不接受實體類型 person" },
-      { file: "data/relations.json", path: "/relations/3/from", message: "實體 person-nobody 不存在" },
+      { file: "data/entities.json", path: `/entities/${e}/type`, message: "實體類型 vendor 不存在於 knowledge-model.json" },
+      { file: "data/relations.json", path: `/relations/${r}/type`, message: "關係類型 reports-to 不存在於 knowledge-model.json" },
+      { file: "data/relations.json", path: `/relations/${r + 1}/from`, message: "member-of 的 from 不接受實體類型 team" },
+      { file: "data/relations.json", path: `/relations/${r + 1}/to`, message: "member-of 的 to 不接受實體類型 person" },
+      { file: "data/relations.json", path: `/relations/${r + 2}/from`, message: "實體 person-nobody 不存在" },
     ]);
   });
 

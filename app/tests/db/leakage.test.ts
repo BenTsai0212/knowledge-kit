@@ -3,7 +3,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { clientConfig } from "../../src/client/load";
 import { openDatabase, type Database } from "../../src/db/database";
-import { expectedVisible, KEY_SQL, TABLE_KEYS, type Visible } from "./oracle";
+import { diff, queryVisible } from "./matrix";
+import { expectedVisible, KEY_SQL, TABLE_KEYS } from "./oracle";
 import { sample, seedSample } from "./sample";
 
 const access = clientConfig.access;
@@ -18,28 +19,7 @@ afterAll(async () => {
   await db.close();
 });
 
-async function actualVisible(identityId: string | null): Promise<Visible> {
-  return db.withIdentity(identityId, async (tx) => {
-    const out: Visible = {};
-    for (const table of TABLE_KEYS) {
-      const rows = await tx.query<{ k: string }>(`SELECT ${KEY_SQL[table]} AS k FROM kk.${table}`);
-      out[table] = rows.rows.map((r) => r.k);
-    }
-    return out;
-  });
-}
-
-function diff(actual: Visible, expected: Visible) {
-  return TABLE_KEYS.map((table) => {
-    const a = new Set(actual[table]);
-    const e = new Set(expected[table]);
-    return {
-      table,
-      leaked: [...a].filter((k) => !e.has(k)),
-      missing: [...e].filter((k) => !a.has(k)),
-    };
-  });
-}
+const actualVisible = (identityId: string | null) => queryVisible(db, identityId);
 
 describe("滲漏矩陣", () => {
   it("每個身分 × 每張表：滲漏 0、漏看 0", async () => {

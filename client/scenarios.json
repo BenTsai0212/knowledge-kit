@@ -1,9 +1,22 @@
 {
   "scenarios": [
     {
+      "id": "visitor",
+      "title": { "zh-TW": "訪客", "en": "Visitor" },
+      "description": { "zh-TW": "以訪客身分只能看到公開資訊", "en": "Visitors can only see public information" },
+      "role": "guest",
+      "questions": [
+        {
+          "id": "company-teams",
+          "text": { "zh-TW": "範例公司有哪些部門？", "en": "What departments does Example Co. have?" },
+          "answerPassages": ["employee-handbook-zh-01", "employee-handbook-en-01"]
+        }
+      ]
+    },
+    {
       "id": "staff-onboarding",
       "title": { "zh-TW": "新進員工查詢", "en": "New staff questions" },
-      "description": { "zh-TW": "以一般員工身分查詢公司規定與部門資訊", "en": "Ask about company policies and teams as a staff member" },
+      "description": { "zh-TW": "以一般員工身分查詢公司規定與極光專案", "en": "Ask about company policies and Project Aurora as a staff member" },
       "role": "staff",
       "questions": [
         {
@@ -15,18 +28,34 @@
           "id": "annual-leave",
           "text": { "zh-TW": "到職滿一年有幾天年假？", "en": "How many days of annual leave do I get after one year?" },
           "answerPassages": ["employee-handbook-zh-03", "employee-handbook-en-03"]
+        },
+        {
+          "id": "aurora-lead",
+          "text": { "zh-TW": "極光專案的負責人是誰？", "en": "Who leads Project Aurora?" },
+          "answerPassages": ["aurora-kickoff-zh-01"]
+        },
+        {
+          "id": "aurora-launch",
+          "text": { "zh-TW": "極光桌預計什麼時候上市？", "en": "When will the Aurora desk launch?" },
+          "answerPassages": ["aurora-kickoff-zh-02", "aurora-status-zh-01"]
         }
       ]
     },
     {
       "id": "manager-overview",
       "title": { "zh-TW": "主管總覽", "en": "Manager overview" },
+      "description": { "zh-TW": "以主管身分查詢專案進度與機密資訊", "en": "Check project status and confidential information as a manager" },
       "role": "manager",
       "questions": [
         {
-          "id": "office-hours",
-          "text": { "zh-TW": "公司的上班時間是幾點到幾點？", "en": "What are the office hours?" },
-          "answerPassages": ["employee-handbook-zh-02", "employee-handbook-en-02"]
+          "id": "harbor-status",
+          "text": { "zh-TW": "港灣專案目前的進度如何？", "en": "What is the status of Project Harbor?" },
+          "answerPassages": ["harbor-progress-zh-01"]
+        },
+        {
+          "id": "raise-2026",
+          "text": { "zh-TW": "2026 年平均調薪幅度是多少？", "en": "What is the average raise for 2026?" },
+          "answerPassages": ["reorg-2026-zh-02"]
         }
       ]
     }

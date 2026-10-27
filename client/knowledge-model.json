@@ -20,6 +20,7 @@
   ],
   "relationTypes": [
     { "id": "member-of", "label": { "zh-TW": "隸屬", "en": "Member of" }, "from": ["person"], "to": ["team"] },
-    { "id": "works-on", "label": { "zh-TW": "參與", "en": "Works on" }, "from": ["person", "team"], "to": ["project"] }
+    { "id": "works-on", "label": { "zh-TW": "參與", "en": "Works on" }, "from": ["person", "team"], "to": ["project"] },
+    { "id": "leads", "label": { "zh-TW": "負責", "en": "Leads" }, "from": ["person"], "to": ["team", "project"] }
   ]
 }

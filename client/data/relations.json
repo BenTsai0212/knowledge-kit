@@ -1,11 +1,137 @@
 {
   "relations": [
     {
-      "id": "chen-meiling-member-of-people",
+      "id": "wang-member-of-rd",
       "type": "member-of",
-      "from": "person-chen-meiling",
+      "from": "person-wang-xiaoming",
+      "to": "team-rd",
+      "sources": ["org-chart-zh-01"]
+    },
+    {
+      "id": "zhou-member-of-rd",
+      "type": "member-of",
+      "from": "person-zhou-dawei",
+      "to": "team-rd",
+      "sources": ["org-chart-zh-01"]
+    },
+    {
+      "id": "lin-rd-member-of-rd",
+      "type": "member-of",
+      "from": "person-lin-zhiming-rd",
+      "to": "team-rd",
+      "sources": ["org-chart-zh-01", "org-chart-zh-04"]
+    },
+    {
+      "id": "lin-sales-member-of-sales",
+      "type": "member-of",
+      "from": "person-lin-zhiming-sales",
+      "to": "team-sales",
+      "sources": ["org-chart-zh-03", "org-chart-zh-04", "sales-weekly-en-02"]
+    },
+    {
+      "id": "wu-yizhen-member-of-people",
+      "type": "member-of",
+      "from": "person-wu-yizhen",
       "to": "team-people",
       "sources": ["employee-handbook-zh-04", "employee-handbook-en-04"]
+    },
+    {
+      "id": "zhang-member-of-ops",
+      "type": "member-of",
+      "from": "person-zhang-yating",
+      "to": "team-ops",
+      "sources": ["org-chart-zh-02"]
+    },
+    {
+      "id": "huang-member-of-ops",
+      "type": "member-of",
+      "from": "person-huang-jianhong",
+      "to": "team-ops",
+      "sources": ["org-chart-zh-02"]
+    },
+    {
+      "id": "li-member-of-sales",
+      "type": "member-of",
+      "from": "person-li-jiaying",
+      "to": "team-sales",
+      "sources": ["org-chart-zh-03"]
+    },
+    {
+      "id": "wang-leads-rd",
+      "type": "leads",
+      "from": "person-wang-xiaoming",
+      "to": "team-rd",
+      "sources": ["org-chart-zh-01"]
+    },
+    {
+      "id": "wu-leads-people",
+      "type": "leads",
+      "from": "person-wu-yizhen",
+      "to": "team-people",
+      "sources": ["employee-handbook-zh-04", "employee-handbook-en-04"]
+    },
+    {
+      "id": "zhang-leads-ops",
+      "type": "leads",
+      "from": "person-zhang-yating",
+      "to": "team-ops",
+      "sources": ["org-chart-zh-02"]
+    },
+    {
+      "id": "li-leads-sales",
+      "type": "leads",
+      "from": "person-li-jiaying",
+      "to": "team-sales",
+      "sources": ["org-chart-zh-03"]
+    },
+    {
+      "id": "wang-leads-aurora",
+      "type": "leads",
+      "from": "person-wang-xiaoming",
+      "to": "project-aurora",
+      "sources": ["aurora-kickoff-zh-01"]
+    },
+    {
+      "id": "zhang-leads-harbor",
+      "type": "leads",
+      "from": "person-zhang-yating",
+      "to": "project-harbor",
+      "sources": ["harbor-progress-zh-01"]
+    },
+    {
+      "id": "zhou-works-on-aurora",
+      "type": "works-on",
+      "from": "person-zhou-dawei",
+      "to": "project-aurora",
+      "sources": ["aurora-kickoff-zh-01", "aurora-spec-en-03"]
+    },
+    {
+      "id": "lin-rd-works-on-aurora",
+      "type": "works-on",
+      "from": "person-lin-zhiming-rd",
+      "to": "project-aurora",
+      "sources": ["aurora-kickoff-zh-01"]
+    },
+    {
+      "id": "huang-works-on-harbor",
+      "type": "works-on",
+      "from": "person-huang-jianhong",
+      "to": "project-harbor",
+      "sources": ["org-chart-zh-05", "harbor-progress-zh-02"]
+    },
+    {
+      "id": "rd-works-on-aurora",
+      "type": "works-on",
+      "from": "team-rd",
+      "to": "project-aurora",
+      "sources": ["aurora-kickoff-zh-01"]
+    },
+    {
+      "id": "ops-works-on-harbor",
+      "type": "works-on",
+      "from": "team-ops",
+      "to": "project-harbor",
+      "sources": ["harbor-progress-zh-01"]
     }
   ]
 }
