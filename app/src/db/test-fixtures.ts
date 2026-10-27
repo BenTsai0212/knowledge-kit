@@ -17,8 +17,8 @@ export async function seedBasic(db: PGliteInterface): Promise<void> {
       ('e-aurora', 'p-aurora-0');
     INSERT INTO kk.relations (id, relation_type, from_entity_id, to_entity_id) VALUES
       ('r-wang-aurora', 'works-on', 'e-wang', 'e-aurora');
-    INSERT INTO kk.relation_sources (relation_id, passage_id) VALUES
-      ('r-wang-aurora', 'p-aurora-0');
+    INSERT INTO kk.relation_sources (relation_id, passage_id, from_entity_id, to_entity_id) VALUES
+      ('r-wang-aurora', 'p-aurora-0', 'e-wang', 'e-aurora');
   `);
 }
 

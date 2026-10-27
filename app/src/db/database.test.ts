@@ -19,7 +19,7 @@ const count = (identity: string | null, table: string) =>
 
 describe("結構", () => {
   it("migration 依檔名順序載入", () => {
-    expect(migrations.map((m) => m.version)).toEqual(["0001_schema", "0002_rls"]);
+    expect(migrations.map((m) => m.version)).toEqual(["0001_schema", "0002_rls", "0003_relation_sources_endpoints"]);
   });
 
   it("通用資料表與欄位存在", async () => {

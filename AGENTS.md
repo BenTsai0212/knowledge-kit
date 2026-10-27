@@ -90,7 +90,7 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 
 <!-- 本專案實際踩到的坑才寫進來，附來源。 -->
 
-（尚無）
+- Vitest 的 `fsModuleCache`（預設開啟）會沿用舊的 `import.meta.glob` 結果：新增 `app/src/db/migrations/*.sql` 後，本機測試不會載入新檔，可能誤判通過。`vitest.config.ts` 已設 `fsModuleCache: false`，不要移除。〔#6 PR 2 以暫時的 migration 驗證滲漏測試時發現｜Vitest 修正快取失效後〕
 
 ## 8. 維護本文件
 

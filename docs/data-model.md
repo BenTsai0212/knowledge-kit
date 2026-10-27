@@ -72,7 +72,7 @@ PGlite 的 session user 固定是 superuser `postgres`。以 `username: "kk_app"
 | `entities` | `id` PK、`entity_type`、`name` | 萃取或資料集 |
 | `entity_sources` | `entity_id`、`passage_id`（出處，合為 PK） | 同上 |
 | `relations` | `id` PK、`relation_type`、`from_entity_id`、`to_entity_id` | 同上 |
-| `relation_sources` | `relation_id`、`passage_id`（出處，合為 PK） | 同上 |
+| `relation_sources` | `relation_id`、`passage_id`（出處，合為 PK）、`from_entity_id`、`to_entity_id`（與關係的兩端相同，以複合外鍵參照 `relations (id, from_entity_id, to_entity_id)` 確保一致） | 同上 |
 
 - id 一律 `text`；`client/` 的名單沿用設定中的 id。
 - `language` 以 CHECK 限制為語言代碼格式；「必須屬於 `client.json` 的 `languages`」由匯入程式檢查。
@@ -97,13 +97,38 @@ PGlite 的 session user 固定是 superuser `postgres`。以 `username: "kk_app"
 | --- | --- |
 | `documents` | `can_see(visibility_level_id, project_id)` |
 | `passages` | 自己的 `can_see(...)`，且所屬文件看得到 |
-| `entity_sources`、`relation_sources` | 出處段落看得到 |
+| `entity_sources` | 出處段落看得到 |
+| `relation_sources` | 出處段落看得到，且兩端的實體都看得到 |
 | `entities` | 至少一個出處看得到。**沒有出處的實體沒有人看得到** |
 | `relations` | 至少一個出處看得到，且兩端的實體都看得到 |
 | `identities`、`identity_projects` | 只有自己這一列 |
 | `visibility_levels`、`projects` | 有身分時全部看得到（名單本身不是機密） |
 
 policy 中的子查詢同樣受 RLS 限制，所以「段落看得到」已包含「文件看得到」，依此類推。
+
+### 為什麼 `relation_sources` 帶上兩端實體
+
+關係被隱藏時（一端的實體看不到），它的出處列也必須看不到，否則會露出關係的 id。
+
+- `relations` 的 policy 會查 `relation_sources`。若 `relation_sources` 的 policy 反過來查 `relations`，兩個 policy 互相參照，PostgreSQL 會報 infinite recursion。
+- 所以 `relation_sources` 帶上兩端的實體 id，policy 只查 `passages` 與 `entities`（`0003_relation_sources_endpoints.sql`）。
+- 兩端的值由複合外鍵保證與 `relations` 一致。
+- `entity_sources` 不需要這樣做：實體只要有一個出處看得到就看得到，所以看得到的出處列一定對應到看得到的實體。
+
+## 越權測試（滲漏矩陣）
+
+`app/tests/db/leakage.test.ts` 用 `app/tests/db/sample.ts` 的最小虛構資料：
+
+- 每種「可見等級 × 專案（含沒有專案）」各一份文件
+- 比文件更機密的段落、比文件寬鬆的段落、與文件不同專案的段落
+- 只有機密出處的實體、沒有出處的實體與關係、一端看不到的關係
+
+`app/tests/db/oracle.ts` 以 TypeScript 獨立實作本文件的權限規則，算出每個身分「應該看得到」的列，再與 SQL 的結果逐表比對：
+
+- **滲漏**：查得到但不該看到的列，必須為 0
+- **漏看**：該看到卻查不到的列，也必須為 0，避免以「全部擋掉」通過
+
+比對的身分包括 `client/access.json` 的所有角色、沒有身分、不存在的身分；也測試依序切換身分，以及同時進行的不同身分查詢。改權限規則時，SQL（新的 migration）、`oracle.ts` 與本文件要一起改。
 
 ## 擴充
 
