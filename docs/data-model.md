@@ -105,6 +105,29 @@ PGlite 的 session user 固定是 superuser `postgres`。以 `username: "kk_app"
 
 policy 中的子查詢同樣受 RLS 限制，所以「段落看得到」已包含「文件看得到」，依此類推。
 
+### 已知缺口：關係的出處（待決定）
+
+`relation_sources` 只要求出處段落看得到，不要求關係本身看得到。所以關係因為一端的實體看不到而被隱藏時，它的出處列仍然看得到，露出關係的 id（但看不到關係的類型與兩端）。
+
+- 這是 #6 計畫核准的規則本身的行為；`app/tests/db/leakage.test.ts` 的「已知缺口」測試記錄這個行為
+- 修正方式：新增 migration，把 `relation_sources` 的 policy 改成「關係看得到」，並同步修改 `oracle.ts`；`0002_rls.sql` 已合併，不修改
+- `entity_sources` 沒有這個問題：實體只要有一個出處看得到就看得到，所以看得到的出處列一定對應到看得到的實體
+
+## 越權測試（滲漏矩陣）
+
+`app/tests/db/leakage.test.ts` 用 `app/tests/db/sample.ts` 的最小虛構資料：
+
+- 每種「可見等級 × 專案（含沒有專案）」各一份文件
+- 比文件更機密的段落、比文件寬鬆的段落、與文件不同專案的段落
+- 只有機密出處的實體、沒有出處的實體與關係、一端看不到的關係
+
+`app/tests/db/oracle.ts` 以 TypeScript 獨立實作本文件的權限規則，算出每個身分「應該看得到」的列，再與 SQL 的結果逐表比對：
+
+- **滲漏**：查得到但不該看到的列，必須為 0
+- **漏看**：該看到卻查不到的列，也必須為 0，避免以「全部擋掉」通過
+
+比對的身分包括 `client/access.json` 的所有角色、沒有身分、不存在的身分；也測試依序切換身分，以及同時進行的不同身分查詢。改權限規則時，SQL（新的 migration）、`oracle.ts` 與本文件要一起改。
+
 ## 擴充
 
 - 新增資料表：在新的 migration 中同時 `ENABLE`、`FORCE ROW LEVEL SECURITY`，加上 policy 與 `GRANT`，並把表名加進 `app/src/db/test-fixtures.ts` 的 `KK_TABLES`。結構測試會確認 `kk` 中每張表都有 FORCE RLS。
