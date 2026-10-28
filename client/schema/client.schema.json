@@ -27,6 +27,21 @@
       "additionalProperties": false,
       "required": ["path"],
       "properties": { "path": { "$ref": "common.schema.json#/definitions/RelativePath" } }
+    },
+    "retrieval": {
+      "description": "檢索參數；省略的欄位使用預設值（docs/client-config.md）",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "description": "使用哪個 VectorProvider（app/src/retrieval/providers.ts 的 PROVIDERS）",
+          "type": "string",
+          "enum": ["keyword-hash"],
+          "default": "keyword-hash"
+        },
+        "topK": { "description": "回傳前幾名", "type": "integer", "minimum": 1, "maximum": 20, "default": 5 },
+        "minScore": { "description": "最低分數門檻，低於此分數的段落不回傳", "type": "number", "minimum": 0, "maximum": 1, "default": 0.1 }
+      }
     }
   }
 }
