@@ -3,7 +3,9 @@
 // - 上傳模組只擷取文字：不繪製 PDF 頁面，也不寫 isEvalSupported（避免誤以為有防護）；Word 只用 extractRawText
 import legacyMain from "pdfjs-dist/legacy/build/pdf.mjs?raw";
 import legacyWorker from "pdfjs-dist/legacy/build/pdf.worker.mjs?raw";
+import mainMin from "pdfjs-dist/build/pdf.min.mjs?raw";
 import main from "pdfjs-dist/build/pdf.mjs?raw";
+import workerMin from "pdfjs-dist/build/pdf.worker.min.mjs?raw";
 import worker from "pdfjs-dist/build/pdf.worker.mjs?raw";
 import { describe, expect, it } from "vitest";
 
@@ -36,6 +38,9 @@ describe("PDF.js 沒有 eval 路徑", () => {
   it.each([
     ["build/pdf.mjs", main, false],
     ["build/pdf.worker.mjs", worker, false],
+    // pdf.ts 實際載入、送到瀏覽器的 worker（#40 審查）
+    ["build/pdf.worker.min.mjs", workerMin, false],
+    ["build/pdf.min.mjs", mainMin, false],
     ["legacy/build/pdf.mjs", legacyMain, true],
     ["legacy/build/pdf.worker.mjs", legacyWorker, true],
   ])("pdfjs-dist/%s 沒有 eval 與 Function()", (_name, text, allowCoreJs) => {

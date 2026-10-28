@@ -1,0 +1,85 @@
+# 上傳文件（`app/src/upload/`）
+
+讓使用者上傳文件，切成段落寫入資料庫，依上傳時設定的可見等級與專案**立即**可被問答、時間軸與原文查到。決策紀錄見 #38；萃取實體與關係（9b）、矛盾並列（9c）不在本功能。
+
+> 上傳內容只存在瀏覽器的記憶體資料庫，**重新整理頁面就消失**；持久化留到第 3 階段。畫面上有同樣的說明。
+
+## 流程
+
+1. **選檔或貼上文字**（「上傳」頁籤，`app/src/ui/UploadPage.tsx`）：
+   - 填寫標題（選檔時預設為檔名去掉副檔名）、語言（預設為介面語言）、可見等級、專案（可無）、日期（選填）。
+   - 可選的等級與專案只列出目前身分看得到的；這只是方便選擇，能否寫入由資料庫的 RLS 決定。
+2. **預覽**：在瀏覽器中擷取純文字（`parse.ts`）並切段（`chunk.ts`），顯示段落數與前 5 段。檔案不上傳到伺服器。
+3. **上傳**：確認後以 `uploadDocument()`（`write.ts`）在一個 `withIdentity()` 交易中寫入文件與所有段落。完成後顯示段落數，並可直接到問答或時間軸查看。
+4. 上傳的段落不需要額外處理就能被檢索到：檢索的向量快取以段落 id 為鍵，新段落下次檢索時自動計算。
+
+切換身分或語言時，上傳頁重建，表單、預覽與結果都清除。
+
+## 權限
+
+- `access.json` 的角色以 `canUpload` 決定能否上傳（參考情境：訪客 `false`，一般員工、主管 `true`）。沒有 `canUpload` 的身分只看到固定說明，不顯示表單。
+- 寫入規則由 migration 0005 的 RLS 執行，見 [docs/data-model.md](data-model.md)「寫入規則」：
+  - 只能寫入自己看得到的可見等級與專案。
+  - 段落只能加在自己上傳的文件中，等級與專案與文件相同。
+  - `kk_app` 只有 `INSERT`，沒有 `UPDATE`、`DELETE`；不能修改或刪除上傳的文件。
+- 上傳後誰看得到，依既有的讀取規則決定。例如主管上傳機密文件，一般員工的檢索、問答、時間軸與原文都看不到。
+- 測試：`app/tests/upload/write.test.ts`（越權寫入）、`app/tests/upload/visibility.test.ts`（上傳後的可見範圍），都以 `app/tests/db/oracle.ts` 比對。
+
+## 格式
+
+| 格式 | 副檔名 | 擷取方式 |
+| --- | --- | --- |
+| 純文字、貼上 | `.txt` | 原文（UTF-8） |
+| Markdown | `.md`、`.markdown` | 只去掉語法符號（標題、引用、清單、分隔線、強調、行內程式碼、程式碼區塊的 fence）；連結只留文字，圖片去掉。不轉 HTML |
+| PDF | `.pdf` | `pdfjs-dist`：逐頁 `getTextContent()`，不繪製頁面；頁與頁之間以空行分隔 |
+| Word | `.docx` | `mammoth.extractRawText()`：不轉 HTML，不帶入圖片、連結、樣式 |
+
+- PDF 與 Word 的套件以動態 import 載入，只在上傳時下載；套件的選擇、安全設定與打包大小見 [ADR 0002](adr/0002-document-parsing.md)。
+- 上傳的內容在畫面上一律以文字節點顯示，不使用 `dangerouslySetInnerHTML`（`app/src/ui/effects.test.ts` 檢查）。
+
+## 切段
+
+`chunk(text, passageMaxChars)`：
+
+1. 以空行分段。段落內的換行，兩側都是漢字或全形標點時直接相連，否則換成空白。
+2. 20 字元內的段落（通常是標題）併入下一段，讓標題留在內容的段落中。
+3. 超過 `passageMaxChars` 的段落依句尾斷開：中文的「。！？」，英文的 `. ! ?` 後接空白。
+4. 單句仍超過上限時硬切。長度以字元（code point）計算。
+
+`passageMaxChars` 是 `client.json` 的 `upload.passageMaxChars`（預設 300，範圍 100～1000，見 [docs/client-config.md](client-config.md)）。300 字元約是參考資料集段落的 2～3 倍；5 段合計仍遠低於問答的 `PROMPT_CHAR_BUDGET`。
+
+## 上限
+
+| 項目 | 上限 | 超過時 |
+| --- | --- | --- |
+| 檔案大小 | 10 MB | `too_large` |
+| 擷取後的字數 | 50,000 字元 | `too_long` |
+| 段落數 | 500 段 | `too_long` |
+
+上限是 `app/src/upload/parse.ts` 的常數（保護瀏覽器，不讓客戶調整）。各種失敗都顯示固定訊息（`app/src/ui/strings.ts` 的 `uploadErrors`）：
+
+| 原因 | 情況 |
+| --- | --- |
+| `unsupported` | 不支援的副檔名 |
+| `too_large`、`too_long` | 超過上限 |
+| `empty` | 沒有任何文字 |
+| `no_text` | PDF 沒有可擷取的文字（例如掃描檔）；不做 OCR |
+| `failed` | 檔案損毀或解析失敗 |
+| `denied` | 被 RLS 拒絕（等級或專案超出權限） |
+| `invalid` | 標題為空或日期格式錯誤 |
+| `no_input` | 沒有選檔也沒有貼上文字 |
+
+## 測試
+
+- `app/tests/upload/parse.test.ts`：4 種格式、各種固定錯誤。PDF 與 .docx 在測試中產生（`app/tests/upload/fixtures.ts`，虛構內容），不提交二進位檔；Vitest 中使用 PDF.js 的 legacy 版本。
+- `app/src/upload/chunk.test.ts`、`markdown.test.ts`：切段與 Markdown。
+- `app/src/upload/structure.test.ts`：PDF.js 沒有 eval 路徑、上傳模組只擷取文字（ADR 0002）。
+- 畫面沒有自動測試（DOM 測試套件未核准），以人工驗收（#38）。
+
+## 限制
+
+- 上傳內容重新整理就消失；不能修改或刪除。
+- 複雜版面的 PDF 文字順序可能不理想；PDF 通常沒有空行，所以依句子切段。
+- 不支援圖片、表格結構與 .doc、.pptx、.xlsx 等其他格式；不做 OCR。
+- 上傳的文件不會產生實體與關係，所以不出現在圖譜中（萃取在 9b）。
+- 時間軸只列出介面語言的文件：上傳英文文件後，要切換成英文介面才會在時間軸看到。

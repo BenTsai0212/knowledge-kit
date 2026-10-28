@@ -21,8 +21,8 @@
 
 - **PDF**：只呼叫取得文字內容的 API（`getTextContent`），不繪製頁面。
   - pdfjs-dist 6.x 已移除 CVE-2024-4367 所在的 eval 路徑與 `isEvalSupported` 選項，以結構測試確認（#38 決定）：
-    - `app/src/upload/structure.test.ts` 掃描安裝的 `build/pdf.mjs`、`build/pdf.worker.mjs`、`legacy/build/pdf.mjs`、`legacy/build/pdf.worker.mjs`，確認沒有 `eval(` 與 `Function(`；之後升級到重新加入 eval 的版本時，CI 失敗。
-    - legacy 版內含 core-js 的 `globalThis` 後備寫法 `Function('return this')()`（固定字串，不是字型路徑），只放行這一段完全相同的寫法；瀏覽器使用的 `build/` 版本沒有任何例外。legacy 版只在 Vitest（Node）中使用。
+    - `app/src/upload/structure.test.ts` 掃描安裝的 `build/pdf.mjs`、`build/pdf.worker.mjs`、實際送到瀏覽器的 `build/pdf.worker.min.mjs` 與 `build/pdf.min.mjs`，以及 `legacy/build/pdf.mjs`、`legacy/build/pdf.worker.mjs`，確認沒有 `eval(` 與 `Function(`；之後升級到重新加入 eval 的版本時，CI 失敗。
+    - legacy 版內含 core-js 的 `globalThis` 後備寫法 `Function('return this')()`（固定字串，不是字型路徑），只放行這一段完全相同的寫法；瀏覽器使用的 `build/` 版本沒有任何例外。legacy 版只在 Vitest（Node）中使用。（#38 的決定原本寫「4 個檔案中都沒有 `Function(`」，legacy 版的這一處是實測後更正，決策中心同意。）
     - 上傳模組不寫 `isEvalSupported`，避免誤以為有防護。
   - 使用 PDF.js 自己的 worker，以 Vite 的 `?url` 隨 build 打包成靜態檔，由 Cloudflare 靜態檔提供，不從 CDN 載入。
 - **Word**：只用 `mammoth.extractRawText()`，不轉 HTML，不帶入圖片、連結、樣式。
