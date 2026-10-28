@@ -140,6 +140,25 @@ describe("寫入待審（上傳者）", () => {
     expect(Object.values(await queryReview(w.db, "staff")).flat()).toEqual([]);
     await w.db.close();
   });
+
+  it("待審 id 的格式：實體以 pe- 開頭、關係以 pr- 開頭，違反時被拒絕（#45 審查）", async () => {
+    const w = await setup();
+    const p = w.ds.passageIds[0];
+    const entity = (id: string) => ({ id, type: "team", names: { "zh-TW": "x", en: "x" }, sources: [p] });
+    for (const bad of ["x-1", "pr-1", "team-rd"]) {
+      await expect(writePending(w.db, "staff", w.ds.documentId, { entities: [entity(bad)], relations: [] }), bad).rejects.toMatchObject({ reason: "denied" });
+    }
+    for (const bad of ["pe-r1", "x-r1"]) {
+      await expect(
+        writePending(w.db, "staff", w.ds.documentId, {
+          entities: [entity("pe-a1"), entity("pe-b1")],
+          relations: [{ id: bad, type: "member-of", from: "pe-a1", to: "pe-b1", sources: [p] }],
+        }),
+        bad,
+      ).rejects.toMatchObject({ reason: "denied" });
+    }
+    await w.db.close();
+  });
 });
 
 describe.each([

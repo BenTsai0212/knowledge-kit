@@ -67,6 +67,7 @@ npm run check:client
 
 | 欄位 | 格式 | 預設值 | 說明 |
 | --- | --- | --- | --- |
+| `extractMaxBatches` | 整數，1～10 | 3 | 每份上傳文件最多以幾批段落呼叫模型萃取實體與關係（每批一次 `/api/ask`，計入每日次數）；超過的段落不萃取，畫面註明（[docs/extraction.md](extraction.md)） |
 | `passageMaxChars` | 整數，100～1000 | 300 | 切段時每段的字元數上限。客戶文件的寫法不同，會影響檢索，所以放在設定中。檔案大小（10 MB）、擷取後字數（50,000）、段落數（500）是保護瀏覽器的上限，固定在 `app/src/upload/parse.ts` |
 
 ## `theme.json`

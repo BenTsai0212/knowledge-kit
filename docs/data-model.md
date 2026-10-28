@@ -135,7 +135,7 @@ policy 中的子查詢同樣受 RLS 限制，所以「段落看得到」已包�
 
 ## 待審與核准
 
-上傳文件的萃取結果（#44，migration 0006）先寫入待審資料表，核准後才寫入正式的 `entities`、`relations` 與出處。**只用 INSERT**：核准與退回寫成 `review_decisions`（每個項目一筆，主鍵保證只能決定一次），`kk_app` 仍然沒有任何 `UPDATE`、`DELETE`。寫入與核准集中在 `app/src/extraction/store.ts`，一律經 `withIdentity()`。
+上傳文件的萃取結果（#44，migration 0006；萃取的流程見 [docs/extraction.md](extraction.md)）先寫入待審資料表，核准後才寫入正式的 `entities`、`relations` 與出處。**只用 INSERT**：核准與退回寫成 `review_decisions`（每個項目一筆，主鍵保證只能決定一次），`kk_app` 仍然沒有任何 `UPDATE`、`DELETE`。寫入與核准集中在 `app/src/extraction/store.ts`，一律經 `withIdentity()`。
 
 **`kk_app` 的權限**（0006 新增的部分）：
 
@@ -151,6 +151,7 @@ policy 中的子查詢同樣受 RLS 限制，所以「段落看得到」已包�
 - **待審資料的可見範圍以文件判斷**：同一份上傳文件的段落權限都相同（0005），所以「看得到文件」就等於「看得到出處」。這樣 policy 不必互相參照。
 - **上傳者看不到待審資料**：寫入只檢查文件是不是自己上傳的；「出處與兩端屬於同一份文件」由複合外鍵保證（外鍵檢查不受 RLS 影響）。上傳者沒有 `can_review` 時，寫入後讀不到任何待審資料（所以寫入不使用 `RETURNING`）。
 - **退回**：`review_decisions` 的 CHECK 規定退回不帶 `names` 與 `merge_into`；合併不帶 `names`（既有實體的名稱不變）。
+- **待審 id 的格式**（migration 0007）：待審實體以 `pe-` 開頭、待審關係以 `pr-` 開頭（CHECK）。`review_decisions.item_id` 由兩者共用，限制格式後兩者不會撞名，也不會與既有實體的 id 混淆。違反時 `store.ts` 回傳 `denied`，不顯示資料庫的訊息。
 - **`kk.is_approved()`**：`review_decisions` 的 INSERT policy 要檢查「關係的兩端都已核准」，但 policy 直接查詢自己的資料表會被 PostgreSQL 視為無限遞迴，所以寫成 PL/pgSQL 函式（不會被內聯進 policy，執行時套用 `review_decisions` 的 SELECT policy）。函式都以呼叫者權限執行，不使用 `SECURITY DEFINER`。
 - **待審與已退回的內容不會外流**：檢索、問答、圖譜、路徑、時間軸、原文的查詢都不讀取待審資料表；核准後的可見範圍沿用「權限規則」。
 - **合併後可見範圍變大**（#44 決定）：把待審實體合併到既有實體時，新文件的段落成為該實體的出處。依「實體只要有一個看得到的出處就看得到」，看得到新文件的人也看得到該實體，包含只在其他文件出現過的其他語言名稱。待審區的合併選單會提示這一點。
