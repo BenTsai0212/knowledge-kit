@@ -5,14 +5,14 @@
       "type": "team",
       "name": "產品研發部",
       "aliases": ["Product Development"],
-      "sources": ["employee-handbook-zh-01", "employee-handbook-en-01", "org-chart-zh-01", "bluewing-kickoff-zh-01"]
+      "sources": ["employee-handbook-zh-01", "employee-handbook-en-01", "org-chart-zh-01", "bluewing-kickoff-zh-01", "bluewing-spec-en-04"]
     },
     {
       "id": "team-ops",
       "type": "team",
       "name": "營運部",
       "aliases": ["Operations"],
-      "sources": ["employee-handbook-zh-01", "employee-handbook-en-01", "org-chart-zh-02", "longpier-progress-zh-01"]
+      "sources": ["employee-handbook-zh-01", "employee-handbook-en-01", "org-chart-zh-02", "longpier-progress-zh-01", "longpier-progress-en-01"]
     },
     {
       "id": "team-people",
@@ -33,35 +33,35 @@
       "type": "project",
       "name": "青翼專案",
       "aliases": ["Project Bluewing", "Bluewing"],
-      "sources": ["bluewing-kickoff-zh-01", "bluewing-spec-en-01", "bluewing-press-en-01"]
+      "sources": ["bluewing-kickoff-zh-01", "bluewing-spec-en-01", "bluewing-press-en-01", "bluewing-spec-en-04"]
     },
     {
       "id": "project-longpier",
       "type": "project",
       "name": "長堤專案",
       "aliases": ["Project Longpier", "Longpier"],
-      "sources": ["longpier-progress-zh-01", "longpier-vendor-en-01", "org-chart-zh-05"]
+      "sources": ["longpier-progress-zh-01", "longpier-vendor-en-01", "org-chart-zh-05", "longpier-progress-en-01"]
     },
     {
       "id": "person-wang-xiaoming",
       "type": "person",
       "name": "王小明",
       "aliases": ["Ming Wang"],
-      "sources": ["org-chart-zh-01", "bluewing-kickoff-zh-01", "bluewing-spec-en-02"]
+      "sources": ["org-chart-zh-01", "bluewing-kickoff-zh-01", "bluewing-spec-en-02", "bluewing-spec-en-04"]
     },
     {
       "id": "person-zhou-dawei",
       "type": "person",
       "name": "周大衛",
       "aliases": ["David Chou"],
-      "sources": ["org-chart-zh-01", "bluewing-kickoff-zh-01", "bluewing-spec-en-03", "bluewing-status-zh-02"]
+      "sources": ["org-chart-zh-01", "bluewing-kickoff-zh-01", "bluewing-spec-en-03", "bluewing-status-zh-02", "bluewing-spec-en-04"]
     },
     {
       "id": "person-lin-zhiming-rd",
       "type": "person",
       "name": "林志明",
       "aliases": ["Zhiming Lin"],
-      "sources": ["org-chart-zh-01", "bluewing-kickoff-zh-01", "org-chart-zh-04"]
+      "sources": ["org-chart-zh-01", "bluewing-kickoff-zh-01", "org-chart-zh-04", "bluewing-spec-en-04"]
     },
     {
       "id": "person-lin-zhiming-sales",
@@ -82,7 +82,7 @@
       "type": "person",
       "name": "張雅婷",
       "aliases": ["Yating Chang"],
-      "sources": ["org-chart-zh-02", "longpier-progress-zh-01", "longpier-vendor-en-02"]
+      "sources": ["org-chart-zh-02", "longpier-progress-zh-01", "longpier-vendor-en-02", "longpier-progress-en-01"]
     },
     {
       "id": "person-huang-jianhong",

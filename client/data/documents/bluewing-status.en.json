@@ -1,0 +1,11 @@
+{
+  "id": "bluewing-status-en",
+  "title": "Project Bluewing Status Update",
+  "language": "en",
+  "date": "2026-05-15",
+  "visibility": "internal",
+  "project": "bluewing",
+  "passages": [
+    { "id": "bluewing-status-en-01", "text": "Because of a delay from the motor supplier, the Bluewing desk launch has moved to the third quarter of 2026." }
+  ]
+}

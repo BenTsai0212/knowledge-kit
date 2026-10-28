@@ -8,6 +8,11 @@
   "passages": [
     { "id": "bluewing-spec-en-01", "text": "The Bluewing desk adjusts from 65 cm to 125 cm and stores up to four height presets." },
     { "id": "bluewing-spec-en-02", "text": "Ming Wang approved a dual-motor design so the desk can carry up to 120 kg." },
-    { "id": "bluewing-spec-en-03", "text": "David Chou is designing the control panel, which uses a single knob instead of buttons." }
+    { "id": "bluewing-spec-en-03", "text": "David Chou is designing the control panel, which uses a single knob instead of buttons." },
+    {
+      "id": "bluewing-spec-en-04",
+      "text": "Project Bluewing is led by Ming Wang, manager of Product Development, with David Chou and Zhiming Lin on the team."
+    },
+    { "id": "bluewing-spec-en-05", "text": "The Bluewing desk is planned to launch in the second quarter of 2026." }
   ]
 }

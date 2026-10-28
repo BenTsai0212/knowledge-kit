@@ -107,11 +107,11 @@ describe("validateDataset", () => {
 
   it("出處段落與預設問題的答案段落必須存在", () => {
     const { config, data } = copy();
-    data.entities.entities[0].sources.push("nope-01");
+    const s = data.entities.entities[0].sources.push("nope-01") - 1;
     data.relations.relations[0].sources = ["nope-02"];
     config.scenarios.scenarios[0].questions[0].answerPassages = ["nope-03"];
     expect(validateDataset(config, data)).toEqual([
-      { file: "data/entities.json", path: "/entities/0/sources/4", message: "出處段落 nope-01 不存在" },
+      { file: "data/entities.json", path: `/entities/0/sources/${s}`, message: "出處段落 nope-01 不存在" },
       { file: "data/relations.json", path: "/relations/0/sources/0", message: "出處段落 nope-02 不存在" },
       { file: "scenarios.json", path: "/scenarios/0/questions/0/answerPassages/0", message: "答案段落 nope-03 不存在於資料集" },
     ]);
