@@ -54,7 +54,7 @@ npm run check:client
 | `evals.path` | 是 | `RelativePath` | 評測題庫的資料夾，必須存在。題庫格式在評測台的 Issue 加入 |
 | `retrieval` | 否 | 物件，見下表 | 檢索參數。省略整個物件或其中的欄位時使用預設值 |
 
-`retrieval` 的欄位（實作在 `app/src/retrieval/`）：
+`retrieval` 的欄位（運作方式見 [docs/retrieval.md](retrieval.md)）：
 
 | 欄位 | 格式 | 預設值 | 說明 |
 | --- | --- | --- | --- |
