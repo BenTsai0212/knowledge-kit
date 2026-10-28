@@ -20,7 +20,12 @@ describe("retrieve", () => {
   it("依 client.json 的設定回傳前 K 名，帶出段落的文件與語言", async () => {
     const results = await openRetriever(db, clientConfig.client.retrieval).retrieve("staff", "到職滿一年有幾天年假？");
     expect(results.length).toBeLessThanOrEqual(clientConfig.client.retrieval.topK);
-    expect(results[0]).toMatchObject({ id: "employee-handbook-zh-03", documentId: "employee-handbook-zh", language: "zh-TW" });
+    expect(results[0]).toMatchObject({
+      id: "employee-handbook-zh-03",
+      documentId: "employee-handbook-zh",
+      documentTitle: Object.values(dataset.documents).find((d) => d.id === "employee-handbook-zh")!.title,
+      language: "zh-TW",
+    });
     expect(results[0].content).toContain("年假");
   });
 

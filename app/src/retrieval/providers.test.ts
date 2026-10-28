@@ -12,8 +12,8 @@ const sources = Object.fromEntries(
 const appSources = Object.entries(sources).filter(([path]) => !path.endsWith(".test.ts"));
 const SELECTOR = "retrieval/providers.ts";
 
-// 匯入具體實作（retrieval/ 中 types.ts、providers.ts 以外的檔）或讀取 retrieval.provider
-const SELECTING = [/from\s+["'][^"']*retrieval\/(?!types["']|providers["'])[^"']+["']/, /from\s+["']\.\/keyword-hash["']/, /\.provider\b/];
+// 匯入具體實作（retrieval/ 中 types.ts、providers.ts、retrieve.ts 以外的檔）或讀取 retrieval.provider
+const SELECTING = [/from\s+["'][^"']*retrieval\/(?!types["']|providers["']|retrieve["'])[^"']+["']/, /from\s+["']\.\/keyword-hash["']/, /\.provider\b/];
 
 const selecting = (text: string) => SELECTING.some((re) => re.test(text));
 
@@ -28,6 +28,7 @@ describe("VectorProvider", () => {
     expect(selecting("const p = config.client.retrieval.provider;")).toBe(true);
     expect(selecting('import type { VectorProvider } from "../retrieval/types";')).toBe(false);
     expect(selecting('import { createProvider } from "../retrieval/providers";')).toBe(false);
+    expect(selecting('import { openRetriever } from "../retrieval/retrieve";')).toBe(false);
   });
 
   it("掃描範圍包含 app/src/ 的程式", () => {
