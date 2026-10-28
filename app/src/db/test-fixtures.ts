@@ -33,4 +33,9 @@ export const KK_TABLES = [
   "entity_sources",
   "relations",
   "relation_sources",
+  "pending_entities",
+  "pending_entity_sources",
+  "pending_relations",
+  "pending_relation_sources",
+  "review_decisions",
 ] as const;

@@ -103,6 +103,8 @@ export interface Role {
   projects: Id[];
   // 能否上傳文件；可上傳的等級與專案同樣限於看得到的範圍
   canUpload: boolean;
+  // 能否核准或退回萃取結果；只能審核看得到的文件
+  canReview: boolean;
 }
 
 export interface AccessFile {

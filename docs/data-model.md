@@ -65,7 +65,7 @@ PGlite 的 session user 固定是 superuser `postgres`。以 `username: "kk_app"
 | --- | --- | --- |
 | `visibility_levels` | `id` PK、`rank`（≥ 0，不重複） | `access.json` |
 | `projects` | `id` PK | `access.json` |
-| `identities` | `id` PK、`visibility_level_id`、`can_upload`（boolean，預設 `false`） | `access.json` 的 `roles`，一個角色一個身分 |
+| `identities` | `id` PK、`visibility_level_id`、`can_upload`、`can_review`（boolean，預設 `false`） | `access.json` 的 `roles`，一個角色一個身分 |
 | `identity_projects` | `identity_id`、`project_id`（合為 PK） | 角色的 `projects` |
 | `documents` | `id` PK、`title`、`language`、`visibility_level_id`、`project_id`（可為 NULL）、`source_uri`（可為 NULL）、`document_date`（`date`，可為 NULL）、`uploaded_by`（上傳者的身分 id；資料集為 NULL） | 資料集或上傳 |
 | `passages` | `id` PK、`document_id`、`ordinal`、`language`、`content`、`visibility_level_id`、`project_id`（可為 NULL） | 資料集或上傳 |
@@ -73,11 +73,14 @@ PGlite 的 session user 固定是 superuser `postgres`。以 `username: "kk_app"
 | `entity_sources` | `entity_id`、`passage_id`（出處，合為 PK） | 同上 |
 | `relations` | `id` PK、`relation_type`、`from_entity_id`、`to_entity_id` | 同上 |
 | `relation_sources` | `relation_id`、`passage_id`（出處，合為 PK）、`from_entity_id`、`to_entity_id`（與關係的兩端相同，以複合外鍵參照 `relations (id, from_entity_id, to_entity_id)` 確保一致） | 同上 |
+| `pending_entities`、`pending_entity_sources`、`pending_relations`、`pending_relation_sources` | 待審的實體、關係與出處；每列帶 `document_id`，以複合外鍵保證出處與兩端屬於同一份文件 | 萃取（#44） |
+| `review_decisions` | `item_id` PK（待審實體或關係）、`decision`（`approve`／`reject`）、`decided_by`、`names`、`merge_into` | 核准與退回（#44） |
 
 - id 一律 `text`；`client/` 的名單沿用設定中的 id。
 - `language` 以 CHECK 限制為語言代碼格式；「必須屬於 `client.json` 的 `languages`」由匯入程式檢查。
 - `entity_type`、`relation_type` 是否存在於 `knowledge-model.json`，同樣由匯入程式檢查。知識模型不進資料庫，所以不寫成 FK。
 - 段落有自己的可見等級與專案，讓同一份文件可以有較機密的段落；段落還必須同時看得到所屬文件。
+- `passages` 有 `UNIQUE (id, document_id)`（0006 migration），讓待審的出處能以複合外鍵參照「同一份文件的段落」。
 - `document_date`（0004 migration）：文件日期，供時間軸使用。讀取時在 SQL 中以 `to_char(document_date, 'YYYY-MM-DD')` 轉成字串，不經過 JavaScript 的 `Date`，避免時區讓日期差一天。
 - `names`（0004 migration）：實體在各介面語言的顯示名稱，例如 `{"zh-TW": "王小明", "en": "Ming Wang"}`；`name` 仍是主要名稱。資料庫只限制必須是物件，「涵蓋 `client.json` 的每種 `languages`」由寫入的程式檢查。目前只有資料集的匯入（`validate.ts`）；**之後的上傳與萃取（Epic 第 9 項）新增實體時，也必須寫入涵蓋所有 `languages` 的 `names`**，否則畫面會缺少該語言的名稱。
 - 兩個欄位都在既有資料表上，跟著所在列的 RLS，不需要新的 policy；`oracle.ts` 不變。
@@ -129,6 +132,29 @@ policy 中的子查詢同樣受 RLS 限制，所以「段落看得到」已包�
 - 讀取的 policy 不變：上傳的文件與段落依「權限規則」決定誰看得到，`oracle.ts` 的讀取規則不變。
 - `oracle.ts` 的 `canWrite()` 是寫入規則的獨立實作。`app/tests/upload/write.test.ts` 對每個身分 × 每種「可見等級 × 專案（含無專案）」比對，並測試偽造 `uploaded_by`、段落加到別人的文件、`UPDATE`／`DELETE`；`app/tests/upload/visibility.test.ts` 確認上傳後，資料表、檢索、問答、時間軸與原文的可見範圍都與 oracle 相同。
 - 上傳的內容只存在瀏覽器的記憶體資料庫，重新整理頁面就消失（AGENTS.md 第 5 節：migration 不套用到持久化的資料庫）。
+
+## 待審與核准
+
+上傳文件的萃取結果（#44，migration 0006）先寫入待審資料表，核准後才寫入正式的 `entities`、`relations` 與出處。**只用 INSERT**：核准與退回寫成 `review_decisions`（每個項目一筆，主鍵保證只能決定一次），`kk_app` 仍然沒有任何 `UPDATE`、`DELETE`。寫入與核准集中在 `app/src/extraction/store.ts`，一律經 `withIdentity()`。
+
+**`kk_app` 的權限**（0006 新增的部分）：
+
+| 資料表 | 權限 | 寫入（`WITH CHECK`） | 讀取（`USING`） |
+| --- | --- | --- | --- |
+| `pending_entities`、`pending_relations` 與兩張出處表 | `SELECT`、`INSERT` | 有 `can_upload`，且 `document_id` 是自己上傳的文件 | 有 `can_review`，且 `document_id` 的文件看得到 |
+| `review_decisions` | `SELECT`、`INSERT` | 有 `can_review`、`decided_by` 是自己、項目看得到；`merge_into` 是自己看得到、類型相同的實體；關係不帶名稱與合併對象，核准時兩端都已核准 | 有 `can_review`，且項目看得到 |
+| `entities` | 新增 `INSERT` | 對應一筆目前身分寫的核准決定（`merge_into` 為 NULL）：id、類型相同，`names` 等於核准時的名稱（決定中的 `names`，沒有時用待審的），`name` 是 `names` 的其中一個值 | 不變 |
+| `entity_sources` | 新增 `INSERT` | 段落是一筆核准的待審實體的出處，實體是它的合併對象或新建的實體 | 不變 |
+| `relations` | 新增 `INSERT` | 對應一筆目前身分寫的核准決定：id、類型相同，兩端是兩個待審實體核准後的實體（合併對象或新建的實體） | 不變 |
+| `relation_sources` | 新增 `INSERT` | 段落是一筆核准的待審關係的出處（兩端由 0003 的複合外鍵保證與關係一致） | 不變 |
+
+- **待審資料的可見範圍以文件判斷**：同一份上傳文件的段落權限都相同（0005），所以「看得到文件」就等於「看得到出處」。這樣 policy 不必互相參照。
+- **上傳者看不到待審資料**：寫入只檢查文件是不是自己上傳的；「出處與兩端屬於同一份文件」由複合外鍵保證（外鍵檢查不受 RLS 影響）。上傳者沒有 `can_review` 時，寫入後讀不到任何待審資料（所以寫入不使用 `RETURNING`）。
+- **退回**：`review_decisions` 的 CHECK 規定退回不帶 `names` 與 `merge_into`；合併不帶 `names`（既有實體的名稱不變）。
+- **`kk.is_approved()`**：`review_decisions` 的 INSERT policy 要檢查「關係的兩端都已核准」，但 policy 直接查詢自己的資料表會被 PostgreSQL 視為無限遞迴，所以寫成 PL/pgSQL 函式（不會被內聯進 policy，執行時套用 `review_decisions` 的 SELECT policy）。函式都以呼叫者權限執行，不使用 `SECURITY DEFINER`。
+- **待審與已退回的內容不會外流**：檢索、問答、圖譜、路徑、時間軸、原文的查詢都不讀取待審資料表；核准後的可見範圍沿用「權限規則」。
+- **合併後可見範圍變大**（#44 決定）：把待審實體合併到既有實體時，新文件的段落成為該實體的出處。依「實體只要有一個看得到的出處就看得到」，看得到新文件的人也看得到該實體，包含只在其他文件出現過的其他語言名稱。待審區的合併選單會提示這一點。
+- `oracle.ts` 的 `expectedReviewVisible()`、`canDecide()`、`approvedSample()` 是上述規則的獨立實作；`app/tests/extraction/review.test.ts` 以兩種設定（參考情境，以及一般員工也能審核）比對，並測試偽造的決定與正式資料寫入。
 
 ## 越權測試（滲漏矩陣）
 

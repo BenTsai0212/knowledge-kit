@@ -118,14 +118,16 @@ describe("偽造上傳者與段落的規則", () => {
     await expect(insertPassage("staff", "p-same", documentId, "internal", "bluewing")).resolves.toBeDefined();
   });
 
-  it("UPDATE、DELETE 沒有權限，實體與關係也不能寫入", async () => {
-    for (const sql of [
-      "UPDATE kk.documents SET title = 'x'",
-      "DELETE FROM kk.passages",
-      "INSERT INTO kk.entities (id, entity_type, name) VALUES ('x', 'person', 'x')",
-      "INSERT INTO kk.relations (id, relation_type, from_entity_id, to_entity_id) VALUES ('x', 'leads', 'a', 'b')",
-    ]) {
+  it("UPDATE、DELETE 沒有權限；沒有核准決定時，實體與關係也不能寫入", async () => {
+    for (const sql of ["UPDATE kk.documents SET title = 'x'", "DELETE FROM kk.passages"]) {
       await expect(db.withIdentity("manager", (tx) => tx.exec(sql)), sql).rejects.toThrow(/permission denied/);
+    }
+    // #44 起 kk_app 有實體與關係的 INSERT，但必須對應到核准的決定（app/tests/extraction/），否則被 RLS 拒絕
+    for (const sql of [
+      "INSERT INTO kk.entities (id, entity_type, name) VALUES ('x', 'person', 'x')",
+      "INSERT INTO kk.relations (id, relation_type, from_entity_id, to_entity_id) VALUES ('x', 'leads', 'person-wang-xiaoming', 'team-rd')",
+    ]) {
+      await expect(db.withIdentity("manager", (tx) => tx.exec(sql)), sql).rejects.toThrow(/row-level security/);
     }
   });
 });
