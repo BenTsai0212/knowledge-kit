@@ -43,8 +43,8 @@ export interface Question {
 // 還不能確定開頭不是拒答標記時先不顯示，避免畫面先閃出標記
 const mayBeMarker = (text: string) => REFUSAL_MARKER.startsWith(text.trimStart());
 
-// onText 收到的是到目前為止可顯示的全部文字（不是片段）
-export async function ask(ctx: QaContext, q: Question, onText?: (text: string) => void): Promise<Answer> {
+// onText 收到的是到目前為止可顯示的全部文字（不是片段）。signal 中止後的結果由呼叫端忽略
+export async function ask(ctx: QaContext, q: Question, onText?: (text: string) => void, signal?: AbortSignal): Promise<Answer> {
   const question = q.text.trim();
   if (question === "") return { kind: "error", error: "empty_question" };
   if (question.length > MAX_QUESTION_CHARS) return { kind: "error", error: "question_too_long" };
@@ -57,8 +57,9 @@ export async function ask(ctx: QaContext, q: Question, onText?: (text: string) =
 
   let text = "";
   let end: AskEvent | undefined;
-  const events = ctx.transport.send({ model: ctx.model, system: prompt.system, messages: [{ role: "user", content: prompt.user }] });
+  const events = ctx.transport.send({ model: ctx.model, system: prompt.system, messages: [{ role: "user", content: prompt.user }] }, signal);
   for await (const event of events) {
+    if (signal?.aborted) break;
     if (event.type !== "delta") {
       end = event;
       break;

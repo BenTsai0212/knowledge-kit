@@ -14,5 +14,6 @@ export type AskEvent =
   | { type: "error"; error: string };
 
 export interface AskTransport {
-  send(body: AskBody): AsyncIterable<AskEvent>;
+  // signal 中止時結束串流、取消連線，不再送出事件（例如切換身分時捨棄進行中的回答）
+  send(body: AskBody, signal?: AbortSignal): AsyncIterable<AskEvent>;
 }

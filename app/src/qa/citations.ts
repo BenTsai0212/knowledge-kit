@@ -29,3 +29,18 @@ export function resolveCitations(text: string, numbering: string[]): ResolvedCit
   });
   return { text: resolved, cited: [...cited], dropped };
 }
+
+export type Segment = { text: string } | { citation: number };
+
+// 畫面顯示用：把文字切成一般文字與引用編號（[1, 3] 也拆成兩個引用）
+export function splitCitations(text: string): Segment[] {
+  const segments: Segment[] = [];
+  let last = 0;
+  for (const m of text.matchAll(/\[(\d+(?:\s*,\s*\d+)*)\]/g)) {
+    if (m.index > last) segments.push({ text: text.slice(last, m.index) });
+    for (const n of m[1].split(",")) segments.push({ citation: Number(n.trim()) });
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) segments.push({ text: text.slice(last) });
+  return segments;
+}

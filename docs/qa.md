@@ -114,7 +114,7 @@ Rules:
 - 解析（`citations.ts`）：依 `numbering` 把編號轉成段落 id，`cited` 依第一次出現的順序、不重複。
 - **不存在的編號**（例如 0 或超過段落數）：從文字中移除，連同前面的空白；記在 `dropped`，並以 `console.warn` 記錄編號（不記內容）。
 - **未附出處**：不是拒答、但沒有任何有效引用的回答，`uncited` 為 `true`，畫面標示「未附出處」。
-- 點引用打開原文：畫面以 `numbering` 找到段落 id，原文同樣經 `withIdentity()` 取得。畫面尚未實作（#26 的最後一個 PR）。
+- 點引用打開原文：畫面以 `numbering` 找到段落 id，以 `app/src/sources/source.ts` 的 `readSource()` 讀取（見下方「畫面」）。
 
 ## 矛盾
 
@@ -131,7 +131,7 @@ Rules:
 | 類型 | 來源 | 繁中訊息（多個類型同列時為摘要） |
 | --- | --- | --- |
 | `forbidden_origin` | Worker | 這個網址無法使用問答功能。 |
-| `invalid_access_code` | Worker | 邀請碼不正確，請重新輸入。（畫面要清除 `sessionStorage` 中的碼並回到輸入畫面，#26 決定 3） |
+| `invalid_access_code` | Worker | 邀請碼不正確，請重新輸入。（畫面清除 `sessionStorage` 中的碼並回到輸入畫面，#26 決定 3） |
 | `daily_limit` | Worker | 今天的提問次數已用完，請明天再試。 |
 | `invalid_request`、`method_not_allowed` | Worker | 送出的內容（方式）有誤，請重新整理頁面後再試。 |
 | `unknown_model`、`misconfigured`、`upstream_quota` | Worker | 設定或額度的問題，請聯絡管理者。 |
@@ -145,7 +145,35 @@ Rules:
 
 各類型的完整文字（繁中與英文）以 `strings.ts` 為準。
 
-**串流中斷**：已收到文字後才收到 `error` 事件、連線中斷，或串流沒有 `done` 就結束時，保留已收到的文字並照樣解析引用，`incomplete` 為 `true`、附上 `error`；畫面要標示「回答不完整」（`strings.ts` 的 `incomplete`）與錯誤訊息。`done` 的 `stopReason` 為 `max_tokens`（被截斷）時同樣標示不完整。還沒收到任何文字就失敗時回 `kind: "error"`。
+**串流中斷**：已收到文字後才收到 `error` 事件、連線中斷，或串流沒有 `done` 就結束時，保留已收到的文字並照樣解析引用，`incomplete` 為 `true`、附上 `error`；畫面標示「回答不完整」（`strings.ts` 的 `incomplete`）與錯誤訊息。`done` 的 `stopReason` 為 `max_tokens`（被截斷）時同樣標示不完整。還沒收到任何文字就失敗時回 `kind: "error"`。
+
+## 畫面
+
+`app/src/App.tsx` 與 `app/src/ui/`。最小可用的介面；正式的主題與翻譯檔在 Epic 第 11 項。
+
+| 元件 | 內容 |
+| --- | --- |
+| `App.tsx` | 狀態：資料庫、邀請碼、身分、語言、目前的回答、開啟的原文 |
+| `ui/AccessCodeForm.tsx` | 輸入邀請碼（`type="password"`）；碼被拒時顯示原因 |
+| `ui/Toolbar.tsx` | 身分切換（`access.json` 的角色，標示「展示用權限」）、語言切換、「虛構資料」標示、更換邀請碼 |
+| `ui/QuestionPanel.tsx` | 依情境分組的預設問題（標示情境的角色）、自由提問（500 字元上限） |
+| `ui/AnswerView.tsx` | 串流文字；結束後引用顯示成可點的編號；標示拒答、未附出處、不完整與錯誤訊息 |
+| `ui/SourcePanel.tsx` | 原文：文件標題與該身分看得到的段落，標示被引用的段落並捲動到該處 |
+
+- **資料庫**：頁面載入時在瀏覽器中以 PGlite 建立記憶體資料庫，執行 migration 並匯入資料集（與測試相同的 `openDatabase()`＋`seedDataset()`）。載入完成前預設問題不能按。
+  - 本機量測（`npm run build`＋`npx wrangler dev`、Chrome）：
+    - 靜態檔：JS 約 0.9 MB（gzip 約 230 KB）、`pglite.wasm` 約 10 MB（gzip 約 3.5 MB）、`pglite.data` 約 6.3 MB（gzip 約 2.1 MB）。
+    - 下載後到可以提問：約 0.4 秒（wasm 已在快取）；第一次約 1.1 秒加上下載時間（#26 計畫時的量測）。
+  - `vite.config.ts` 設 `optimizeDeps.exclude: ["@electric-sql/pglite"]`：開發伺服器預先打包會改變 PGlite 載入 wasm 與資料檔的路徑。
+- **邀請碼**：存在 React state 與 `sessionStorage`（`ui/access-code.ts`），關閉分頁就清除；不放會保留到下次開啟的瀏覽器儲存（`access-code.test.ts` 掃描 `app/src/`），也不放網址（只放在 `X-Access-Code` header）。收到 `invalid_access_code` 時清除並回到輸入畫面。
+- **提問**：預設問題與自由提問都以**送出當下**選的身分與語言提問（#26 決定 1、2）；預設問題旁標示的情境角色只是說明。
+- **切換身分或語言時捨棄進行中的回答**（`ui/requests.ts`）：
+  - 清掉畫面上的回答與開啟的原文。
+  - 進行中的提問以 `AbortSignal` 取消連線（`apiTransport` 把 signal 傳給 `fetch`），之後才收到的 `onText` 與 `ask()` 的結果都忽略；原文的讀取也一樣。
+  - 新的提問開始時，前一個提問同樣被捨棄。
+- **原文**（`app/src/sources/source.ts`）：`readSource(db, identityId, passageId)` 經 `withIdentity()` 讀取段落所屬的文件，以及其中該身分看得到的段落（依順序）；看不到時回 `null`。文件中看不到的段落直接省略，不標示「有段落被隱藏」。`app/tests/sources/source.test.ts` 以 `oracle.ts` 對每個身分 × 每段段落測試。
+- **介面文字**：都在 `ui/strings.ts`（繁中＋英文）；角色、情境、公司名稱來自 `client/`；語言名稱以 `Intl.DisplayNames` 用該語言自己的名稱顯示。
+- 畫面沒有自動測試（DOM 測試套件未核准；Playwright 在 Epic 第 12 項）。可以抽出的邏輯（邀請碼的保存、提問的捨棄、引用的切割、原文的權限）以 Vitest 測試。
 
 ## 測試
 

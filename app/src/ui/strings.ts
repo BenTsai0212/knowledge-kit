@@ -14,6 +14,31 @@ export type AskErrorType =
   | "question_too_long";
 
 export interface UiStrings {
+  loading: string;
+  loadFailed: string;
+  // 標示：資料是虛構的、身分切換只是展示權限
+  fictionalData: string;
+  demoPermissions: string;
+  identity: string;
+  language: string;
+  accessCodeTitle: string;
+  accessCodeLabel: string;
+  accessCodeHint: string;
+  accessCodeSubmit: string;
+  changeAccessCode: string;
+  presetQuestions: string;
+  // 預設問題旁標示情境的角色；提問一律以目前選的身分（#26 決定 1）
+  scenarioRole: string;
+  questionLabel: string;
+  questionPlaceholder: string;
+  askButton: string;
+  answering: string;
+  emptyAnswer: string;
+  openSource: string;
+  sourceTitle: string;
+  closeSource: string;
+  // 標籤與內容之間的分隔（繁中用全形冒號）
+  colon: string;
   // 拒答：「沒有資料」與「沒有權限」相同，不透露是否有看不到的文件
   refusal: string;
   // 不是拒答、但沒有任何有效引用的回答
@@ -27,6 +52,28 @@ export interface UiStrings {
 
 export const STRINGS: Record<LanguageCode, UiStrings> = {
   "zh-TW": {
+    loading: "正在載入資料…",
+    loadFailed: "資料載入失敗，請重新整理頁面。",
+    fictionalData: "虛構資料",
+    demoPermissions: "展示用權限",
+    identity: "身分",
+    language: "語言",
+    accessCodeTitle: "輸入邀請碼",
+    accessCodeLabel: "邀請碼",
+    accessCodeHint: "邀請碼只保存在這個分頁，關閉分頁後就會清除。",
+    accessCodeSubmit: "開始使用",
+    changeAccessCode: "更換邀請碼",
+    presetQuestions: "預設問題",
+    scenarioRole: "情境角色",
+    questionLabel: "自由提問",
+    questionPlaceholder: "輸入問題（500 字以內）",
+    askButton: "提問",
+    answering: "回答中…",
+    emptyAnswer: "選擇預設問題，或輸入問題後提問。",
+    openSource: "打開原文",
+    sourceTitle: "原文",
+    closeSource: "關閉",
+    colon: "：",
     refusal: "找不到可以回答這個問題的資料。",
     uncited: "未附出處",
     incomplete: "回答不完整",
@@ -54,6 +101,28 @@ export const STRINGS: Record<LanguageCode, UiStrings> = {
     unknownError: "發生未預期的錯誤，請稍後再試。",
   },
   en: {
+    loading: "Loading data…",
+    loadFailed: "The data couldn't be loaded. Please reload the page.",
+    fictionalData: "Fictional data",
+    demoPermissions: "Demo permissions",
+    identity: "Identity",
+    language: "Language",
+    accessCodeTitle: "Enter your access code",
+    accessCodeLabel: "Access code",
+    accessCodeHint: "The access code is kept only in this tab and is cleared when you close it.",
+    accessCodeSubmit: "Start",
+    changeAccessCode: "Change access code",
+    presetQuestions: "Sample questions",
+    scenarioRole: "Scenario role",
+    questionLabel: "Your question",
+    questionPlaceholder: "Type a question (up to 500 characters)",
+    askButton: "Ask",
+    answering: "Answering…",
+    emptyAnswer: "Choose a sample question, or type your own and ask.",
+    openSource: "Open source",
+    sourceTitle: "Source",
+    closeSource: "Close",
+    colon: ": ",
     refusal: "I couldn't find information to answer this question.",
     uncited: "No sources cited",
     incomplete: "Incomplete answer",

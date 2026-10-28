@@ -164,6 +164,20 @@ describe("ask：錯誤與串流中斷", () => {
   });
 });
 
+describe("ask：中止", () => {
+  it("中止後不再呼叫 onText，signal 傳給傳輸層", async () => {
+    const controller = new AbortController();
+    const { ctx } = context(() => answered("一年", "有 7 天", " [1]。"));
+    const send = ctx.transport.send.bind(ctx.transport);
+    let received: AbortSignal | undefined;
+    ctx.transport.send = (body, signal) => ((received = signal), send(body, signal));
+    const seen: string[] = [];
+    await ask(ctx, LEAVE, (text) => (seen.push(text), controller.abort()), controller.signal);
+    expect(received).toBe(controller.signal);
+    expect(seen).toEqual(["一年"]);
+  });
+});
+
 describe("ask：矛盾", () => {
   const launch = clientConfig.scenarios.scenarios.flatMap((s) => s.questions).find((q) => q.id === "bluewing-launch")!;
 
