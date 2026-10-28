@@ -78,6 +78,14 @@ describe("check-client", () => {
     expect(validateClient(files).map((e) => e.path)).toEqual(["/model"]);
   });
 
+  it("檢索參數：provider 只接受已登記的實作，topK 與 minScore 有範圍，可省略", () => {
+    const files = example();
+    files["client.json"].retrieval = { provider: "pgvector", topK: 0, minScore: 1.5 };
+    expect(validateClient(files).map((e) => e.path)).toEqual(["/retrieval/provider", "/retrieval/topK", "/retrieval/minScore"]);
+    delete files["client.json"].retrieval;
+    expect(validateClient(files)).toEqual([]);
+  });
+
   it("合併策略只接受 review 或 auto，省略時預設 review", () => {
     const files = example();
     files["knowledge-model.json"].entityTypes[0].mergeStrategy = "merge";

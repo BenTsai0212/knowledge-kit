@@ -12,6 +12,15 @@ export interface PathRef {
   path: RelativePath;
 }
 
+// app/src/retrieval/providers.ts 的 PROVIDERS 鍵
+export type ProviderId = "keyword-hash";
+
+export interface RetrievalFile {
+  provider?: ProviderId;
+  topK?: number;
+  minScore?: number;
+}
+
 export interface ClientFile {
   displayName: LocalizedText;
   defaultLanguage: LanguageCode;
@@ -19,6 +28,7 @@ export interface ClientFile {
   model: ModelCode;
   dataset: PathRef;
   evals: PathRef;
+  retrieval?: RetrievalFile;
 }
 
 export interface ThemeColors {
@@ -124,7 +134,10 @@ export interface EntityType extends Omit<EntityTypeFile, "mergeStrategy"> {
   mergeStrategy: MergeStrategy;
 }
 
-export interface ClientConfig extends Omit<ClientFiles, "knowledgeModel"> {
+export type RetrievalConfig = Required<RetrievalFile>;
+
+export interface ClientConfig extends Omit<ClientFiles, "client" | "knowledgeModel"> {
+  client: Omit<ClientFile, "retrieval"> & { retrieval: RetrievalConfig };
   knowledgeModel: {
     entityTypes: EntityType[];
     relationTypes: RelationType[];

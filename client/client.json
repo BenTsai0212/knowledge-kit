@@ -4,5 +4,6 @@
   "languages": ["zh-TW", "en"],
   "model": "standard",
   "dataset": { "path": "data/" },
-  "evals": { "path": "evals/" }
+  "evals": { "path": "evals/" },
+  "retrieval": { "provider": "keyword-hash", "topK": 5, "minScore": 0.1 }
 }
