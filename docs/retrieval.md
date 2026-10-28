@@ -7,10 +7,11 @@
 ```ts
 const retriever = openRetriever(db, clientConfig.client.retrieval);
 const passages = await retriever.retrieve("staff", "到職滿一年有幾天年假？");
-// [{ id, documentId, language, content, score }, …]，依 score 由高到低
+// [{ id, documentId, documentTitle, language, content, score }, …]，依 score 由高到低
 ```
 
 1. 以 `db.withIdentity(identityId, …)` 執行 `SELECT … FROM kk.passages`。看得到哪些段落完全交給 RLS（[docs/data-model.md](data-model.md)），本模組不另外判斷權限。
+   - 文件標題（問答以標題區分來源）以 JOIN `kk.documents` 在同一個查詢中取得。兩張表都受 RLS 篩選，但資料集規定段落不比所屬文件寬鬆（[docs/dataset.md](dataset.md)，匯入時檢查），所以看得到段落就看得到文件，JOIN 不會少掉段落。`app/tests/retrieval/leakage.test.ts` 的「不限名次時漏看 0」確認這一點。
 2. 以 `VectorProvider` 把問題與段落轉成向量，再算相似度。
 3. 依分數排序，去掉低於 `minScore` 的段落，取前 `topK` 名。分數相同時依段落 id 排序。
 
