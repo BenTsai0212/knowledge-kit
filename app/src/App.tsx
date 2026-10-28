@@ -34,6 +34,9 @@ export function App() {
   const [loadFailed, setLoadFailed] = useState(false);
   const [answer, setAnswer] = useState<AnswerState | null>(null);
   const [source, setSource] = useState<SourceDocument | null>(null);
+  // 本次工作階段上傳的文件（時間軸加上「上傳」標籤），以及從上傳頁跳到時間軸時要捲動到的文件（#42）
+  const [uploaded, setUploaded] = useState<ReadonlySet<string>>(new Set());
+  const [focusDocument, setFocusDocument] = useState<string | null>(null);
   // 同時只有一個有效的提問與原文讀取；切換身分或語言時捨棄進行中的
   const questions = useRef(createRequestGate());
   const sources = useRef(createRequestGate());
@@ -143,9 +146,31 @@ export function App() {
             <GraphPage db={db} identity={identity} language={language} onOpenSource={onOpenSource} />
           ) : view === "upload" ? (
             // 切換身分或語言時重建，清除表單、預覽與結果
-            <UploadPage key={`${identity}|${language}`} db={db} identity={identity} language={language} onGoto={setView} />
+            <UploadPage
+              key={`${identity}|${language}`}
+              db={db}
+              identity={identity}
+              language={language}
+              onUploaded={(id) => setUploaded((ids) => new Set(ids).add(id))}
+              onGoto={(target, document) => {
+                if (document !== undefined) {
+                  // 時間軸只列出介面語言的文件，所以切換成這份文件的語言
+                  if (document.language !== language) (discard(), setLanguage(document.language));
+                  setFocusDocument(document.id);
+                }
+                setView(target);
+              }}
+            />
           ) : (
-            <TimelinePage db={db} identity={identity} language={language} onOpenSource={onOpenSource} />
+            <TimelinePage
+              db={db}
+              identity={identity}
+              language={language}
+              uploaded={uploaded}
+              focus={focusDocument}
+              onFocused={() => setFocusDocument(null)}
+              onOpenSource={onOpenSource}
+            />
           )}
           {source !== null && <SourcePanel language={language} source={source} onClose={() => (sources.current.cancel(), setSource(null))} />}
         </main>

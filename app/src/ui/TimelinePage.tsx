@@ -10,16 +10,26 @@ interface Props {
   db: Database;
   identity: string;
   language: string;
+  // 本次工作階段上傳的文件，加上「上傳」標籤
+  uploaded: ReadonlySet<string>;
+  // 要捲動到並短暫標示的文件（從上傳頁跳過來時）；處理後呼叫 onFocused
+  focus: string | null;
+  onFocused(): void;
   onOpenSource(passageId: string): void;
 }
 
-// 時間軸頁：依日期列出介面語言的文件，可依實體篩選。切換身分或語言時重新讀取，舊結果忽略；篩選的實體已看不到時清除
-export function TimelinePage({ db, identity, language, onOpenSource }: Props) {
+// 標示由 CSS 的 timeline-flash 動畫（約 2.5 秒）淡出，animationend 時結束；動畫沒有觸發時（例如瀏覽器停用動畫）以此保底清除
+const FLASH_FALLBACK_MS = 4000;
+
+// 時間軸頁：依日期由新到舊列出介面語言的文件，可依實體篩選。切換身分或語言時重新讀取，舊結果忽略；篩選的實體已看不到時清除
+export function TimelinePage({ db, identity, language, uploaded, focus, onFocused, onOpenSource }: Props) {
   const s = strings(language);
   const [graph, setGraph] = useState<Graph | null>(null);
   const [entityId, setEntityId] = useState<string | null>(null);
   const [entries, setEntries] = useState<TimelineEntry[] | null>(null);
   const reads = useRef(createRequestGate());
+  const list = useRef<HTMLOListElement>(null);
+  const [flash, setFlash] = useState<string | null>(null);
 
   useEffect(() => {
     const ticket = reads.current.begin();
@@ -37,6 +47,27 @@ export function TimelinePage({ db, identity, language, onOpenSource }: Props) {
     })();
     return () => reads.current.cancel();
   }, [db, identity, language, entityId]);
+
+  // onFocused 每次 render 都是新的函式，以 ref 取得最新的，不放進 effect 的相依
+  const focused = useRef(onFocused);
+  focused.current = onFocused;
+
+  // 時間軸讀完後，捲動到剛上傳的文件並標示
+  useEffect(() => {
+    if (focus === null || entries === null) return;
+    const item = list.current?.querySelector(`[data-document-id="${CSS.escape(focus)}"]`);
+    focused.current();
+    if (item === null || item === undefined) return;
+    item.scrollIntoView({ block: "center" });
+    setFlash(focus);
+  }, [focus, entries]);
+
+  // 保底：動畫結束事件沒有到時仍會取消標示
+  useEffect(() => {
+    if (flash === null) return;
+    const timer = setTimeout(() => setFlash(null), FLASH_FALLBACK_MS);
+    return () => clearTimeout(timer);
+  }, [flash]);
 
   const options =
     graph?.entities
@@ -63,11 +94,18 @@ export function TimelinePage({ db, identity, language, onOpenSource }: Props) {
       ) : entries.length === 0 ? (
         <p className="card muted">{s.timelineEmpty}</p>
       ) : (
-        <ol className="timeline">
+        <ol className="timeline" ref={list}>
           {entries.map((entry) => (
-            <li key={entry.documentId} className="card">
+            <li
+              key={entry.documentId}
+              data-document-id={entry.documentId}
+              className={entry.documentId === flash ? "card flash" : "card"}
+              // 淡出動畫結束時取消標示，程式與 CSS 的時間不會不一致
+              onAnimationEnd={(e) => e.animationName.startsWith("timeline-flash") && setFlash(null)}
+            >
               <h3>
                 <time dateTime={entry.date ?? undefined}>{entry.date ?? s.undated}</time> {entry.title}
+                {uploaded.has(entry.documentId) && <span className="badge">{s.timelineUploaded}</span>}
               </h3>
               <ul>
                 {entry.passages.map((p) => (

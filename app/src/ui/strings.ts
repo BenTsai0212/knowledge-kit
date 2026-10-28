@@ -81,6 +81,18 @@ export interface UiStrings {
   uploadGotoQa: string;
   uploadGotoTimeline: string;
   uploadErrors: Record<UploadFailure, string>;
+  uploadDrop: string;
+  uploadClearFile: string;
+  // 依可見等級與專案算出看得到的角色（#42）
+  uploadAudience: string;
+  listSeparator: string;
+  uploadConfirmTitle: string;
+  uploadBack: string;
+  uploadShowAll: string;
+  uploadWriting: string;
+  uploadAnother: string;
+  // 時間軸中本次工作階段上傳的文件
+  timelineUploaded: string;
   // 標籤與內容之間的分隔（繁中用全形冒號）
   colon: string;
   // 拒答：「沒有資料」與「沒有權限」相同，不透露是否有看不到的文件
@@ -165,6 +177,16 @@ export const STRINGS: Record<LanguageCode, UiStrings> = {
       invalid: "請填寫標題，並確認日期格式正確。",
       no_input: "請選擇檔案或貼上文字。",
     },
+    uploadDrop: "或把檔案拖放到這裡",
+    uploadClearFile: "清除檔案",
+    uploadAudience: "誰看得到",
+    listSeparator: "、",
+    uploadConfirmTitle: "確認上傳",
+    uploadBack: "返回修改",
+    uploadShowAll: "顯示全部段落",
+    uploadWriting: "上傳中…",
+    uploadAnother: "再上傳一份",
+    timelineUploaded: "上傳",
     colon: "：",
     refusal: "找不到可以回答這個問題的資料。",
     uncited: "未附出處",
@@ -262,6 +284,16 @@ export const STRINGS: Record<LanguageCode, UiStrings> = {
       invalid: "Please enter a title and check that the date is valid.",
       no_input: "Please choose a file or paste some text.",
     },
+    uploadDrop: "Or drop a file here",
+    uploadClearFile: "Clear file",
+    uploadAudience: "Visible to",
+    listSeparator: ", ",
+    uploadConfirmTitle: "Confirm upload",
+    uploadBack: "Back to edit",
+    uploadShowAll: "Show all passages",
+    uploadWriting: "Uploading…",
+    uploadAnother: "Upload another",
+    timelineUploaded: "Uploaded",
     colon: ": ",
     refusal: "I couldn't find information to answer this question.",
     uncited: "No sources cited",

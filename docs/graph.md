@@ -62,11 +62,11 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
 ```
 
 - **單位**：文件，附上其中看得到的段落（依文件中的順序）。沒有看得到的段落的文件不列出。
-- **排序**：依日期由舊到新；沒有日期的文件排在最後（`date` 為 `null`）。日期相同時依文件 id。
+- **排序**：依日期由新到舊（#42）；沒有日期的文件排在最後（`date` 為 `null`）。日期相同時依文件 id。
 - **語言**：只列出與介面語言相同的文件（#31 決定 2），與問答一致。
 - **依實體篩選**：只留以該實體為出處的段落，以及有這類段落的文件。`entityIds` 是以該段為出處、且看得到的實體。
 - **日期**：在 SQL 中以 `to_char(document_date, 'YYYY-MM-DD')` 轉成字串，不經過 JavaScript 的 `Date`，避免時區讓日期差一天；畫面直接顯示該字串。
-- 參考資料集中，依「青翼專案」篩選時，中文與英文都能看出上市時間從第二季（較早的文件）改為第三季（2026-05-15 的進度更新）。上市時間的 4 段是 `project-bluewing` 的出處（#31 決定 4）。
+- 參考資料集中，依「青翼專案」篩選時，中文與英文都能看出上市時間從第二季（較早的文件）改為第三季（2026-05-15 的進度更新）；由新到舊排列，所以第三季的進度更新在上面。上市時間的 4 段是 `project-bluewing` 的出處（#31 決定 4）。
 
 ## 畫面
 
@@ -78,7 +78,7 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
 | `ui/GraphView.tsx` | 以 cytoscape 畫圖：節點依實體類型著色（`knowledge-model.json` 的 `color`），標籤是 `names[介面語言]`，邊的標籤是關係類型的 `label` |
 | `ui/EntityPanel.tsx` | 點節點時顯示類型、名稱、相關實體（可點）與出處段落；出處以 `readSource()` 打開原文 |
 | `ui/PathPanel.tsx` | 多跳路徑：選起點與終點，在圖上標示路徑，逐步列出每個關係與它的出處；找不到時顯示固定文字「找不到這兩個實體之間的路徑。」，不區分原因 |
-| `ui/TimelinePage.tsx` | 時間軸：依日期列出介面語言的文件與看得到的段落，可依實體篩選；日期直接顯示 `YYYY-MM-DD` 字串，沒有日期時顯示「未註明日期」 |
+| `ui/TimelinePage.tsx` | 時間軸：依日期由新到舊列出介面語言的文件與看得到的段落，可依實體篩選；日期直接顯示 `YYYY-MM-DD` 字串，沒有日期時顯示「未註明日期」；本次工作階段上傳的文件加上「上傳」標籤，從上傳頁跳過來時捲動到該文件並標示後淡出（`animationend` 時結束；減少動態效果時不淡出）（[docs/upload.md](upload.md)） |
 | `ui/graph-labels.ts` | 實體、類型、關係類型的顯示文字與相關實體；出處的語言（`sourcesForLanguage()`，見下方）；下拉選單中顯示名稱相同的實體（兩位林志明）加上第一個相關實體的名稱以便區分 |
 
 - **cytoscape**：以 `import("cytoscape")` 動態載入，build 時分成獨立的 chunk（約 435 KB，gzip 約 138 KB），只用問答的人不必下載。cytoscape 自帶型別，不安裝 `@types/cytoscape`（ADR 0001「修訂」）。

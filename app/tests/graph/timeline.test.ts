@@ -75,11 +75,11 @@ describe("readTimeline 的權限", () => {
 });
 
 describe("readTimeline 的內容", () => {
-  it("只列出介面語言的文件，依日期由舊到新；日期與資料集的字串完全相同", async () => {
+  it("只列出介面語言的文件，依日期由新到舊（#42）；日期與資料集的字串完全相同", async () => {
     for (const language of LANGUAGES) {
       const entries = await readTimeline(db, "manager", { language });
       expect(entries.every((e) => e.language === language)).toBe(true);
-      expect(entries.map((e) => e.date)).toEqual(entries.map((e) => e.date).sort());
+      expect(entries.map((e) => e.date)).toEqual(entries.map((e) => e.date).sort().reverse());
       for (const e of entries) expect(e.date, e.documentId).toBe(documents.find((d) => d.id === e.documentId)!.date);
     }
   });
@@ -94,11 +94,24 @@ describe("readTimeline 的內容", () => {
   it.each([
     ["zh-TW", /第二季/, /第三季/],
     ["en", /second quarter/, /third quarter/],
-  ] as const)("青翼專案（%s）：上市時間依日期從第二季改為第三季", async (language, q2, q3) => {
+  ] as const)("青翼專案（%s）：較新的第三季排在較舊的第二季之前", async (language, q2, q3) => {
     const entries = await readTimeline(db, "staff", { language, entityId: "project-bluewing" });
     const launch = entries.flatMap((e) => e.passages.filter((p) => q2.test(p.content) || q3.test(p.content)).map((p) => ({ date: e.date, q3: q3.test(p.content) })));
     expect(launch).toHaveLength(2);
-    expect(launch.map((x) => x.q3)).toEqual([false, true]);
-    expect(launch[0].date! < launch[1].date!).toBe(true);
+    expect(launch.map((x) => x.q3)).toEqual([true, false]);
+    expect(launch[0].date! > launch[1].date!).toBe(true);
+  });
+
+  it("沒有日期的文件排在最後；日期相同時依文件 id", async () => {
+    const { uploadDocument } = await import("../../src/upload/write");
+    const dated = { title: "x", language: "zh-TW", visibility: "public", project: null, passages: ["虛構的測試段落。"] };
+    const options = { languages: clientConfig.client.languages };
+    const a = await uploadDocument(db, "manager", { ...dated, date: null }, options);
+    const b = await uploadDocument(db, "manager", { ...dated, date: "2099-01-01" }, options);
+    const c = await uploadDocument(db, "manager", { ...dated, date: "2099-01-01" }, options);
+    const ids = (await readTimeline(db, "manager", { language: "zh-TW" })).map((e) => e.documentId);
+    expect(ids[0]).toBe([b.documentId, c.documentId].sort()[0]);
+    expect(ids[1]).toBe([b.documentId, c.documentId].sort()[1]);
+    expect(ids.at(-1)).toBe(a.documentId);
   });
 });
