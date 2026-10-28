@@ -76,6 +76,9 @@ export function validateDataset(config: ClientConfig, data: Dataset): DatasetErr
     entityTypeOf.set(e.id, e.type);
     if (!entityTypes.has(e.type)) push("entities.json", `${at}/type`, `實體類型 ${e.type} 不存在於 knowledge-model.json`);
     checkSources("entities.json", `${at}/sources`, e.sources);
+    for (const language of languages) {
+      if (!e.names[language]) push("entities.json", `${at}/names`, `缺少語言 ${language} 的顯示名稱`);
+    }
   });
 
   const relationIds = new Set<string>();

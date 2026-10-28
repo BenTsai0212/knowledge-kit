@@ -67,9 +67,9 @@ PGlite 的 session user 固定是 superuser `postgres`。以 `username: "kk_app"
 | `projects` | `id` PK | `access.json` |
 | `identities` | `id` PK、`visibility_level_id` | `access.json` 的 `roles`，一個角色一個身分 |
 | `identity_projects` | `identity_id`、`project_id`（合為 PK） | 角色的 `projects` |
-| `documents` | `id` PK、`title`、`language`、`visibility_level_id`、`project_id`（可為 NULL）、`source_uri`（可為 NULL） | 資料集 |
+| `documents` | `id` PK、`title`、`language`、`visibility_level_id`、`project_id`（可為 NULL）、`source_uri`（可為 NULL）、`document_date`（`date`，可為 NULL） | 資料集 |
 | `passages` | `id` PK、`document_id`、`ordinal`、`language`、`content`、`visibility_level_id`、`project_id`（可為 NULL） | 資料集 |
-| `entities` | `id` PK、`entity_type`、`name` | 萃取或資料集 |
+| `entities` | `id` PK、`entity_type`、`name`、`names`（`jsonb` 物件，依語言的顯示名稱，預設 `{}`） | 萃取或資料集 |
 | `entity_sources` | `entity_id`、`passage_id`（出處，合為 PK） | 同上 |
 | `relations` | `id` PK、`relation_type`、`from_entity_id`、`to_entity_id` | 同上 |
 | `relation_sources` | `relation_id`、`passage_id`（出處，合為 PK）、`from_entity_id`、`to_entity_id`（與關係的兩端相同，以複合外鍵參照 `relations (id, from_entity_id, to_entity_id)` 確保一致） | 同上 |
@@ -78,6 +78,9 @@ PGlite 的 session user 固定是 superuser `postgres`。以 `username: "kk_app"
 - `language` 以 CHECK 限制為語言代碼格式；「必須屬於 `client.json` 的 `languages`」由匯入程式檢查。
 - `entity_type`、`relation_type` 是否存在於 `knowledge-model.json`，同樣由匯入程式檢查。知識模型不進資料庫，所以不寫成 FK。
 - 段落有自己的可見等級與專案，讓同一份文件可以有較機密的段落；段落還必須同時看得到所屬文件。
+- `document_date`（0004 migration）：文件日期，供時間軸使用。讀取時在 SQL 中以 `to_char(document_date, 'YYYY-MM-DD')` 轉成字串，不經過 JavaScript 的 `Date`，避免時區讓日期差一天。
+- `names`（0004 migration）：實體在各介面語言的顯示名稱，例如 `{"zh-TW": "王小明", "en": "Ming Wang"}`；`name` 仍是主要名稱。資料庫只限制必須是物件，「涵蓋 `client.json` 的每種 `languages`」由寫入的程式檢查。目前只有資料集的匯入（`validate.ts`）；**之後的上傳與萃取（Epic 第 9 項）新增實體時，也必須寫入涵蓋所有 `languages` 的 `names`**，否則畫面會缺少該語言的名稱。
+- 兩個欄位都在既有資料表上，跟著所在列的 RLS，不需要新的 policy；`oracle.ts` 不變。
 
 ## 權限規則
 
