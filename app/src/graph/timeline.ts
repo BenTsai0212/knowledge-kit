@@ -1,4 +1,4 @@
-// 時間軸：依日期由舊到新列出目前身分看得到的文件與段落，只列出介面語言的文件（#31 決定 2），可依實體篩選。
+// 時間軸：依日期由新到舊（#42）列出目前身分看得到的文件與段落，只列出介面語言的文件（#31 決定 2），可依實體篩選。
 // 一律經 withIdentity()，權限交給 RLS；日期在 SQL 中轉成字串，不經過 JavaScript 的 Date（不受時區影響）。
 import type { LanguageCode } from "../client/types";
 import type { Database } from "../db/database";
@@ -45,7 +45,7 @@ const SQL = `
     LEFT JOIN kk.entity_sources s ON s.passage_id = p.id
    WHERE d.language = $1
    GROUP BY d.id, p.id
-   ORDER BY d.document_date NULLS LAST, d.id, p.ordinal`;
+   ORDER BY d.document_date DESC NULLS LAST, d.id, p.ordinal`;
 
 export async function readTimeline(db: Database, identityId: string | null, options: TimelineOptions): Promise<TimelineEntry[]> {
   const rows = await db.withIdentity(identityId, async (tx) => (await tx.query<Row>(SQL, [options.language])).rows);
