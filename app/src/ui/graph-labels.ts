@@ -29,3 +29,12 @@ export function relatedEntities(graph: Graph, entityId: string, language: string
       return other ? [{ relationId: r.id, label: relationTypeLabel(r.type, language), outgoing: r.from === entityId, entity: other }] : [];
     });
 }
+
+// 下拉選單用的名稱：顯示名稱相同的實體（例如兩位林志明）加上第一個相關實體的名稱以便區分
+export function entityOptionLabel(graph: Graph, entity: GraphEntity, language: string): string {
+  const name = entityName(entity, language);
+  const same = graph.entities.filter((e) => entityName(e, language) === name);
+  if (same.length < 2) return name;
+  const first = relatedEntities(graph, entity.id, language)[0];
+  return first ? `${name}（${entityName(first.entity, language)}）` : `${name}（${entity.id}）`;
+}

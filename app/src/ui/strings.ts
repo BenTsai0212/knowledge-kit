@@ -45,6 +45,17 @@ export interface UiStrings {
   selectEntity: string;
   relatedEntities: string;
   entitySources: string;
+  tabTimeline: string;
+  pathTitle: string;
+  pathFrom: string;
+  pathTo: string;
+  pathChoose: string;
+  // 找不到路徑時的固定文字：不區分沒有連通或看不到（不透露是否因權限而找不到）
+  pathNotFound: string;
+  timelineFilter: string;
+  timelineAll: string;
+  timelineEmpty: string;
+  undated: string;
   // 標籤與內容之間的分隔（繁中用全形冒號）
   colon: string;
   // 拒答：「沒有資料」與「沒有權限」相同，不透露是否有看不到的文件
@@ -89,6 +100,16 @@ export const STRINGS: Record<LanguageCode, UiStrings> = {
     selectEntity: "點選節點查看詳細資訊。",
     relatedEntities: "相關實體",
     entitySources: "出處",
+    tabTimeline: "時間軸",
+    pathTitle: "多跳路徑",
+    pathFrom: "起點",
+    pathTo: "終點",
+    pathChoose: "選擇起點與終點，找出兩個實體之間的最短路徑。",
+    pathNotFound: "找不到這兩個實體之間的路徑。",
+    timelineFilter: "依實體篩選",
+    timelineAll: "全部",
+    timelineEmpty: "沒有可顯示的文件。",
+    undated: "未註明日期",
     colon: "：",
     refusal: "找不到可以回答這個問題的資料。",
     uncited: "未附出處",
@@ -146,6 +167,16 @@ export const STRINGS: Record<LanguageCode, UiStrings> = {
     selectEntity: "Select a node to see its details.",
     relatedEntities: "Related entities",
     entitySources: "Sources",
+    tabTimeline: "Timeline",
+    pathTitle: "Multi-hop path",
+    pathFrom: "From",
+    pathTo: "To",
+    pathChoose: "Choose two entities to find the shortest path between them.",
+    pathNotFound: "No path was found between these two entities.",
+    timelineFilter: "Filter by entity",
+    timelineAll: "All",
+    timelineEmpty: "No documents to show.",
+    undated: "Undated",
     colon: ": ",
     refusal: "I couldn't find information to answer this question.",
     uncited: "No sources cited",
