@@ -17,6 +17,9 @@ export type AskErrorType =
 // 上傳失敗的原因：解析（ParseFailure）、寫入（denied：被 RLS 拒絕；invalid：格式不符）、沒有選檔也沒有貼上文字
 export type UploadFailure = ParseFailure | "denied" | "invalid" | "no_input";
 
+// 萃取的失敗原因（run.ts 之外，以及畫面自己的 no_access_code）；/api/ask 的錯誤類型用 errors
+export type ExtractFailure = "format" | "truncated" | "write" | "no_access_code";
+
 export interface UiStrings {
   loading: string;
   loadFailed: string;
@@ -93,6 +96,40 @@ export interface UiStrings {
   uploadAnother: string;
   // 時間軸中本次工作階段上傳的文件
   timelineUploaded: string;
+  extractTitle: string;
+  extractRunning: string;
+  extractDone: string;
+  extractEntities: string;
+  extractRelations: string;
+  extractDropped: string;
+  extractSkipped: string;
+  extractFailed: string;
+  extractRetry: string;
+  extractErrors: Record<ExtractFailure, string>;
+  tabReview: string;
+  reviewPendingTab: string;
+  reviewRejectedTab: string;
+  reviewEmpty: string;
+  reviewRejectedEmpty: string;
+  reviewExtracting: string;
+  reviewRefresh: string;
+  reviewEntities: string;
+  reviewRelations: string;
+  reviewSelectAll: string;
+  reviewApproveSelected: string;
+  reviewApproveDocument: string;
+  reviewApprove: string;
+  reviewReject: string;
+  reviewWorking: string;
+  reviewNeedsChoice: string;
+  reviewChoose: string;
+  reviewCreateNew: string;
+  reviewMergeInto: string;
+  reviewMergeHint: string;
+  reviewApprovedCount: string;
+  reviewRejectedWithEntity: string;
+  reviewRelationBlocked: string;
+  reviewErrors: Record<"denied" | "conflict", string>;
   // 標籤與內容之間的分隔（繁中用全形冒號）
   colon: string;
   // 拒答：「沒有資料」與「沒有權限」相同，不透露是否有看不到的文件
@@ -187,6 +224,48 @@ export const STRINGS: Record<LanguageCode, UiStrings> = {
     uploadWriting: "上傳中…",
     uploadAnother: "再上傳一份",
     timelineUploaded: "上傳",
+    extractTitle: "萃取實體與關係",
+    extractRunning: "萃取中",
+    extractDone: "已送審",
+    extractEntities: "實體",
+    extractRelations: "關係",
+    extractDropped: "捨棄",
+    extractSkipped: "超過批數上限，未萃取的段落數",
+    extractFailed: "部分批次失敗",
+    extractRetry: "重試萃取",
+    extractErrors: {
+      format: "模型輸出的格式不符。",
+      truncated: "模型的回應太長而被截斷。",
+      write: "寫入待審時被拒絕。",
+      no_access_code: "需要邀請碼才能萃取。請到問答頁輸入邀請碼後重試。",
+    },
+    tabReview: "待審",
+    reviewPendingTab: "待審",
+    reviewRejectedTab: "已退回",
+    reviewEmpty: "沒有待審的項目。",
+    reviewRejectedEmpty: "沒有已退回的項目。",
+    reviewExtracting: "還有文件在萃取中，完成後請重新整理清單。",
+    reviewRefresh: "重新整理",
+    reviewEntities: "實體",
+    reviewRelations: "關係",
+    reviewSelectAll: "全選",
+    reviewApproveSelected: "核准選取的項目",
+    reviewApproveDocument: "核准這份文件的全部",
+    reviewApprove: "核准",
+    reviewReject: "退回",
+    reviewWorking: "處理中…",
+    reviewNeedsChoice: "需逐筆決定：請選擇合併對象或建立新實體",
+    reviewChoose: "請選擇",
+    reviewCreateNew: "建立新實體",
+    reviewMergeInto: "合併到",
+    reviewMergeHint: "合併後，看得到這份文件的人也會看到此實體。",
+    reviewApprovedCount: "已核准",
+    reviewRejectedWithEntity: "因實體退回",
+    reviewRelationBlocked: "兩端的實體核准後才能核准",
+    reviewErrors: {
+      denied: "沒有權限處理這個項目。",
+      conflict: "這個項目已經被處理過，請重新整理。",
+    },
     colon: "：",
     refusal: "找不到可以回答這個問題的資料。",
     uncited: "未附出處",
@@ -294,6 +373,48 @@ export const STRINGS: Record<LanguageCode, UiStrings> = {
     uploadWriting: "Uploading…",
     uploadAnother: "Upload another",
     timelineUploaded: "Uploaded",
+    extractTitle: "Entity and relation extraction",
+    extractRunning: "Extracting",
+    extractDone: "Sent for review",
+    extractEntities: "Entities",
+    extractRelations: "Relations",
+    extractDropped: "Discarded",
+    extractSkipped: "Passages not extracted (over the batch limit)",
+    extractFailed: "Some batches failed",
+    extractRetry: "Retry extraction",
+    extractErrors: {
+      format: "The model's output wasn't in the expected format.",
+      truncated: "The model's response was too long and was cut off.",
+      write: "Saving the results for review was refused.",
+      no_access_code: "An access code is needed to extract. Enter it on the Q&A page, then retry.",
+    },
+    tabReview: "Review",
+    reviewPendingTab: "Pending",
+    reviewRejectedTab: "Rejected",
+    reviewEmpty: "Nothing is waiting for review.",
+    reviewRejectedEmpty: "Nothing has been rejected.",
+    reviewExtracting: "Some documents are still being extracted. Refresh the list when they finish.",
+    reviewRefresh: "Refresh",
+    reviewEntities: "Entities",
+    reviewRelations: "Relations",
+    reviewSelectAll: "Select all",
+    reviewApproveSelected: "Approve selected",
+    reviewApproveDocument: "Approve everything in this document",
+    reviewApprove: "Approve",
+    reviewReject: "Reject",
+    reviewWorking: "Working…",
+    reviewNeedsChoice: "Decide one by one: choose an entity to merge into, or create a new one",
+    reviewChoose: "Choose",
+    reviewCreateNew: "Create a new entity",
+    reviewMergeInto: "Merge into",
+    reviewMergeHint: "After merging, anyone who can see this document can also see this entity.",
+    reviewApprovedCount: "Approved",
+    reviewRejectedWithEntity: "Rejected with its entity",
+    reviewRelationBlocked: "Approve both entities first",
+    reviewErrors: {
+      denied: "You don't have permission to handle this item.",
+      conflict: "This item has already been handled. Please refresh.",
+    },
     colon: ": ",
     refusal: "I couldn't find information to answer this question.",
     uncited: "No sources cited",

@@ -4,6 +4,7 @@ import { clientConfig } from "./client/load";
 import { dataset } from "./dataset/load";
 import { seedDataset } from "./dataset/seed";
 import { openDatabase, type Database } from "./db/database";
+import { planExtraction, runExtraction, type ExtractionState } from "./extraction/run";
 import { ask } from "./qa/answer";
 import { apiTransport } from "./qa/api";
 import { openRetriever } from "./retrieval/retrieve";
@@ -13,6 +14,7 @@ import { AccessCodeForm } from "./ui/AccessCodeForm";
 import { AnswerView, type AnswerState } from "./ui/AnswerView";
 import { GraphPage } from "./ui/GraphPage";
 import { QuestionPanel } from "./ui/QuestionPanel";
+import { ReviewPage } from "./ui/ReviewPage";
 import { createRequestGate } from "./ui/requests";
 import { SourcePanel } from "./ui/SourcePanel";
 import { strings } from "./ui/strings";
@@ -22,7 +24,7 @@ import { Toolbar } from "./ui/Toolbar";
 
 const { client, access } = clientConfig;
 
-type View = "qa" | "graph" | "timeline" | "upload";
+type View = "qa" | "graph" | "timeline" | "upload" | "review";
 
 export function App() {
   const [view, setView] = useState<View>("qa");
@@ -37,6 +39,11 @@ export function App() {
   // 本次工作階段上傳的文件（時間軸加上「上傳」標籤），以及從上傳頁跳到時間軸時要捲動到的文件（#42）
   const [uploaded, setUploaded] = useState<ReadonlySet<string>>(new Set());
   const [focusDocument, setFocusDocument] = useState<string | null>(null);
+  // 萃取在背景執行，由 App 管理：切換身分、語言或頁籤都不中斷（#44 決定的補充 1）
+  const [extractions, setExtractions] = useState<Record<string, { title: string; state: ExtractionState }>>({});
+  const latestExtractions = useRef(extractions);
+  latestExtractions.current = extractions;
+  const runningExtractions = useRef(new Set<string>());
   // 同時只有一個有效的提問與原文讀取；切換身分或語言時捨棄進行中的
   const questions = useRef(createRequestGate());
   const sources = useRef(createRequestGate());
@@ -97,6 +104,28 @@ export function App() {
     setAnswer({ question, streaming: "", answer: result });
   }
 
+  // 以上傳時記錄的身分寫入待審；邀請碼用開始（或重試）當下的碼，沒有碼時記為失敗，輸入後可以重試
+  async function extract(documentId: string, state: ExtractionState) {
+    if (db === null || runningExtractions.current.has(documentId)) return;
+    const save = (next: ExtractionState) => setExtractions((all) => ({ ...all, [documentId]: { ...all[documentId], state: next } }));
+    if (accessCode === null) {
+      save({ ...state, batches: state.batches.map((b) => (b.status === "done" ? b : { ...b, status: "failed", error: "no_access_code" })) });
+      return;
+    }
+    runningExtractions.current.add(documentId);
+    try {
+      const final = await runExtraction({ db, transport: apiTransport({ accessCode }), config: clientConfig }, state, save);
+      if (final.batches.some((b) => b.error === "invalid_access_code")) {
+        // 與問答相同：清除被拒的碼，回到輸入畫面（#26 決定 3）
+        clearAccessCode();
+        setAccessCode(null);
+        setCodeRejected(true);
+      }
+    } finally {
+      runningExtractions.current.delete(documentId);
+    }
+  }
+
   async function onOpenSource(passageId: string) {
     if (db === null) return;
     const ticket = sources.current.begin();
@@ -109,7 +138,12 @@ export function App() {
       <Toolbar
         language={language}
         identity={identity}
-        onIdentity={(id) => (discard(), setIdentity(id))}
+        onIdentity={(id) => {
+          discard();
+          setIdentity(id);
+          // 沒有 canReview 的身分看不到待審頁籤
+          if (view === "review" && !access.roles.find((r) => r.id === id)?.canReview) setView("qa");
+        }}
         onLanguage={(code) => (discard(), setLanguage(code))}
         onChangeAccessCode={
           accessCode === null
@@ -129,6 +163,7 @@ export function App() {
             ["graph", s.tabGraph],
             ["timeline", s.tabTimeline],
             ["upload", s.tabUpload],
+            ...(access.roles.find((r) => r.id === identity)?.canReview ? ([["review", s.tabReview]] as const) : []),
           ] as const
         ).map(([id, label]) => (
           <button key={id} type="button" aria-current={view === id ? "page" : undefined} onClick={() => setView(id)}>
@@ -144,6 +179,15 @@ export function App() {
             <p className="card muted">{s.loading}</p>
           ) : view === "graph" ? (
             <GraphPage db={db} identity={identity} language={language} onOpenSource={onOpenSource} />
+          ) : view === "review" ? (
+            <ReviewPage
+              key={`${identity}|${language}`}
+              db={db}
+              identity={identity}
+              language={language}
+              extracting={Object.values(extractions).some((x) => x.state.batches.some((b) => b.status === "running" || b.status === "waiting"))}
+              onOpenSource={onOpenSource}
+            />
           ) : view === "upload" ? (
             // 切換身分或語言時重建，清除表單、預覽與結果
             <UploadPage
@@ -151,7 +195,17 @@ export function App() {
               db={db}
               identity={identity}
               language={language}
-              onUploaded={(id) => setUploaded((ids) => new Set(ids).add(id))}
+              onUploaded={(upload) => {
+                setUploaded((ids) => new Set(ids).add(upload.documentId));
+                const state = planExtraction(clientConfig, { ...upload, uploader: identity });
+                setExtractions((all) => ({ ...all, [upload.documentId]: { title: upload.title, state } }));
+                void extract(upload.documentId, state);
+              }}
+              extractions={Object.values(extractions).filter((x) => x.state.uploader === identity)}
+              onRetryExtraction={(id) => {
+                const job = latestExtractions.current[id];
+                if (job) void extract(id, job.state);
+              }}
               onGoto={(target, document) => {
                 if (document !== undefined) {
                   // 時間軸只列出介面語言的文件，所以切換成這份文件的語言

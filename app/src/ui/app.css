@@ -336,3 +336,32 @@ button.secondary {
     outline: 3px solid transparent;
   }
 }
+
+.extraction {
+  border-top: 1px solid var(--color-border);
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.review-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.review-list {
+  display: grid;
+  gap: 0.75rem;
+  list-style: none;
+  padding: 0;
+}
+
+.review-list > li {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+}
+
+label.inline {
+  display: inline-flex;
+  margin-right: 0.5rem;
+}
