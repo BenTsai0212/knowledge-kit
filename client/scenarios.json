@@ -32,12 +32,12 @@
         {
           "id": "bluewing-lead",
           "text": { "zh-TW": "青翼專案的負責人是誰？", "en": "Who leads Project Bluewing?" },
-          "answerPassages": ["bluewing-kickoff-zh-01"]
+          "answerPassages": ["bluewing-kickoff-zh-01", "bluewing-spec-en-04"]
         },
         {
           "id": "bluewing-launch",
           "text": { "zh-TW": "青翼桌預計什麼時候上市？", "en": "When will the Bluewing desk launch?" },
-          "answerPassages": ["bluewing-kickoff-zh-02", "bluewing-status-zh-01"]
+          "answerPassages": ["bluewing-kickoff-zh-02", "bluewing-status-zh-01", "bluewing-spec-en-05", "bluewing-status-en-01"]
         }
       ]
     },
@@ -50,12 +50,12 @@
         {
           "id": "longpier-status",
           "text": { "zh-TW": "長堤專案目前的進度如何？", "en": "What is the status of Project Longpier?" },
-          "answerPassages": ["longpier-progress-zh-01"]
+          "answerPassages": ["longpier-progress-zh-01", "longpier-progress-en-01"]
         },
         {
           "id": "raise-2026",
           "text": { "zh-TW": "2026 年平均調薪幅度是多少？", "en": "What is the average raise for 2026?" },
-          "answerPassages": ["reorg-2026-zh-02"]
+          "answerPassages": ["reorg-2026-zh-02", "compensation-2026-en-01"]
         }
       ]
     }

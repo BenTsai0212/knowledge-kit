@@ -89,28 +89,28 @@
       "type": "leads",
       "from": "person-wang-xiaoming",
       "to": "project-bluewing",
-      "sources": ["bluewing-kickoff-zh-01"]
+      "sources": ["bluewing-kickoff-zh-01", "bluewing-spec-en-04"]
     },
     {
       "id": "zhang-leads-longpier",
       "type": "leads",
       "from": "person-zhang-yating",
       "to": "project-longpier",
-      "sources": ["longpier-progress-zh-01"]
+      "sources": ["longpier-progress-zh-01", "longpier-progress-en-01"]
     },
     {
       "id": "zhou-works-on-bluewing",
       "type": "works-on",
       "from": "person-zhou-dawei",
       "to": "project-bluewing",
-      "sources": ["bluewing-kickoff-zh-01", "bluewing-spec-en-03"]
+      "sources": ["bluewing-kickoff-zh-01", "bluewing-spec-en-03", "bluewing-spec-en-04"]
     },
     {
       "id": "lin-rd-works-on-bluewing",
       "type": "works-on",
       "from": "person-lin-zhiming-rd",
       "to": "project-bluewing",
-      "sources": ["bluewing-kickoff-zh-01"]
+      "sources": ["bluewing-kickoff-zh-01", "bluewing-spec-en-04"]
     },
     {
       "id": "huang-works-on-longpier",
@@ -124,14 +124,14 @@
       "type": "works-on",
       "from": "team-rd",
       "to": "project-bluewing",
-      "sources": ["bluewing-kickoff-zh-01"]
+      "sources": ["bluewing-kickoff-zh-01", "bluewing-spec-en-04"]
     },
     {
       "id": "ops-works-on-longpier",
       "type": "works-on",
       "from": "team-ops",
       "to": "project-longpier",
-      "sources": ["longpier-progress-zh-01"]
+      "sources": ["longpier-progress-zh-01", "longpier-progress-en-01"]
     }
   ]
 }

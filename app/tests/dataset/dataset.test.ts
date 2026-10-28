@@ -39,12 +39,13 @@ afterAll(async () => {
 });
 
 describe("內容涵蓋", () => {
-  it("繁中與英文的文件與段落都有，繁中約占六成", () => {
-    const zh = documents.filter((d) => d.language === "zh-TW").length;
+  // 比例以段落數計算：檢索與問答的對象是段落（#26 決定，取代 #15 以文件數計算）
+  it("繁中與英文的文件與段落都有，段落的繁中約占六成", () => {
+    const zh = passages.filter((p) => p.language === "zh-TW").length;
     expect(new Set(documents.map((d) => d.language))).toEqual(new Set(["zh-TW", "en"]));
     expect(new Set(passages.map((p) => p.language))).toEqual(new Set(["zh-TW", "en"]));
-    expect(zh / documents.length).toBeGreaterThanOrEqual(0.55);
-    expect(zh / documents.length).toBeLessThanOrEqual(0.7);
+    expect(zh / passages.length).toBeGreaterThanOrEqual(0.55);
+    expect(zh / passages.length).toBeLessThanOrEqual(0.7);
   });
 
   it("涵蓋三種可見等級、兩個專案、沒有專案的文件，以及比所屬文件更機密的段落", () => {
@@ -76,6 +77,10 @@ describe("內容涵蓋", () => {
     expect(new Set(lins.map((e) => teamOf(e.id)))).toEqual(new Set(["team-rd", "team-sales"]));
     // 人物的合併策略預設送審，避免把這兩位合成同一個人（docs/client-config.md）
     expect(knowledgeModel.entityTypes.find((t) => t.id === "person")?.mergeStrategy).toBe("review");
+    // 青翼專案英文段落中的 Zhiming Lin 是研發部那位（#26 決定）
+    const [rd, sales] = ["person-lin-zhiming-rd", "person-lin-zhiming-sales"].map((id) => lins.find((e) => e.id === id)!);
+    expect(rd.sources).toContain("bluewing-spec-en-04");
+    expect(sales.sources).not.toContain("bluewing-spec-en-04");
   });
 
   it("中英文別名：人物的中文名與英文名，兩種語言的文件都是出處", () => {
@@ -89,13 +94,21 @@ describe("內容涵蓋", () => {
     expect(bilingual.length).toBeGreaterThanOrEqual(5);
   });
 
-  it("矛盾：青翼桌的上市時間，較新的文件說法不同（docs/dataset.md）", () => {
+  it("矛盾：青翼桌的上市時間，中文與英文都由較新的另一份文件改口（docs/dataset.md）", () => {
     const question = scenarios.scenarios.flatMap((s) => s.questions).find((q) => q.id === "bluewing-launch")!;
     const sources = question.answerPassages.map((id) => passages.find((p) => p.id === id)!);
-    expect(sources.map((p) => [p.doc.date, p.text.includes("第二季") ? "Q2" : p.text.includes("第三季") ? "Q3" : "?"])).toEqual([
-      ["2026-02-10", "Q2"],
-      ["2026-05-15", "Q3"],
+    const quarter = (text: string) =>
+      /第二季|second quarter/.test(text) ? "Q2" : /第三季|third quarter/.test(text) ? "Q3" : "?";
+    expect(sources.map((p) => [p.language, p.doc.date, quarter(p.text)])).toEqual([
+      ["zh-TW", "2026-02-10", "Q2"],
+      ["zh-TW", "2026-05-15", "Q3"],
+      ["en", "2026-03-03", "Q2"],
+      ["en", "2026-05-15", "Q3"],
     ]);
+    // 同一語言的兩種說法來自不同文件，問答以文件標題並列來源
+    for (const language of ["zh-TW", "en"]) {
+      expect(new Set(sources.filter((p) => p.language === language).map((p) => p.doc.id)).size, language).toBe(2);
+    }
   });
 });
 
