@@ -304,7 +304,35 @@ button.secondary {
   color: var(--color-primary);
 }
 
+/* 跳到新文件時的標示（#42）：框線加淡色背景維持約 1 秒，再於約 1.5 秒內淡出；animationend 時由程式取消 */
 .timeline .flash {
-  outline: 3px solid var(--color-primary);
-  transition: outline-color 0.5s;
+  animation: timeline-flash 2.5s ease-out forwards;
+}
+
+@keyframes timeline-flash {
+  0%,
+  40% {
+    outline: 3px solid var(--color-primary);
+    background-color: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+  }
+  100% {
+    outline: 3px solid transparent;
+    background-color: var(--color-surface);
+  }
+}
+
+/* 減少動態效果：不播放淡出，框線顯示一段時間後直接取消（steps 讓最後一刻才跳到結束狀態，animationend 照樣觸發） */
+@media (prefers-reduced-motion: reduce) {
+  .timeline .flash {
+    animation: timeline-flash-static 2s steps(1, end) forwards;
+  }
+}
+
+@keyframes timeline-flash-static {
+  0% {
+    outline: 3px solid var(--color-primary);
+  }
+  100% {
+    outline: 3px solid transparent;
+  }
 }

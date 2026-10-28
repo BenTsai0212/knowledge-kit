@@ -18,7 +18,8 @@ interface Props {
   onOpenSource(passageId: string): void;
 }
 
-const FLASH_MS = 2000;
+// 標示由 CSS 的 timeline-flash 動畫（約 2.5 秒）淡出，animationend 時結束；動畫沒有觸發時（例如瀏覽器停用動畫）以此保底清除
+const FLASH_FALLBACK_MS = 4000;
 
 // 時間軸頁：依日期由新到舊列出介面語言的文件，可依實體篩選。切換身分或語言時重新讀取，舊結果忽略；篩選的實體已看不到時清除
 export function TimelinePage({ db, identity, language, uploaded, focus, onFocused, onOpenSource }: Props) {
@@ -61,10 +62,10 @@ export function TimelinePage({ db, identity, language, uploaded, focus, onFocuse
     setFlash(focus);
   }, [focus, entries]);
 
-  // 標示一段時間後取消
+  // 保底：動畫結束事件沒有到時仍會取消標示
   useEffect(() => {
     if (flash === null) return;
-    const timer = setTimeout(() => setFlash(null), FLASH_MS);
+    const timer = setTimeout(() => setFlash(null), FLASH_FALLBACK_MS);
     return () => clearTimeout(timer);
   }, [flash]);
 
@@ -95,7 +96,13 @@ export function TimelinePage({ db, identity, language, uploaded, focus, onFocuse
       ) : (
         <ol className="timeline" ref={list}>
           {entries.map((entry) => (
-            <li key={entry.documentId} data-document-id={entry.documentId} className={entry.documentId === flash ? "card flash" : "card"}>
+            <li
+              key={entry.documentId}
+              data-document-id={entry.documentId}
+              className={entry.documentId === flash ? "card flash" : "card"}
+              // 淡出動畫結束時取消標示，程式與 CSS 的時間不會不一致
+              onAnimationEnd={(e) => e.animationName.startsWith("timeline-flash") && setFlash(null)}
+            >
               <h3>
                 <time dateTime={entry.date ?? undefined}>{entry.date ?? s.undated}</time> {entry.title}
                 {uploaded.has(entry.documentId) && <span className="badge">{s.timelineUploaded}</span>}
