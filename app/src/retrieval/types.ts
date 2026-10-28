@@ -1,4 +1,4 @@
-// 檢索的向量接口。問答與資料層只依賴本接口；使用哪個實作只在 providers.ts 決定。
+// 檢索的向量接口。問答與資料層只依賴本接口；使用哪個實作只在 providers.ts 決定（docs/retrieval.md）。
 import type { ProviderId } from "../client/types";
 
 export interface VectorProvider<V = unknown> {
