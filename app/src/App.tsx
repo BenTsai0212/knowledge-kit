@@ -15,6 +15,7 @@ import { AnswerView, type AnswerState } from "./ui/AnswerView";
 import { GraphPage } from "./ui/GraphPage";
 import { QuestionPanel } from "./ui/QuestionPanel";
 import { ReviewPage } from "./ui/ReviewPage";
+import { createExtractionRunner } from "./ui/extraction-runner";
 import { createRequestGate } from "./ui/requests";
 import { SourcePanel } from "./ui/SourcePanel";
 import { strings } from "./ui/strings";
@@ -43,7 +44,9 @@ export function App() {
   const [extractions, setExtractions] = useState<Record<string, { title: string; state: ExtractionState }>>({});
   const latestExtractions = useRef(extractions);
   latestExtractions.current = extractions;
-  const runningExtractions = useRef(new Set<string>());
+  // 實際執行中的萃取（文件 id）；「萃取中」以此判斷，不看批次狀態（#47 審查）
+  const [activeExtractions, setActiveExtractions] = useState<ReadonlySet<string>>(new Set());
+  const extractionRunner = useRef(createExtractionRunner(setActiveExtractions));
   // 同時只有一個有效的提問與原文讀取；切換身分或語言時捨棄進行中的
   const questions = useRef(createRequestGate());
   const sources = useRef(createRequestGate());
@@ -106,23 +109,20 @@ export function App() {
 
   // 以上傳時記錄的身分寫入待審；邀請碼用開始（或重試）當下的碼，沒有碼時記為失敗，輸入後可以重試
   async function extract(documentId: string, state: ExtractionState) {
-    if (db === null || runningExtractions.current.has(documentId)) return;
+    if (db === null || extractionRunner.current.isRunning(documentId)) return;
     const save = (next: ExtractionState) => setExtractions((all) => ({ ...all, [documentId]: { ...all[documentId], state: next } }));
     if (accessCode === null) {
       save({ ...state, batches: state.batches.map((b) => (b.status === "done" ? b : { ...b, status: "failed", error: "no_access_code" })) });
       return;
     }
-    runningExtractions.current.add(documentId);
-    try {
-      const final = await runExtraction({ db, transport: apiTransport({ accessCode }), config: clientConfig }, state, save);
-      if (final.batches.some((b) => b.error === "invalid_access_code")) {
-        // 與問答相同：清除被拒的碼，回到輸入畫面（#26 決定 3）
-        clearAccessCode();
-        setAccessCode(null);
-        setCodeRejected(true);
-      }
-    } finally {
-      runningExtractions.current.delete(documentId);
+    const final = await extractionRunner.current.run(documentId, () =>
+      runExtraction({ db, transport: apiTransport({ accessCode }), config: clientConfig }, state, save),
+    );
+    if (final?.batches.some((b) => b.error === "invalid_access_code")) {
+      // 與問答相同：清除被拒的碼，回到輸入畫面（#26 決定 3）
+      clearAccessCode();
+      setAccessCode(null);
+      setCodeRejected(true);
     }
   }
 
@@ -185,7 +185,7 @@ export function App() {
               db={db}
               identity={identity}
               language={language}
-              extracting={Object.values(extractions).some((x) => x.state.batches.some((b) => b.status === "running" || b.status === "waiting"))}
+              extracting={activeExtractions.size > 0}
               onOpenSource={onOpenSource}
             />
           ) : view === "upload" ? (
@@ -201,7 +201,9 @@ export function App() {
                 setExtractions((all) => ({ ...all, [upload.documentId]: { title: upload.title, state } }));
                 void extract(upload.documentId, state);
               }}
-              extractions={Object.values(extractions).filter((x) => x.state.uploader === identity)}
+              extractions={Object.values(extractions)
+                .filter((x) => x.state.uploader === identity)
+                .map((x) => ({ ...x, running: activeExtractions.has(x.state.documentId) }))}
               onRetryExtraction={(id) => {
                 const job = latestExtractions.current[id];
                 if (job) void extract(id, job.state);

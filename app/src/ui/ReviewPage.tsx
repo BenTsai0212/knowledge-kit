@@ -6,11 +6,11 @@ import { clientConfig } from "../client/load";
 import type { LocalizedText } from "../client/types";
 import type { Database } from "../db/database";
 import { suggestMerge, type MergeSuggestion } from "../extraction/merge";
-import { approve, readReview, reject, ReviewError, type ReviewDocument, type ReviewEntity } from "../extraction/store";
+import { approve, readReview, reject, ReviewError, type EntityApproval, type ReviewDocument, type ReviewEntity } from "../extraction/store";
 import { readGraph, type Graph } from "../graph/read";
 import { entityOptionLabel, entityTypeLabel, relationTypeLabel } from "./graph-labels";
 import { createRequestGate } from "./requests";
-import { batchPlan, canBatch, entityApproval, initialChoice, relationReady, type EntityChoice } from "./review-helpers";
+import { batchPlan, canBatch, entityApproval, initialChoice, namesInvalid, relationReady, type EntityChoice } from "./review-helpers";
 import { strings } from "./strings";
 
 interface Props {
@@ -35,6 +35,8 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource }:
   const [choices, setChoices] = useState<Record<string, EntityChoice>>({});
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  // 批次核准時，因名稱不完整而略過的筆數
+  const [skipped, setSkipped] = useState(0);
   const [busy, setBusy] = useState(false);
   // 連點時 state 還沒更新，以 ref 確保同時只有一個核准或退回在進行（比照 #42）
   const working = useRef(false);
@@ -83,8 +85,12 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource }:
       setVersion((v) => v + 1);
     }
   }
-  const approveItems = (items: ReturnType<typeof batchPlan>) =>
-    run(() => approve(db, identity, items, { defaultLanguage: client.defaultLanguage }));
+  // skippedCount：批次核准時因名稱不完整而略過的筆數（逐筆核准時為 0，清除先前的提示）
+  const approveItems = (items: { entities: EntityApproval[]; relations: string[] }, skippedCount = 0) => {
+    setSkipped(skippedCount);
+    return run(() => approve(db, identity, items, { defaultLanguage: client.defaultLanguage }));
+  };
+  const approveBatch = (plan: ReturnType<typeof batchPlan>) => void approveItems({ entities: plan.entities, relations: plan.relations }, plan.skipped);
   const rejectItems = (items: { entities: string[]; relations: string[] }) => run(() => reject(db, identity, items));
 
   const nameOf = (doc: ReviewDocument, id: string) => {
@@ -110,6 +116,13 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource }:
       </nav>
       {extracting && <p className="card muted">{s.reviewExtracting}</p>}
       {error !== null && <p className="card error">{error}</p>}
+      {skipped > 0 && (
+        <p className="card warning">
+          {s.reviewSkippedNames}
+          {s.colon}
+          {skipped}
+        </p>
+      )}
       {visibleDocs.length === 0 && <p className="card muted">{tab === "pending" ? s.reviewEmpty : s.reviewRejectedEmpty}</p>}
 
       {visibleDocs.map((doc) => {
@@ -132,10 +145,10 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource }:
                 <button type="button" className="secondary" disabled={busy} onClick={() => setSelected(new Set(batchable))}>
                   {s.reviewSelectAll}
                 </button>
-                <button type="button" disabled={busy || selected.size === 0} onClick={() => void approveItems(batchPlan(doc, suggestions, allChoices, selected))}>
+                <button type="button" disabled={busy || selected.size === 0} onClick={() => approveBatch(batchPlan(doc, suggestions, allChoices, client.languages, selected))}>
                   {busy ? s.reviewWorking : s.reviewApproveSelected}
                 </button>
-                <button type="button" disabled={busy} onClick={() => void approveItems(batchPlan(doc, suggestions, allChoices))}>
+                <button type="button" disabled={busy} onClick={() => approveBatch(batchPlan(doc, suggestions, allChoices, client.languages))}>
                   {busy ? s.reviewWorking : s.reviewApproveDocument}
                 </button>
               </div>
@@ -149,6 +162,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource }:
                 const needsChoice = suggestion.mode === "choose";
                 const candidates = suggestion.mode === "choose" ? suggestion.candidates : suggestion.mode === "auto" ? [suggestion.target] : [];
                 const names: LocalizedText = choice.names ?? e.names;
+                const invalidNames = namesInvalid(choice, client.languages);
                 return (
                   <li key={e.id}>
                     {tab === "pending" && (
@@ -193,6 +207,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource }:
                       </label>
                     )}
                     {tab === "pending" && typeof choice.mergeInto === "string" && <p className="muted">{s.reviewMergeHint}</p>}
+                    {tab === "pending" && invalidNames && <p className="error">{s.reviewNamesRequired}</p>}
                     <ul>
                       {e.sources.map((p) => (
                         <li key={p.id}>
@@ -207,9 +222,9 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource }:
                       <div className="dialog-actions">
                         <button
                           type="button"
-                          disabled={busy || choice.mergeInto === undefined}
+                          disabled={busy || choice.mergeInto === undefined || invalidNames}
                           onClick={() => {
-                            const approval = entityApproval(e.id, choice);
+                            const approval = entityApproval(e.id, choice, client.languages);
                             if (approval) void approveItems({ entities: [approval], relations: [] });
                           }}
                         >

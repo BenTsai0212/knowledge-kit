@@ -20,7 +20,7 @@ interface Props {
   // 上傳成功：App 記錄「上傳」標籤，並在背景萃取實體與關係（#44）
   onUploaded(upload: { documentId: string; title: string; documentLanguage: string; passages: { id: string; content: string }[] }): void;
   // 目前身分在本次工作階段上傳的文件的萃取狀態，以及重試
-  extractions: { title: string; state: ExtractionState }[];
+  extractions: { title: string; state: ExtractionState; running: boolean }[];
   onRetryExtraction(documentId: string): void;
   // 到時間軸時帶上剛上傳的文件與它的語言，以便捲動到該文件
   onGoto(view: "qa" | "timeline", document?: { id: string; language: string }): void;
@@ -166,10 +166,10 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
   return (
     <section className="card upload">
       <p className="badge warning">{s.uploadEphemeral}</p>
-      {extractions.map(({ title: docTitle, state }) => (
+      {extractions.map(({ title: docTitle, state, running }) => (
         <div key={state.documentId} className="card">
           <p>{docTitle}</p>
-          <ExtractionStatus state={state} language={language} onRetry={() => onRetryExtraction(state.documentId)} />
+          <ExtractionStatus state={state} running={running} language={language} onRetry={() => onRetryExtraction(state.documentId)} />
         </div>
       ))}
       <div
@@ -308,8 +308,12 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
                   {confirm.result.count}
                 </p>
                 {(() => {
-                  const state = extractions.find((x) => x.state.documentId === confirm.result!.documentId)?.state;
-                  return state && <ExtractionStatus state={state} language={language} onRetry={() => onRetryExtraction(state.documentId)} />;
+                  const job = extractions.find((x) => x.state.documentId === confirm.result!.documentId);
+                  return (
+                    job && (
+                      <ExtractionStatus state={job.state} running={job.running} language={language} onRetry={() => onRetryExtraction(job.state.documentId)} />
+                    )
+                  );
                 })()}
                 <div className="dialog-actions">
                   <button type="button" onClick={() => onGoto("qa")}>

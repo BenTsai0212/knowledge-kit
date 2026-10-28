@@ -365,3 +365,8 @@ label.inline {
   display: inline-flex;
   margin-right: 0.5rem;
 }
+
+.card.warning {
+  border-color: #d4a72c;
+  color: #7d4e00;
+}

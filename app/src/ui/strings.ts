@@ -104,6 +104,8 @@ export interface UiStrings {
   extractDropped: string;
   extractSkipped: string;
   extractFailed: string;
+  // 萃取停止後還沒執行的批次（例如邀請碼被拒），重試時一併送出
+  extractNotRun: string;
   extractRetry: string;
   extractErrors: Record<ExtractFailure, string>;
   tabReview: string;
@@ -129,6 +131,9 @@ export interface UiStrings {
   reviewApprovedCount: string;
   reviewRejectedWithEntity: string;
   reviewRelationBlocked: string;
+  // 核准前修改的名稱，每種語言都必須有值（#47 審查）
+  reviewNamesRequired: string;
+  reviewSkippedNames: string;
   reviewErrors: Record<"denied" | "conflict", string>;
   // 標籤與內容之間的分隔（繁中用全形冒號）
   colon: string;
@@ -232,6 +237,7 @@ export const STRINGS: Record<LanguageCode, UiStrings> = {
     extractDropped: "捨棄",
     extractSkipped: "超過批數上限，未萃取的段落數",
     extractFailed: "部分批次失敗",
+    extractNotRun: "未執行，可重試的批次",
     extractRetry: "重試萃取",
     extractErrors: {
       format: "模型輸出的格式不符。",
@@ -262,6 +268,8 @@ export const STRINGS: Record<LanguageCode, UiStrings> = {
     reviewApprovedCount: "已核准",
     reviewRejectedWithEntity: "因實體退回",
     reviewRelationBlocked: "兩端的實體核准後才能核准",
+    reviewNamesRequired: "請填寫所有語言的名稱",
+    reviewSkippedNames: "名稱未填寫完整而略過的項目",
     reviewErrors: {
       denied: "沒有權限處理這個項目。",
       conflict: "這個項目已經被處理過，請重新整理。",
@@ -381,6 +389,7 @@ export const STRINGS: Record<LanguageCode, UiStrings> = {
     extractDropped: "Discarded",
     extractSkipped: "Passages not extracted (over the batch limit)",
     extractFailed: "Some batches failed",
+    extractNotRun: "Batches not run yet (retry to run them)",
     extractRetry: "Retry extraction",
     extractErrors: {
       format: "The model's output wasn't in the expected format.",
@@ -411,6 +420,8 @@ export const STRINGS: Record<LanguageCode, UiStrings> = {
     reviewApprovedCount: "Approved",
     reviewRejectedWithEntity: "Rejected with its entity",
     reviewRelationBlocked: "Approve both entities first",
+    reviewNamesRequired: "Please fill in the name in every language",
+    reviewSkippedNames: "Items skipped because a name is missing",
     reviewErrors: {
       denied: "You don't have permission to handle this item.",
       conflict: "This item has already been handled. Please refresh.",
