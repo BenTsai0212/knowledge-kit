@@ -9,9 +9,12 @@ export function fakeTransport(reply: (body: AskBody) => AskEvent[] = () => answe
   const bodies: AskBody[] = [];
   return {
     bodies,
-    async *send(body) {
+    async *send(body, signal) {
       bodies.push(body);
-      yield* reply(body);
+      for (const event of reply(body)) {
+        if (signal?.aborted) return;
+        yield event;
+      }
     },
   };
 }

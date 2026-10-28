@@ -1,0 +1,29 @@
+// 引用跳回原文：讀取段落所屬的文件，以及其中目前身分看得到的段落。一律經 withIdentity()，權限交給 RLS。
+// 看不到的段落直接省略，不標示「有段落被隱藏」，避免透露其存在。
+import type { Database } from "../db/database";
+
+export interface SourceDocument {
+  id: string;
+  title: string;
+  language: string;
+  passages: { id: string; content: string }[];
+  // 被引用的段落 id
+  highlight: string;
+}
+
+// 看不到該段落（或段落不存在）時回 null
+export function readSource(db: Database, identityId: string | null, passageId: string): Promise<SourceDocument | null> {
+  return db.withIdentity(identityId, async (tx) => {
+    const doc = (
+      await tx.query<{ id: string; title: string; language: string }>(
+        `SELECT d.id, d.title, d.language FROM kk.passages p JOIN kk.documents d ON d.id = p.document_id WHERE p.id = $1`,
+        [passageId],
+      )
+    ).rows[0];
+    if (doc === undefined) return null;
+    const passages = (
+      await tx.query<{ id: string; content: string }>("SELECT id, content FROM kk.passages WHERE document_id = $1 ORDER BY ordinal", [doc.id])
+    ).rows;
+    return { ...doc, passages, highlight: passageId };
+  });
+}

@@ -38,15 +38,17 @@ function toEvent(event: string, data: string): AskEvent | null | "invalid" {
 
 export function apiTransport({ accessCode, fetch: request = (input, init) => fetch(input, init) }: ApiOptions): AskTransport {
   return {
-    async *send(body) {
+    async *send(body, signal) {
       let response: Response;
       try {
         response = await request("/api/ask", {
           method: "POST",
           headers: { "Content-Type": "application/json", "X-Access-Code": accessCode },
           body: JSON.stringify(body),
+          signal,
         });
       } catch {
+        if (signal?.aborted) return;
         yield { type: "error", error: "network" };
         return;
       }
@@ -70,6 +72,7 @@ export function apiTransport({ accessCode, fetch: request = (input, init) => fet
           if (parsed.type !== "delta") return;
         }
       } catch {
+        if (signal?.aborted) return;
         yield { type: "error", error: "upstream_interrupted" };
       }
       // 沒有 done 或 error 就結束時不補事件，由 ask() 視為中斷

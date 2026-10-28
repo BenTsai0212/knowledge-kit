@@ -117,6 +117,54 @@ describe("apiTransport", () => {
   });
 });
 
+describe("apiTransport：中止", () => {
+  // 與瀏覽器的 fetch 相同：signal 中止時，回應的串流以錯誤結束
+  const abortable = (chunks: string[]) => async (_url: RequestInfo | URL, init?: RequestInit) => {
+    const encoder = new TextEncoder();
+    const queue = [...chunks];
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        init?.signal?.addEventListener("abort", () => controller.error(new DOMException("aborted", "AbortError")));
+      },
+      pull(controller) {
+        const next = queue.shift();
+        if (next !== undefined) controller.enqueue(encoder.encode(next));
+        // 之後的內容還沒送到，等待中止
+      },
+    });
+    return new Response(body, { headers: { "Content-Type": "text/event-stream" } });
+  };
+
+  it("signal 傳給 fetch；中止後結束串流，不送出錯誤事件", async () => {
+    const controller = new AbortController();
+    let signal: AbortSignal | null | undefined;
+    const fetchWith = abortable(['event: delta\ndata: {"text":"一年"}\n\n']);
+    const transport = apiTransport({ accessCode: "code-for-test", fetch: (url, init) => ((signal = init?.signal), fetchWith(url, init)) });
+    const events: AskEvent[] = [];
+    for await (const e of transport.send(BODY, controller.signal)) {
+      events.push(e);
+      controller.abort();
+    }
+    expect(signal).toBe(controller.signal);
+    expect(events).toEqual([{ type: "delta", text: "一年" }]);
+  });
+
+  it("送出前就中止時，fetch 失敗也不回 network", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const transport = apiTransport({
+      accessCode: "code-for-test",
+      fetch: async (_url, init) => {
+        if (init?.signal?.aborted) throw new DOMException("aborted", "AbortError");
+        throw new Error("unreachable");
+      },
+    });
+    const events: AskEvent[] = [];
+    for await (const e of transport.send(BODY, controller.signal)) events.push(e);
+    expect(events).toEqual([]);
+  });
+});
+
 describe("ask() 經由 apiTransport", () => {
   const retriever: Retriever = {
     retrieve: async () => [

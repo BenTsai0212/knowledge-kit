@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveCitations } from "./citations";
+import { resolveCitations, splitCitations } from "./citations";
 
 const NUMBERING = ["p-a", "p-b", "p-c"];
 
@@ -27,5 +27,14 @@ describe("resolveCitations", () => {
 
   it("不是編號的方括號保留", () => {
     expect(resolveCitations("見 [附件] 與 [a1]。", NUMBERING).text).toBe("見 [附件] 與 [a1]。");
+  });
+});
+
+describe("splitCitations", () => {
+  it("切成一般文字與引用編號", () => {
+    expect(splitCitations("A [1]。B [2, 3]")).toEqual([{ text: "A " }, { citation: 1 }, { text: "。B " }, { citation: 2 }, { citation: 3 }]);
+    expect(splitCitations("[1]開頭")).toEqual([{ citation: 1 }, { text: "開頭" }]);
+    expect(splitCitations("沒有引用")).toEqual([{ text: "沒有引用" }]);
+    expect(splitCitations("")).toEqual([]);
   });
 });

@@ -1,0 +1,180 @@
+/* 最小樣式：顏色與字型來自 client/theme.json（main.tsx 設定 CSS 變數）。正式的主題在 Epic 第 11 項。 */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  line-height: 1.6;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading);
+  margin: 0 0 0.5rem;
+}
+
+h1 {
+  font-size: 1.25rem;
+}
+
+h2 {
+  font-size: 1.05rem;
+}
+
+h3 {
+  font-size: 0.95rem;
+}
+
+.app {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.toolbar h1 {
+  margin: 0;
+}
+
+label {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+main {
+  display: grid;
+  gap: 1rem;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.access-code {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 420px;
+}
+
+.muted {
+  color: var(--color-textMuted);
+}
+
+.error {
+  color: #b42318;
+}
+
+.badge {
+  display: inline-block;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0 0.5rem;
+  font-size: 0.8rem;
+  color: var(--color-textMuted);
+}
+
+.badge.warning {
+  border-color: #d4a72c;
+  color: #7d4e00;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--color-primary);
+  border-radius: 6px;
+  background: var(--color-primary);
+  color: var(--color-onPrimary);
+  padding: 0.25rem 0.75rem;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+button.link {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  text-decoration: underline;
+  padding: 0;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0.25rem 0.5rem;
+}
+
+.scenario {
+  margin-bottom: 0.75rem;
+}
+
+.questions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.questions button {
+  background: var(--color-surface);
+  color: var(--color-primary);
+}
+
+.free-question {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.free-question label {
+  display: grid;
+}
+
+textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.answer-text {
+  white-space: pre-wrap;
+}
+
+button.citation {
+  font-size: 0.75rem;
+  padding: 0 0.35rem;
+  margin: 0 0.1rem;
+  vertical-align: super;
+}
+
+.source header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+}
+
+.source .highlight mark {
+  background: #fff3bf;
+  color: inherit;
+}
