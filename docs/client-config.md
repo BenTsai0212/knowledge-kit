@@ -132,6 +132,7 @@ npm run check:client
 | `label` | 是 | `LocalizedText` | 顯示名稱（切換身分時顯示） |
 | `visibility` | 是 | 可見等級 `id` | 此角色最高可看到的等級；必須存在於 `visibilityLevels` |
 | `projects` | 是 | 專案 `id` 陣列，可為空、不重複 | 此角色可看到的專案；必須存在於 `projects` |
+| `canUpload` | 是 | boolean | 能否上傳文件。可上傳的可見等級與專案同樣限於此角色看得到的範圍，由資料庫的 RLS 執行（`docs/data-model.md`「寫入規則」） |
 
 ## `scenarios.json`
 

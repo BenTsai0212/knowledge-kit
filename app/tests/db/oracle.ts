@@ -61,3 +61,12 @@ export const KEY_SQL: Record<(typeof TABLE_KEYS)[number], string> = {
   relations: "id",
   relation_sources: "relation_id || '|' || passage_id",
 };
+
+// docs/data-model.md「寫入規則」的獨立實作：身分能否上傳某個可見等級與專案的文件（#38）。
+// 段落另外要求：文件由同一身分上傳，等級與專案與文件相同（由 app/tests/upload/ 直接測試）
+export function canWrite(access: AccessFile, identityId: string | null, level: string, project: string | null): boolean {
+  const role = access.roles.find((r) => r.id === identityId);
+  if (!role || !role.canUpload) return false;
+  const rank = new Map(access.visibilityLevels.map((l) => [l.id, l.rank]));
+  return rank.get(level)! <= rank.get(role.visibility)! && (project === null || role.projects.includes(project));
+}
