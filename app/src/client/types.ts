@@ -23,6 +23,7 @@ export interface RetrievalFile {
 
 export interface UploadFile {
   passageMaxChars?: number;
+  extractMaxBatches?: number;
 }
 
 export interface ClientFile {

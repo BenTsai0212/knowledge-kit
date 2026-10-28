@@ -42,7 +42,8 @@ describe("normalizeClient", () => {
   it("upload 省略時補上預設值，預設值與 Schema 的 default 相同", () => {
     const raw = (upload?: object) => ({ ...clientConfig, client: { ...clientConfig.client, upload } }) as unknown as ClientFiles;
     expect(normalizeClient(raw()).client.upload).toEqual(UPLOAD_DEFAULTS);
-    expect(normalizeClient(raw({ passageMaxChars: 500 })).client.upload).toEqual({ passageMaxChars: 500 });
+    expect(normalizeClient(raw({ passageMaxChars: 500 })).client.upload).toEqual({ ...UPLOAD_DEFAULTS, passageMaxChars: 500 });
     expect(UPLOAD_DEFAULTS.passageMaxChars).toBe(clientSchema.properties.upload.properties.passageMaxChars.default);
+    expect(UPLOAD_DEFAULTS.extractMaxBatches).toBe(clientSchema.properties.upload.properties.extractMaxBatches.default);
   });
 });

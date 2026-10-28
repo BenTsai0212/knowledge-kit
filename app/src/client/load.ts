@@ -20,7 +20,7 @@ const files: Widen<ClientFiles> = { client, theme, knowledgeModel, access, scena
 
 // 與 client.schema.json 的 default 相同（load.test.ts 比對）
 export const RETRIEVAL_DEFAULTS: RetrievalConfig = { provider: "keyword-hash", topK: 5, minScore: 0.1 };
-export const UPLOAD_DEFAULTS: UploadConfig = { passageMaxChars: 300 };
+export const UPLOAD_DEFAULTS: UploadConfig = { passageMaxChars: 300, extractMaxBatches: 3 };
 
 export function normalizeClient(raw: ClientFiles): ClientConfig {
   return {

@@ -60,7 +60,7 @@ export const manifests: ManifestEntry[] = [
   {
     schema: "client.schema.json",
     pointer: "/properties/upload",
-    keys: { passageMaxChars: "optional" } satisfies KeyManifest<UploadFile>,
+    keys: { passageMaxChars: "optional", extractMaxBatches: "optional" } satisfies KeyManifest<UploadFile>,
   },
   {
     schema: "theme.schema.json",

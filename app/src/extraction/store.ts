@@ -8,6 +8,8 @@ export interface PendingInput {
   entities: { id: string; type: string; names: LocalizedText; sources: string[] }[];
   // from、to 是同一份文件的待審實體 id
   relations: { id: string; type: string; from: string; to: string; sources: string[] }[];
+  // 為前幾批已寫入的待審實體或關係補上出處（同一份文件中的去重，docs/extraction.md）
+  addedSources?: { entity?: string; relation?: string; passages: string[] }[];
 }
 
 export type ReviewStatus = "pending" | "approved" | "rejected";
@@ -59,10 +61,11 @@ export class ReviewError extends Error {
 export const newPendingEntityId = () => `pe-${crypto.randomUUID()}`;
 export const newPendingRelationId = () => `pr-${crypto.randomUUID()}`;
 
-// 42501：被 RLS 拒絕或沒有權限；23505：同一個項目已有決定；23503：外鍵（例如合併對象不存在）
+// 42501：被 RLS 拒絕或沒有權限；23503：外鍵（例如合併對象不存在）；23514：違反 CHECK（例如待審 id 的格式）；
+// 23505：同一個項目已有決定。資料庫的訊息不顯示在畫面上
 function mapError(e: unknown): never {
   const code = (e as { code?: string }).code;
-  if (code === "42501" || code === "23503") throw new ReviewError("denied");
+  if (code === "42501" || code === "23503" || code === "23514") throw new ReviewError("denied");
   if (code === "23505") throw new ReviewError("conflict");
   throw e;
 }
@@ -84,6 +87,22 @@ export async function writePending(db: Database, identityId: string | null, docu
             documentId,
             p,
           ]);
+        }
+      }
+      for (const added of input.addedSources ?? []) {
+        for (const p of added.passages) {
+          if (added.entity !== undefined) {
+            await tx.query(
+              "INSERT INTO kk.pending_entity_sources (pending_entity_id, document_id, passage_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+              [added.entity, documentId, p],
+            );
+          }
+          if (added.relation !== undefined) {
+            await tx.query(
+              "INSERT INTO kk.pending_relation_sources (pending_relation_id, document_id, passage_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+              [added.relation, documentId, p],
+            );
+          }
         }
       }
       for (const r of input.relations) {

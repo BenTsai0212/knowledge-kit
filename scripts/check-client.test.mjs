@@ -86,12 +86,16 @@ describe("check-client", () => {
     expect(validateClient(files)).toEqual([]);
   });
 
-  it("上傳參數：passageMaxChars 為 100～1000 的整數，可省略", () => {
+  it("上傳參數：passageMaxChars 為 100～1000、extractMaxBatches 為 1～10 的整數，可省略", () => {
     const files = example();
     files["client.json"].upload = { passageMaxChars: 50 };
     expect(validateClient(files).map((e) => e.path)).toEqual(["/upload/passageMaxChars"]);
     files["client.json"].upload = { passageMaxChars: 300.5 };
     expect(validateClient(files).map((e) => e.path)).toEqual(["/upload/passageMaxChars"]);
+    files["client.json"].upload = { extractMaxBatches: 0 };
+    expect(validateClient(files).map((e) => e.path)).toEqual(["/upload/extractMaxBatches"]);
+    files["client.json"].upload = { extractMaxBatches: 11 };
+    expect(validateClient(files).map((e) => e.path)).toEqual(["/upload/extractMaxBatches"]);
     delete files["client.json"].upload;
     expect(validateClient(files)).toEqual([]);
   });

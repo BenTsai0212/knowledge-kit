@@ -54,6 +54,13 @@
           "minimum": 100,
           "maximum": 1000,
           "default": 300
+        },
+        "extractMaxBatches": {
+          "description": "每份上傳文件最多以幾批段落呼叫模型萃取實體與關係；超過的段落不萃取（docs/extraction.md）",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 3
         }
       }
     }

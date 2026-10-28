@@ -6,5 +6,5 @@
   "dataset": { "path": "data/" },
   "evals": { "path": "evals/" },
   "retrieval": { "provider": "keyword-hash", "topK": 5, "minScore": 0.1 },
-  "upload": { "passageMaxChars": 300 }
+  "upload": { "passageMaxChars": 300, "extractMaxBatches": 3 }
 }
