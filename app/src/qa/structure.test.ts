@@ -3,6 +3,11 @@ import { describe, expect, it } from "vitest";
 
 const raw = import.meta.glob<string>("./*.ts", { query: "?raw", import: "default", eager: true });
 const sources = Object.entries(raw).filter(([path]) => !path.endsWith(".test.ts"));
+const tests = Object.entries(
+  import.meta.glob<string>(["../**/*.test.ts", "../../tests/**/*.test.ts"], { query: "?raw", import: "default", eager: true }),
+);
+// 呼叫 apiTransport 卻沒有注入 fetch：會連到真的 /api/ask
+const REAL_API = /apiTransport\(\{(?![^}]*\bfetch\b)/;
 
 const FORBIDDEN = [
   // 資料層
@@ -38,5 +43,12 @@ describe("app/src/qa/ 的結構", () => {
 
   it("qa/ 不直接查詢資料庫、不匯入具體的 VectorProvider", () => {
     expect(sources.flatMap(([path, text]) => violations(text).map((v) => `${path} ${v}`))).toEqual([]);
+  });
+
+  it("測試中的 apiTransport 都注入假的 fetch（CI 不呼叫真實 API）", () => {
+    expect(REAL_API.test('apiTransport({ accessCode: "x" })')).toBe(true);
+    expect(REAL_API.test('apiTransport({ accessCode: "x", fetch: async () => r })')).toBe(false);
+    expect(tests.map(([path]) => path)).toEqual(expect.arrayContaining(["./api.test.ts", "../../tests/qa/leakage.test.ts"]));
+    expect(tests.filter(([, text]) => REAL_API.test(text)).map(([path]) => path)).toEqual([]);
   });
 });

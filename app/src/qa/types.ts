@@ -1,4 +1,4 @@
-// 問答與 /api/ask 之間的接口（格式見 worker/README.md）。真的實作呼叫 /api/ask；測試用 testing.ts 的假實作，不呼叫真實 API。
+// 問答與 /api/ask 之間的接口（格式見 worker/README.md）。真的實作是 api.ts；測試用 testing.ts 的假實作，不呼叫真實 API。
 import type { ModelCode } from "../client/types";
 
 export interface AskBody {
