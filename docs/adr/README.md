@@ -40,3 +40,4 @@ ADR（Architecture Decision Record）記錄「決定了什麼、為什麼、放�
 | 編號 | 決策 | 狀態 |
 | --- | --- | --- |
 | [0001](0001-tech-stack.md) | 技術選型（Vite＋TypeScript＋React、PGlite、Cloudflare Worker） | Accepted |
+| [0002](0002-document-parsing.md) | 上傳文件的解析套件（`pdfjs-dist`、`mammoth`，只在瀏覽器中擷取文字） | Proposed |

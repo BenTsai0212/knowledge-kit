@@ -11,6 +11,7 @@ import type {
   Question,
   RelationType,
   RetrievalFile,
+  UploadFile,
   Role,
   Scenario,
   ScenariosFile,
@@ -46,6 +47,7 @@ export const manifests: ManifestEntry[] = [
       dataset: "required",
       evals: "required",
       retrieval: "optional",
+      upload: "optional",
     } satisfies KeyManifest<ClientFile>,
   },
   { schema: "client.schema.json", pointer: "/properties/dataset", keys: pathRef },
@@ -54,6 +56,11 @@ export const manifests: ManifestEntry[] = [
     schema: "client.schema.json",
     pointer: "/properties/retrieval",
     keys: { provider: "optional", topK: "optional", minScore: "optional" } satisfies KeyManifest<RetrievalFile>,
+  },
+  {
+    schema: "client.schema.json",
+    pointer: "/properties/upload",
+    keys: { passageMaxChars: "optional" } satisfies KeyManifest<UploadFile>,
   },
   {
     schema: "theme.schema.json",
