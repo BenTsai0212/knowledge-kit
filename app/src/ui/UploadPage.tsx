@@ -7,6 +7,8 @@ import type { Database } from "../db/database";
 import { chunk } from "../upload/chunk";
 import { extractText, formatOf, ParseError } from "../upload/parse";
 import { uploadDocument, UploadError } from "../upload/write";
+import type { ExtractionState } from "../extraction/run";
+import { ExtractionStatus } from "./ExtractionStatus";
 import { createRequestGate } from "./requests";
 import { strings, type UploadFailure } from "./strings";
 import { audienceRoles, formatBytes, todayIso } from "./upload-helpers";
@@ -15,7 +17,11 @@ interface Props {
   db: Database;
   identity: string;
   language: string;
-  onUploaded(documentId: string): void;
+  // 上傳成功：App 記錄「上傳」標籤，並在背景萃取實體與關係（#44）
+  onUploaded(upload: { documentId: string; title: string; documentLanguage: string; passages: { id: string; content: string }[] }): void;
+  // 目前身分在本次工作階段上傳的文件的萃取狀態，以及重試
+  extractions: { title: string; state: ExtractionState; running: boolean }[];
+  onRetryExtraction(documentId: string): void;
   // 到時間軸時帶上剛上傳的文件與它的語言，以便捲動到該文件
   onGoto(view: "qa" | "timeline", document?: { id: string; language: string }): void;
 }
@@ -31,7 +37,7 @@ type Confirm = {
   error?: UploadFailure;
 };
 
-export function UploadPage({ db, identity, language, onUploaded, onGoto }: Props) {
+export function UploadPage({ db, identity, language, onUploaded, extractions, onRetryExtraction, onGoto }: Props) {
   const s = strings(language);
   const role = access.roles.find((r) => r.id === identity);
   const rank = new Map(access.visibilityLevels.map((l) => [l.id, l.rank]));
@@ -135,7 +141,12 @@ export function UploadPage({ db, identity, language, onUploaded, onGoto }: Props
         { title, language: docLanguage, visibility, project: project === "" ? null : project, date: date === "" ? null : date, passages },
         { languages: client.languages },
       );
-      onUploaded(result.documentId);
+      onUploaded({
+        documentId: result.documentId,
+        title,
+        documentLanguage: docLanguage,
+        passages: result.passageIds.map((id, i) => ({ id, content: passages[i] })),
+      });
       setConfirm({ passages, writing: false, result: { documentId: result.documentId, count: result.passageIds.length } });
     } catch (e) {
       // 失敗時可以修改表單後重新預覽；這份預覽不再寫入
@@ -155,6 +166,12 @@ export function UploadPage({ db, identity, language, onUploaded, onGoto }: Props
   return (
     <section className="card upload">
       <p className="badge warning">{s.uploadEphemeral}</p>
+      {extractions.map(({ title: docTitle, state, running }) => (
+        <div key={state.documentId} className="card">
+          <p>{docTitle}</p>
+          <ExtractionStatus state={state} running={running} language={language} onRetry={() => onRetryExtraction(state.documentId)} />
+        </div>
+      ))}
       <div
         className="drop-zone"
         onDragOver={(e) => e.preventDefault()}
@@ -290,6 +307,14 @@ export function UploadPage({ db, identity, language, onUploaded, onGoto }: Props
                   {s.colon}
                   {confirm.result.count}
                 </p>
+                {(() => {
+                  const job = extractions.find((x) => x.state.documentId === confirm.result!.documentId);
+                  return (
+                    job && (
+                      <ExtractionStatus state={job.state} running={job.running} language={language} onRetry={() => onRetryExtraction(job.state.documentId)} />
+                    )
+                  );
+                })()}
                 <div className="dialog-actions">
                   <button type="button" onClick={() => onGoto("qa")}>
                     {s.uploadGotoQa}
