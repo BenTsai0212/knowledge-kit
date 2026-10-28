@@ -1,6 +1,7 @@
 // 介面文字：集中在本檔，元件與問答模組不寫死文字（#26 決定 4）。正式的翻譯檔格式在 Epic 第 11 項，屆時移到 client/。
 import type { ErrorType } from "../../../worker/src/errors";
 import type { LanguageCode } from "../client/types";
+import type { ParseFailure } from "../upload/parse";
 
 // /api/ask 的錯誤類型（worker/README.md），加上前端自己的錯誤。少了任何一種，型別檢查就會失敗
 export type AskErrorType =
@@ -12,6 +13,9 @@ export type AskErrorType =
   // ask() 在送出前的檢查
   | "empty_question"
   | "question_too_long";
+
+// 上傳失敗的原因：解析（ParseFailure）、寫入（denied：被 RLS 拒絕；invalid：格式不符）、沒有選檔也沒有貼上文字
+export type UploadFailure = ParseFailure | "denied" | "invalid" | "no_input";
 
 export interface UiStrings {
   loading: string;
@@ -56,6 +60,27 @@ export interface UiStrings {
   timelineAll: string;
   timelineEmpty: string;
   undated: string;
+  tabUpload: string;
+  uploadNotAllowed: string;
+  // 上傳內容只存在瀏覽器記憶體
+  uploadEphemeral: string;
+  uploadFile: string;
+  uploadPaste: string;
+  uploadPastePlaceholder: string;
+  uploadDocTitle: string;
+  uploadLanguage: string;
+  uploadVisibility: string;
+  uploadProject: string;
+  uploadNoProject: string;
+  uploadDate: string;
+  uploadPreview: string;
+  uploadParsing: string;
+  uploadPassageCount: string;
+  uploadSubmit: string;
+  uploadDone: string;
+  uploadGotoQa: string;
+  uploadGotoTimeline: string;
+  uploadErrors: Record<UploadFailure, string>;
   // 標籤與內容之間的分隔（繁中用全形冒號）
   colon: string;
   // 拒答：「沒有資料」與「沒有權限」相同，不透露是否有看不到的文件
@@ -110,6 +135,36 @@ export const STRINGS: Record<LanguageCode, UiStrings> = {
     timelineAll: "全部",
     timelineEmpty: "沒有可顯示的文件。",
     undated: "未註明日期",
+    tabUpload: "上傳",
+    uploadNotAllowed: "目前的身分沒有上傳文件的權限。",
+    uploadEphemeral: "上傳內容只保留到重新整理頁面為止。",
+    uploadFile: "選擇檔案（.txt、.md、.pdf、.docx）",
+    uploadPaste: "或直接貼上文字",
+    uploadPastePlaceholder: "貼上要上傳的文字",
+    uploadDocTitle: "標題",
+    uploadLanguage: "語言",
+    uploadVisibility: "可見等級",
+    uploadProject: "專案",
+    uploadNoProject: "無",
+    uploadDate: "日期（選填）",
+    uploadPreview: "預覽",
+    uploadParsing: "正在讀取文件…",
+    uploadPassageCount: "段落數",
+    uploadSubmit: "上傳",
+    uploadDone: "上傳完成，現在可以在問答與時間軸中查到這份文件。",
+    uploadGotoQa: "到問答",
+    uploadGotoTimeline: "到時間軸",
+    uploadErrors: {
+      unsupported: "不支援這種檔案格式，請上傳 .txt、.md、.pdf 或 .docx。",
+      too_large: "檔案超過 10 MB，請縮小後再上傳。",
+      too_long: "文件太長（超過 50,000 字或 500 段），請拆成多份上傳。",
+      empty: "文件中沒有文字。",
+      no_text: "這份 PDF 沒有可擷取的文字（可能是掃描檔），目前不支援文字辨識。",
+      failed: "無法讀取這份檔案，檔案可能已損毀。",
+      denied: "目前的身分不能上傳這個可見等級或專案的文件。",
+      invalid: "請填寫標題，並確認日期格式正確。",
+      no_input: "請選擇檔案或貼上文字。",
+    },
     colon: "：",
     refusal: "找不到可以回答這個問題的資料。",
     uncited: "未附出處",
@@ -177,6 +232,36 @@ export const STRINGS: Record<LanguageCode, UiStrings> = {
     timelineAll: "All",
     timelineEmpty: "No documents to show.",
     undated: "Undated",
+    tabUpload: "Upload",
+    uploadNotAllowed: "The current identity can't upload documents.",
+    uploadEphemeral: "Uploaded content is kept only until you reload the page.",
+    uploadFile: "Choose a file (.txt, .md, .pdf, .docx)",
+    uploadPaste: "Or paste text",
+    uploadPastePlaceholder: "Paste the text to upload",
+    uploadDocTitle: "Title",
+    uploadLanguage: "Language",
+    uploadVisibility: "Visibility",
+    uploadProject: "Project",
+    uploadNoProject: "None",
+    uploadDate: "Date (optional)",
+    uploadPreview: "Preview",
+    uploadParsing: "Reading the document…",
+    uploadPassageCount: "Passages",
+    uploadSubmit: "Upload",
+    uploadDone: "Uploaded. You can now find this document in Q&A and the timeline.",
+    uploadGotoQa: "Go to Q&A",
+    uploadGotoTimeline: "Go to timeline",
+    uploadErrors: {
+      unsupported: "This file type isn't supported. Please upload a .txt, .md, .pdf, or .docx file.",
+      too_large: "The file is larger than 10 MB. Please make it smaller and try again.",
+      too_long: "The document is too long (over 50,000 characters or 500 passages). Please split it into several uploads.",
+      empty: "The document has no text.",
+      no_text: "This PDF has no extractable text (it may be a scan). Text recognition isn't supported.",
+      failed: "The file couldn't be read. It may be damaged.",
+      denied: "The current identity can't upload documents with this visibility or project.",
+      invalid: "Please enter a title and check that the date is valid.",
+      no_input: "Please choose a file or paste some text.",
+    },
     colon: ": ",
     refusal: "I couldn't find information to answer this question.",
     uncited: "No sources cited",

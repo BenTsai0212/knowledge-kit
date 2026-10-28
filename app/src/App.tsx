@@ -1,4 +1,4 @@
-// 主畫面：PGlite 在瀏覽器中載入並匯入資料集；身分與語言切換；問答（需要邀請碼）、圖譜、時間軸（後兩者不呼叫模型）三個頁籤；引用跳回原文。
+// 主畫面：PGlite 在瀏覽器中載入並匯入資料集；身分與語言切換；問答（需要邀請碼）、圖譜、時間軸、上傳（後三者不呼叫模型）四個頁籤；引用跳回原文。
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clientConfig } from "./client/load";
 import { dataset } from "./dataset/load";
@@ -17,11 +17,12 @@ import { createRequestGate } from "./ui/requests";
 import { SourcePanel } from "./ui/SourcePanel";
 import { strings } from "./ui/strings";
 import { TimelinePage } from "./ui/TimelinePage";
+import { UploadPage } from "./ui/UploadPage";
 import { Toolbar } from "./ui/Toolbar";
 
 const { client, access } = clientConfig;
 
-type View = "qa" | "graph" | "timeline";
+type View = "qa" | "graph" | "timeline" | "upload";
 
 export function App() {
   const [view, setView] = useState<View>("qa");
@@ -124,6 +125,7 @@ export function App() {
             ["qa", s.tabQa],
             ["graph", s.tabGraph],
             ["timeline", s.tabTimeline],
+            ["upload", s.tabUpload],
           ] as const
         ).map(([id, label]) => (
           <button key={id} type="button" aria-current={view === id ? "page" : undefined} onClick={() => setView(id)}>
@@ -139,6 +141,9 @@ export function App() {
             <p className="card muted">{s.loading}</p>
           ) : view === "graph" ? (
             <GraphPage db={db} identity={identity} language={language} onOpenSource={onOpenSource} />
+          ) : view === "upload" ? (
+            // 切換身分或語言時重建，清除表單、預覽與結果
+            <UploadPage key={`${identity}|${language}`} db={db} identity={identity} language={language} onGoto={setView} />
           ) : (
             <TimelinePage db={db} identity={identity} language={language} onOpenSource={onOpenSource} />
           )}

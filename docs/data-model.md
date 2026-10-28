@@ -120,7 +120,7 @@ policy 中的子查詢同樣受 RLS 限制，所以「段落看得到」已包�
 
 ## 寫入規則
 
-上傳文件（#38，migration 0005）是 `kk_app` 唯一能寫入的操作：只有 `kk.documents`、`kk.passages` 的 `INSERT`，沒有 `UPDATE`、`DELETE`，也不能寫入其他資料表。寫入一律經 `withIdentity()`，集中在 `app/src/upload/write.ts`。
+上傳文件（#38，migration 0005；流程見 [docs/upload.md](upload.md)）是 `kk_app` 唯一能寫入的操作：只有 `kk.documents`、`kk.passages` 的 `INSERT`，沒有 `UPDATE`、`DELETE`，也不能寫入其他資料表。寫入一律經 `withIdentity()`，集中在 `app/src/upload/write.ts`。
 
 - **文件**：目前身分的 `can_upload` 為 `true`（`kk.can_upload()`），`uploaded_by` 等於目前身分，且可見等級與專案是目前身分看得到的（`kk.can_see()`）。
 - **段落**：所屬文件由目前身分上傳，且段落的可見等級與專案與文件相同。所以不能把段落加進資料集的文件或其他身分上傳的文件，也不能建立比文件寬鬆或不同專案的段落。
