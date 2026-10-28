@@ -96,6 +96,8 @@ export interface Role {
   label: LocalizedText;
   visibility: Id;
   projects: Id[];
+  // 能否上傳文件；可上傳的等級與專案同樣限於看得到的範圍
+  canUpload: boolean;
 }
 
 export interface AccessFile {

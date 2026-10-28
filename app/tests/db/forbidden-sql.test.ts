@@ -42,3 +42,19 @@ describe("app/src/ 不得切換資料庫角色或關閉 RLS", () => {
     expect(found).toEqual([]);
   });
 });
+
+// 函式一律以呼叫者權限執行，讀取的資料表同樣受 RLS 限制（#38 決定的修正）。註解中提到的不算
+describe("migration 不使用 SECURITY DEFINER", () => {
+  const definer = (sql: string) => /\bSECURITY\s+DEFINER\b/i.test(sql.replace(/--[^\n]*/g, ""));
+
+  it("規則能抓到 SECURITY DEFINER，忽略註解", () => {
+    expect(definer("CREATE FUNCTION f() RETURNS int LANGUAGE sql SECURITY DEFINER AS $$ SELECT 1 $$")).toBe(true);
+    expect(definer("-- 不使用 SECURITY DEFINER\nCREATE FUNCTION f() RETURNS int LANGUAGE sql AS $$ SELECT 1 $$")).toBe(false);
+  });
+
+  it("所有 migration 都沒有", () => {
+    const migrations = Object.entries(sources).filter(([path]) => path.endsWith(".sql"));
+    expect(migrations.map(([path]) => path)).toEqual(expect.arrayContaining(["../../src/db/migrations/0005_upload_write.sql"]));
+    expect(migrations.filter(([, sql]) => definer(sql)).map(([path]) => path)).toEqual([]);
+  });
+});

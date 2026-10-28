@@ -39,7 +39,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "label", "visibility", "projects"],
+        "required": ["id", "label", "visibility", "projects", "canUpload"],
         "properties": {
           "id": { "$ref": "common.schema.json#/definitions/Id" },
           "label": { "$ref": "common.schema.json#/definitions/LocalizedText" },
@@ -49,7 +49,8 @@
             "type": "array",
             "uniqueItems": true,
             "items": { "$ref": "common.schema.json#/definitions/Id" }
-          }
+          },
+          "canUpload": { "description": "能否上傳文件；可上傳的範圍限於看得到的等級與專案（docs/data-model.md「寫入規則」）", "type": "boolean" }
         }
       }
     }

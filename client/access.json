@@ -9,8 +9,8 @@
     { "id": "longpier", "label": { "zh-TW": "長堤專案", "en": "Project Longpier" } }
   ],
   "roles": [
-    { "id": "guest", "label": { "zh-TW": "訪客", "en": "Guest" }, "visibility": "public", "projects": [] },
-    { "id": "staff", "label": { "zh-TW": "一般員工", "en": "Staff" }, "visibility": "internal", "projects": ["bluewing"] },
-    { "id": "manager", "label": { "zh-TW": "主管", "en": "Manager" }, "visibility": "confidential", "projects": ["bluewing", "longpier"] }
+    { "id": "guest", "label": { "zh-TW": "訪客", "en": "Guest" }, "visibility": "public", "projects": [], "canUpload": false },
+    { "id": "staff", "label": { "zh-TW": "一般員工", "en": "Staff" }, "visibility": "internal", "projects": ["bluewing"], "canUpload": true },
+    { "id": "manager", "label": { "zh-TW": "主管", "en": "Manager" }, "visibility": "confidential", "projects": ["bluewing", "longpier"], "canUpload": true }
   ]
 }
