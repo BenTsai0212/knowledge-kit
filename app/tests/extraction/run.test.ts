@@ -26,7 +26,7 @@ async function setup(passages: string[], config: ClientConfig = clientConfig) {
   const state = planExtraction(config, {
     documentId: upload.documentId,
     uploader: "staff",
-    language: "zh-TW",
+    documentLanguage: "zh-TW",
     passages: upload.passageIds.map((id, i) => ({ id, content: passages[i] })),
   });
   return { db, upload, state };
@@ -123,10 +123,10 @@ describe("runExtraction", () => {
     await db.close();
   });
 
-  it("同一份文件中去重：跨批次與同一批中名稱相符的實體合成一筆，出處取聯集；關係也一樣", async () => {
+  it("同一份文件中去重：跨批次與同一批中，文件語言的名稱相符（全形半形不同）的實體合成一筆，出處取聯集；關係也一樣", async () => {
     const passages = Array.from({ length: 40 }, (_, i) => `第 ${i + 1} 段虛構內容。`.padEnd(900, "測"));
     const { db, upload, state } = await setup(passages, withBatches(2));
-    const sameName = { ...PERSON, key: "e3", names: { "zh-TW": "測試人員甲", en: "TEST PERSON A" }, sources: [2] };
+    const sameName = { ...PERSON, key: "e3", names: { "zh-TW": "測試人員甲　", en: "Someone Else" }, sources: [2] };
     const transport = fakeTransport(() => reply([PERSON, PROJECT, sameName], [WORKS_ON, { ...WORKS_ON, from: "e3", sources: [2] }]));
     await runExtraction({ db, transport, config: withBatches(2) }, state);
 
@@ -137,6 +137,22 @@ describe("runExtraction", () => {
     expect(person.sources.map((s) => s.id).sort()).toEqual([firstOf(0)[0], firstOf(0)[1], firstOf(1)[0], firstOf(1)[1]].sort());
     expect(doc.relations).toHaveLength(1);
     expect(doc.relations[0].sources).toHaveLength(4);
+    await db.close();
+  });
+
+  it("文件語言的名稱不同、其他語言的名稱相同的兩個人員，保留為兩筆；文件語言的名稱只差大小寫或全形半形時合成一筆（#46 審查）", async () => {
+    const { db, upload, state } = await setup(["林志明、林芷敏與測試人員Ａ都參與青翼專案的虛構測試。"]);
+    const person = (key: string, zh: string, en: string) => ({ key, type: "person", names: { "zh-TW": zh, en }, sources: [1] });
+    const entities = [
+      person("e1", "林志明", "Zhiming Lin"),
+      person("e2", "林芷敏", "Zhiming Lin"),
+      person("e3", "測試人員Ａ", "Tester A"),
+      // 全形 Ａ 與小寫 a：依 person 的 aliasRules（normalizeWidth、ignoreCase）視為相同；英文名稱不同不影響
+      person("e4", "測試人員a", "Someone Else"),
+    ];
+    await runExtraction({ db, transport: fakeTransport(() => reply(entities)), config: clientConfig }, state);
+    const [doc] = (await readReview(db, "manager")).filter((d) => d.id === upload.documentId);
+    expect(doc.entities.map((e) => e.names["zh-TW"]).sort()).toEqual(["林志明", "林芷敏", "測試人員Ａ"].sort());
     await db.close();
   });
 });

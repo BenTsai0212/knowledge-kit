@@ -10,7 +10,7 @@
 2. **分批**（`batch.ts`）：依段落順序裝入，直到 prompt 的長度達到 `PROMPT_CHAR_BUDGET`（16,000 字元，算法與 Worker 相同，見 [docs/qa.md](qa.md)「長度」），段落不跨批。每份文件最多 `client.json` 的 `upload.extractMaxBatches` 批（預設 3，範圍 1～10）；超過的段落不萃取，記在 `skipped`。
 3. **每批呼叫一次 `/api/ask`**（`run.ts`），使用上傳者的邀請碼，計入每日次數。
 4. **解析並驗證**（`output.ts`），見「驗證」。
-5. **同一份文件中去重**：見「去重」。
+5. **同一份文件中去重**：只比對文件語言的名稱，見「去重」。
 6. **寫入待審**（`store.ts` 的 `writePending()`），一律以上傳時的身分寫入（`withIdentity(上傳者)`）。上傳者沒有 `canReview` 時，寫入後在資料庫中讀不到待審資料。
 
 狀態逐批記錄（`ExtractionState`）：`waiting`、`running`、`done`、`failed`。`runExtraction()` 只執行等待中與失敗的批次，所以「重試萃取」不會重送已成功的批次。
@@ -34,7 +34,7 @@ prompt 以英文撰寫。全文在 `prompt.ts` 的 `extractionSystemPrompt()`；
 
 | 代入 | 內容（參考情境） |
 | --- | --- |
-| `{companyName}` | `client.json` 的 `displayName`（上傳時的介面語言） |
+| `{companyName}` | `client.json` 的 `displayName`（文件的語言） |
 | `{entityTypes}` | `knowledge-model.json` 的實體類型：`person (人員 / Person), team (部門 / Team), project (專案 / Project)` |
 | `{relationTypes}` | 關係類型與 from → to：`member-of: person → team; works-on: person\|team → project; leads: person → team\|project` |
 | `{languages}` | `client.json` 的 `languages`：`zh-TW (Chinese (Taiwan)), en (English)` |
@@ -101,7 +101,11 @@ If nothing can be extracted, reply {"entities":[],"relations":[]}.
 
 ## 去重
 
-同一份文件中，類型相同、而且任一名稱依該類型的 `aliasRules` 正規化後相同的實體，合成一筆待審實體，出處取聯集。跨批次時，後面的批次沿用前面寫入的待審 id，只補上出處（`writePending()` 的 `addedSources`）。類型與兩端都相同的關係也一樣。
+同一份文件中，類型相同、而且**文件語言的名稱**依該類型的 `aliasRules` 正規化後相同的實體，合成一筆待審實體，出處取聯集。跨批次時，後面的批次沿用前面寫入的待審 id，只補上出處（`writePending()` 的 `addedSources`）。類型與兩端都相同的關係也一樣。
+
+- **只比對文件語言的名稱**（`ExtractionState.documentLanguage`，上傳時設定的語言，不是介面語言；#46 審查）：其他語言的名稱由模型補上（prompt 第 6 條），不同的中文人名常有相同的英文拼音（例如「林志明」與「林芷敏」都可能是「Zhiming Lin」）。若以所有語言比對，兩個人會在主管看到之前被合成一筆，主管只能整筆退回。
+- 文件語言的名稱只差大小寫、全形半形或空白（依 `aliasRules`）時，仍合成一筆。
+- 核准時的合併建議（`suggestMerge()`）仍比對所有語言的名稱，因為那一步由主管逐筆確認。
 
 ## 合併（`merge.ts`）
 
@@ -148,6 +152,7 @@ If nothing can be extracted, reply {"entities":[],"relations":[]}.
 - 超過批數上限的段落不萃取；不能重新萃取已退回的項目，也不能修改已核准的實體與關係。
 - 只萃取關係的兩端都在同一批中的關係；跨批次的關係（兩端出現在不同批）不會被萃取。
 - 合併只比對名稱，不比對別名（`aliases` 不在資料庫中）。
+- 同一份文件中，文件語言的名稱相同的實體會合成一筆待審實體。若同一份文件提到兩位同名的人（例如兩位林志明），會被合成一筆，需要主管退回後另行處理。
 
 ## 費用估算（每份文件）
 

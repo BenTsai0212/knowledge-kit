@@ -24,9 +24,10 @@ export interface BatchState {
 
 export interface ExtractionState {
   documentId: string;
-  // 上傳時的身分與介面語言；之後切換身分或語言都不影響
+  // 上傳者的身分：一律以此身分寫入待審，之後切換身分不影響
   uploader: string;
-  language: LanguageCode;
+  // 文件的語言（上傳時設定的語言，不是介面語言）：同一份文件中的去重只比對這個語言的名稱；prompt 中的公司名稱也用這個語言
+  documentLanguage: LanguageCode;
   passages: Record<string, string>;
   batches: BatchState[];
   // 超過批數上限、沒有萃取的段落
@@ -44,14 +45,14 @@ export interface ExtractionContext {
 
 export function planExtraction(
   config: ExtractionContext["config"],
-  upload: { documentId: string; uploader: string; language: LanguageCode; passages: { id: string; content: string }[] },
+  upload: { documentId: string; uploader: string; documentLanguage: LanguageCode; passages: { id: string; content: string }[] },
 ): ExtractionState {
-  const system = extractionSystemPrompt(promptParts(config, upload.language));
+  const system = extractionSystemPrompt(promptParts(config, upload.documentLanguage));
   const { batches, skipped } = planBatches(upload.passages, system, config.client.upload.extractMaxBatches);
   return {
     documentId: upload.documentId,
     uploader: upload.uploader,
-    language: upload.language,
+    documentLanguage: upload.documentLanguage,
     passages: Object.fromEntries(upload.passages.map((p) => [p.id, p.content])),
     batches: batches.map((passageIds) => ({ passageIds, status: "waiting", entities: 0, relations: 0, dropped: 0 })),
     skipped,
@@ -83,7 +84,7 @@ export async function runExtraction(
     onChange(state);
   };
   const { config } = ctx;
-  const system = extractionSystemPrompt(promptParts(config, state.language));
+  const system = extractionSystemPrompt(promptParts(config, state.documentLanguage));
 
   for (let i = 0; i < state.batches.length; i++) {
     if (state.batches[i].status === "done") continue;
@@ -107,13 +108,14 @@ export async function runExtraction(
       continue;
     }
 
-    // 同一份文件中去重：名稱相符的實體、類型與兩端相同的關係，沿用前面寫入的待審項目，只補上出處
+    // 同一份文件中去重：文件語言的名稱相符的實體、類型與兩端相同的關係，沿用前面寫入的待審項目，只補上出處
     const entityKeys = { ...state.entityKeys };
     const relationKeys = { ...state.relationKeys };
     const input: Required<PendingInput> = { entities: [], relations: [], addedSources: [] };
     const idOfKey = new Map<string, string>();
     for (const e of parsed.entities) {
-      const keys = [...nameKeys(e.type, Object.values(e.names), config.knowledgeModel.entityTypes)];
+      // 只比對文件語言的名稱：模型補上的其他語言名稱（例如人名的拼音）可能相同，不同的人不可在這裡被合成一筆（#46 審查）
+      const keys = [...nameKeys(e.type, [e.names[state.documentLanguage]], config.knowledgeModel.entityTypes)];
       const existing = keys.map((k) => entityKeys[k]).find((id) => id !== undefined);
       const created = input.entities.find((x) => x.id === existing);
       if (existing === undefined) {
