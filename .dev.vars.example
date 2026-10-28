@@ -3,6 +3,8 @@
 # Anthropic API 金鑰（由人填入）
 ANTHROPIC_API_KEY=
 # 邀請碼：組名:碼,碼;組名:碼（組名小寫英數與 -，碼至少 8 個英數字元）
+# 完整範例：ACCESS_CODES=me:demo2026（組名 me、碼 demo2026）
+# 只寫碼、少了組名和冒號時（例如 ACCESS_CODES=demo2026），/api/ask 會回 500 misconfigured
 ACCESS_CODES=demo:EXAMPLE1
 # 停用的組（逗號分隔）
 DISABLED_GROUPS=
