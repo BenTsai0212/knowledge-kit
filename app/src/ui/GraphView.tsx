@@ -2,6 +2,7 @@
 import type { Core, ElementDefinition } from "cytoscape";
 import { useEffect, useRef } from "react";
 import { clientConfig } from "../client/load";
+import type { PathStep } from "../graph/path";
 import type { Graph } from "../graph/read";
 import { entityName } from "./graph-labels";
 
@@ -9,6 +10,8 @@ interface Props {
   graph: Graph;
   language: string;
   selected: string | null;
+  // 標示在圖上的路徑（多跳路徑）
+  path: PathStep[] | null;
   onSelect(entityId: string | null): void;
 }
 
@@ -30,7 +33,15 @@ function elements(graph: Graph, language: string): ElementDefinition[] {
   ];
 }
 
-export function GraphView({ graph, language, selected, onSelect }: Props) {
+function markPath(cy: Core, path: PathStep[] | null) {
+  cy.elements().removeClass("path");
+  for (const step of path ?? []) {
+    cy.$id(step.entity).addClass("path");
+    if (step.relation !== undefined) cy.$id(`relation:${step.relation}`).addClass("path");
+  }
+}
+
+export function GraphView({ graph, language, selected, path, onSelect }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const cy = useRef<Core | null>(null);
   // tap 事件在 cytoscape 實例建立時註冊，以 ref 取得最新的 onSelect
@@ -73,12 +84,22 @@ export function GraphView({ graph, language, selected, onSelect }: Props) {
             },
           },
           { selector: "node.selected", style: { "border-width": 4, "border-color": style.getPropertyValue("--color-text") } },
+          { selector: "node.path", style: { "border-width": 4, "border-color": style.getPropertyValue("--color-primary") } },
+          {
+            selector: "edge.path",
+            style: {
+              width: 4,
+              "line-color": style.getPropertyValue("--color-primary"),
+              "target-arrow-color": style.getPropertyValue("--color-primary"),
+            },
+          },
         ],
       });
       instance.on("tap", "node", (e) => select.current(e.target.id()));
       instance.on("tap", (e) => e.target === instance && select.current(null));
       cy.current = instance;
       instance.$id(selected ?? "").addClass("selected");
+      markPath(instance, path);
     });
     return () => {
       cancelled = true;
@@ -92,6 +113,10 @@ export function GraphView({ graph, language, selected, onSelect }: Props) {
     cy.current?.nodes().removeClass("selected");
     if (selected !== null) cy.current?.$id(selected).addClass("selected");
   }, [selected]);
+
+  useEffect(() => {
+    if (cy.current !== null) markPath(cy.current, path);
+  }, [path]);
 
   return <div ref={container} className="graph-canvas" />;
 }

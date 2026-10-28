@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Graph } from "../graph/read";
-import { entityName, entityTypeLabel, relatedEntities, relationTypeLabel } from "./graph-labels";
+import { entityName, entityOptionLabel, entityTypeLabel, relatedEntities, relationTypeLabel } from "./graph-labels";
 
 const entity = (id: string, names: Record<string, string>) => ({ id, type: "person", name: `${id}-name`, names, sources: [] });
 const graph: Graph = {
@@ -30,5 +30,13 @@ describe("圖譜的顯示文字", () => {
       ["r1", "Member of", true, "b"],
       ["r2", "Leads", false, "c"],
     ]);
+  });
+
+  it("下拉選單中，顯示名稱相同的實體加上第一個相關實體的名稱", () => {
+    const twins: Graph = {
+      entities: [entity("lin-1", { en: "Lin" }), entity("lin-2", { en: "Lin" }), entity("rd", { en: "R&D" }), entity("solo", { en: "Solo" })],
+      relations: [{ id: "r1", type: "member-of", from: "lin-1", to: "rd", sources: [] }],
+    };
+    expect(twins.entities.map((e) => entityOptionLabel(twins, e, "en"))).toEqual(["Lin（R&D）", "Lin（lin-2）", "R&D", "Solo"]);
   });
 });

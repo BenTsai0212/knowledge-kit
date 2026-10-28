@@ -1,4 +1,4 @@
-// 主畫面：PGlite 在瀏覽器中載入並匯入資料集；身分與語言切換；問答（需要邀請碼）與圖譜（不呼叫模型）兩個頁籤；引用跳回原文。
+// 主畫面：PGlite 在瀏覽器中載入並匯入資料集；身分與語言切換；問答（需要邀請碼）、圖譜、時間軸（後兩者不呼叫模型）三個頁籤；引用跳回原文。
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clientConfig } from "./client/load";
 import { dataset } from "./dataset/load";
@@ -16,11 +16,12 @@ import { QuestionPanel } from "./ui/QuestionPanel";
 import { createRequestGate } from "./ui/requests";
 import { SourcePanel } from "./ui/SourcePanel";
 import { strings } from "./ui/strings";
+import { TimelinePage } from "./ui/TimelinePage";
 import { Toolbar } from "./ui/Toolbar";
 
 const { client, access } = clientConfig;
 
-type View = "qa" | "graph";
+type View = "qa" | "graph" | "timeline";
 
 export function App() {
   const [view, setView] = useState<View>("qa");
@@ -122,6 +123,7 @@ export function App() {
           [
             ["qa", s.tabQa],
             ["graph", s.tabGraph],
+            ["timeline", s.tabTimeline],
           ] as const
         ).map(([id, label]) => (
           <button key={id} type="button" aria-current={view === id ? "page" : undefined} onClick={() => setView(id)}>
@@ -131,9 +133,15 @@ export function App() {
       </nav>
       {loadFailed ? (
         <p className="card error">{s.loadFailed}</p>
-      ) : view === "graph" ? (
+      ) : view !== "qa" ? (
         <main>
-          {db === null ? <p className="card muted">{s.loading}</p> : <GraphPage db={db} identity={identity} language={language} onOpenSource={onOpenSource} />}
+          {db === null ? (
+            <p className="card muted">{s.loading}</p>
+          ) : view === "graph" ? (
+            <GraphPage db={db} identity={identity} language={language} onOpenSource={onOpenSource} />
+          ) : (
+            <TimelinePage db={db} identity={identity} language={language} onOpenSource={onOpenSource} />
+          )}
           {source !== null && <SourcePanel language={language} source={source} onClose={() => (sources.current.cancel(), setSource(null))} />}
         </main>
       ) : accessCode === null ? (
