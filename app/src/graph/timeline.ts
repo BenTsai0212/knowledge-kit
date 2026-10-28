@@ -1,0 +1,63 @@
+// 時間軸：依日期由舊到新列出目前身分看得到的文件與段落，只列出介面語言的文件（#31 決定 2），可依實體篩選。
+// 一律經 withIdentity()，權限交給 RLS；日期在 SQL 中轉成字串，不經過 JavaScript 的 Date（不受時區影響）。
+import type { LanguageCode } from "../client/types";
+import type { Database } from "../db/database";
+
+export interface TimelinePassage {
+  id: string;
+  content: string;
+  // 以本段為出處的實體（只有看得到的）
+  entityIds: string[];
+}
+
+export interface TimelineEntry {
+  documentId: string;
+  title: string;
+  // YYYY-MM-DD；文件沒有日期時為 null，排在最後
+  date: string | null;
+  language: string;
+  passages: TimelinePassage[];
+}
+
+export interface TimelineOptions {
+  language: LanguageCode;
+  // 只留以該實體為出處的段落，以及有這類段落的文件
+  entityId?: string;
+}
+
+interface Row {
+  document_id: string;
+  title: string;
+  date: string | null;
+  language: string;
+  passage_id: string;
+  content: string;
+  entity_ids: string[];
+}
+
+// 只列出有看得到的段落的文件；entity_sources 只回傳出處段落看得到的列
+const SQL = `
+  SELECT d.id AS document_id, d.title, to_char(d.document_date, 'YYYY-MM-DD') AS date, d.language,
+         p.id AS passage_id, p.content,
+         coalesce(array_agg(s.entity_id ORDER BY s.entity_id) FILTER (WHERE s.entity_id IS NOT NULL), '{}') AS entity_ids
+    FROM kk.documents d
+    JOIN kk.passages p ON p.document_id = d.id
+    LEFT JOIN kk.entity_sources s ON s.passage_id = p.id
+   WHERE d.language = $1
+   GROUP BY d.id, p.id
+   ORDER BY d.document_date NULLS LAST, d.id, p.ordinal`;
+
+export async function readTimeline(db: Database, identityId: string | null, options: TimelineOptions): Promise<TimelineEntry[]> {
+  const rows = await db.withIdentity(identityId, async (tx) => (await tx.query<Row>(SQL, [options.language])).rows);
+  const entries: TimelineEntry[] = [];
+  for (const r of rows) {
+    if (options.entityId !== undefined && !r.entity_ids.includes(options.entityId)) continue;
+    let entry = entries.at(-1);
+    if (entry?.documentId !== r.document_id) {
+      entry = { documentId: r.document_id, title: r.title, date: r.date, language: r.language, passages: [] };
+      entries.push(entry);
+    }
+    entry.passages.push({ id: r.passage_id, content: r.content, entityIds: r.entity_ids });
+  }
+  return entries;
+}

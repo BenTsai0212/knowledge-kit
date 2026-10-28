@@ -78,28 +78,29 @@ function build(): Sample {
 
 export const sample = build();
 
-export async function seedSample(db: PGliteInterface): Promise<void> {
+// data 省略時匯入上面的 sample；其他測試可傳入自己的小樣本（例如 app/tests/graph/path.test.ts）
+export async function seedSample(db: PGliteInterface, data: Sample = sample): Promise<void> {
   await db.transaction(async (tx) => {
-    for (const d of sample.docs) {
+    for (const d of data.docs) {
       await tx.query(
         "INSERT INTO kk.documents (id, title, language, visibility_level_id, project_id) VALUES ($1, $1, 'zh-TW', $2, $3)",
         [d.id, d.level, d.project],
       );
     }
-    for (const [i, p] of sample.passages.entries()) {
+    for (const [i, p] of data.passages.entries()) {
       await tx.query(
         `INSERT INTO kk.passages (id, document_id, ordinal, language, content, visibility_level_id, project_id)
          VALUES ($1, $2, $3, 'zh-TW', $1, $4, $5)`,
         [p.id, p.doc, i, p.level, p.project],
       );
     }
-    for (const e of sample.entities) {
+    for (const e of data.entities) {
       await tx.query("INSERT INTO kk.entities (id, entity_type, name) VALUES ($1, 'person', $1)", [e.id]);
       for (const s of e.sources) {
         await tx.query("INSERT INTO kk.entity_sources (entity_id, passage_id) VALUES ($1, $2)", [e.id, s]);
       }
     }
-    for (const r of sample.relations) {
+    for (const r of data.relations) {
       await tx.query(
         "INSERT INTO kk.relations (id, relation_type, from_entity_id, to_entity_id) VALUES ($1, 'works-on', $2, $3)",
         [r.id, r.from, r.to],

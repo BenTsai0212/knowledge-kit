@@ -39,7 +39,7 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 | `app/src/retrieval/` | 檢索：`retrieve.ts` 經 `withIdentity()` 取段落再計分；`VectorProvider` 接口（`types.ts`）、預設實作 `keyword-hash`（`tokenize.ts`、`keyword-hash.ts`）；使用哪個實作只在 `providers.ts` 決定（`providers.test.ts` 檢查）；說明見 `docs/retrieval.md` |
 | `app/src/qa/` | 問答：`answer.ts` 的 `ask()`（`retrieve()` → 本機拒答 → `prompt.ts` 組 prompt → `/api/ask` → 拒答標記與 `citations.ts` 的引用解析）；`types.ts` 是 `/api/ask` 的傳輸接口，`api.ts`（＋`sse.ts`）是真的實作，`testing.ts` 是測試用的假實作（測試不呼叫真實 API）；只透過 `retrieve()` 取得段落（`structure.test.ts` 檢查）；說明見 `docs/qa.md` |
 | `app/src/ui/` | 畫面（入口是 `app/src/App.tsx`）：元件（`*.tsx`）、`strings.ts` 是介面文字（繁中＋英文，含拒答文字與 `/api/ask` 各錯誤類型的訊息；元件與問答模組不寫死文字）、`access-code.ts`（邀請碼只放 `sessionStorage`）、`requests.ts`（切換身分或語言時捨棄進行中的提問）；說明見 `docs/qa.md`「畫面」 |
-| `app/src/graph/` | 知識圖譜：`read.ts` 的 `readGraph()` 經 `withIdentity()` 一次讀出看得到的實體、關係與出處段落（權限測試在 `app/tests/graph/`） |
+| `app/src/graph/` | 知識圖譜：`read.ts` 的 `readGraph()` 經 `withIdentity()` 一次讀出看得到的實體、關係與出處段落；`path.ts` 的 `shortestPath()` 在可見圖上找最短路徑；`timeline.ts` 的 `readTimeline()` 依日期列出看得到的文件與段落（權限測試在 `app/tests/graph/`）；說明見 `docs/graph.md` |
 | `app/src/sources/` | 引用跳回原文：`source.ts` 的 `readSource()` 經 `withIdentity()` 讀取段落所屬文件中看得到的段落 |
 | `app/src/db/` | 資料層（PGlite＋RLS）：`database.ts` 是唯一入口，`migrations/*.sql` 是 migration；說明見 `docs/data-model.md` |
 | `app/tests/` | 需要放在 `app/src/` 之外的測試（例如會用到被禁止 SQL 的越權測試） |
