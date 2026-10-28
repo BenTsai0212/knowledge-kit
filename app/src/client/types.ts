@@ -21,6 +21,10 @@ export interface RetrievalFile {
   minScore?: number;
 }
 
+export interface UploadFile {
+  passageMaxChars?: number;
+}
+
 export interface ClientFile {
   displayName: LocalizedText;
   defaultLanguage: LanguageCode;
@@ -29,6 +33,7 @@ export interface ClientFile {
   dataset: PathRef;
   evals: PathRef;
   retrieval?: RetrievalFile;
+  upload?: UploadFile;
 }
 
 export interface ThemeColors {
@@ -139,9 +144,10 @@ export interface EntityType extends Omit<EntityTypeFile, "mergeStrategy"> {
 }
 
 export type RetrievalConfig = Required<RetrievalFile>;
+export type UploadConfig = Required<UploadFile>;
 
 export interface ClientConfig extends Omit<ClientFiles, "client" | "knowledgeModel"> {
-  client: Omit<ClientFile, "retrieval"> & { retrieval: RetrievalConfig };
+  client: Omit<ClientFile, "retrieval" | "upload"> & { retrieval: RetrievalConfig; upload: UploadConfig };
   knowledgeModel: {
     entityTypes: EntityType[];
     relationTypes: RelationType[];

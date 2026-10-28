@@ -42,6 +42,20 @@
         "topK": { "description": "回傳前幾名", "type": "integer", "minimum": 1, "maximum": 20, "default": 5 },
         "minScore": { "description": "最低分數門檻，低於此分數的段落不回傳", "type": "number", "minimum": 0, "maximum": 1, "default": 0.1 }
       }
+    },
+    "upload": {
+      "description": "上傳文件的參數；省略的欄位使用預設值（docs/client-config.md）",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "passageMaxChars": {
+          "description": "切段時每段的字元數上限",
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 1000,
+          "default": 300
+        }
+      }
     }
   }
 }

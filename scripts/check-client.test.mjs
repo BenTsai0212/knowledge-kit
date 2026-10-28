@@ -86,6 +86,16 @@ describe("check-client", () => {
     expect(validateClient(files)).toEqual([]);
   });
 
+  it("上傳參數：passageMaxChars 為 100～1000 的整數，可省略", () => {
+    const files = example();
+    files["client.json"].upload = { passageMaxChars: 50 };
+    expect(validateClient(files).map((e) => e.path)).toEqual(["/upload/passageMaxChars"]);
+    files["client.json"].upload = { passageMaxChars: 300.5 };
+    expect(validateClient(files).map((e) => e.path)).toEqual(["/upload/passageMaxChars"]);
+    delete files["client.json"].upload;
+    expect(validateClient(files)).toEqual([]);
+  });
+
   it("合併策略只接受 review 或 auto，省略時預設 review", () => {
     const files = example();
     files["knowledge-model.json"].entityTypes[0].mergeStrategy = "merge";

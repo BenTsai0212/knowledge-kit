@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import clientSchema from "../../../client/schema/client.schema.json";
-import { clientConfig, normalizeClient, RETRIEVAL_DEFAULTS } from "./load";
+import { clientConfig, normalizeClient, RETRIEVAL_DEFAULTS, UPLOAD_DEFAULTS } from "./load";
 import type { ClientFiles } from "./types";
 
 describe("normalizeClient", () => {
@@ -37,5 +37,12 @@ describe("normalizeClient", () => {
   it("讀入 client/ 的範例設定", () => {
     expect(clientConfig.client.displayName["zh-TW"]).toBe("範例公司");
     expect(clientConfig.client.languages).toEqual(["zh-TW", "en"]);
+  });
+
+  it("upload 省略時補上預設值，預設值與 Schema 的 default 相同", () => {
+    const raw = (upload?: object) => ({ ...clientConfig, client: { ...clientConfig.client, upload } }) as unknown as ClientFiles;
+    expect(normalizeClient(raw()).client.upload).toEqual(UPLOAD_DEFAULTS);
+    expect(normalizeClient(raw({ passageMaxChars: 500 })).client.upload).toEqual({ passageMaxChars: 500 });
+    expect(UPLOAD_DEFAULTS.passageMaxChars).toBe(clientSchema.properties.upload.properties.passageMaxChars.default);
   });
 });

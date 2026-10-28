@@ -61,3 +61,4 @@ RFC 0001 要求換客戶時只修改 `client/`，並讓 coding agent 能快速�
 
 - **2026-10-28，#31**：`@types/cytoscape` 不需要安裝。cytoscape 自帶型別定義，npm 上的 `@types/cytoscape` 是標示為 deprecated 的空殼（#31 決定 1）。上方「核准的套件」保留原文，以本節為準。
 - **2026-10-28，更正**：pgvector 不在 `@electric-sql/pglite` 主套件中，而是另一個套件 `@electric-sql/pglite-pgvector`，不在核准清單；pg_trgm 在主套件的 `contrib/pg_trgm`（#6 計畫審查時查證）。上方「瀏覽器內資料庫」一列的「含 pgvector」以本節為準。
+- **2026-10-28，#38**：新增執行套件 `pdfjs-dist`、`mammoth`（上傳文件的解析），決策與理由見 ADR 0002。
