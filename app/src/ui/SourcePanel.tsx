@@ -11,7 +11,10 @@ interface Props {
 export function SourcePanel({ language, source, onClose }: Props) {
   const s = strings(language);
   const highlighted = useRef<HTMLParagraphElement>(null);
-  useEffect(() => highlighted.current?.scrollIntoView({ block: "nearest" }), [source]);
+  // 不可寫成 () => …scrollIntoView()：新版瀏覽器的 scrollIntoView 回傳 Promise，React 會把它當成 cleanup 呼叫而出錯
+  useEffect(() => {
+    void highlighted.current?.scrollIntoView({ block: "nearest" });
+  }, [source]);
 
   return (
     <aside className="card source" aria-label={s.sourceTitle}>

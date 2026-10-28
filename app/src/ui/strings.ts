@@ -37,6 +37,14 @@ export interface UiStrings {
   openSource: string;
   sourceTitle: string;
   closeSource: string;
+  views: string;
+  tabQa: string;
+  tabGraph: string;
+  legend: string;
+  graphEmpty: string;
+  selectEntity: string;
+  relatedEntities: string;
+  entitySources: string;
   // 標籤與內容之間的分隔（繁中用全形冒號）
   colon: string;
   // 拒答：「沒有資料」與「沒有權限」相同，不透露是否有看不到的文件
@@ -73,6 +81,14 @@ export const STRINGS: Record<LanguageCode, UiStrings> = {
     openSource: "打開原文",
     sourceTitle: "原文",
     closeSource: "關閉",
+    views: "頁面",
+    tabQa: "問答",
+    tabGraph: "圖譜",
+    legend: "圖例",
+    graphEmpty: "目前的身分看不到任何實體。",
+    selectEntity: "點選節點查看詳細資訊。",
+    relatedEntities: "相關實體",
+    entitySources: "出處",
     colon: "：",
     refusal: "找不到可以回答這個問題的資料。",
     uncited: "未附出處",
@@ -122,6 +138,14 @@ export const STRINGS: Record<LanguageCode, UiStrings> = {
     openSource: "Open source",
     sourceTitle: "Source",
     closeSource: "Close",
+    views: "Views",
+    tabQa: "Q&A",
+    tabGraph: "Graph",
+    legend: "Legend",
+    graphEmpty: "No entities are visible to the current identity.",
+    selectEntity: "Select a node to see its details.",
+    relatedEntities: "Related entities",
+    entitySources: "Sources",
     colon: ": ",
     refusal: "I couldn't find information to answer this question.",
     uncited: "No sources cited",

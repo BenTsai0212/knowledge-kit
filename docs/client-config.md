@@ -22,7 +22,7 @@ npm run check:client
 | --- | --- | --- |
 | `client.json` | `client.schema.json` | 基本資訊、語言、模型、資料集與評測題庫的位置 |
 | `theme.json` | `theme.schema.json` | 色票、字體 |
-| `knowledge-model.json` | `knowledge-model.schema.json` | 實體類型、關係類型、別名規則、合併策略 |
+| `knowledge-model.json` | `knowledge-model.schema.json` | 實體類型（含圖譜顏色）、關係類型、別名規則、合併策略 |
 | `access.json` | `access.schema.json` | 可見等級、專案名單、角色 |
 | `scenarios.json` | `scenarios.schema.json` | 示範情境與預設問題 |
 
@@ -88,6 +88,7 @@ npm run check:client
 | --- | --- | --- | --- |
 | `id` | 是 | `Id`，不可重複 | 例如 `person`、`project` |
 | `label` | 是 | `LocalizedText` | 顯示名稱 |
+| `color` | 是 | `#RRGGBB` | 圖譜中節點的顏色（[docs/graph.md](graph.md)）。沒有預設值：類型由客戶定義 |
 | `aliasRules.ignoreCase` | 是 | boolean | 比對名稱與別名時忽略大小寫 |
 | `aliasRules.normalizeWidth` | 是 | boolean | 比對前把全形英數與符號轉為半形 |
 | `aliasRules.ignoreWhitespace` | 是 | boolean | 比對時忽略空白 |

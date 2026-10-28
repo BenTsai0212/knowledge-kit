@@ -93,6 +93,13 @@ describe("check-client", () => {
     expect(schema("knowledge-model.schema.json").properties.entityTypes.items.properties.mergeStrategy.default).toBe("review");
   });
 
+  it("實體類型的顏色必填，格式為 #RRGGBB", () => {
+    const files = example();
+    files["knowledge-model.json"].entityTypes[0].color = "blue";
+    delete files["knowledge-model.json"].entityTypes[1].color;
+    expect(validateClient(files).map((e) => e.path)).toEqual(["/entityTypes/0/color", "/entityTypes/1"]);
+  });
+
   it("情境的角色與問題 id 會被檢查", () => {
     const files = example();
     const scenario = files["scenarios.json"].scenarios[0];

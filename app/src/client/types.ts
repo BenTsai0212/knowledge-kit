@@ -62,6 +62,8 @@ export type MergeStrategy = "review" | "auto";
 export interface EntityTypeFile {
   id: Id;
   label: LocalizedText;
+  // 圖譜中節點的顏色（#RRGGBB）
+  color: string;
   aliasRules: AliasRules;
   mergeStrategy?: MergeStrategy;
 }
