@@ -1,6 +1,6 @@
 // 圖譜的顯示文字：實體名稱依介面語言（names），類型與關係類型的名稱來自 knowledge-model.json。
 import { clientConfig } from "../client/load";
-import type { Graph, GraphEntity } from "../graph/read";
+import type { Graph, GraphEntity, SourcePassage } from "../graph/read";
 
 const { entityTypes, relationTypes } = clientConfig.knowledgeModel;
 
@@ -37,4 +37,17 @@ export function entityOptionLabel(graph: Graph, entity: GraphEntity, language: s
   if (same.length < 2) return name;
   const first = relatedEntities(graph, entity.id, language)[0];
   return first ? `${name}（${entityName(first.entity, language)}）` : `${name}（${entity.id}）`;
+}
+
+export interface DisplaySource extends SourcePassage {
+  // 不是介面語言的出處才有：該段語言的名稱，依介面語言顯示（例如英文介面的 zh-TW → Chinese (Taiwan)）
+  languageLabel?: string;
+}
+
+// 出處優先顯示介面語言（#36）：有介面語言的出處時只顯示這些；沒有時顯示其他語言並標示語言，不讓關係看起來沒有出處
+export function sourcesForLanguage(sources: SourcePassage[], language: string): DisplaySource[] {
+  const same = sources.filter((s) => s.language === language);
+  if (same.length > 0 || sources.length === 0) return same;
+  const names = new Intl.DisplayNames([language], { type: "language" });
+  return sources.map((s) => ({ ...s, languageLabel: names.of(s.language) ?? s.language }));
 }

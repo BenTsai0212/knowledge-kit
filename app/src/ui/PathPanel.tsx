@@ -1,6 +1,6 @@
 import type { PathStep } from "../graph/path";
 import type { Graph } from "../graph/read";
-import { entityName, entityOptionLabel, relationTypeLabel } from "./graph-labels";
+import { entityName, entityOptionLabel, relationTypeLabel, sourcesForLanguage } from "./graph-labels";
 import { strings } from "./strings";
 
 interface Props {
@@ -59,11 +59,11 @@ export function PathPanel({ graph, language, from, to, path, onChange, onOpenSou
                     {s.colon}
                     {entityName(byId.get(relation.from)!, language)} → {entityName(byId.get(relation.to)!, language)}
                     <ul>
-                      {relation.sources.map((p) => (
+                      {sourcesForLanguage(relation.sources, language).map((p) => (
                         <li key={p.id}>
                           {p.documentTitle}
                           {s.colon}
-                          <span lang={p.language}>{p.content}</span>{" "}
+                          {p.languageLabel !== undefined && <span className="badge">{p.languageLabel}</span>} <span lang={p.language}>{p.content}</span>{" "}
                           <button type="button" className="link" onClick={() => onOpenSource(p.id)}>
                             {s.openSource}
                           </button>

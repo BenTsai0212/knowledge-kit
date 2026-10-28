@@ -1,5 +1,5 @@
 import type { Graph } from "../graph/read";
-import { entityName, entityTypeLabel, relatedEntities } from "./graph-labels";
+import { entityName, entityTypeLabel, relatedEntities, sourcesForLanguage } from "./graph-labels";
 import { strings } from "./strings";
 
 interface Props {
@@ -35,13 +35,13 @@ export function EntityPanel({ graph, entityId, language, onSelect, onOpenSource 
       </ul>
       <h3>{s.entitySources}</h3>
       <ul>
-        {entity.sources.map((p) => (
+        {sourcesForLanguage(entity.sources, language).map((p) => (
           <li key={p.id}>
             <span className="muted">
               {p.documentTitle}
               {s.colon}
             </span>
-            <span lang={p.language}>{p.content}</span>{" "}
+            {p.languageLabel !== undefined && <span className="badge">{p.languageLabel}</span>} <span lang={p.language}>{p.content}</span>{" "}
             <button type="button" className="link" onClick={() => onOpenSource(p.id)}>
               {s.openSource}
             </button>

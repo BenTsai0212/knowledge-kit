@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { Graph } from "../graph/read";
-import { entityName, entityOptionLabel, entityTypeLabel, relatedEntities, relationTypeLabel } from "./graph-labels";
+import type { Graph, SourcePassage } from "../graph/read";
+import { entityName, entityOptionLabel, entityTypeLabel, relatedEntities, relationTypeLabel, sourcesForLanguage } from "./graph-labels";
 
 const entity = (id: string, names: Record<string, string>) => ({ id, type: "person", name: `${id}-name`, names, sources: [] });
 const graph: Graph = {
@@ -38,5 +38,29 @@ describe("圖譜的顯示文字", () => {
       relations: [{ id: "r1", type: "member-of", from: "lin-1", to: "rd", sources: [] }],
     };
     expect(twins.entities.map((e) => entityOptionLabel(twins, e, "en"))).toEqual(["Lin（R&D）", "Lin（lin-2）", "R&D", "Solo"]);
+  });
+});
+
+describe("sourcesForLanguage", () => {
+  const source = (id: string, language: string): SourcePassage => ({ id, documentId: `${id}-doc`, documentTitle: id, language, content: id });
+  const zh = [source("zh-1", "zh-TW"), source("zh-2", "zh-TW")];
+  const en = [source("en-1", "en")];
+
+  it("只有介面語言的出處：全部顯示，不標示語言", () => {
+    expect(sourcesForLanguage(en, "en")).toEqual(en);
+  });
+
+  it("只有其他語言的出處：全部顯示，並以介面語言標示該段的語言", () => {
+    expect(sourcesForLanguage(zh, "en")).toEqual(zh.map((s) => ({ ...s, languageLabel: "Chinese (Taiwan)" })));
+    expect(sourcesForLanguage(en, "zh-TW")).toEqual(en.map((s) => ({ ...s, languageLabel: "英文" })));
+  });
+
+  it("兩者都有：只顯示介面語言的出處", () => {
+    expect(sourcesForLanguage([...zh, ...en], "en")).toEqual(en);
+    expect(sourcesForLanguage([...en, ...zh], "zh-TW")).toEqual(zh);
+  });
+
+  it("沒有出處：空陣列", () => {
+    expect(sourcesForLanguage([], "en")).toEqual([]);
   });
 });
