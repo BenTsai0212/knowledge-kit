@@ -89,6 +89,7 @@ export const manifests: ManifestEntry[] = [
     keys: {
       id: "required",
       label: "required",
+      color: "required",
       aliasRules: "required",
       mergeStrategy: "optional",
     } satisfies KeyManifest<EntityTypeFile>,

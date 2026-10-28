@@ -3,18 +3,21 @@
     {
       "id": "person",
       "label": { "zh-TW": "人員", "en": "Person" },
+      "color": "#2F5D8A",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
       "mergeStrategy": "review"
     },
     {
       "id": "team",
       "label": { "zh-TW": "部門", "en": "Team" },
+      "color": "#2E7D5B",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
       "mergeStrategy": "auto"
     },
     {
       "id": "project",
       "label": { "zh-TW": "專案", "en": "Project" },
+      "color": "#B26A00",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": false }
     }
   ],

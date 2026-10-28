@@ -1,4 +1,4 @@
-// 問答頁：PGlite 在瀏覽器中載入並匯入資料集；身分與語言切換；預設問題與自由提問；串流回答；引用跳回原文。
+// 主畫面：PGlite 在瀏覽器中載入並匯入資料集；身分與語言切換；問答（需要邀請碼）與圖譜（不呼叫模型）兩個頁籤；引用跳回原文。
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clientConfig } from "./client/load";
 import { dataset } from "./dataset/load";
@@ -11,6 +11,7 @@ import { readSource, type SourceDocument } from "./sources/source";
 import { clearAccessCode, loadAccessCode, saveAccessCode } from "./ui/access-code";
 import { AccessCodeForm } from "./ui/AccessCodeForm";
 import { AnswerView, type AnswerState } from "./ui/AnswerView";
+import { GraphPage } from "./ui/GraphPage";
 import { QuestionPanel } from "./ui/QuestionPanel";
 import { createRequestGate } from "./ui/requests";
 import { SourcePanel } from "./ui/SourcePanel";
@@ -19,7 +20,10 @@ import { Toolbar } from "./ui/Toolbar";
 
 const { client, access } = clientConfig;
 
+type View = "qa" | "graph";
+
 export function App() {
+  const [view, setView] = useState<View>("qa");
   const [language, setLanguage] = useState(client.defaultLanguage);
   const [identity, setIdentity] = useState(access.roles[0].id);
   const [accessCode, setAccessCode] = useState(loadAccessCode);
@@ -113,8 +117,25 @@ export function App() {
               }
         }
       />
+      <nav className="tabs" aria-label={s.views}>
+        {(
+          [
+            ["qa", s.tabQa],
+            ["graph", s.tabGraph],
+          ] as const
+        ).map(([id, label]) => (
+          <button key={id} type="button" aria-current={view === id ? "page" : undefined} onClick={() => setView(id)}>
+            {label}
+          </button>
+        ))}
+      </nav>
       {loadFailed ? (
         <p className="card error">{s.loadFailed}</p>
+      ) : view === "graph" ? (
+        <main>
+          {db === null ? <p className="card muted">{s.loading}</p> : <GraphPage db={db} identity={identity} language={language} onOpenSource={onOpenSource} />}
+          {source !== null && <SourcePanel language={language} source={source} onClose={() => (sources.current.cancel(), setSource(null))} />}
+        </main>
       ) : accessCode === null ? (
         <AccessCodeForm
           language={language}

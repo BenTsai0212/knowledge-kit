@@ -3,11 +3,13 @@
     {
       "id": "person",
       "label": { "zh-TW": "人員" },
+      "color": "#2F5D8A",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true }
     },
     {
       "id": "person",
       "label": { "zh-TW": "人員（重複）" },
+      "color": "#2F5D8A",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true }
     }
   ],

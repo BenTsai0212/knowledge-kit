@@ -12,10 +12,15 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "label", "aliasRules"],
+        "required": ["id", "label", "color", "aliasRules"],
         "properties": {
           "id": { "$ref": "common.schema.json#/definitions/Id" },
           "label": { "$ref": "common.schema.json#/definitions/LocalizedText" },
+          "color": {
+            "description": "圖譜中節點的顏色（#RRGGBB）",
+            "type": "string",
+            "pattern": "^#[0-9A-Fa-f]{6}$"
+          },
           "aliasRules": {
             "description": "比對名稱與別名前的正規化",
             "type": "object",
