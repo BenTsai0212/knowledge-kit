@@ -11,10 +11,11 @@ export async function seedAccess(db: PGliteInterface, access: AccessFile): Promi
       await tx.query("INSERT INTO kk.projects (id) VALUES ($1)", [project.id]);
     }
     for (const role of access.roles) {
-      await tx.query("INSERT INTO kk.identities (id, visibility_level_id, can_upload) VALUES ($1, $2, $3)", [
+      await tx.query("INSERT INTO kk.identities (id, visibility_level_id, can_upload, can_review) VALUES ($1, $2, $3, $4)", [
         role.id,
         role.visibility,
         role.canUpload,
+        role.canReview,
       ]);
       for (const project of role.projects) {
         await tx.query("INSERT INTO kk.identity_projects (identity_id, project_id) VALUES ($1, $2)", [role.id, project]);

@@ -70,3 +70,72 @@ export function canWrite(access: AccessFile, identityId: string | null, level: s
   const rank = new Map(access.visibilityLevels.map((l) => [l.id, l.rank]));
   return rank.get(level)! <= rank.get(role.visibility)! && (project === null || role.projects.includes(project));
 }
+
+// docs/data-model.md「待審與核准」的獨立實作（#44）。待審項目只存在於上傳的文件中
+export interface ReviewSample {
+  pendingEntities: { id: string; doc: string; type: string; sources: string[] }[];
+  pendingRelations: { id: string; doc: string; from: string; to: string; sources: string[] }[];
+  decisions: { item: string; decision: "approve" | "reject"; mergeInto?: string }[];
+}
+
+// 每張待審資料表看得到的列：有 canReview，且文件看得到（決定：項目看得到）
+export function expectedReviewVisible(access: AccessFile, data: Sample, review: ReviewSample, identityId: string | null): Visible {
+  const role = access.roles.find((r) => r.id === identityId);
+  const docs = new Set(role?.canReview ? expectedVisible(access, data, identityId).documents : []);
+  const entities = review.pendingEntities.filter((e) => docs.has(e.doc));
+  const relations = review.pendingRelations.filter((r) => docs.has(r.doc));
+  const items = new Set([...entities, ...relations].map((x) => x.id));
+  return {
+    pending_entities: entities.map((e) => e.id),
+    pending_entity_sources: entities.flatMap((e) => e.sources.map((s) => `${e.id}|${s}`)),
+    pending_relations: relations.map((r) => r.id),
+    pending_relation_sources: relations.flatMap((r) => r.sources.map((s) => `${r.id}|${s}`)),
+    review_decisions: review.decisions.filter((d) => items.has(d.item)).map((d) => d.item),
+  };
+}
+
+export const REVIEW_KEY_SQL: Record<string, string> = {
+  pending_entities: "id",
+  pending_entity_sources: "pending_entity_id || '|' || passage_id",
+  pending_relations: "id",
+  pending_relation_sources: "pending_relation_id || '|' || passage_id",
+  review_decisions: "item_id",
+};
+
+// 核准後的正式資料：新實體沿用待審 id；合併時出處加到既有實體；關係的兩端解析成核准後的實體
+export function approvedSample(data: Sample, review: ReviewSample): Sample {
+  const decision = new Map(review.decisions.map((d) => [d.item, d]));
+  const approved = (id: string) => decision.get(id)?.decision === "approve";
+  const resolve = (id: string) => decision.get(id)?.mergeInto ?? id;
+  const entities = data.entities.map((e) => ({ ...e, sources: [...e.sources] }));
+  for (const p of review.pendingEntities.filter((e) => approved(e.id))) {
+    const target = decision.get(p.id)!.mergeInto;
+    if (target === undefined) entities.push({ id: p.id, sources: [...p.sources] });
+    else entities.find((e) => e.id === target)!.sources.push(...p.sources);
+  }
+  const relations = [
+    ...data.relations,
+    ...review.pendingRelations.filter((r) => approved(r.id)).map((r) => ({ id: r.id, from: resolve(r.from), to: resolve(r.to), sources: r.sources })),
+  ];
+  return { ...data, entities, relations };
+}
+
+// 能否寫入決定：有 canReview、項目看得到；合併對象是該角色看得到的實體；核准關係時兩端都已核准
+export function canDecide(
+  access: AccessFile,
+  data: Sample,
+  review: ReviewSample,
+  identityId: string | null,
+  item: string,
+  decision: { decision: "approve" | "reject"; mergeInto?: string },
+): boolean {
+  const visible = expectedReviewVisible(access, data, review, identityId);
+  if (![...visible.pending_entities, ...visible.pending_relations].includes(item)) return false;
+  if (decision.mergeInto !== undefined && !expectedVisible(access, approvedSample(data, review), identityId).entities.includes(decision.mergeInto)) return false;
+  const relation = review.pendingRelations.find((r) => r.id === item);
+  if (relation && decision.decision === "approve") {
+    const approved = (id: string) => review.decisions.some((d) => d.item === id && d.decision === "approve");
+    return approved(relation.from) && approved(relation.to);
+  }
+  return true;
+}

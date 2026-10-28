@@ -110,6 +110,13 @@ describe("check-client", () => {
     expect(validateClient(files).map((e) => e.path)).toEqual(["/entityTypes/0/color", "/entityTypes/1"]);
   });
 
+  it("角色的 canReview 必填，只接受 boolean", () => {
+    const files = example();
+    delete files["access.json"].roles[0].canReview;
+    files["access.json"].roles[1].canReview = 1;
+    expect(validateClient(files).map((e) => e.path)).toEqual(["/roles/0", "/roles/1/canReview"]);
+  });
+
   it("角色的 canUpload 必填，只接受 boolean", () => {
     const files = example();
     delete files["access.json"].roles[0].canUpload;

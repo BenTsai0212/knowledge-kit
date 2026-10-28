@@ -129,7 +129,7 @@ export const manifests: ManifestEntry[] = [
   {
     schema: "access.schema.json",
     pointer: "/properties/roles/items",
-    keys: { id: "required", label: "required", visibility: "required", projects: "required", canUpload: "required" } satisfies KeyManifest<Role>,
+    keys: { id: "required", label: "required", visibility: "required", projects: "required", canUpload: "required", canReview: "required" } satisfies KeyManifest<Role>,
   },
   {
     schema: "scenarios.schema.json",
