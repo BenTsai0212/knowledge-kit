@@ -88,7 +88,7 @@ describe("validateDataset", () => {
 
   it("實體與關係的類型必須存在，關係的兩端必須符合關係類型", () => {
     const { config, data } = copy();
-    const e = data.entities.entities.push({ id: "vendor-x", type: "vendor", name: "x", sources: ["employee-handbook-zh-01"] }) - 1;
+    const e = data.entities.entities.push({ id: "vendor-x", type: "vendor", name: "x", names: { "zh-TW": "x", en: "x" }, sources: ["employee-handbook-zh-01"] }) - 1;
     const r = data.relations.relations.length;
     data.relations.relations.push(
       { id: "r-bad-type", type: "reports-to", from: "person-wu-yizhen", to: "team-people", sources: ["employee-handbook-zh-04"] },
@@ -102,6 +102,16 @@ describe("validateDataset", () => {
       { file: "data/relations.json", path: `/relations/${r + 1}/from`, message: "member-of 的 from 不接受實體類型 team" },
       { file: "data/relations.json", path: `/relations/${r + 1}/to`, message: "member-of 的 to 不接受實體類型 person" },
       { file: "data/relations.json", path: `/relations/${r + 2}/from`, message: "實體 person-nobody 不存在" },
+    ]);
+  });
+
+  it("實體的顯示名稱必須涵蓋 client.json 的每種語言", () => {
+    const { config, data } = copy();
+    data.entities.entities[0].names = { "zh-TW": "產品研發部" };
+    data.entities.entities[1].names = { "zh-TW": "營運部", en: "" };
+    expect(validateDataset(config, data)).toEqual([
+      { file: "data/entities.json", path: "/entities/0/names", message: "缺少語言 en 的顯示名稱" },
+      { file: "data/entities.json", path: "/entities/1/names", message: "缺少語言 en 的顯示名稱" },
     ]);
   });
 

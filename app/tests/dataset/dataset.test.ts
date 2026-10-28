@@ -64,6 +64,13 @@ describe("內容涵蓋", () => {
     expect(documents.filter((d) => !d.date).map((d) => d.id)).toEqual([]);
   });
 
+  it("文件日期寫入資料庫；在 SQL 中轉成字串讀出，與資料集完全相同（不經過 Date，不受時區影響，#31）", async () => {
+    const rows = await db.withIdentity("manager", async (tx) =>
+      (await tx.query<{ id: string; date: string | null }>("SELECT id, to_char(document_date, 'YYYY-MM-DD') AS date FROM kk.documents")).rows,
+    );
+    expect(Object.fromEntries(rows.map((r) => [r.id, r.date]))).toEqual(Object.fromEntries(documents.map((d) => [d.id, d.date ?? null])));
+  });
+
   it("使用知識模型的每種實體與關係類型", () => {
     expect(new Set(dataset.entities.entities.map((e) => e.type))).toEqual(new Set(knowledgeModel.entityTypes.map((t) => t.id)));
     expect(new Set(dataset.relations.relations.map((r) => r.type))).toEqual(new Set(knowledgeModel.relationTypes.map((t) => t.id)));

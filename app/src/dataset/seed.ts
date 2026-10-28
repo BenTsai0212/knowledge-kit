@@ -14,8 +14,8 @@ export async function seedDataset(db: PGliteInterface, config: ClientConfig, dat
   await db.transaction(async (tx) => {
     for (const doc of Object.values(data.documents)) {
       await tx.query(
-        "INSERT INTO kk.documents (id, title, language, visibility_level_id, project_id) VALUES ($1, $2, $3, $4, $5)",
-        [doc.id, doc.title, doc.language, doc.visibility, doc.project ?? null],
+        "INSERT INTO kk.documents (id, title, language, visibility_level_id, project_id, document_date) VALUES ($1, $2, $3, $4, $5, $6)",
+        [doc.id, doc.title, doc.language, doc.visibility, doc.project ?? null, doc.date ?? null],
       );
       for (const [ordinal, p] of doc.passages.entries()) {
         await tx.query(
@@ -26,7 +26,7 @@ export async function seedDataset(db: PGliteInterface, config: ClientConfig, dat
       }
     }
     for (const e of data.entities.entities) {
-      await tx.query("INSERT INTO kk.entities (id, entity_type, name) VALUES ($1, $2, $3)", [e.id, e.type, e.name]);
+      await tx.query("INSERT INTO kk.entities (id, entity_type, name, names) VALUES ($1, $2, $3, $4)", [e.id, e.type, e.name, e.names]);
       for (const s of e.sources) {
         await tx.query("INSERT INTO kk.entity_sources (entity_id, passage_id) VALUES ($1, $2)", [e.id, s]);
       }

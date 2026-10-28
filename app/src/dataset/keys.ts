@@ -39,6 +39,7 @@ export const datasetManifests: ManifestEntry[] = [
       id: "required",
       type: "required",
       name: "required",
+      names: "required",
       aliases: "optional",
       sources: "required",
     } satisfies KeyManifest<DatasetEntity>,

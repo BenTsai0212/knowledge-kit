@@ -1,5 +1,5 @@
 // client/data/ 的型別。JSON Schema（client/schema/data/）是唯一正本；改 Schema 時同步修改本檔與 keys.ts。
-import type { Id, LanguageCode } from "../client/types";
+import type { Id, LanguageCode, LocalizedText } from "../client/types";
 
 export type IsoDate = string;
 
@@ -24,7 +24,10 @@ export interface DatasetDocument {
 export interface DatasetEntity {
   id: Id;
   type: Id;
+  // 主要名稱，萃取與合併時使用
   name: string;
+  // 各介面語言的顯示名稱
+  names: LocalizedText;
   aliases?: string[];
   sources: Id[];
 }
