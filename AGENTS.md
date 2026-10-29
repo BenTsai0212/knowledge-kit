@@ -6,7 +6,7 @@
 
 - Repo：`BenTsai0212/knowledge-kit`
 - 看板：GitHub Project #9（https://github.com/users/BenTsai0212/projects/9）
-- 啟用模組：核心、高風險（見 `docs/workflow/modules.md`）
+- 啟用模組：核心、高風險、自動化（見 `docs/workflow/modules.md`；自動化見 ADR 0003）
 - 憲法版本：v0.8（`docs/workflow/constitution.md`）
 - 決定者：@BenTsai0212（停止回報與 `plan-first` 時 @ 此帳號）
 
@@ -28,7 +28,8 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 - workflow 工具測試：`npm test --prefix tools/workflow`（Node 內建 `node --test`，無相依套件）
 - PR 描述檢查：`PR_BODY='Closes #1' PR_LABELS='[]' node tools/workflow/check-pr-body.mjs`（CI 的 `PR body` workflow 在 PR 開啟、編輯、更新與標籤變更時執行）
 - CI 的 `checks` job 依序執行 `npm ci` → `npm run check:client` → `npm run typecheck` → `npm test` → `npm run build` → workflow 工具測試。
-- **不適用，不要執行**：`tools/workflow/runner/`（自動化模組，本專案未啟用）、`tools/workflow/bootstrap-github.mjs` 與其設定 `tools/workflow/config.json`（新 repo 的標籤與看板已建立）。三者隨 template 帶入，其測試仍包含在 `npm test --prefix tools/workflow`。
+- runner（自動化模組，ADR 0003；說明見 `tools/workflow/runner/README.md`）：`node tools/workflow/runner/agent-runner.mjs --dry-run` 試跑（只顯示會挑哪一件，不改 GitHub、不動 worktree），`--now` 手動執行一件。設定放在不進版本控制的 `tools/workflow/runner/config.local.json`。**排程（launchd）的安裝與移除由人執行**，agent 不安裝、不移除。〔#52 啟用自動化模組｜停用自動化模組時〕
+- **不適用，不要執行**：`tools/workflow/bootstrap-github.mjs` 與其設定 `tools/workflow/config.json`（新 repo 的標籤與看板已建立）。兩者隨 template 帶入，其測試仍包含在 `npm test --prefix tools/workflow`。
 
 ## 3. 結構
 
@@ -51,7 +52,7 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 | `package.json`、`vite.config.ts`、`vitest.config.ts`、`tsconfig.node.json`、`wrangler.jsonc` | 根目錄的指令與設定（單一 `package.json`，不用 workspaces） |
 | `docs/workflow/` | 憲法與 workflow 手冊 |
 | `docs/rfcs/`、`docs/adr/` | 專案章程與決策紀錄 |
-| `tools/workflow/` | workflow 工具（Node，自帶 `package.json`）；`hooks/confirm-main.mjs` 是合併與 push 到 main 前的確認 hook；`check-pr-body.mjs` 檢查 PR 描述有 `Closes`／`Refs #N`（`fast-lane` 除外）；`runner/`、`bootstrap-github.mjs`、`config.json` 不適用（見第 2 節） |
+| `tools/workflow/` | workflow 工具（Node，自帶 `package.json`）；`hooks/confirm-main.mjs` 是合併與 push 到 main 前的確認 hook；`check-pr-body.mjs` 檢查 PR 描述有 `Closes`／`Refs #N`（`fast-lane` 除外）；`runner/` 是自動化模組的 runner（ADR 0003，指令見第 2 節）；`bootstrap-github.mjs`、`config.json` 不適用（見第 2 節） |
 | `.claude/settings.json` | Claude Code 設定：在 `PreToolUse`（Bash）註冊確認 hook |
 | `templates/` | Claude Project 範本與預設不啟用的模組檔案 |
 | `.github/` | Issue／PR 範本、標籤定義、CI（`workflows/ci.yml`：`checks` job；`workflows/pr-body.yml`：PR 描述檢查）；沒有部署 workflow |
