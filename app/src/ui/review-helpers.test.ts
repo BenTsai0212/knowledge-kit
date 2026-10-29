@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { MergeSuggestion } from "../extraction/merge";
 import type { ReviewDocument, ReviewEntity, ReviewRelation } from "../extraction/store";
-import { batchPlan, canBatch, entityApproval, highlightSegments, initialChoice, inputSize, namesComplete, namesInvalid, pendingCount, relationReady } from "./review-helpers";
+import { batchPlan, canBatch, entityApproval, highlightSegments, initialChoice, inputSize, namesComplete, namesInvalid, pendingCount, relationReady, toastText } from "./review-helpers";
 
 const entity = (id: string, status: ReviewEntity["status"] = "pending"): ReviewEntity => ({
   id,
@@ -136,5 +136,23 @@ describe("highlightSegments", () => {
       { text: "林志明", mark: true },
       { text: "</b>", mark: false },
     ]);
+  });
+});
+
+describe("toastText", () => {
+  const approved = { one: "已核准：{name}", many: "已核准 {count} 筆" };
+
+  it("一筆時顯示項目名稱，實體與關係相同", () => {
+    expect(toastText(approved, ["鄭書豪"])).toBe("已核准：鄭書豪");
+    expect(toastText({ one: "已退回：{name}", many: "已退回 {count} 筆" }, ["周大衛 —隸屬→ 王小明"])).toBe("已退回：周大衛 —隸屬→ 王小明");
+  });
+
+  it("多筆時顯示筆數", () => {
+    expect(toastText(approved, ["甲", "乙", "丙"])).toBe("已核准 3 筆");
+    expect(toastText({ one: "Approved: {name}", many: "{count} approved" }, ["a", "b"])).toBe("2 approved");
+  });
+
+  it("名稱中的替換字元與標記原樣保留", () => {
+    expect(toastText(approved, ["$& <b>甲</b> $1"])).toBe("已核准：$& <b>甲</b> $1");
   });
 });

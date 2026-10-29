@@ -100,3 +100,10 @@ export function highlightSegments(text: string, terms: readonly string[]): Segme
   push(text.slice(pos), false);
   return segments;
 }
+
+// 核准或退回後短提示的文字（#48 審查第 2 次）：只有一筆時顯示項目名稱（例如「已核准：鄭書豪」），
+// 多筆時顯示筆數（「已核准 N 筆」）。名稱以函式替換，不解讀 $& 這類替換字元；畫面以文字節點顯示
+export function toastText(templates: { one: string; many: string }, labels: readonly string[]): string {
+  if (labels.length === 1) return templates.one.replace("{name}", () => labels[0]);
+  return templates.many.replace("{count}", () => String(labels.length));
+}

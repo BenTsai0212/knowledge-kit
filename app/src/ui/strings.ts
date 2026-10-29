@@ -148,8 +148,10 @@ export interface UiStrings {
   reviewEditDone: string;
   reviewExpand: string;
   reviewCollapse: string;
-  // 核准或退回後的短提示；{count} 換成筆數
+  // 核准或退回後的短提示：一筆時 {name} 換成項目名稱，多筆時 {count} 換成筆數
+  reviewToastApprovedOne: string;
   reviewToastApproved: string;
+  reviewToastRejectedOne: string;
   reviewToastRejected: string;
   reviewGotoGraph: string;
   reviewErrors: Record<"denied" | "conflict", string>;
@@ -298,7 +300,9 @@ export const STRINGS: Record<LanguageCode, UiStrings> = {
     reviewEditDone: "完成",
     reviewExpand: "展開",
     reviewCollapse: "收合",
+    reviewToastApprovedOne: "已核准：{name}",
     reviewToastApproved: "已核准 {count} 筆",
+    reviewToastRejectedOne: "已退回：{name}",
     reviewToastRejected: "已退回 {count} 筆",
     reviewGotoGraph: "到圖譜查看",
     reviewErrors: {
@@ -463,7 +467,9 @@ export const STRINGS: Record<LanguageCode, UiStrings> = {
     reviewEditDone: "Done",
     reviewExpand: "Show more",
     reviewCollapse: "Show less",
+    reviewToastApprovedOne: "Approved: {name}",
     reviewToastApproved: "{count} approved",
+    reviewToastRejectedOne: "Rejected: {name}",
     reviewToastRejected: "{count} rejected",
     reviewGotoGraph: "View in graph",
     reviewErrors: {

@@ -13,7 +13,18 @@ import { AccessBadges } from "./AccessBadges";
 import { entityOptionLabel, entityTypeLabel, relationTypeLabel } from "./graph-labels";
 import { Notice } from "./Notice";
 import { createRequestGate } from "./requests";
-import { batchPlan, canBatch, entityApproval, highlightSegments, initialChoice, inputSize, namesInvalid, relationReady, type EntityChoice } from "./review-helpers";
+import {
+  batchPlan,
+  canBatch,
+  entityApproval,
+  highlightSegments,
+  initialChoice,
+  inputSize,
+  namesInvalid,
+  relationReady,
+  toastText,
+  type EntityChoice,
+} from "./review-helpers";
 import { strings } from "./strings";
 import { createToastTimer, type ToastTimer } from "./toast-timer";
 
@@ -50,8 +61,10 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   // 正在編輯名稱的實體、展開的出處（項目 id 與段落 id）、核准或退回後的短提示
   const [editing, setEditing] = useState<ReadonlySet<string>>(new Set());
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
-  // graph：附「到圖譜查看」（只有核准；退回的項目不會出現在圖譜）
-  const [toast, setToast] = useState<{ text: string; graph: boolean } | null>(null);
+  // graph：附「到圖譜查看」（只有核准；退回的項目不會出現在圖譜）。
+  // id 每次遞增，當作 key：文字與上一次相同時也重新掛載，重新播放進場動畫（#48 審查第 2 次）
+  const [toast, setToast] = useState<{ id: number; text: string; graph: boolean } | null>(null);
+  const toastId = useRef(0);
   const toastTimer = useRef<ToastTimer | null>(null);
   // 連點時 state 還沒更新，以 ref 確保同時只有一個核准或退回在進行（比照 #42）
   const working = useRef(false);
@@ -109,7 +122,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
     setToast(null);
     try {
       await action();
-      setToast(done);
+      setToast({ ...done, id: ++toastId.current });
     } catch (e) {
       setNotice({ docId, skipped, error: e instanceof ReviewError ? s.reviewErrors[e.reason] : s.unknownError });
     } finally {
@@ -123,20 +136,36 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
     run(
       docId,
       () => approve(db, identity, items, { defaultLanguage: client.defaultLanguage }),
-      { text: s.reviewToastApproved.replace("{count}", String(items.entities.length + items.relations.length)), graph: true },
+      {
+        text: toastText(
+          { one: s.reviewToastApprovedOne, many: s.reviewToastApproved },
+          itemLabels(docId, items.entities.map((e) => e.id), items.relations),
+        ),
+        graph: true,
+      },
       skippedCount,
     );
   const approveBatch = (docId: string, plan: ReturnType<typeof batchPlan>) =>
     void approveItems(docId, { entities: plan.entities, relations: plan.relations }, plan.skipped);
   const rejectItems = (docId: string, items: { entities: string[]; relations: string[] }) =>
     run(docId, () => reject(db, identity, items), {
-      text: s.reviewToastRejected.replace("{count}", String(items.entities.length + items.relations.length)),
+      text: toastText({ one: s.reviewToastRejectedOne, many: s.reviewToastRejected }, itemLabels(docId, items.entities, items.relations)),
       graph: false,
     });
 
   const nameOf = (doc: ReviewDocument, id: string) => {
     const e = doc.entities.find((x) => x.id === id);
     return e ? (choiceOf(e).names?.[language] ?? pendingName(e, language)) : id;
+  };
+  // 短提示中的項目名稱：實體是介面語言的名稱，關係是「起點 —關係→ 終點」（與卡片相同）
+  const itemLabels = (docId: string, entities: string[], relations: string[]) => {
+    const doc = docs.find((d) => d.id === docId);
+    if (doc === undefined) return [...entities, ...relations];
+    const relationLabel = (id: string) => {
+      const r = doc.relations.find((x) => x.id === id);
+      return r ? `${nameOf(doc, r.from)} —${relationTypeLabel(r.type, language)}→ ${nameOf(doc, r.to)}` : id;
+    };
+    return [...entities.map((id) => nameOf(doc, id)), ...relations.map(relationLabel)];
   };
   // 出處段落：預設 2 行、可以展開，以文件語言的名稱標出實體（#48）
   const sourceList = (doc: ReviewDocument, itemId: string, sources: ReviewEntity["sources"], entityIds: string[]) => {
@@ -185,10 +214,11 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
           ↻
         </button>
       </div>
-      {/* 短提示：在分段切換列下方、文件卡片之上；live region 一直存在，內容出現時螢幕閱讀器才讀得到 */}
+      {/* 短提示：浮動在視窗上方置中；live region 一直存在，內容出現時螢幕閱讀器才讀得到 */}
       <div className="toast-region" role="status">
         {toast !== null && (
           <div
+            key={toast.id}
             className="toast"
             onMouseEnter={() => toastTimer.current?.hold("hover")}
             onMouseLeave={() => toastTimer.current?.release("hover")}
