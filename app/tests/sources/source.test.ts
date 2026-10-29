@@ -45,6 +45,8 @@ describe("readSource", () => {
             id: doc.id,
             title: doc.title,
             language: doc.language,
+            visibility: doc.visibility,
+            project: doc.project ?? null,
             passages: doc.passages.filter((q) => visible.has(q.id)).map((q) => ({ id: q.id, content: q.text })),
             highlight: p.id,
           });

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Database } from "../db/database";
 import { readGraph, type Graph } from "../graph/read";
 import { readTimeline, type TimelineEntry } from "../graph/timeline";
+import { AccessBadges } from "./AccessBadges";
 import { entityOptionLabel } from "./graph-labels";
 import { createRequestGate } from "./requests";
 import { strings } from "./strings";
@@ -105,7 +106,8 @@ export function TimelinePage({ db, identity, language, uploaded, focus, onFocuse
             >
               <h3>
                 <time dateTime={entry.date ?? undefined}>{entry.date ?? s.undated}</time> {entry.title}
-                {uploaded.has(entry.documentId) && <span className="badge">{s.timelineUploaded}</span>}
+                {uploaded.has(entry.documentId) && <span className="badge">{s.timelineUploaded}</span>}{" "}
+                <AccessBadges visibility={entry.visibility} project={entry.project} language={language} />
               </h3>
               <ul>
                 {entry.passages.map((p) => (

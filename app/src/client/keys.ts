@@ -123,7 +123,7 @@ export const manifests: ManifestEntry[] = [
   {
     schema: "access.schema.json",
     pointer: "/properties/visibilityLevels/items",
-    keys: { id: "required", label: "required", rank: "required" } satisfies KeyManifest<VisibilityLevel>,
+    keys: { id: "required", label: "required", rank: "required", color: "required" } satisfies KeyManifest<VisibilityLevel>,
   },
   { schema: "access.schema.json", pointer: "/properties/projects/items", keys: localizedLabel },
   {

@@ -39,6 +39,9 @@ export interface ReviewDocument {
   id: string;
   title: string;
   language: string;
+  // 文件的可見等級與專案（畫面上的標籤）
+  visibility: string;
+  project: string | null;
   entities: ReviewEntity[];
   relations: ReviewRelation[];
 }
@@ -154,8 +157,20 @@ const statusOf = (decision: string | null): ReviewStatus => (decision === null ?
 export function readReview(db: Database, identityId: string | null): Promise<ReviewDocument[]> {
   return db.withIdentity(identityId, async (tx) => {
     const entities = (
-      await tx.query<{ id: string; document_id: string; title: string; language: string; entity_type: string; names: LocalizedText; decision: string | null; merge_into: string | null }>(
-        `SELECT p.id, p.document_id, d.title, d.language, p.entity_type, p.names, r.decision, r.merge_into
+      await tx.query<{
+        id: string;
+        document_id: string;
+        title: string;
+        language: string;
+        visibility: string;
+        project: string | null;
+        entity_type: string;
+        names: LocalizedText;
+        decision: string | null;
+        merge_into: string | null;
+      }>(
+        `SELECT p.id, p.document_id, d.title, d.language, d.visibility_level_id AS visibility, d.project_id AS project,
+                p.entity_type, p.names, r.decision, r.merge_into
            FROM kk.pending_entities p JOIN kk.documents d ON d.id = p.document_id
            LEFT JOIN kk.review_decisions r ON r.item_id = p.id
           ORDER BY p.document_id, p.id`,
@@ -173,7 +188,15 @@ export function readReview(db: Database, identityId: string | null): Promise<Rev
 
     const documents = new Map<string, ReviewDocument>();
     for (const e of entities) {
-      const doc = documents.get(e.document_id) ?? { id: e.document_id, title: e.title, language: e.language, entities: [], relations: [] };
+      const doc = documents.get(e.document_id) ?? {
+        id: e.document_id,
+        title: e.title,
+        language: e.language,
+        visibility: e.visibility,
+        project: e.project,
+        entities: [],
+        relations: [],
+      };
       doc.entities.push({
         id: e.id,
         type: e.entity_type,

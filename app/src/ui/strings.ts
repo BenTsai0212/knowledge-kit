@@ -134,6 +134,15 @@ export interface UiStrings {
   // 核准前修改的名稱，每種語言都必須有值（#47 審查）
   reviewNamesRequired: string;
   reviewSkippedNames: string;
+  // 提示框的標題與動作（#48）
+  noticeParseTitle: string;
+  noticeWriteTitle: string;
+  noticeReviewTitle: string;
+  uploadChooseAgain: string;
+  // 確認視窗右上角 ✕ 的 aria-label
+  dialogClose: string;
+  // 待審頁第二層（待審／已退回）的 aria-label
+  reviewStatusTabs: string;
   reviewErrors: Record<"denied" | "conflict", string>;
   // 標籤與內容之間的分隔（繁中用全形冒號）
   colon: string;
@@ -270,6 +279,12 @@ export const STRINGS: Record<LanguageCode, UiStrings> = {
     reviewRelationBlocked: "兩端的實體核准後才能核准",
     reviewNamesRequired: "請填寫所有語言的名稱",
     reviewSkippedNames: "名稱未填寫完整而略過的項目",
+    noticeParseTitle: "無法讀取這份文件",
+    noticeWriteTitle: "上傳失敗",
+    noticeReviewTitle: "無法完成這個動作",
+    uploadChooseAgain: "重新選檔",
+    dialogClose: "關閉",
+    reviewStatusTabs: "審核狀態",
     reviewErrors: {
       denied: "沒有權限處理這個項目。",
       conflict: "這個項目已經被處理過，請重新整理。",
@@ -422,6 +437,12 @@ export const STRINGS: Record<LanguageCode, UiStrings> = {
     reviewRelationBlocked: "Approve both entities first",
     reviewNamesRequired: "Please fill in the name in every language",
     reviewSkippedNames: "Items skipped because a name is missing",
+    noticeParseTitle: "The document couldn't be read",
+    noticeWriteTitle: "Upload failed",
+    noticeReviewTitle: "The action couldn't be completed",
+    uploadChooseAgain: "Choose another file",
+    dialogClose: "Close",
+    reviewStatusTabs: "Review status",
     reviewErrors: {
       denied: "You don't have permission to handle this item.",
       conflict: "This item has already been handled. Please refresh.",

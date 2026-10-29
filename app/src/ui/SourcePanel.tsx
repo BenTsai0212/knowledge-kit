@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { SourceDocument } from "../sources/source";
+import { AccessBadges } from "./AccessBadges";
 import { strings } from "./strings";
 
 interface Props {
@@ -22,7 +23,7 @@ export function SourcePanel({ language, source, onClose }: Props) {
         <h2>
           {s.sourceTitle}
           {s.colon}
-          {source.title}
+          {source.title} <AccessBadges visibility={source.visibility} project={source.project} language={language} />
         </h2>
         <button type="button" className="link" onClick={onClose}>
           {s.closeSource}

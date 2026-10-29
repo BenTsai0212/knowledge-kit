@@ -1,8 +1,8 @@
 {
   "visibilityLevels": [
-    { "id": "public", "label": { "zh-TW": "公開", "en": "Public" }, "rank": 0 },
-    { "id": "internal", "label": { "zh-TW": "內部", "en": "Internal" }, "rank": 1 },
-    { "id": "confidential", "label": { "zh-TW": "機密", "en": "Confidential" }, "rank": 2 }
+    { "id": "public", "label": { "zh-TW": "公開", "en": "Public" }, "rank": 0, "color": "#4F7A65" },
+    { "id": "internal", "label": { "zh-TW": "內部", "en": "Internal" }, "rank": 1, "color": "#2F5D8A" },
+    { "id": "confidential", "label": { "zh-TW": "機密", "en": "Confidential" }, "rank": 2, "color": "#B42318" }
   ],
   "projects": [
     { "id": "bluewing", "label": { "zh-TW": "青翼專案", "en": "Project Bluewing" } },

@@ -280,6 +280,7 @@ describe("核准與退回", () => {
     expect(graph.entities.find((e) => e.id === "team-ops")!.sources.map((s) => s.id)).toContain(w.dm.passageIds[0]);
     expect(graph.relations.find((r) => r.id === "pr-m1")).toMatchObject({ type: "member-of", from: "pe-m1", to: "team-ops" });
     const doc = (await readReview(w.db, "manager")).find((d) => d.id === w.dm.documentId)!;
+    expect(doc).toMatchObject({ visibility: "confidential", project: null });
     expect(doc.entities.map((e) => [e.id, e.status, e.mergedInto])).toEqual([
       ["pe-m1", "approved", null],
       ["pe-m2", "approved", "team-ops"],

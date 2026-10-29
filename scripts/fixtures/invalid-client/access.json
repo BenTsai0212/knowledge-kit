@@ -1,7 +1,7 @@
 {
   "visibilityLevels": [
-    { "id": "public", "label": { "zh-TW": "公開" }, "rank": 0 },
-    { "id": "internal", "label": { "zh-TW": "內部" }, "rank": 0 }
+    { "id": "public", "label": { "zh-TW": "公開" }, "rank": 0, "color": "#4F7A65" },
+    { "id": "internal", "label": { "zh-TW": "內部" }, "rank": 0, "color": "#2F5D8A" }
   ],
   "projects": [{ "id": "bluewing", "label": { "zh-TW": "青翼專案" } }],
   "roles": [

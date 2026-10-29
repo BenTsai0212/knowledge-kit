@@ -6,6 +6,9 @@ export interface SourceDocument {
   id: string;
   title: string;
   language: string;
+  // 文件的可見等級與專案（畫面上的標籤）
+  visibility: string;
+  project: string | null;
   passages: { id: string; content: string }[];
   // 被引用的段落 id
   highlight: string;
@@ -15,8 +18,9 @@ export interface SourceDocument {
 export function readSource(db: Database, identityId: string | null, passageId: string): Promise<SourceDocument | null> {
   return db.withIdentity(identityId, async (tx) => {
     const doc = (
-      await tx.query<{ id: string; title: string; language: string }>(
-        `SELECT d.id, d.title, d.language FROM kk.passages p JOIN kk.documents d ON d.id = p.document_id WHERE p.id = $1`,
+      await tx.query<{ id: string; title: string; language: string; visibility: string; project: string | null }>(
+        `SELECT d.id, d.title, d.language, d.visibility_level_id AS visibility, d.project_id AS project
+           FROM kk.passages p JOIN kk.documents d ON d.id = p.document_id WHERE p.id = $1`,
         [passageId],
       )
     ).rows[0];

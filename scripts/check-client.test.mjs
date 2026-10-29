@@ -114,6 +114,13 @@ describe("check-client", () => {
     expect(validateClient(files).map((e) => e.path)).toEqual(["/entityTypes/0/color", "/entityTypes/1"]);
   });
 
+  it("可見等級的顏色必填，格式為 #RRGGBB", () => {
+    const files = example();
+    files["access.json"].visibilityLevels[0].color = "green";
+    delete files["access.json"].visibilityLevels[1].color;
+    expect(validateClient(files).map((e) => e.path)).toEqual(["/visibilityLevels/0/color", "/visibilityLevels/1"]);
+  });
+
   it("角色的 canReview 必填，只接受 boolean", () => {
     const files = example();
     delete files["access.json"].roles[0].canReview;
