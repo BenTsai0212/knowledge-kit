@@ -42,27 +42,58 @@ Rules:
 4. If the passages do not contain enough information to answer the question, reply with exactly ${REFUSAL_MARKER} and nothing else. Do not explain, do not describe the passages, and do not mention other documents.
 5. If passages contradict each other, do not choose one. State each claim with its document title and citation, then say that the sources disagree.
 6. Answer in ${languageName(language)}, even if the question or passages are in another language. Keep the answer to one to three sentences, or a short list when sources disagree.
-7. Write plain text without Markdown headings, tables, or links.`;
+7. Write plain text without Markdown headings, tables, or links.
+8. A passage marked superseded-by="N" was replaced by passage N. Treat passage N as current. If the change matters to the answer, state the current claim and what it said before, citing both, for example "originally Q2 [1], later changed to Q3 [3]".`;
 }
 
-function passageBlock(p: RetrievedPassage, index: number): string {
-  const attrs = `number="${index + 1}" title="${escapeText(p.documentTitle)}" language="${escapeText(p.language)}"`;
+// prompt 中的一段；supersededBy 是取代它的段落 id
+export interface PromptPassage extends Pick<RetrievedPassage, "id" | "documentTitle" | "language" | "content"> {
+  supersededBy: string | null;
+}
+
+function passageBlock(p: PromptPassage, index: number, number: Map<string, number>): string {
+  const replacedBy = p.supersededBy === null ? undefined : number.get(p.supersededBy);
+  const attrs =
+    `number="${index + 1}" title="${escapeText(p.documentTitle)}" language="${escapeText(p.language)}"` +
+    (replacedBy === undefined ? "" : ` superseded-by="${replacedBy}"`);
   return `<passage ${attrs}>\n${escapeText(p.content)}\n</passage>`;
 }
 
-export function userMessage(passages: RetrievedPassage[], question: string): string {
-  return `<passages>\n${passages.map(passageBlock).join("\n")}\n</passages>\n\n<question>\n${escapeText(question)}\n</question>`;
+// 取代它的段落也在 prompt 中時，才加上 superseded-by
+export function userMessage(passages: PromptPassage[], question: string): string {
+  const number = new Map(passages.map((p, i) => [p.id, i + 1]));
+  const blocks = passages.map((p, i) => passageBlock(p, i, number));
+  return `<passages>\n${blocks.join("\n")}\n</passages>\n\n<question>\n${escapeText(question)}\n</question>`;
 }
 
-// passages 依分數由高到低。超過 PROMPT_CHAR_BUDGET 時從分數最低的段落開始丟棄；連一段都放不下時回 null
+// 依分數順序分組：被取代的段落後面接著取代它的新段落（只補一層，不遞迴），兩段一起保留或丟棄。
+// 每段只出現一次：已經放入的段落（包括補上的新段落）之後再遇到就略過
+function groups(passages: RetrievedPassage[]): PromptPassage[][] {
+  const placed = new Set<string>();
+  const out: PromptPassage[][] = [];
+  for (const p of passages) {
+    if (placed.has(p.id)) continue;
+    placed.add(p.id);
+    const group: PromptPassage[] = [{ ...p, supersededBy: p.supersededBy?.id ?? null }];
+    if (p.supersededBy !== null && !placed.has(p.supersededBy.id)) {
+      placed.add(p.supersededBy.id);
+      group.push(p.supersededBy);
+    }
+    out.push(group);
+  }
+  return out;
+}
+
+// passages 依分數由高到低。超過 PROMPT_CHAR_BUDGET 時從分數最低的段落（連同補上的新段落）開始丟棄；連一組都放不下時回 null
 export function buildPrompt(
   passages: RetrievedPassage[],
   question: string,
   options: { companyName: string; language: LanguageCode },
 ): Prompt | null {
   const system = systemPrompt(options.companyName, options.language);
-  for (let n = passages.length; n > 0; n--) {
-    const kept = passages.slice(0, n);
+  const all = groups(passages);
+  for (let n = all.length; n > 0; n--) {
+    const kept = all.slice(0, n).flat();
     const user = userMessage(kept, question);
     if (promptChars({ system, user }) <= PROMPT_CHAR_BUDGET) return { system, user, numbering: kept.map((p) => p.id) };
   }

@@ -2,7 +2,7 @@
 
 上傳文件後，以模型找出新文件與既有段落說法不同的地方，寫成待處理的組合，由主管處理。決策紀錄見 #51。資料表與權限見 [docs/data-model.md](data-model.md)「說法不同」。
 
-> 實作分成 4 個 PR：資料層（已完成）、**偵測（本文件目前描述的範圍）**、問答的「取代」、畫面。問答與畫面的部分在各自的 PR 補上。
+> 實作分成 4 個 PR：資料層、偵測、問答的「取代」（以上已完成）、畫面。畫面的部分在最後一個 PR 補上。
 
 偵測結果與上傳的文件一樣，只存在瀏覽器的記憶體資料庫，重新整理頁面就消失。
 
@@ -124,6 +124,15 @@ If there are no conflicts, reply {"conflicts":[]}.
 - **比對只用上傳者看得到的段落**：檢索以上傳者的身分執行，寫入時 RLS 再檢查一次。
 - 只有 `canUpload` 的身分能為自己上傳的文件寫入；未處理的組合只有 `canReview`、而且兩段都看得到的身分讀得到。
 
+## 問答的取代
+
+主管把一組標記為「新說法取代舊說法」（`supersede`）後，問答以新說法為主，並可以說明變更的經過；舊段落不修改、不隱藏，仍然可以檢索。細節見 [docs/qa.md](qa.md)「新說法取代舊說法」：
+
+- `retrieve()` 為每段附上 `supersededBy`（取代它的新段落），在同一個 `withIdentity()` 中讀取 `conflict_decisions`。
+- 同一段被多段取代時，取**目前身分看得到**的新段落中，文件日期最新的；日期相同時依段落 id。
+- `buildPrompt()` 把新段落接在被取代的段落後面，舊段落加上 `superseded-by="N"`；只補一層，每段只出現一次。system 第 8 條請模型以段落 N 為準。
+- **取代只對看得到新段落的人生效**：決定只在兩段都看得到時讀得到（RLS），看不到新段落的身分在檢索與問答中都與沒有標記時完全相同，不會出現「已過時」或新文件的標題（`app/tests/qa/supersede.test.ts` 以 `oracle.ts` 的 `expectedSupersede()` 比對）。
+
 ## 測試
 
 一律以假的 `/api/ask` 執行（`app/src/qa/testing.ts` 的 `fakeTransport`），CI 不呼叫真實 API。
@@ -133,6 +142,7 @@ If there are no conflicts, reply {"conflicts":[]}.
 - `output.test.ts`：格式錯誤與每一條捨棄規則。
 - `app/tests/conflicts/run.test.ts`：以資料庫與假的 `/api/ask` 測試以上傳者的身分挑選（一般員工不會送出機密段落）、寫入待處理的組合、`max_tokens`／格式錯誤／邀請碼失效／`/api/ask` 的錯誤、重試送出相同的內容、寫入被拒絕、`shouldDetectConflicts()`。
 - `app/tests/conflicts/store.test.ts`：權限（見 docs/data-model.md）。
+- `app/src/qa/prompt.test.ts`、`app/tests/qa/supersede.test.ts`：問答的取代（見上方「問答的取代」）。
 
 ## 限制
 

@@ -11,6 +11,7 @@ const existing = (id: string, score: number, content = `${id} 的內容`): Retri
   language: "zh-TW",
   content,
   score,
+  supersededBy: null,
 });
 
 // 依新段落的內容回傳固定的檢索結果，並記下呼叫
