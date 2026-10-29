@@ -6,6 +6,7 @@ const passage = (id: string, content: string, documentTitle = "青翼專案進�
   id,
   documentId: `${id}-doc`,
   documentTitle,
+  documentDate: null,
   language: "zh-TW",
   content,
   score: 0.5,

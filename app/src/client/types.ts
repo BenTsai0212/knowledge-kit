@@ -26,6 +26,12 @@ export interface UploadFile {
   extractMaxBatches?: number;
 }
 
+export interface ConflictsFile {
+  enabled?: boolean;
+  candidatesPerPassage?: number;
+  minScore?: number;
+}
+
 export interface ClientFile {
   displayName: LocalizedText;
   defaultLanguage: LanguageCode;
@@ -35,6 +41,7 @@ export interface ClientFile {
   evals: PathRef;
   retrieval?: RetrievalFile;
   upload?: UploadFile;
+  conflicts?: ConflictsFile;
 }
 
 export interface ThemeColors {
@@ -150,9 +157,10 @@ export interface EntityType extends Omit<EntityTypeFile, "mergeStrategy"> {
 
 export type RetrievalConfig = Required<RetrievalFile>;
 export type UploadConfig = Required<UploadFile>;
+export type ConflictsConfig = Required<ConflictsFile>;
 
 export interface ClientConfig extends Omit<ClientFiles, "client" | "knowledgeModel"> {
-  client: Omit<ClientFile, "retrieval" | "upload"> & { retrieval: RetrievalConfig; upload: UploadConfig };
+  client: Omit<ClientFile, "retrieval" | "upload" | "conflicts"> & { retrieval: RetrievalConfig; upload: UploadConfig; conflicts: ConflictsConfig };
   knowledgeModel: {
     entityTypes: EntityType[];
     relationTypes: RelationType[];
