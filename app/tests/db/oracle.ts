@@ -139,3 +139,62 @@ export function canDecide(
   }
   return true;
 }
+
+// docs/data-model.md「說法不同」的獨立實作（#51）。新段落只存在於上傳的文件中
+export interface ConflictSample {
+  // 上傳的文件 → 上傳者
+  uploads: Record<string, string>;
+  conflicts: { id: string; doc: string; newPassage: string; oldPassage: string }[];
+  decisions: { conflict: string; decision: "coexist" | "supersede" | "not_conflict" }[];
+}
+
+const SHOWN_TO_ALL = ["coexist", "supersede"];
+
+// 看得到的偵測結果與決定：兩段都看得到，且（有 canReview，或決定是「並存」「取代」）
+export function expectedConflictVisible(access: AccessFile, data: Sample, conflicts: ConflictSample, identityId: string | null): Visible {
+  const role = access.roles.find((r) => r.id === identityId);
+  const passages = new Set(expectedVisible(access, data, identityId).passages);
+  const decision = new Map(conflicts.decisions.map((d) => [d.conflict, d.decision]));
+  const visible = (c: ConflictSample["conflicts"][number]) => {
+    const d = decision.get(c.id);
+    return passages.has(c.newPassage) && passages.has(c.oldPassage) && (role?.canReview === true || (d !== undefined && SHOWN_TO_ALL.includes(d)));
+  };
+  const ids = new Set(conflicts.conflicts.filter(visible).map((c) => c.id));
+  return {
+    conflicts: [...ids],
+    conflict_decisions: conflicts.decisions.filter((d) => ids.has(d.conflict)).map((d) => d.conflict),
+  };
+}
+
+export const CONFLICT_KEY_SQL: Record<string, string> = {
+  conflicts: "id",
+  conflict_decisions: "conflict_id",
+};
+
+// 能否處理：有 canReview、該組看得到、還沒有決定
+export function canDecideConflict(access: AccessFile, data: Sample, conflicts: ConflictSample, identityId: string | null, conflict: string): boolean {
+  const role = access.roles.find((r) => r.id === identityId);
+  return (
+    role?.canReview === true &&
+    expectedConflictVisible(access, data, conflicts, identityId).conflicts.includes(conflict) &&
+    !conflicts.decisions.some((d) => d.conflict === conflict)
+  );
+}
+
+// 能否寫入偵測結果：有 canUpload、文件由自己上傳、新段落屬於該文件、既有段落自己看得到而且不在該文件中
+export function canWriteConflict(
+  access: AccessFile,
+  data: Sample,
+  conflicts: ConflictSample,
+  identityId: string | null,
+  pair: { doc: string; newPassage: string; oldPassage: string },
+): boolean {
+  const role = access.roles.find((r) => r.id === identityId);
+  if (!role?.canUpload || conflicts.uploads[pair.doc] !== role.id) return false;
+  const docOf = (id: string) => data.passages.find((p) => p.id === id)?.doc;
+  return (
+    docOf(pair.newPassage) === pair.doc &&
+    docOf(pair.oldPassage) !== pair.doc &&
+    expectedVisible(access, data, identityId).passages.includes(pair.oldPassage)
+  );
+}
