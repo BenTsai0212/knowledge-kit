@@ -198,3 +198,29 @@ export function canWriteConflict(
     expectedVisible(access, data, identityId).passages.includes(pair.oldPassage)
   );
 }
+
+// 問答的「取代」（docs/conflicts.md「問答的取代」）：舊段落 → 取代它的新段落。
+// 只取目前身分看得到的「取代」決定（兩段都看得到）；同一段被多段取代時，取文件日期最新的，日期相同時取 id 較小的。
+// dates 是新段落所屬文件的日期（沒有日期時視為最舊）
+export function expectedSupersede(
+  access: AccessFile,
+  data: Sample,
+  conflicts: ConflictSample,
+  identityId: string | null,
+  dates: Record<string, string | null>,
+): Map<string, string> {
+  const visible = new Set(expectedConflictVisible(access, data, conflicts, identityId).conflicts);
+  const supersede = new Set(conflicts.decisions.filter((d) => d.decision === "supersede").map((d) => d.conflict));
+  const docOf = (id: string) => data.passages.find((p) => p.id === id)!.doc;
+  const newer = (a: string, b: string) => {
+    const da = dates[docOf(a)] ?? "";
+    const db = dates[docOf(b)] ?? "";
+    return da !== db ? da > db : a < b;
+  };
+  const out = new Map<string, string>();
+  for (const c of conflicts.conflicts.filter((c) => visible.has(c.id) && supersede.has(c.id))) {
+    const current = out.get(c.oldPassage);
+    if (current === undefined || newer(c.newPassage, current)) out.set(c.oldPassage, c.newPassage);
+  }
+  return out;
+}

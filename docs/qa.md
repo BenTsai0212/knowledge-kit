@@ -51,6 +51,7 @@ Rules:
 5. If passages contradict each other, do not choose one. State each claim with its document title and citation, then say that the sources disagree.
 6. Answer in {languageName}, even if the question or passages are in another language. Keep the answer to one to three sentences, or a short list when sources disagree.
 7. Write plain text without Markdown headings, tables, or links.
+8. A passage marked superseded-by="N" was replaced by passage N. Treat passage N as current. If the change matters to the answer, state the current claim and what it said before, citing both, for example "originally Q2 [1], later changed to Q3 [3]".
 ```
 
 設計理由：
@@ -64,6 +65,7 @@ Rules:
 | 5 | 矛盾時並列，不自行選邊。資料庫還沒有文件日期（Epic 第 8 項），所以以文件標題區分來源 |
 | 6 | 回答語言依介面語言（#26 決定 2），結果固定，也與預設問題的語言一致 |
 | 7 | 畫面以純文字顯示 |
+| 8 | 主管標記「新說法取代舊說法」時（#51），以新說法為主，並能說明變更的經過；沒有標記的矛盾仍依第 5 條並列。見下方「新說法取代舊說法」 |
 
 ### 段落編排（user 訊息）
 
@@ -82,7 +84,7 @@ Rules:
 </question>
 ```
 
-- 編號從 1 開始，依檢索分數由高到低。
+- 編號從 1 開始，依檢索分數由高到低；被取代的段落後面接著取代它的新段落（見下方「新說法取代舊說法」）。
 - 文件標題由 `retrieve()` 在同一個 `withIdentity()` 中取得（[docs/retrieval.md](retrieval.md)）。
 - 標題、語言、段落內容與問題中的 `&`、`<`、`>`、`"` 都轉成 entity：段落文字無法提前關閉標籤或跳出屬性的引號，假裝成指令或另一段段落。
 
@@ -90,8 +92,8 @@ Rules:
 
 - `PROMPT_CHAR_BUDGET` 為 16,000 字元：Worker 的 `MAX_PROMPT_CHARS` 預設 20,000，前端不知道伺服器的設定值，所以保留 20% 餘裕。
 - **算法與 Worker 相同**：`system` 的字元數加上所有 `content` 的字元數（JavaScript 的 `String.length`），以**跳脫後**的文字計算（`worker/src/request.ts`）。`app/tests/qa/leakage.test.ts` 以 Worker 的 `parseAskBody()` 確認每次送出的長度相同、且都在預算內。
-- 超過預算時從分數最低的段落開始丟棄，直到放得下；連一段都放不下時當作拒答。
-- 參考資料集的 14 個預設問題：system 約 1,110 字元，user 約 170～980 字元，遠低於預算。
+- 超過預算時從分數最低的段落開始丟棄，直到放得下；連一段都放不下時當作拒答。被取代的段落與接在後面的新段落一起保留或一起丟棄。
+- 參考資料集的 14 個預設問題：system 約 1,360 字元，user 約 170～980 字元，遠低於預算。被取代的段落會多帶一段新段落，仍在預算內。
 
 ## 拒答
 
@@ -123,6 +125,28 @@ Rules:
 - 參考資料集的 `bluewing-launch`：中文與英文各有兩段，說法分別是第二季與第三季，分屬不同文件（[docs/dataset.md](dataset.md)）。`answer.test.ts` 確認兩段都會送出，且帶不同的文件標題。
 - 模型實際是否並列，以人工驗收確認（#26 的人工待辦）。
 - 資料庫沒有文件日期，所以無法說明哪一份比較新；時間軸在 Epic 第 8 項。
+
+## 新說法取代舊說法
+
+主管在待審頁把一組說法不同標記為「新說法取代舊說法」後（#51，[docs/conflicts.md](conflicts.md)），問答以新說法為主，並可以說明「原本是…，後來改為…」。舊段落不修改、不隱藏，仍然可以檢索。
+
+- **檢索**：`retrieve()` 為每段附上 `supersededBy`，也就是取代它的新段落（id、文件標題、語言、內容），在同一個 `withIdentity()` 中讀取 `conflict_decisions`（[docs/retrieval.md](retrieval.md)）。決定只在兩段都看得到時讀得到（RLS），所以**看不到新段落的身分，結果與沒有標記時完全相同**。
+- **多段取代同一段**：取目前身分看得到的新段落中，文件日期最新的；日期相同時依段落 id。
+- **編排**：被取代的段落後面一定接著取代它的新段落，即使新段落不在檢索結果中；舊段落加上 `superseded-by="N"`（N 是新段落的編號）。新段落已經排在前面時不重複，舊段落指向它的編號。
+
+  ```
+  <passage number="1" title="青翼專案啟動會議紀錄" language="zh-TW" superseded-by="2">
+  專案目標是開發一款可調式辦公桌「青翼桌」，預計 2026 年第二季上市。
+  </passage>
+  <passage number="2" title="青翼專案進度更新（虛構上傳）" language="zh-TW">
+  青翼桌上市時間改為 2026 年第四季。
+  </passage>
+  ```
+
+- **只補一層**：補上的新段落本身也被取代時，不再往下補；只有取代它的段落也在 prompt 中時，才加上它自己的 `superseded-by`。每段在同一份 prompt 中只出現一次，所以互相取代也不會循環。
+- **長度**：被取代的段落與補上的新段落一起保留或一起丟棄，仍在 `PROMPT_CHAR_BUDGET` 內。
+- 測試：`prompt.test.ts`（編排、一起丟棄、A→B→C 的鏈、A↔B 互相取代）；`app/tests/qa/supersede.test.ts`（以 `oracle.ts` 的 `expectedSupersede()` 比對每個身分的 `supersededBy` 與送出的 `superseded-by`，以及「取代不外流」與反向驗證）。
+- 模型實際是否以新說法為主並說明變更，以人工驗收確認（#51 的人工待辦）。
 
 ## 錯誤
 
@@ -190,7 +214,7 @@ Rules:
 - 只做單輪問答，不保留對話。
 - 不支援跨語言檢索（第 2 階段）：中文問題找不到只有英文的段落，反之亦然。參考資料集的預設問題在兩種語言都有答案段落。
 - 檢索不是語意模型（[docs/retrieval.md](retrieval.md#限制)）：換句話說的問題可能找不到段落而在本機拒答。
-- 矛盾並列只能以文件標題區分來源，沒有日期。
+- 矛盾並列只能以文件標題區分來源，沒有日期。主管標記「取代」的組合除外（見「新說法取代舊說法」）。
 - 拒答標記出現在任何位置都算拒答，所以「部分能回答」的情況也會整個拒答。
 - 模型是否遵守規則（只用段落、正確引用、並列矛盾）無法以自動測試保證；引用正確率的評測在 Epic 第 10 項。
 
@@ -198,7 +222,7 @@ Rules:
 
 以 `standard`（Opus 5.5，每百萬 token 輸入 $4、輸出 $20；`max_tokens` 8000、effort `low`，[worker/README.md](../worker/README.md#模型白名單)）估算：
 
-- **輸入**：參考資料集的預設問題，system 約 1,110 字元（英文，約 250 token），user 約 170～980 字元（約 100～350 token），合計約 400～600 token，約 **$0.002**。
+- **輸入**：參考資料集的預設問題，system 約 1,360 字元（英文，約 310 token），user 約 170～980 字元（約 100～350 token），合計約 450～700 token，約 **$0.002～0.003**。
 - **輸出**：回答約 50～200 token，加上 thinking（effort `low`；Opus 5.5 的 thinking 無法關閉）估計數百到 1,500 token，約 **$0.005～0.035**。
 - **一次約 $0.01～0.04**。最差情況是輸出用滿 `max_tokens`（8,000），約 $0.16。
 - 本機拒答不呼叫 `/api/ask`，不產生費用。

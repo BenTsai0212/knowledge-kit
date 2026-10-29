@@ -168,7 +168,7 @@ describe("apiTransport：中止", () => {
 describe("ask() 經由 apiTransport", () => {
   const retriever: Retriever = {
     retrieve: async () => [
-      { id: "p-1", documentId: "d", documentTitle: "員工手冊", documentDate: null, language: "zh-TW", content: "到職滿一年有 7 天年假。", score: 0.9 },
+      { id: "p-1", documentId: "d", documentTitle: "員工手冊", documentDate: null, language: "zh-TW", content: "到職滿一年有 7 天年假。", score: 0.9, supersededBy: null },
     ],
   };
   const ctx = (response: Response): QaContext => ({

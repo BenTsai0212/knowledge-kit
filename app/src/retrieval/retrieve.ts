@@ -14,6 +14,13 @@ export interface RetrievedPassage {
   language: string;
   content: string;
   score: number;
+  // 主管標記「新說法取代舊說法」時，取代這段的新段落；只在目前身分看得到新段落時才有（docs/conflicts.md「問答的取代」）
+  supersededBy: SupersedingPassage | null;
+}
+
+// 取代舊段落的新段落。supersededBy 是取代它的段落 id（只有一層，不再展開）
+export interface SupersedingPassage extends Omit<RetrievedPassage, "score" | "supersededBy"> {
+  supersededBy: string | null;
 }
 
 // 個別呼叫的選項：只取某個語言的段落、排除某份文件，或改用不同的筆數與門檻（例如說法不同的比對，docs/conflicts.md）
@@ -24,6 +31,16 @@ export interface RetrieveOptions extends Partial<Pick<RetrievalConfig, "topK" | 
 
 export interface Retriever {
   retrieve(identityId: string | null, question: string, options?: RetrieveOptions): Promise<RetrievedPassage[]>;
+}
+
+interface SupersedeRow {
+  old_id: string;
+  id: string;
+  document_id: string;
+  document_title: string;
+  document_date: string | null;
+  language: string;
+  content: string;
 }
 
 interface PassageRow {
@@ -47,9 +64,9 @@ export function createRetriever(
     async retrieve(identityId, question, call = {}) {
       const topK = call.topK ?? options.topK;
       const minScore = call.minScore ?? options.minScore;
-      const rows = await db.withIdentity(identityId, async (tx) =>
+      const { rows, supersede } = await db.withIdentity(identityId, async (tx) => ({
         // 段落不比所屬文件寬鬆，看得到段落就看得到文件，所以 JOIN 不會少掉段落（docs/retrieval.md）
-        (
+        rows: (
           await tx.query<PassageRow>(
             `SELECT p.id, p.document_id, d.title AS document_title, to_char(d.document_date, 'YYYY-MM-DD') AS document_date, p.language, p.content
                FROM kk.passages p JOIN kk.documents d ON d.id = p.document_id
@@ -57,12 +74,39 @@ export function createRetriever(
             [call.language ?? null, call.excludeDocument ?? null],
           )
         ).rows,
-      );
+        // 每個被取代的段落取一段新段落：文件日期最新的，日期相同時依段落 id。
+        // 決定只在兩段都看得到時讀得到（RLS），看不到新段落的身分讀不到任何取代
+        supersede: (
+          await tx.query<SupersedeRow>(
+            `SELECT DISTINCT ON (r.old_passage_id) r.old_passage_id AS old_id, n.id, n.document_id, nd.title AS document_title,
+                    to_char(nd.document_date, 'YYYY-MM-DD') AS document_date, n.language, n.content
+               FROM kk.conflict_decisions r
+               JOIN kk.passages n ON n.id = r.new_passage_id JOIN kk.documents nd ON nd.id = n.document_id
+              WHERE r.decision = 'supersede'
+              ORDER BY r.old_passage_id, nd.document_date DESC NULLS LAST, n.id`,
+          )
+        ).rows,
+      }));
       if (rows.length === 0) return [];
 
       const missing = rows.filter((r) => !cache.has(r.id));
       const [questionVector, ...vectors] = await provider.embed([question, ...missing.map((r) => r.content)]);
       missing.forEach((r, i) => cache.set(r.id, vectors[i]));
+
+      const byOld = new Map(supersede.map((r) => [r.old_id, r]));
+      const supersededBy = (id: string): SupersedingPassage | null => {
+        const r = byOld.get(id);
+        if (r === undefined) return null;
+        return {
+          id: r.id,
+          documentId: r.document_id,
+          documentTitle: r.document_title,
+          documentDate: r.document_date,
+          language: r.language,
+          content: r.content,
+          supersededBy: byOld.get(r.id)?.id ?? null,
+        };
+      };
 
       return rows
         .map((r) => ({
@@ -76,7 +120,8 @@ export function createRetriever(
         }))
         .filter((p) => p.score >= minScore)
         .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id))
-        .slice(0, topK);
+        .slice(0, topK)
+        .map((p) => ({ ...p, supersededBy: supersededBy(p.id) }));
     },
   };
 }
