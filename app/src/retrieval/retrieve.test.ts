@@ -41,6 +41,21 @@ describe("retrieve", () => {
     expect(results).toHaveLength(2);
   });
 
+  it("個別呼叫的選項：限制語言、排除文件、改變筆數與門檻；帶出文件日期", async () => {
+    const retriever = createRetriever(db, keywordHashProvider, { topK: 20, minScore: 0 });
+    const all = await retriever.retrieve("manager", "專案");
+    expect(new Set(all.map((r) => r.language)).size).toBeGreaterThan(1);
+    const en = await retriever.retrieve("manager", "專案", { language: "en" });
+    expect(en.length).toBeGreaterThan(0);
+    expect(en.every((r) => r.language === "en")).toBe(true);
+    const excluded = all[0].documentId;
+    expect((await retriever.retrieve("manager", "專案", { excludeDocument: excluded })).some((r) => r.documentId === excluded)).toBe(false);
+    expect(await retriever.retrieve("manager", "專案", { topK: 1 })).toEqual(all.slice(0, 1));
+    expect((await retriever.retrieve("manager", "專案", { minScore: 0.2 })).every((r) => r.score >= 0.2)).toBe(true);
+    const handbook = Object.values(dataset.documents).find((d) => d.id === all[0].documentId)!;
+    expect(all[0].documentDate).toBe(handbook.date ?? null);
+  });
+
   it("沒有共同詞時回傳空陣列", async () => {
     expect(await openRetriever(db, clientConfig.client.retrieval).retrieve("manager", "xyzzy")).toEqual([]);
   });

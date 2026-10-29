@@ -1,6 +1,6 @@
 # 萃取實體與關係（`app/src/extraction/`）
 
-上傳文件後，以模型從段落中萃取實體與關係，放進待審區；有 `canReview` 的身分核准後才進入圖譜。決策紀錄見 #44；矛盾並列（9c）不在本功能。
+上傳文件後，以模型從段落中萃取實體與關係，放進待審區；有 `canReview` 的身分核准後才進入圖譜。決策紀錄見 #44。萃取結束後，與既有段落說法不同的比對（#51）見 [docs/conflicts.md](conflicts.md)。
 
 > 待審資料與上傳的文件一樣，只存在瀏覽器的記憶體資料庫，重新整理頁面就消失。
 
@@ -12,6 +12,8 @@
 4. **解析並驗證**（`output.ts`），見「驗證」。
 5. **同一份文件中去重**：只比對文件語言的名稱，見「去重」。
 6. **寫入待審**（`store.ts` 的 `writePending()`），一律以上傳時的身分寫入（`withIdentity(上傳者)`）。上傳者沒有 `canReview` 時，寫入後在資料庫中讀不到待審資料。
+
+萃取結束後（沒有等待中的批次，也沒有因邀請碼失效而停止），`client.json` 的 `conflicts.enabled` 為 `true` 時接著比對說法不同，見 [docs/conflicts.md](conflicts.md)「流程」。
 
 狀態逐批記錄（`ExtractionState`）：`waiting`、`running`、`done`、`failed`。`runExtraction()` 只執行等待中與失敗的批次，所以「重試萃取」不會重送已成功的批次。
 

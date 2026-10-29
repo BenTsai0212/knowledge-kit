@@ -4,6 +4,7 @@ import type {
   AliasRules,
   AccessFile,
   ClientFile,
+  ConflictsFile,
   EntityTypeFile,
   KnowledgeModelFile,
   PathRef,
@@ -48,6 +49,7 @@ export const manifests: ManifestEntry[] = [
       evals: "required",
       retrieval: "optional",
       upload: "optional",
+      conflicts: "optional",
     } satisfies KeyManifest<ClientFile>,
   },
   { schema: "client.schema.json", pointer: "/properties/dataset", keys: pathRef },
@@ -61,6 +63,11 @@ export const manifests: ManifestEntry[] = [
     schema: "client.schema.json",
     pointer: "/properties/upload",
     keys: { passageMaxChars: "optional", extractMaxBatches: "optional" } satisfies KeyManifest<UploadFile>,
+  },
+  {
+    schema: "client.schema.json",
+    pointer: "/properties/conflicts",
+    keys: { enabled: "optional", candidatesPerPassage: "optional", minScore: "optional" } satisfies KeyManifest<ConflictsFile>,
   },
   {
     schema: "theme.schema.json",

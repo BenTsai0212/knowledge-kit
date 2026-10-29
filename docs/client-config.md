@@ -54,6 +54,7 @@ npm run check:client
 | `evals.path` | 是 | `RelativePath` | 評測題庫的資料夾，必須存在。題庫格式在評測台的 Issue 加入 |
 | `retrieval` | 否 | 物件，見下表 | 檢索參數。省略整個物件或其中的欄位時使用預設值 |
 | `upload` | 否 | 物件，見下表 | 上傳文件的參數。省略整個物件或其中的欄位時使用預設值 |
+| `conflicts` | 否 | 物件，見下表 | 上傳文件與既有段落說法不同的比對。省略整個物件或其中的欄位時使用預設值 |
 
 `retrieval` 的欄位（運作方式見 [docs/retrieval.md](retrieval.md)）：
 
@@ -69,6 +70,14 @@ npm run check:client
 | --- | --- | --- | --- |
 | `extractMaxBatches` | 整數，1～10 | 3 | 每份上傳文件最多以幾批段落呼叫模型萃取實體與關係（每批一次 `/api/ask`，計入每日次數）；超過的段落不萃取，畫面註明（[docs/extraction.md](extraction.md)） |
 | `passageMaxChars` | 整數，100～1000 | 300 | 切段時每段的字元數上限。客戶文件的寫法不同，會影響檢索，所以放在設定中。檔案大小（10 MB）、擷取後字數（50,000）、段落數（500）是保護瀏覽器的上限，固定在 `app/src/upload/parse.ts` |
+
+`conflicts` 的欄位（運作方式見 [docs/conflicts.md](conflicts.md)）：
+
+| 欄位 | 格式 | 預設值 | 說明 |
+| --- | --- | --- | --- |
+| `enabled` | 布林 | `false` | 萃取完成後是否比對說法不同（每份文件多一次 `/api/ask`，計入每日次數）。營運開關，預設關閉；範例客戶的 `client.json` 明確寫 `true` |
+| `candidatesPerPassage` | 整數，1～10 | 3 | 每個新段落最多比對幾段既有段落 |
+| `minScore` | 0～1 | 0.15 | 既有段落的最低檢索分數，低於此分數的段落不比對 |
 
 ## `theme.json`
 
@@ -173,7 +182,7 @@ JSON Schema 無法參照另一個檔的值，以下由 `scripts/check-client.mjs
 `app/src/client/load.ts` 在 build 時以 JSON import 讀入 5 個設定檔，匯出型別為 `ClientConfig` 的 `clientConfig`。
 
 - 執行時不做 ajv 驗證，ajv 不打包進前端；驗證只在 `npm run check:client` 與 CI 執行。
-- 省略的欄位在這裡補上預設值，讀取端拿到的型別一律是必填。目前有 `mergeStrategy`（省略時補成 `review`）、`retrieval` 的各欄位（`RETRIEVAL_DEFAULTS`）與 `upload` 的各欄位（`UPLOAD_DEFAULTS`）；預設值與 Schema 的 `default` 相同，由 `load.test.ts` 比對。
+- 省略的欄位在這裡補上預設值，讀取端拿到的型別一律是必填。目前有 `mergeStrategy`（省略時補成 `review`）、`retrieval` 的各欄位（`RETRIEVAL_DEFAULTS`）、`upload` 的各欄位（`UPLOAD_DEFAULTS`）與 `conflicts` 的各欄位（`CONFLICTS_DEFAULTS`）；預設值與 Schema 的 `default` 相同，由 `load.test.ts` 比對。
 
 ## 擴充 Schema
 

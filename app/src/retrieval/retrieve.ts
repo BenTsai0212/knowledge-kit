@@ -9,19 +9,28 @@ export interface RetrievedPassage {
   id: string;
   documentId: string;
   documentTitle: string;
+  // 文件日期（YYYY-MM-DD）；沒有日期時為 null
+  documentDate: string | null;
   language: string;
   content: string;
   score: number;
 }
 
+// 個別呼叫的選項：只取某個語言的段落、排除某份文件，或改用不同的筆數與門檻（例如說法不同的比對，docs/conflicts.md）
+export interface RetrieveOptions extends Partial<Pick<RetrievalConfig, "topK" | "minScore">> {
+  language?: string;
+  excludeDocument?: string;
+}
+
 export interface Retriever {
-  retrieve(identityId: string | null, question: string): Promise<RetrievedPassage[]>;
+  retrieve(identityId: string | null, question: string, options?: RetrieveOptions): Promise<RetrievedPassage[]>;
 }
 
 interface PassageRow {
   id: string;
   document_id: string;
   document_title: string;
+  document_date: string | null;
   language: string;
   content: string;
 }
@@ -35,13 +44,17 @@ export function createRetriever(
   const cache = new Map<string, unknown>();
 
   return {
-    async retrieve(identityId, question) {
+    async retrieve(identityId, question, call = {}) {
+      const topK = call.topK ?? options.topK;
+      const minScore = call.minScore ?? options.minScore;
       const rows = await db.withIdentity(identityId, async (tx) =>
         // 段落不比所屬文件寬鬆，看得到段落就看得到文件，所以 JOIN 不會少掉段落（docs/retrieval.md）
         (
           await tx.query<PassageRow>(
-            `SELECT p.id, p.document_id, d.title AS document_title, p.language, p.content
-               FROM kk.passages p JOIN kk.documents d ON d.id = p.document_id`,
+            `SELECT p.id, p.document_id, d.title AS document_title, to_char(d.document_date, 'YYYY-MM-DD') AS document_date, p.language, p.content
+               FROM kk.passages p JOIN kk.documents d ON d.id = p.document_id
+              WHERE ($1::text IS NULL OR p.language = $1) AND ($2::text IS NULL OR p.document_id <> $2)`,
+            [call.language ?? null, call.excludeDocument ?? null],
           )
         ).rows,
       );
@@ -56,13 +69,14 @@ export function createRetriever(
           id: r.id,
           documentId: r.document_id,
           documentTitle: r.document_title,
+          documentDate: r.document_date,
           language: r.language,
           content: r.content,
           score: provider.similarity(questionVector, cache.get(r.id)),
         }))
-        .filter((p) => p.score >= options.minScore)
+        .filter((p) => p.score >= minScore)
         .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id))
-        .slice(0, options.topK);
+        .slice(0, topK);
     },
   };
 }

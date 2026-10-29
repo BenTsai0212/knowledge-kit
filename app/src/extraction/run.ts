@@ -62,7 +62,7 @@ export function planExtraction(
 }
 
 // 收齊一批的回應：成功時回傳文字，失敗時回傳錯誤類型
-async function collect(events: AsyncIterable<AskEvent>): Promise<{ text: string } | { error: string }> {
+export async function collect(events: AsyncIterable<AskEvent>): Promise<{ text: string } | { error: string }> {
   let text = "";
   for await (const event of events) {
     if (event.type === "delta") text += event.text;

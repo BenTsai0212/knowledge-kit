@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import clientSchema from "../../../client/schema/client.schema.json";
-import { clientConfig, normalizeClient, RETRIEVAL_DEFAULTS, UPLOAD_DEFAULTS } from "./load";
+import { clientConfig, CONFLICTS_DEFAULTS, normalizeClient, RETRIEVAL_DEFAULTS, UPLOAD_DEFAULTS } from "./load";
 import type { ClientFiles } from "./types";
 
 describe("normalizeClient", () => {
@@ -45,5 +45,15 @@ describe("normalizeClient", () => {
     expect(normalizeClient(raw({ passageMaxChars: 500 })).client.upload).toEqual({ ...UPLOAD_DEFAULTS, passageMaxChars: 500 });
     expect(UPLOAD_DEFAULTS.passageMaxChars).toBe(clientSchema.properties.upload.properties.passageMaxChars.default);
     expect(UPLOAD_DEFAULTS.extractMaxBatches).toBe(clientSchema.properties.upload.properties.extractMaxBatches.default);
+  });
+
+  it("conflicts 省略時補上預設值（預設關閉），預設值與 Schema 的 default 相同；範例客戶明確開啟", () => {
+    const raw = (conflicts?: object) => ({ ...clientConfig, client: { ...clientConfig.client, conflicts } }) as unknown as ClientFiles;
+    expect(normalizeClient(raw()).client.conflicts).toEqual(CONFLICTS_DEFAULTS);
+    expect(CONFLICTS_DEFAULTS.enabled).toBe(false);
+    expect(normalizeClient(raw({ minScore: 0.3 })).client.conflicts).toEqual({ ...CONFLICTS_DEFAULTS, minScore: 0.3 });
+    const props = clientSchema.properties.conflicts.properties;
+    expect(CONFLICTS_DEFAULTS).toEqual({ enabled: props.enabled.default, candidatesPerPassage: props.candidatesPerPassage.default, minScore: props.minScore.default });
+    expect(clientConfig.client.conflicts.enabled).toBe(true);
   });
 });

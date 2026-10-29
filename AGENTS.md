@@ -43,7 +43,7 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 | `app/src/graph/` | 知識圖譜：`read.ts` 的 `readGraph()` 經 `withIdentity()` 一次讀出看得到的實體、關係與出處段落；`path.ts` 的 `shortestPath()` 在可見圖上找最短路徑；`timeline.ts` 的 `readTimeline()` 依日期列出看得到的文件與段落（權限測試在 `app/tests/graph/`）；說明見 `docs/graph.md` |
 | `app/src/upload/` | 上傳（說明見 `docs/upload.md`；畫面是 `app/src/ui/UploadPage.tsx`）：`parse.ts` 擷取純文字（`pdf.ts`、`docx.ts` 以動態 import 載入 `pdfjs-dist`、`mammoth`，見 ADR 0002；上限是 `parse.ts` 的常數）、`markdown.ts`、`chunk.ts` 切段；`write.ts` 的 `uploadDocument()` 經 `withIdentity()` 寫入文件與段落（`kk_app` 唯一的寫入；權限由 RLS 執行，見 `docs/data-model.md`「寫入規則」，測試在 `app/tests/upload/`） |
 | `app/src/extraction/` | 上傳文件的萃取（說明見 `docs/extraction.md`）：`run.ts` 分批呼叫 `/api/ask`（`batch.ts`、`prompt.ts`）、`output.ts` 解析與驗證、`merge.ts` 合併比對；`store.ts` 經 `withIdentity()` 寫入待審、讀取待審區、核准與退回（只用 INSERT；規則由 RLS 執行，見 `docs/data-model.md`「待審與核准」，測試在 `app/tests/extraction/`） |
-| `app/src/conflicts/` | 上傳文件與既有段落的說法不同（#51）：`store.ts` 經 `withIdentity()` 寫入偵測結果、讀取與處理（只用 INSERT；規則由 RLS 執行，見 `docs/data-model.md`「說法不同」，測試在 `app/tests/conflicts/`） |
+| `app/src/conflicts/` | 上傳文件與既有段落的說法不同（#51，說明見 `docs/conflicts.md`）：`run.ts` 在萃取後以上傳者的身分挑選段落（`select.ts`）、呼叫一次 `/api/ask`（`prompt.ts`）、解析與驗證（`output.ts`）；`store.ts` 經 `withIdentity()` 寫入偵測結果、讀取與處理（只用 INSERT；規則由 RLS 執行，見 `docs/data-model.md`「說法不同」，測試在 `app/tests/conflicts/`） |
 | `app/src/sources/` | 引用跳回原文：`source.ts` 的 `readSource()` 經 `withIdentity()` 讀取段落所屬文件中看得到的段落 |
 | `app/src/db/` | 資料層（PGlite＋RLS）：`database.ts` 是唯一入口，`migrations/*.sql` 是 migration；說明見 `docs/data-model.md` |
 | `app/tests/` | 需要放在 `app/src/` 之外的測試（例如會用到被禁止 SQL 的越權測試） |

@@ -40,7 +40,7 @@ export class ExtractionFormatError extends Error {
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
 // 開頭與結尾的 ``` 或 ```json 先去掉
-function stripFence(text: string): string {
+export function stripFence(text: string): string {
   const m = /^\s*```(?:json)?\s*([\s\S]*?)\s*```\s*$/.exec(text);
   return m ? m[1] : text.trim();
 }

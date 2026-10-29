@@ -63,6 +63,22 @@
           "default": 3
         }
       }
+    },
+    "conflicts": {
+      "description": "上傳文件與既有段落說法不同的比對；省略的欄位使用預設值（docs/conflicts.md）",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "description": "萃取完成後是否比對（營運開關，預設關閉）", "type": "boolean", "default": false },
+        "candidatesPerPassage": {
+          "description": "每個新段落最多比對幾段既有段落",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 3
+        },
+        "minScore": { "description": "既有段落的最低檢索分數，低於此分數的段落不比對", "type": "number", "minimum": 0, "maximum": 1, "default": 0.15 }
+      }
     }
   }
 }
