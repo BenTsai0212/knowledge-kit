@@ -143,6 +143,17 @@ export interface UiStrings {
   dialogClose: string;
   // 待審頁第二層（待審／已退回）的 aria-label
   reviewStatusTabs: string;
+  // 待審卡片（#48）：編輯名稱、出處段落的展開與收合
+  reviewEditNames: string;
+  reviewEditDone: string;
+  reviewExpand: string;
+  reviewCollapse: string;
+  // 核准或退回後的短提示：一筆時 {name} 換成項目名稱，多筆時 {count} 換成筆數
+  reviewToastApprovedOne: string;
+  reviewToastApproved: string;
+  reviewToastRejectedOne: string;
+  reviewToastRejected: string;
+  reviewGotoGraph: string;
   reviewErrors: Record<"denied" | "conflict", string>;
   // 標籤與內容之間的分隔（繁中用全形冒號）
   colon: string;
@@ -285,6 +296,15 @@ export const STRINGS: Record<LanguageCode, UiStrings> = {
     uploadChooseAgain: "重新選檔",
     dialogClose: "關閉",
     reviewStatusTabs: "審核狀態",
+    reviewEditNames: "編輯名稱",
+    reviewEditDone: "完成",
+    reviewExpand: "展開",
+    reviewCollapse: "收合",
+    reviewToastApprovedOne: "已核准：{name}",
+    reviewToastApproved: "已核准 {count} 筆",
+    reviewToastRejectedOne: "已退回：{name}",
+    reviewToastRejected: "已退回 {count} 筆",
+    reviewGotoGraph: "到圖譜查看",
     reviewErrors: {
       denied: "沒有權限處理這個項目。",
       conflict: "這個項目已經被處理過，請重新整理。",
@@ -443,6 +463,15 @@ export const STRINGS: Record<LanguageCode, UiStrings> = {
     uploadChooseAgain: "Choose another file",
     dialogClose: "Close",
     reviewStatusTabs: "Review status",
+    reviewEditNames: "Edit names",
+    reviewEditDone: "Done",
+    reviewExpand: "Show more",
+    reviewCollapse: "Show less",
+    reviewToastApprovedOne: "Approved: {name}",
+    reviewToastApproved: "{count} approved",
+    reviewToastRejectedOne: "Rejected: {name}",
+    reviewToastRejected: "{count} rejected",
+    reviewGotoGraph: "View in graph",
     reviewErrors: {
       denied: "You don't have permission to handle this item.",
       conflict: "This item has already been handled. Please refresh.",

@@ -5,6 +5,7 @@ import { dataset } from "./dataset/load";
 import { seedDataset } from "./dataset/seed";
 import { openDatabase, type Database } from "./db/database";
 import { planExtraction, runExtraction, type ExtractionState } from "./extraction/run";
+import { readReview } from "./extraction/store";
 import { ask } from "./qa/answer";
 import { apiTransport } from "./qa/api";
 import { openRetriever } from "./retrieval/retrieve";
@@ -15,6 +16,7 @@ import { AnswerView, type AnswerState } from "./ui/AnswerView";
 import { GraphPage } from "./ui/GraphPage";
 import { QuestionPanel } from "./ui/QuestionPanel";
 import { ReviewPage } from "./ui/ReviewPage";
+import { pendingCount } from "./ui/review-helpers";
 import { createExtractionRunner } from "./ui/extraction-runner";
 import { createRequestGate } from "./ui/requests";
 import { SourcePanel } from "./ui/SourcePanel";
@@ -50,6 +52,11 @@ export function App() {
   // 同時只有一個有效的提問與原文讀取；切換身分或語言時捨棄進行中的
   const questions = useRef(createRequestGate());
   const sources = useRef(createRequestGate());
+  // 「待審」頁籤的筆數（#48）：核准、退回、重新整理（reviewVersion）與萃取結束（activeExtractions）後重新讀取。
+  // 記下讀取時的身分，切換身分後不顯示前一個身分的筆數
+  const canReview = access.roles.find((r) => r.id === identity)?.canReview ?? false;
+  const [reviewVersion, setReviewVersion] = useState(0);
+  const [pending, setPending] = useState<{ identity: string; count: number } | null>(null);
   const s = strings(language);
 
   useEffect(() => {
@@ -70,6 +77,17 @@ export function App() {
     document.documentElement.lang = language;
     document.title = client.displayName[language];
   }, [language]);
+
+  useEffect(() => {
+    if (db === null || !canReview) return;
+    let cancelled = false;
+    void readReview(db, identity).then((docs) => {
+      if (!cancelled) setPending({ identity, count: pendingCount(docs) });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [db, identity, canReview, reviewVersion, activeExtractions]);
 
   const retriever = useMemo(() => (db === null ? null : openRetriever(db, client.retrieval)), [db]);
 
@@ -164,11 +182,12 @@ export function App() {
             ["graph", s.tabGraph],
             ["timeline", s.tabTimeline],
             ["upload", s.tabUpload],
-            ...(access.roles.find((r) => r.id === identity)?.canReview ? ([["review", s.tabReview]] as const) : []),
+            ...(canReview ? ([["review", s.tabReview]] as const) : []),
           ] as const
         ).map(([id, label]) => (
           <button key={id} type="button" aria-current={view === id ? "page" : undefined} onClick={() => setView(id)}>
             {label}
+            {id === "review" && pending?.identity === identity && <span className="tab-count">{pending.count}</span>}
           </button>
         ))}
       </nav>
@@ -188,6 +207,8 @@ export function App() {
               language={language}
               extracting={activeExtractions.size > 0}
               onOpenSource={onOpenSource}
+              onChanged={() => setReviewVersion((v) => v + 1)}
+              onGotoGraph={() => setView("graph")}
             />
           ) : view === "upload" ? (
             // 切換身分或語言時重建，清除表單、預覽與結果
