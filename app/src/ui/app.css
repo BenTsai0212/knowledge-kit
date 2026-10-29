@@ -559,24 +559,19 @@ label.inline {
   font-size: 0.875rem;
 }
 
-/* 核准或退回後的短提示 */
-.toast-region {
-  position: fixed;
-  bottom: 1rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 20;
-  max-width: calc(100% - 2rem);
+/* 核准或退回後的短提示：在分段切換列下方（#48 審查）。區域一直存在（live region），
+   沒有內容時以負邊距抵銷 .review-page 的間距，不留空白 */
+.toast-region:empty {
+  margin-top: -1rem;
 }
 
 .toast {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.75rem;
   background: var(--color-surface);
   border: 1px solid var(--color-primary);
   border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
   padding: 0.5rem 0.5rem 0.5rem 1rem;
 }
 

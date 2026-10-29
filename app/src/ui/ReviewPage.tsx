@@ -15,6 +15,7 @@ import { Notice } from "./Notice";
 import { createRequestGate } from "./requests";
 import { batchPlan, canBatch, entityApproval, highlightSegments, initialChoice, inputSize, namesInvalid, relationReady, type EntityChoice } from "./review-helpers";
 import { strings } from "./strings";
+import { createToastTimer, type ToastTimer } from "./toast-timer";
 
 interface Props {
   db: Database;
@@ -28,8 +29,8 @@ interface Props {
   onGotoGraph(): void;
 }
 
-// 短提示自動消失的時間
-const TOAST_MS = 6000;
+// 短提示自動消失的時間；滑鼠停在提示上或焦點在提示內時暫停（toast-timer.ts，#48 審查）
+const TOAST_MS = 10_000;
 
 const { client, knowledgeModel } = clientConfig;
 
@@ -49,7 +50,9 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   // 正在編輯名稱的實體、展開的出處（項目 id 與段落 id）、核准或退回後的短提示
   const [editing, setEditing] = useState<ReadonlySet<string>>(new Set());
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
-  const [toast, setToast] = useState<string | null>(null);
+  // graph：附「到圖譜查看」（只有核准；退回的項目不會出現在圖譜）
+  const [toast, setToast] = useState<{ text: string; graph: boolean } | null>(null);
+  const toastTimer = useRef<ToastTimer | null>(null);
   // 連點時 state 還沒更新，以 ref 確保同時只有一個核准或退回在進行（比照 #42）
   const working = useRef(false);
   const reads = useRef(createRequestGate());
@@ -68,9 +71,11 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
 
   useEffect(() => {
     if (toast === null) return;
-    const timer = setTimeout(() => setToast(null), TOAST_MS);
+    const timer = createToastTimer(TOAST_MS, () => setToast(null));
+    toastTimer.current = timer;
     return () => {
-      clearTimeout(timer);
+      timer.cancel();
+      toastTimer.current = null;
     };
   }, [toast]);
 
@@ -96,7 +101,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   const languageNames = new Intl.DisplayNames([language], { type: "language" });
 
   // done：成功後的短提示
-  async function run(docId: string, action: () => Promise<void>, done: string, skipped = 0) {
+  async function run(docId: string, action: () => Promise<void>, done: { text: string; graph: boolean }, skipped = 0) {
     if (working.current) return;
     working.current = true;
     setBusy(true);
@@ -118,13 +123,16 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
     run(
       docId,
       () => approve(db, identity, items, { defaultLanguage: client.defaultLanguage }),
-      s.reviewToastApproved.replace("{count}", String(items.entities.length + items.relations.length)),
+      { text: s.reviewToastApproved.replace("{count}", String(items.entities.length + items.relations.length)), graph: true },
       skippedCount,
     );
   const approveBatch = (docId: string, plan: ReturnType<typeof batchPlan>) =>
     void approveItems(docId, { entities: plan.entities, relations: plan.relations }, plan.skipped);
   const rejectItems = (docId: string, items: { entities: string[]; relations: string[] }) =>
-    run(docId, () => reject(db, identity, items), s.reviewToastRejected.replace("{count}", String(items.entities.length + items.relations.length)));
+    run(docId, () => reject(db, identity, items), {
+      text: s.reviewToastRejected.replace("{count}", String(items.entities.length + items.relations.length)),
+      graph: false,
+    });
 
   const nameOf = (doc: ReviewDocument, id: string) => {
     const e = doc.entities.find((x) => x.id === id);
@@ -177,14 +185,24 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
           ↻
         </button>
       </div>
-      {/* 短提示：live region 一直存在，內容出現時螢幕閱讀器才讀得到 */}
+      {/* 短提示：在分段切換列下方、文件卡片之上；live region 一直存在，內容出現時螢幕閱讀器才讀得到 */}
       <div className="toast-region" role="status">
         {toast !== null && (
-          <div className="toast">
-            <span>{toast}</span>
-            <button type="button" className="link" onClick={onGotoGraph}>
-              {s.reviewGotoGraph}
-            </button>
+          <div
+            className="toast"
+            onMouseEnter={() => toastTimer.current?.hold("hover")}
+            onMouseLeave={() => toastTimer.current?.release("hover")}
+            onFocus={() => toastTimer.current?.hold("focus")}
+            onBlur={(ev) => {
+              if (!ev.currentTarget.contains(ev.relatedTarget)) toastTimer.current?.release("focus");
+            }}
+          >
+            <span>{toast.text}</span>
+            {toast.graph && (
+              <button type="button" className="link" onClick={onGotoGraph}>
+                {s.reviewGotoGraph}
+              </button>
+            )}
             <button type="button" className="icon-button" aria-label={s.dialogClose} title={s.dialogClose} onClick={() => setToast(null)}>
               ✕
             </button>
