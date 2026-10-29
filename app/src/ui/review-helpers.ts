@@ -61,3 +61,42 @@ export const relationReady = (doc: ReviewDocument, relationId: string) => {
   const r = doc.relations.find((x) => x.id === relationId);
   return r !== undefined && [r.from, r.to].every((id) => doc.entities.some((e) => e.id === id && e.status === "approved"));
 };
+
+// 待審筆數（#48）：目前身分看得到的待審實體與關係
+export const pendingCount = (docs: readonly ReviewDocument[]) =>
+  docs.reduce((n, d) => n + [...d.entities, ...d.relations].filter((x) => x.status === "pending").length, 0);
+
+// 名稱輸入框的寬度（size，以半形字元計）：隨內容調整，全形字元算 2 個，不截斷長名稱（#48）
+export const inputSize = (text: string) => Math.max(8, [...text].reduce((n, c) => n + (c.codePointAt(0)! >= 0x2e80 ? 2 : 1), 0) + 2);
+
+export interface Segment {
+  text: string;
+  mark: boolean;
+}
+
+// 出處段落中標出實體名稱（#48）：依序找出最早出現的名稱（同一位置取最長的），不分大小寫；
+// 回傳文字片段，由畫面一律以文字節點與 <mark> 組成（比照 SourcePanel）
+export function highlightSegments(text: string, terms: readonly string[]): Segment[] {
+  const lower = text.toLowerCase();
+  const needles = [...new Set(terms.map((t) => t.trim().toLowerCase()).filter((t) => t !== ""))];
+  const segments: Segment[] = [];
+  const push = (part: string, mark: boolean) => part !== "" && segments.push({ text: part, mark });
+  let pos = 0;
+  for (;;) {
+    let start = -1;
+    let length = 0;
+    for (const n of needles) {
+      const i = lower.indexOf(n, pos);
+      if (i !== -1 && (start === -1 || i < start || (i === start && n.length > length))) {
+        start = i;
+        length = n.length;
+      }
+    }
+    if (start === -1) break;
+    push(text.slice(pos, start), false);
+    push(text.slice(start, start + length), true);
+    pos = start + length;
+  }
+  push(text.slice(pos), false);
+  return segments;
+}

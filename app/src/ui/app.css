@@ -505,3 +505,81 @@ label.inline {
   margin-right: 0.5rem;
 }
 
+
+/* 待審頁籤的筆數（#48） */
+.tab-count {
+  display: inline-block;
+  margin-left: 0.35rem;
+  min-width: 1.5rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+/* 待審卡片的名稱：平常只顯示文字，編輯時輸入框隨內容加寬（size 由 inputSize 決定） */
+.review-names {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+}
+
+.review-names input {
+  max-width: 100%;
+}
+
+/* 出處段落：預設 2 行，可以展開 */
+.review-sources {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+}
+
+.review-source {
+  display: block;
+}
+
+.review-source.clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.review-source-actions {
+  display: inline-flex;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+}
+
+/* 核准或退回後的短提示 */
+.toast-region {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  max-width: calc(100% - 2rem);
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-primary);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  padding: 0.5rem 0.5rem 0.5rem 1rem;
+}
+
+.review-names + * {
+  margin-left: 0.5rem;
+}
