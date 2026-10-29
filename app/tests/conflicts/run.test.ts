@@ -36,7 +36,7 @@ const replyFor = (state: ConflictState, pairs: { new: number; existing: string; 
   answered(JSON.stringify({ conflicts: pairs.map((p) => ({ ...p, existing: state.selection.existing.findIndex((e) => e.id === p.existing) + 1 })) }));
 
 describe("planConflicts", () => {
-  it("以上傳者的身分挑選：一般員工送出的既有段落都是自己看得到的，不含機密段落；主管則包含", async () => {
+  it("以上傳者的身分挑選：一般員工送出的既有段落都是自己看得到的，不含機密段落", async () => {
     const staff = await setup("staff");
     const visible = await staff.db.withIdentity("staff", async (tx) => new Set((await tx.query<{ id: string }>("SELECT id FROM kk.passages")).rows.map((r) => r.id)));
     const ids = staff.state.selection.existing.map((p) => p.id);
@@ -46,7 +46,9 @@ describe("planConflicts", () => {
     expect(ids.some((id) => staff.upload.passageIds.includes(id))).toBe(false);
     expect(staff.state.status).toBe("waiting");
     await staff.db.close();
+  });
 
+  it("主管上傳時，送出的既有段落包含機密段落", async () => {
     const manager = await setup("manager", "confidential");
     expect(manager.state.selection.existing.map((p) => p.id)).toContain(CONFIDENTIAL);
     await manager.db.close();
