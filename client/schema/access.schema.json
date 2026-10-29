@@ -13,11 +13,16 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "label", "rank"],
+        "required": ["id", "label", "rank", "color"],
         "properties": {
           "id": { "$ref": "common.schema.json#/definitions/Id" },
           "label": { "$ref": "common.schema.json#/definitions/LocalizedText" },
-          "rank": { "type": "integer", "minimum": 0 }
+          "rank": { "type": "integer", "minimum": 0 },
+          "color": {
+            "description": "畫面上可見等級標籤的顏色（#RRGGBB）",
+            "type": "string",
+            "pattern": "^#[0-9A-Fa-f]{6}$"
+          }
         }
       }
     },

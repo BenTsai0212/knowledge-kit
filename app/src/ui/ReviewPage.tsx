@@ -8,7 +8,9 @@ import type { Database } from "../db/database";
 import { suggestMerge, type MergeSuggestion } from "../extraction/merge";
 import { approve, readReview, reject, ReviewError, type EntityApproval, type ReviewDocument, type ReviewEntity } from "../extraction/store";
 import { readGraph, type Graph } from "../graph/read";
+import { AccessBadges } from "./AccessBadges";
 import { entityOptionLabel, entityTypeLabel, relationTypeLabel } from "./graph-labels";
+import { Notice } from "./Notice";
 import { createRequestGate } from "./requests";
 import { batchPlan, canBatch, entityApproval, initialChoice, namesInvalid, relationReady, type EntityChoice } from "./review-helpers";
 import { strings } from "./strings";
@@ -34,9 +36,8 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource }:
   const [graph, setGraph] = useState<Graph | null>(null);
   const [choices, setChoices] = useState<Record<string, EntityChoice>>({});
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
-  const [error, setError] = useState<string | null>(null);
-  // 批次核准時，因名稱不完整而略過的筆數
-  const [skipped, setSkipped] = useState(0);
+  // 核准或退回的錯誤、批次核准時因名稱不完整而略過的筆數；顯示在該文件的卡片上方（#48）
+  const [notice, setNotice] = useState<{ docId: string; error?: string; skipped?: number } | null>(null);
   const [busy, setBusy] = useState(false);
   // 連點時 state 還沒更新，以 ref 確保同時只有一個核准或退回在進行（比照 #42）
   const working = useRef(false);
@@ -70,15 +71,15 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource }:
       return next;
     });
 
-  async function run(action: () => Promise<void>) {
+  async function run(docId: string, action: () => Promise<void>, skipped = 0) {
     if (working.current) return;
     working.current = true;
     setBusy(true);
-    setError(null);
+    setNotice(skipped > 0 ? { docId, skipped } : null);
     try {
       await action();
     } catch (e) {
-      setError(e instanceof ReviewError ? s.reviewErrors[e.reason] : s.unknownError);
+      setNotice({ docId, skipped, error: e instanceof ReviewError ? s.reviewErrors[e.reason] : s.unknownError });
     } finally {
       working.current = false;
       setBusy(false);
@@ -86,12 +87,11 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource }:
     }
   }
   // skippedCount：批次核准時因名稱不完整而略過的筆數（逐筆核准時為 0，清除先前的提示）
-  const approveItems = (items: { entities: EntityApproval[]; relations: string[] }, skippedCount = 0) => {
-    setSkipped(skippedCount);
-    return run(() => approve(db, identity, items, { defaultLanguage: client.defaultLanguage }));
-  };
-  const approveBatch = (plan: ReturnType<typeof batchPlan>) => void approveItems({ entities: plan.entities, relations: plan.relations }, plan.skipped);
-  const rejectItems = (items: { entities: string[]; relations: string[] }) => run(() => reject(db, identity, items));
+  const approveItems = (docId: string, items: { entities: EntityApproval[]; relations: string[] }, skippedCount = 0) =>
+    run(docId, () => approve(db, identity, items, { defaultLanguage: client.defaultLanguage }), skippedCount);
+  const approveBatch = (docId: string, plan: ReturnType<typeof batchPlan>) =>
+    void approveItems(docId, { entities: plan.entities, relations: plan.relations }, plan.skipped);
+  const rejectItems = (docId: string, items: { entities: string[]; relations: string[] }) => run(docId, () => reject(db, identity, items));
 
   const nameOf = (doc: ReviewDocument, id: string) => {
     const e = doc.entities.find((x) => x.id === id);
@@ -103,26 +103,21 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource }:
 
   return (
     <div className="review-page">
-      <nav className="tabs" aria-label={s.tabReview}>
-        <button type="button" aria-current={tab === "pending" ? "page" : undefined} onClick={() => setTab("pending")}>
-          {s.reviewPendingTab}
+      <div className="review-toolbar">
+        {/* 第二層：小一號的分段切換（#48） */}
+        <div className="segmented" role="group" aria-label={s.reviewStatusTabs}>
+          <button type="button" aria-pressed={tab === "pending"} onClick={() => setTab("pending")}>
+            {s.reviewPendingTab}
+          </button>
+          <button type="button" aria-pressed={tab === "rejected"} onClick={() => setTab("rejected")}>
+            {s.reviewRejectedTab}
+          </button>
+        </div>
+        <button type="button" className="icon-button" aria-label={s.reviewRefresh} title={s.reviewRefresh} disabled={busy} onClick={() => setVersion((v) => v + 1)}>
+          ↻
         </button>
-        <button type="button" aria-current={tab === "rejected" ? "page" : undefined} onClick={() => setTab("rejected")}>
-          {s.reviewRejectedTab}
-        </button>
-        <button type="button" className="secondary" disabled={busy} onClick={() => setVersion((v) => v + 1)}>
-          {s.reviewRefresh}
-        </button>
-      </nav>
-      {extracting && <p className="card muted">{s.reviewExtracting}</p>}
-      {error !== null && <p className="card error">{error}</p>}
-      {skipped > 0 && (
-        <p className="card warning">
-          {s.reviewSkippedNames}
-          {s.colon}
-          {skipped}
-        </p>
-      )}
+      </div>
+      {extracting && <Notice kind="info" title={s.reviewExtracting} action={{ label: s.reviewRefresh, onClick: () => setVersion((v) => v + 1), disabled: busy }} />}
       {visibleDocs.length === 0 && <p className="card muted">{tab === "pending" ? s.reviewEmpty : s.reviewRejectedEmpty}</p>}
 
       {visibleDocs.map((doc) => {
@@ -132,7 +127,19 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource }:
         const batchable = [...pendingEntities.filter((e) => canBatch(suggestions[e.id])).map((e) => e.id), ...pendingRelations.map((r) => r.id)];
         return (
           <section key={doc.id} className="card review-doc">
-            <h2 lang={doc.language}>{doc.title}</h2>
+            {notice?.docId === doc.id && notice.error !== undefined && (
+              <Notice kind="error" title={s.noticeReviewTitle} action={{ label: s.reviewRefresh, onClick: () => setVersion((v) => v + 1), disabled: busy }}>
+                {notice.error}
+              </Notice>
+            )}
+            {notice?.docId === doc.id && (notice.skipped ?? 0) > 0 && (
+              <Notice kind="warning" title={s.reviewSkippedNames}>
+                {notice.skipped}
+              </Notice>
+            )}
+            <h2 lang={doc.language}>
+              {doc.title} <AccessBadges visibility={doc.visibility} project={doc.project} language={language} />
+            </h2>
             {approvedCount > 0 && (
               <p className="muted">
                 {s.reviewApprovedCount}
@@ -145,10 +152,10 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource }:
                 <button type="button" className="secondary" disabled={busy} onClick={() => setSelected(new Set(batchable))}>
                   {s.reviewSelectAll}
                 </button>
-                <button type="button" disabled={busy || selected.size === 0} onClick={() => approveBatch(batchPlan(doc, suggestions, allChoices, client.languages, selected))}>
+                <button type="button" disabled={busy || selected.size === 0} onClick={() => approveBatch(doc.id, batchPlan(doc, suggestions, allChoices, client.languages, selected))}>
                   {busy ? s.reviewWorking : s.reviewApproveSelected}
                 </button>
-                <button type="button" disabled={busy} onClick={() => approveBatch(batchPlan(doc, suggestions, allChoices, client.languages))}>
+                <button type="button" disabled={busy} onClick={() => approveBatch(doc.id, batchPlan(doc, suggestions, allChoices, client.languages))}>
                   {busy ? s.reviewWorking : s.reviewApproveDocument}
                 </button>
               </div>
@@ -225,12 +232,12 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource }:
                           disabled={busy || choice.mergeInto === undefined || invalidNames}
                           onClick={() => {
                             const approval = entityApproval(e.id, choice, client.languages);
-                            if (approval) void approveItems({ entities: [approval], relations: [] });
+                            if (approval) void approveItems(doc.id, { entities: [approval], relations: [] });
                           }}
                         >
                           {busy ? s.reviewWorking : s.reviewApprove}
                         </button>
-                        <button type="button" className="secondary" disabled={busy} onClick={() => void rejectItems({ entities: [e.id], relations: [] })}>
+                        <button type="button" className="secondary" disabled={busy} onClick={() => void rejectItems(doc.id, { entities: [e.id], relations: [] })}>
                           {s.reviewReject}
                         </button>
                       </div>
@@ -265,11 +272,11 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource }:
                         type="button"
                         disabled={busy || !relationReady(doc, r.id)}
                         title={relationReady(doc, r.id) ? undefined : s.reviewRelationBlocked}
-                        onClick={() => void approveItems({ entities: [], relations: [r.id] })}
+                        onClick={() => void approveItems(doc.id, { entities: [], relations: [r.id] })}
                       >
                         {busy ? s.reviewWorking : s.reviewApprove}
                       </button>
-                      <button type="button" className="secondary" disabled={busy} onClick={() => void rejectItems({ entities: [], relations: [r.id] })}>
+                      <button type="button" className="secondary" disabled={busy} onClick={() => void rejectItems(doc.id, { entities: [], relations: [r.id] })}>
                         {s.reviewReject}
                       </button>
                       {!relationReady(doc, r.id) && <span className="muted">{s.reviewRelationBlocked}</span>}

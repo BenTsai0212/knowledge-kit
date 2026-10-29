@@ -1,14 +1,16 @@
 // 上傳頁（docs/upload.md）：選檔、拖放或貼上文字 → 預覽 → 在彈出視窗中確認後寫入（#42）。
 // 可選的等級與專案只列出目前身分看得到的；實際能否寫入由 RLS 決定。上傳內容一律以文字節點顯示。
 // 切換身分或語言時由 App 以 key 重建本元件，清除表單、預覽與結果。
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { clientConfig } from "../client/load";
 import type { Database } from "../db/database";
 import { chunk } from "../upload/chunk";
 import { extractText, formatOf, ParseError } from "../upload/parse";
 import { uploadDocument, UploadError } from "../upload/write";
 import type { ExtractionState } from "../extraction/run";
+import { LevelBadge, ProjectBadge } from "./AccessBadges";
 import { ExtractionStatus } from "./ExtractionStatus";
+import { Notice } from "./Notice";
 import { createRequestGate } from "./requests";
 import { strings, type UploadFailure } from "./strings";
 import { audienceRoles, formatBytes, todayIso } from "./upload-helpers";
@@ -61,6 +63,7 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
   // 連點時 state 還沒更新，以 ref 確保同一份預覽只寫入一次
   const writeStarted = useRef(false);
   const dialog = useRef<HTMLDialogElement>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const d = dialog.current;
@@ -154,11 +157,11 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
     }
   }
 
-  const summary: [string, string][] = [
+  const summary: [string, ReactNode][] = [
     [s.uploadDocTitle, title],
     [s.uploadLanguage, languageName.of(docLanguage) ?? docLanguage],
-    [s.uploadVisibility, levels.find((l) => l.id === visibility)?.label[language] ?? visibility],
-    [s.uploadProject, project === "" ? s.uploadNoProject : (projects.find((p) => p.id === project)?.label[language] ?? project)],
+    [s.uploadVisibility, <LevelBadge visibility={visibility} language={language} />],
+    [s.uploadProject, project === "" ? s.uploadNoProject : <ProjectBadge project={project} language={language} />],
     [s.uploadDate, date === "" ? s.undated : date],
     [s.uploadAudience, audience],
   ];
@@ -183,7 +186,7 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
       >
         <label>
           {s.uploadFile}
-          <input key={fileInputKey} type="file" accept=".txt,.md,.markdown,.pdf,.docx" onChange={(e) => chooseFile(e.target.files?.[0] ?? null)} />
+          <input ref={fileInput} key={fileInputKey} type="file" accept=".txt,.md,.markdown,.pdf,.docx" onChange={(e) => chooseFile(e.target.files?.[0] ?? null)} />
         </label>
         <p className="muted">{s.uploadDrop}</p>
         {file !== null && (
@@ -199,6 +202,16 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
         {s.uploadPaste}
         <textarea rows={4} value={pasted} placeholder={s.uploadPastePlaceholder} disabled={file !== null} onChange={(e) => edit(setPasted)(e.target.value)} />
       </label>
+      {parseError !== null && (
+        // 解析錯誤顯示在檔案區與貼上區旁邊：有檔案時可以清除，沒有時可以重新選檔
+        <Notice
+          kind="error"
+          title={s.noticeParseTitle}
+          action={file !== null ? { label: s.uploadClearFile, onClick: clearFile } : { label: s.uploadChooseAgain, onClick: () => fileInput.current?.click() }}
+        >
+          {s.uploadErrors[parseError]}
+        </Notice>
+      )}
       <label>
         {s.uploadDocTitle}
         <input type="text" value={title} onChange={(e) => edit(setTitle)(e.target.value)} />
@@ -246,7 +259,6 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
       <button type="button" disabled={parsing} onClick={() => void preview()}>
         {parsing ? s.uploadParsing : s.uploadPreview}
       </button>
-      {parseError !== null && <p className="error">{s.uploadErrors[parseError]}</p>}
 
       <dialog
         ref={dialog}
@@ -258,7 +270,13 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
       >
         {confirm !== null && (
           <>
-            <h2>{s.uploadConfirmTitle}</h2>
+            <header className="dialog-header">
+              <h2>{s.uploadConfirmTitle}</h2>
+              {/* 與 Esc、「返回修改」相同：保留表單內容；寫入中停用 */}
+              <button type="button" className="icon-button" aria-label={s.dialogClose} title={s.dialogClose} disabled={confirm.writing} onClick={() => setConfirm(null)}>
+                ✕
+              </button>
+            </header>
             <dl>
               {summary.map(([label, value]) => (
                 <div key={label}>
@@ -286,7 +304,11 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
                 </ol>
               </details>
             )}
-            {confirm.error !== undefined && <p className="error">{s.uploadErrors[confirm.error]}</p>}
+            {confirm.error !== undefined && (
+              <Notice kind="error" title={s.noticeWriteTitle} action={{ label: s.uploadBack, onClick: () => setConfirm(null) }}>
+                {s.uploadErrors[confirm.error]}
+              </Notice>
+            )}
             {confirm.result === undefined ? (
               <div className="dialog-actions">
                 <button

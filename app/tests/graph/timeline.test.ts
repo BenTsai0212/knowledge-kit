@@ -80,7 +80,12 @@ describe("readTimeline 的內容", () => {
       const entries = await readTimeline(db, "manager", { language });
       expect(entries.every((e) => e.language === language)).toBe(true);
       expect(entries.map((e) => e.date)).toEqual(entries.map((e) => e.date).sort().reverse());
-      for (const e of entries) expect(e.date, e.documentId).toBe(documents.find((d) => d.id === e.documentId)!.date);
+      for (const e of entries) {
+        const doc = documents.find((d) => d.id === e.documentId)!;
+        expect(e.date, e.documentId).toBe(doc.date);
+        // 可見等級與專案（畫面上的標籤，#48）
+        expect([e.visibility, e.project], e.documentId).toEqual([doc.visibility, doc.project ?? null]);
+      }
     }
   });
 

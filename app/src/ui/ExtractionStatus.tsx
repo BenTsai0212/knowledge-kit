@@ -1,5 +1,6 @@
 // 上傳後的萃取狀態（#44）：萃取中（第幾批）、已送審的筆數、捨棄的筆數、未萃取的段落、失敗時可以重試。
 import type { ExtractionState } from "../extraction/run";
+import { Notice } from "./Notice";
 import { errorMessage, strings, type ExtractFailure } from "./strings";
 
 interface Props {
@@ -52,25 +53,23 @@ export function ExtractionStatus({ state, running: active, language, onRetry }: 
           {state.skipped.length}
         </p>
       )}
-      {!active && failed.length > 0 && (
-        <p className="error">
-          {s.extractFailed}
-          {s.colon}
-          {reasons.map(message).join(" ")}
-        </p>
-      )}
-      {notRun > 0 && (
-        <p className="muted">
-          {s.extractNotRun}
-          {s.colon}
-          {notRun}
-        </p>
-      )}
       {/* 重試會一併送出失敗與未執行的批次；已成功的批次不重送 */}
-      {!active && (failed.length > 0 || notRun > 0) && (
-        <button type="button" onClick={onRetry}>
-          {s.extractRetry}
-        </button>
+      {!active && failed.length > 0 && (
+        <Notice kind="error" title={s.extractFailed} action={{ label: s.extractRetry, onClick: onRetry }}>
+          {reasons.map(message).join(" ")}
+          {notRun > 0 && (
+            <div>
+              {s.extractNotRun}
+              {s.colon}
+              {notRun}
+            </div>
+          )}
+        </Notice>
+      )}
+      {!active && failed.length === 0 && notRun > 0 && (
+        <Notice kind="info" title={s.extractNotRun} action={{ label: s.extractRetry, onClick: onRetry }}>
+          {notRun}
+        </Notice>
       )}
     </div>
   );

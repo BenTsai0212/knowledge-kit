@@ -156,7 +156,8 @@ export function App() {
               }
         }
       />
-      <nav className="tabs" aria-label={s.views}>
+      {/* 第一層：底線式的導覽列（#48） */}
+      <nav className="primary-tabs" aria-label={s.views}>
         {(
           [
             ["qa", s.tabQa],

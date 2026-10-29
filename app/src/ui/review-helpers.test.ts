@@ -21,7 +21,7 @@ const relation = (id: string, from: string, to: string, status: ReviewRelation["
   rejectedWithEntity: false,
 });
 const LANGS = ["zh-TW", "en"];
-const doc = (entities: ReviewEntity[], relations: ReviewRelation[]): ReviewDocument => ({ id: "d", title: "d", language: "zh-TW", entities, relations });
+const doc = (entities: ReviewEntity[], relations: ReviewRelation[]): ReviewDocument => ({ id: "d", title: "d", language: "zh-TW", visibility: "public", project: null, entities, relations });
 
 describe("initialChoice、canBatch、entityApproval", () => {
   it("new 建立新實體、auto 帶入合併對象、choose 尚未選擇且不能批次核准", () => {

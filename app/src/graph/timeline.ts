@@ -16,6 +16,9 @@ export interface TimelineEntry {
   // YYYY-MM-DD；文件沒有日期時為 null，排在最後
   date: string | null;
   language: string;
+  // 文件的可見等級與專案（畫面上的標籤）
+  visibility: string;
+  project: string | null;
   passages: TimelinePassage[];
 }
 
@@ -30,6 +33,8 @@ interface Row {
   title: string;
   date: string | null;
   language: string;
+  visibility: string;
+  project: string | null;
   passage_id: string;
   content: string;
   entity_ids: string[];
@@ -38,6 +43,7 @@ interface Row {
 // 只列出有看得到的段落的文件；entity_sources 只回傳出處段落看得到的列
 const SQL = `
   SELECT d.id AS document_id, d.title, to_char(d.document_date, 'YYYY-MM-DD') AS date, d.language,
+         d.visibility_level_id AS visibility, d.project_id AS project,
          p.id AS passage_id, p.content,
          coalesce(array_agg(s.entity_id ORDER BY s.entity_id) FILTER (WHERE s.entity_id IS NOT NULL), '{}') AS entity_ids
     FROM kk.documents d
@@ -54,7 +60,7 @@ export async function readTimeline(db: Database, identityId: string | null, opti
     if (options.entityId !== undefined && !r.entity_ids.includes(options.entityId)) continue;
     let entry = entries.at(-1);
     if (entry?.documentId !== r.document_id) {
-      entry = { documentId: r.document_id, title: r.title, date: r.date, language: r.language, passages: [] };
+      entry = { documentId: r.document_id, title: r.title, date: r.date, language: r.language, visibility: r.visibility, project: r.project, passages: [] };
       entries.push(entry);
     }
     entry.passages.push({ id: r.passage_id, content: r.content, entityIds: r.entity_ids });

@@ -1,0 +1,33 @@
+// 統一的提示框（#48）：錯誤、警告、資訊三種，包含圖示、標題、說明與可選的動作按鈕。
+// 顯示在發生的位置，不另外彈出視窗。錯誤以 role="alert"、其他以 role="status" 讓螢幕閱讀器讀到。
+import type { ReactNode } from "react";
+
+export type NoticeKind = "error" | "warning" | "info";
+
+interface Props {
+  kind: NoticeKind;
+  title: string;
+  children?: ReactNode;
+  action?: { label: string; onClick(): void; disabled?: boolean };
+}
+
+const ICONS: Record<NoticeKind, string> = { error: "!", warning: "⚠", info: "i" };
+
+export function Notice({ kind, title, children, action }: Props) {
+  return (
+    <div className={`notice notice-${kind}`} role={kind === "error" ? "alert" : "status"}>
+      <span className="notice-icon" aria-hidden="true">
+        {ICONS[kind]}
+      </span>
+      <div className="notice-body">
+        <strong>{title}</strong>
+        {children !== undefined && <div>{children}</div>}
+        {action && (
+          <button type="button" className="secondary" disabled={action.disabled} onClick={action.onClick}>
+            {action.label}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}

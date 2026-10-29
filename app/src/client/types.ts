@@ -90,6 +90,8 @@ export interface VisibilityLevel {
   id: Id;
   label: LocalizedText;
   rank: number;
+  // 畫面上可見等級標籤的顏色（#RRGGBB）
+  color: string;
 }
 
 export interface Project {
