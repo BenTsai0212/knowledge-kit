@@ -75,6 +75,8 @@ PGlite 的 session user 固定是 superuser `postgres`。以 `username: "kk_app"
 | `relation_sources` | `relation_id`、`passage_id`（出處，合為 PK）、`from_entity_id`、`to_entity_id`（與關係的兩端相同，以複合外鍵參照 `relations (id, from_entity_id, to_entity_id)` 確保一致） | 同上 |
 | `pending_entities`、`pending_entity_sources`、`pending_relations`、`pending_relation_sources` | 待審的實體、關係與出處；每列帶 `document_id`，以複合外鍵保證出處與兩端屬於同一份文件 | 萃取（#44） |
 | `review_decisions` | `item_id` PK（待審實體或關係）、`decision`（`approve`／`reject`）、`decided_by`、`names`、`merge_into` | 核准與退回（#44） |
+| `conflicts` | `id` PK（`pc-` 開頭）、`document_id`（新文件）、`new_passage_id`（新文件的段落，以複合外鍵保證屬於新文件）、`old_passage_id`（既有段落）、`summary`（1～200 字）；`(new_passage_id, old_passage_id)` 不重複 | 說法不同的偵測（#51） |
+| `conflict_decisions` | `conflict_id` PK、`new_passage_id`、`old_passage_id`（以複合外鍵保證與 `conflicts` 一致）、`decision`（`coexist`／`supersede`／`not_conflict`）、`decided_by` | 主管的處理（#51） |
 
 - id 一律 `text`；`client/` 的名單沿用設定中的 id。
 - `language` 以 CHECK 限制為語言代碼格式；「必須屬於 `client.json` 的 `languages`」由匯入程式檢查。
@@ -156,6 +158,25 @@ policy 中的子查詢同樣受 RLS 限制，所以「段落看得到」已包�
 - **待審與已退回的內容不會外流**：檢索、問答、圖譜、路徑、時間軸、原文的查詢都不讀取待審資料表；核准後的可見範圍沿用「權限規則」。
 - **合併後可見範圍變大**（#44 決定）：把待審實體合併到既有實體時，新文件的段落成為該實體的出處。依「實體只要有一個看得到的出處就看得到」，看得到新文件的人也看得到該實體，包含只在其他文件出現過的其他語言名稱。待審區的合併選單會提示這一點。
 - `oracle.ts` 的 `expectedReviewVisible()`、`canDecide()`、`approvedSample()` 是上述規則的獨立實作；`app/tests/extraction/review.test.ts` 以兩種設定（參考情境，以及一般員工也能審核）比對，並測試偽造的決定與正式資料寫入。
+
+## 說法不同
+
+上傳文件與既有段落說法不同之處（#51，migration 0008）：偵測結果寫入 `conflicts`，主管的處理寫入 `conflict_decisions`（每組一筆，主鍵保證只能處理一次）。**只用 INSERT**：「新說法取代舊說法」也只新增一筆決定，不修改、不隱藏舊段落；`kk_app` 仍然沒有任何 `UPDATE`、`DELETE`。寫入與讀取集中在 `app/src/conflicts/store.ts`，一律經 `withIdentity()`。
+
+**`kk_app` 的權限**（0008 新增的部分）：
+
+| 資料表 | 權限 | 寫入（`WITH CHECK`） | 讀取（`USING`） |
+| --- | --- | --- | --- |
+| `conflicts` | `SELECT`、`INSERT` | 有 `can_upload`；`document_id` 是自己上傳的文件（新段落屬於該文件由複合外鍵保證）；既有段落自己看得到，且不在新文件中 | 兩段都看得到，且（有 `can_review`，或已決定為 `coexist`／`supersede`） |
+| `conflict_decisions` | `SELECT`、`INSERT` | 有 `can_review`、`decided_by` 是自己、兩段都看得到 | 兩段都看得到，且（有 `can_review`，或 `decision` 為 `coexist`／`supersede`） |
+
+- **比對只用上傳者看得到的段落**：既有段落必須是上傳者看得到的。新文件與上傳者看不到的機密文件說法不同時不會被偵測，否則等於透露機密內容的存在。
+- **未處理的紀錄只有核准者讀得到**（比照「待審與核准」）：沒有 `can_review` 的身分只看得到兩段都看得到、而且已決定為「並存」或「取代」的組合；未處理與「不是矛盾」的組合看不到。上傳者寫入後讀不到自己寫的紀錄，所以寫入不使用 `RETURNING`。
+- **任何指向另一段的紀錄，只給看得到兩段的人**：例如主管上傳機密文件並標記取代一段公開段落，一般員工看不到這筆紀錄，因此問答、時間軸與原文都不會出現任何標示（問答與畫面的處理在後續的 PR 實作）。
+- **policy 不互相參照**：`conflict_decisions` 帶上兩段的 id（複合外鍵 `(conflict_id, new_passage_id, old_passage_id)` 參照 `conflicts`），SELECT policy 只查 `passages`；`conflicts` 的 SELECT policy 查 `conflict_decisions`。參照方向是 `conflicts → conflict_decisions → passages`。
+- **寫入決定不查 `conflicts`**：INSERT 的 `WITH CHECK` 若寫成 `EXISTS (SELECT … FROM kk.conflicts)`，`conflicts` 的 SELECT policy 又參照 `conflict_decisions`，PostgreSQL 會報 infinite recursion（已以測試確認）。有 `can_review` 時「該組看得到」等於「兩段都看得到」，兩段又由複合外鍵保證與該組一致，所以直接檢查兩段。`store.ts` 的 `decideConflict()` 以 `INSERT … SELECT FROM kk.conflicts` 帶入兩段的 id，看不到該組時沒有可寫入的列，視為拒絕。
+- 違反 CHECK、外鍵或被 RLS 拒絕時，`store.ts` 回傳 `denied`；重複的組合或已處理的組回傳 `conflict`。不顯示資料庫的訊息。
+- `oracle.ts` 的 `expectedConflictVisible()`、`canWriteConflict()`、`canDecideConflict()` 是上述規則的獨立實作；`app/tests/conflicts/store.test.ts` 以兩種設定（參考情境，以及一般員工也能審核）比對，並測試偽造的決定、`kk_app` 沒有 `UPDATE`／`DELETE`，以及「忽略身分的資料層」的反向驗證。
 
 ## 越權測試（滲漏矩陣）
 
