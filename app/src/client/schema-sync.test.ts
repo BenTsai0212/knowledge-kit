@@ -8,10 +8,12 @@ import themeSchema from "../../../client/schema/theme.schema.json";
 import documentSchema from "../../../client/schema/data/document.schema.json";
 import entitiesSchema from "../../../client/schema/data/entities.schema.json";
 import relationsSchema from "../../../client/schema/data/relations.schema.json";
+import questionsSchema from "../../../client/schema/evals/questions.schema.json";
 import { datasetManifests } from "../dataset/keys";
+import { evalsManifests } from "../evals/keys";
 import { i18nManifests, manifests as clientManifests } from "./keys";
 
-const manifests = [...clientManifests, ...i18nManifests, ...datasetManifests];
+const manifests = [...clientManifests, ...i18nManifests, ...datasetManifests, ...evalsManifests];
 
 interface ObjectSchema {
   properties?: Record<string, unknown>;
@@ -28,6 +30,7 @@ const schemas: Record<string, unknown> = {
   "data/document.schema.json": documentSchema,
   "data/entities.schema.json": entitiesSchema,
   "data/relations.schema.json": relationsSchema,
+  "evals/questions.schema.json": questionsSchema,
 };
 
 function resolve(schema: unknown, pointer: string): ObjectSchema {

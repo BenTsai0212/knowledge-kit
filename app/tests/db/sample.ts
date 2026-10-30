@@ -1,33 +1,8 @@
 // 滲漏矩陣用的最小虛構資料。以結構化資料表示，同一份資料同時匯入 PGlite 與交給 oracle.ts 計算預期結果。
 import type { PGliteInterface } from "@electric-sql/pglite";
+import type { Doc, Entity, Passage, Relation, Sample } from "../../src/evals/oracle";
 
-export interface Doc {
-  id: string;
-  level: string;
-  project: string | null;
-}
-export interface Passage {
-  id: string;
-  doc: string;
-  level: string;
-  project: string | null;
-}
-export interface Entity {
-  id: string;
-  sources: string[];
-}
-export interface Relation {
-  id: string;
-  from: string;
-  to: string;
-  sources: string[];
-}
-export interface Sample {
-  docs: Doc[];
-  passages: Passage[];
-  entities: Entity[];
-  relations: Relation[];
-}
+export type { Doc, Entity, Passage, Relation, Sample } from "../../src/evals/oracle";
 
 const LEVELS = ["public", "internal", "confidential"];
 const PROJECTS = [null, "bluewing", "longpier"];

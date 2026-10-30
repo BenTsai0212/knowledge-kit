@@ -4,7 +4,7 @@ import client from "../../../client/client.json";
 import knowledgeModel from "../../../client/knowledge-model.json";
 import scenarios from "../../../client/scenarios.json";
 import theme from "../../../client/theme.json";
-import type { ClientConfig, ClientFiles, ConflictsConfig, RetrievalConfig, UploadConfig } from "./types";
+import type { ClientConfig, ClientFiles, ConflictsConfig, EvalThresholds, RetrievalConfig, UploadConfig } from "./types";
 
 // JSON import 的字串型別會放寬成 string，列舉值無法在編譯時比對；
 // 這裡比對其餘的形狀（缺欄位、型別不符時 typecheck 失敗），列舉值由 ajv 檢查。
@@ -22,12 +22,14 @@ const files: Widen<ClientFiles> = { client, theme, knowledgeModel, access, scena
 export const RETRIEVAL_DEFAULTS: RetrievalConfig = { provider: "keyword-hash", topK: 5, minScore: 0.1 };
 export const UPLOAD_DEFAULTS: UploadConfig = { passageMaxChars: 300, extractMaxBatches: 3 };
 export const CONFLICTS_DEFAULTS: ConflictsConfig = { enabled: false, candidatesPerPassage: 3, minScore: 0.15 };
+export const EVAL_THRESHOLDS_DEFAULTS: EvalThresholds = { citation: 0.9, answer: 0.8, leakage: 0, refusal: 1 };
 
 export function normalizeClient(raw: ClientFiles): ClientConfig {
   return {
     ...raw,
     client: {
       ...raw.client,
+      evals: { ...raw.client.evals, thresholds: { ...EVAL_THRESHOLDS_DEFAULTS, ...raw.client.evals?.thresholds } },
       retrieval: { ...RETRIEVAL_DEFAULTS, ...raw.client.retrieval },
       upload: { ...UPLOAD_DEFAULTS, ...raw.client.upload },
       conflicts: { ...CONFLICTS_DEFAULTS, ...raw.client.conflicts },

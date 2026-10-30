@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import clientSchema from "../../../client/schema/client.schema.json";
-import { clientConfig, CONFLICTS_DEFAULTS, normalizeClient, RETRIEVAL_DEFAULTS, UPLOAD_DEFAULTS } from "./load";
+import { clientConfig, CONFLICTS_DEFAULTS, EVAL_THRESHOLDS_DEFAULTS, normalizeClient, RETRIEVAL_DEFAULTS, UPLOAD_DEFAULTS } from "./load";
 import type { ClientFiles } from "./types";
 
 describe("normalizeClient", () => {
@@ -55,5 +55,19 @@ describe("normalizeClient", () => {
     const props = clientSchema.properties.conflicts.properties;
     expect(CONFLICTS_DEFAULTS).toEqual({ enabled: props.enabled.default, candidatesPerPassage: props.candidatesPerPassage.default, minScore: props.minScore.default });
     expect(clientConfig.client.conflicts.enabled).toBe(true);
+  });
+
+  it("評測門檻省略時補上預設值，預設值與 Schema 的 default 相同", () => {
+    const raw = (thresholds?: object) =>
+      ({ ...clientConfig, client: { ...clientConfig.client, evals: { path: "evals/", thresholds } } }) as unknown as ClientFiles;
+    expect(normalizeClient(raw()).client.evals).toEqual({ path: "evals/", thresholds: EVAL_THRESHOLDS_DEFAULTS });
+    expect(normalizeClient(raw({ answer: 0.7 })).client.evals.thresholds).toEqual({ ...EVAL_THRESHOLDS_DEFAULTS, answer: 0.7 });
+    const props = clientSchema.properties.evals.properties.thresholds.properties;
+    expect(EVAL_THRESHOLDS_DEFAULTS).toEqual({
+      citation: props.citation.default,
+      answer: props.answer.default,
+      leakage: props.leakage.default,
+      refusal: props.refusal.default,
+    });
   });
 });
