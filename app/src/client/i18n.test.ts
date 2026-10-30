@@ -3,6 +3,7 @@ import workerReadme from "../../../worker/README.md?raw";
 import { errorMessage, fill, strings, taskErrorMessage, TRANSLATIONS } from "./i18n";
 import { i18nManifests } from "./keys";
 import { clientConfig } from "./load";
+import { sources, stripComments } from "./source-scan";
 
 // 巢狀物件攤平成 "errors.daily_limit" 這類鍵
 const flatten = (value: object, prefix = ""): [string, unknown][] =>
@@ -74,46 +75,6 @@ describe("fill", () => {
 
 // 結構測試：介面文字只來自 client/i18n/，元件不寫死文字（docs/client-config.md「翻譯檔」）。
 // 只能檢查中日韓文字；寫死的英文介面文字由審查把關。
-const sources = Object.entries(
-  import.meta.glob<string>(["../**/*.ts", "../**/*.tsx", "!../**/*.test.ts"], { query: "?raw", import: "default", eager: true }),
-);
-
-// 去掉註解，保留字串、樣板字串、正規表達式與 JSX 文字（略過其中的 //、/* 與引號）
-function stripComments(text: string): string {
-  let out = "";
-  let quote: string | null = null;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (quote) {
-      out += c;
-      if (c === "\\") out += text[++i] ?? "";
-      else if (c === quote) quote = null;
-    } else if (c === "/" && text[i + 1] === "/") {
-      while (i < text.length && text[i] !== "\n") i++;
-      out += "\n";
-    } else if (c === "/" && text[i + 1] === "*") {
-      const end = text.indexOf("*/", i + 2);
-      i = end < 0 ? text.length : end + 1;
-    } else if (c === "/" && /(^|[(,=:[!&|?{};]|\breturn)\s*$/.test(out.slice(-20))) {
-      // 正規表達式：讀到字元類別外、未跳脫的 /
-      let inClass = false;
-      out += c;
-      for (i++; i < text.length && text[i] !== "\n"; i++) {
-        const r = text[i];
-        out += r;
-        if (r === "\\") out += text[++i] ?? "";
-        else if (r === "[") inClass = true;
-        else if (r === "]") inClass = false;
-        else if (r === "/" && !inClass) break;
-      }
-    } else {
-      if (c === '"' || c === "'" || c === "`") quote = c;
-      out += c;
-    }
-  }
-  return out;
-}
-
 const CJK = /[　-〿぀-ヿ㐀-䶿一-鿿가-힯＀-￯]/;
 
 // 允許中日韓文字的檔：都不是畫面上的文字（畫面依錯誤類型從翻譯檔取訊息，不顯示 Error.message）

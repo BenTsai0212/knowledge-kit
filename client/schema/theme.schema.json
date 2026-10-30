@@ -1,19 +1,37 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "theme.schema.json",
-  "title": "theme.json：色票、字體",
+  "title": "theme.json：色票、圓角、字體",
   "type": "object",
   "additionalProperties": false,
-  "required": ["colors", "fonts"],
+  "required": ["colors", "radius", "fonts"],
   "definitions": {
     "Color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+    "ColorAlpha": { "description": "帶透明度的顏色 #RRGGBBAA", "type": "string", "pattern": "^#[0-9A-Fa-f]{8}$" },
+    "Length": { "description": "CSS 長度，單位為 px 或 rem", "type": "string", "pattern": "^(0|[0-9]+(\\.[0-9]+)?(px|rem))$" },
     "FontStack": { "description": "CSS font-family 值", "type": "string", "minLength": 1 }
   },
   "properties": {
     "colors": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["primary", "onPrimary", "background", "surface", "text", "textMuted", "border"],
+      "required": [
+        "primary",
+        "onPrimary",
+        "background",
+        "surface",
+        "text",
+        "textMuted",
+        "border",
+        "danger",
+        "warning",
+        "success",
+        "info",
+        "onStatus",
+        "mark",
+        "overlay",
+        "graphFallback"
+      ],
       "properties": {
         "primary": { "$ref": "#/definitions/Color" },
         "onPrimary": { "$ref": "#/definitions/Color" },
@@ -21,7 +39,26 @@
         "surface": { "$ref": "#/definitions/Color" },
         "text": { "$ref": "#/definitions/Color" },
         "textMuted": { "$ref": "#/definitions/Color" },
-        "border": { "$ref": "#/definitions/Color" }
+        "border": { "$ref": "#/definitions/Color" },
+        "danger": { "$ref": "#/definitions/Color" },
+        "warning": { "$ref": "#/definitions/Color" },
+        "success": { "$ref": "#/definitions/Color" },
+        "info": { "$ref": "#/definitions/Color" },
+        "onStatus": { "$ref": "#/definitions/Color" },
+        "mark": { "$ref": "#/definitions/Color" },
+        "overlay": { "$ref": "#/definitions/ColorAlpha" },
+        "graphFallback": { "$ref": "#/definitions/Color" }
+      }
+    },
+    "radius": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["small", "medium", "large", "pill"],
+      "properties": {
+        "small": { "$ref": "#/definitions/Length" },
+        "medium": { "$ref": "#/definitions/Length" },
+        "large": { "$ref": "#/definitions/Length" },
+        "pill": { "$ref": "#/definitions/Length" }
       }
     },
     "fonts": {

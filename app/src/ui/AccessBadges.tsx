@@ -6,7 +6,7 @@ import { clientConfig } from "../client/load";
 export function LevelBadge({ visibility, language }: { visibility: string; language: string }) {
   const level = clientConfig.access.visibilityLevels.find((l) => l.id === visibility);
   return (
-    <span className="access-badge level" style={{ "--level-color": level?.color ?? "#888888" } as CSSProperties}>
+    <span className="access-badge level" style={{ "--level-color": level?.color ?? "var(--color-graphFallback)" } as CSSProperties}>
       {level?.label[language] ?? visibility}
     </span>
   );

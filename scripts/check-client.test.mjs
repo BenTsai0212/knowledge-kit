@@ -31,6 +31,8 @@ describe("check-client", () => {
         "client.json /model",
         "client.json /dataset/path",
         "theme.json /colors/primary",
+        "theme.json /colors/overlay",
+        "theme.json /radius/pill",
         "theme.json /fonts",
         "scenarios.json /scenarios/0/title",
         "knowledge-model.json /entityTypes/1/id",
@@ -167,8 +169,8 @@ describe("check-client", () => {
     expect(props("client.schema.json")).toHaveProperty("evals");
     expect(props("client.schema.json").model.$ref).toBe("common.schema.json#/definitions/ModelCode");
     expect(props("client.schema.json")).toHaveProperty("dataset");
-    // 主題（色票、字體）
-    expect(schema("theme.schema.json").required).toEqual(["colors", "fonts"]);
+    // 主題（色票、圓角、字體）
+    expect(schema("theme.schema.json").required).toEqual(["colors", "radius", "fonts"]);
   });
 });
 

@@ -6,7 +6,21 @@
     "surface": "#FFFFFF",
     "text": "#1F2328",
     "textMuted": "#59636E",
-    "border": "#D0D7DE"
+    "border": "#D0D7DE",
+    "danger": "#B42318",
+    "warning": "#7D4E00",
+    "success": "#1A6E33",
+    "info": "#2F5D8A",
+    "onStatus": "#FFFFFF",
+    "mark": "#FFF3BF",
+    "overlay": "#00000066",
+    "graphFallback": "#888888"
+  },
+  "radius": {
+    "small": "4px",
+    "medium": "6px",
+    "large": "8px",
+    "pill": "999px"
   },
   "fonts": {
     "body": "system-ui, \"Noto Sans TC\", sans-serif",

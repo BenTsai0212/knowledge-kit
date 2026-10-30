@@ -35,11 +35,11 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 
 | 路徑 | 內容 |
 | --- | --- |
-| `app/` | 前端（Vite＋React＋TypeScript）；`index.html` 與 `src/`；`src/client/` 是 `client/` 設定的型別與讀取（改 Schema 時同步修改，見 `docs/client-config.md`）；`src/client/i18n.ts` 是介面文字唯一的讀取模組（`strings()`、`fill()`、`errorMessage()`；結構測試在 `i18n.test.ts`） |
+| `app/` | 前端（Vite＋React＋TypeScript）；`index.html` 與 `src/`；`src/client/` 是 `client/` 設定的型別與讀取（改 Schema 時同步修改，見 `docs/client-config.md`）；`src/client/i18n.ts` 是介面文字唯一的讀取模組（`strings()`、`fill()`、`errorMessage()`；結構測試在 `i18n.test.ts`）；`src/client/source-scan.ts` 是結構測試共用的原始碼掃描 |
 | `app/src/dataset/` | 資料集（`client/data/`）的型別、鍵清單、讀取（`load.ts`）、跨檔檢查（`validate.ts`）與匯入（`seed.ts`） |
 | `app/src/retrieval/` | 檢索：`retrieve.ts` 經 `withIdentity()` 取段落再計分；`VectorProvider` 接口（`types.ts`）、預設實作 `keyword-hash`（`tokenize.ts`、`keyword-hash.ts`）；使用哪個實作只在 `providers.ts` 決定（`providers.test.ts` 檢查）；說明見 `docs/retrieval.md` |
 | `app/src/qa/` | 問答：`answer.ts` 的 `ask()`（`retrieve()` → 本機拒答 → `prompt.ts` 組 prompt → `/api/ask` → 拒答標記與 `citations.ts` 的引用解析）；`types.ts` 是 `/api/ask` 的傳輸接口，`api.ts`（＋`sse.ts`）是真的實作，`testing.ts` 是測試用的假實作（測試不呼叫真實 API）；只透過 `retrieve()` 取得段落（`structure.test.ts` 檢查）；說明見 `docs/qa.md` |
-| `app/src/ui/` | 畫面（入口是 `app/src/App.tsx`，頁籤切換問答、圖譜、時間軸、上傳與待審；App 也在背景執行上傳後的萃取與說法不同的比對）：待審頁是 `ReviewPage.tsx`（核准計畫在 `review-helpers.ts`；含「說法不同」的並列與處理），萃取狀態是 `ExtractionStatus.tsx`，比對狀態是 `ConflictStatus.tsx`，時間軸與原文面板的標示是 `PassageMarks.tsx`；共用的提示框是 `Notice.tsx`，可見等級與專案的標籤是 `AccessBadges.tsx`；元件（`*.tsx`；圖譜是 `GraphPage.tsx`、`GraphView.tsx`（cytoscape，動態載入）、`EntityPanel.tsx`、`PathPanel.tsx`，時間軸是 `TimelinePage.tsx`）、介面文字一律以 `app/src/client/i18n.ts` 的 `strings()` 取得（翻譯檔在 `client/i18n/`）、`access-code.ts`（邀請碼只放 `sessionStorage`）、`requests.ts`（切換身分或語言時捨棄進行中的提問）；說明見 `docs/qa.md`「畫面」 |
+| `app/src/ui/` | 畫面（入口是 `app/src/App.tsx`，頁籤切換問答、圖譜、時間軸、上傳與待審；App 也在背景執行上傳後的萃取與說法不同的比對）：待審頁是 `ReviewPage.tsx`（核准計畫在 `review-helpers.ts`；含「說法不同」的並列與處理），萃取狀態是 `ExtractionStatus.tsx`，比對狀態是 `ConflictStatus.tsx`，時間軸與原文面板的標示是 `PassageMarks.tsx`；共用的提示框是 `Notice.tsx`，可見等級與專案的標籤是 `AccessBadges.tsx`；元件（`*.tsx`；圖譜是 `GraphPage.tsx`、`GraphView.tsx`（cytoscape，動態載入）、`EntityPanel.tsx`、`PathPanel.tsx`，時間軸是 `TimelinePage.tsx`）、介面文字一律以 `app/src/client/i18n.ts` 的 `strings()` 取得（翻譯檔在 `client/i18n/`）、樣式是 `app.css`（顏色與圓角只用 `theme.ts` 由 `client/theme.json` 設定的 CSS 變數，不寫死顏色；結構測試在 `theme.test.ts`）、`access-code.ts`（邀請碼只放 `sessionStorage`）、`requests.ts`（切換身分或語言時捨棄進行中的提問）；說明見 `docs/qa.md`「畫面」 |
 | `app/src/graph/` | 知識圖譜：`read.ts` 的 `readGraph()` 經 `withIdentity()` 一次讀出看得到的實體、關係與出處段落；`path.ts` 的 `shortestPath()` 在可見圖上找最短路徑；`timeline.ts` 的 `readTimeline()` 依日期列出看得到的文件與段落（權限測試在 `app/tests/graph/`）；說明見 `docs/graph.md` |
 | `app/src/upload/` | 上傳（說明見 `docs/upload.md`；畫面是 `app/src/ui/UploadPage.tsx`）：`parse.ts` 擷取純文字（`pdf.ts`、`docx.ts` 以動態 import 載入 `pdfjs-dist`、`mammoth`，見 ADR 0002；上限是 `parse.ts` 的常數）、`markdown.ts`、`chunk.ts` 切段；`write.ts` 的 `uploadDocument()` 經 `withIdentity()` 寫入文件與段落（`kk_app` 唯一的寫入；權限由 RLS 執行，見 `docs/data-model.md`「寫入規則」，測試在 `app/tests/upload/`） |
 | `app/src/extraction/` | 上傳文件的萃取（說明見 `docs/extraction.md`）：`run.ts` 分批呼叫 `/api/ask`（`batch.ts`、`prompt.ts`）、`output.ts` 解析與驗證、`merge.ts` 合併比對；`store.ts` 經 `withIdentity()` 寫入待審、讀取待審區、核准與退回（只用 INSERT；規則由 RLS 執行，見 `docs/data-model.md`「待審與核准」，測試在 `app/tests/extraction/`） |
@@ -102,6 +102,7 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 <!-- 本專案實際踩到的坑才寫進來，附來源。 -->
 
 - Vitest 的 `fsModuleCache`（預設開啟）會沿用舊的 `import.meta.glob` 結果：新增 `app/src/db/migrations/*.sql` 後，本機測試不會載入新檔，可能誤判通過。`vitest.config.ts` 已設 `fsModuleCache: false`，不要移除。〔#6 PR 2 以暫時的 migration 驗證滲漏測試時發現｜Vitest 修正快取失效後〕
+- Vitest 預設把 CSS 檔換成空字串，連 `?raw` 也一樣，檢查 CSS 的測試會因為讀到空字串而誤判通過。`vitest.config.ts` 的 `css.include` 已加入 `app/src/ui/app.css`，不要移除；要檢查其他 CSS 檔時加進去。〔#58 PR 2 的主題結構測試發現｜Vitest 的 `?raw` 不再受 `css` 設定影響後〕
 
 ## 8. 維護本文件
 
