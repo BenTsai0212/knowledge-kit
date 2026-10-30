@@ -77,6 +77,7 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
 | --- | --- |
 | `ui/GraphPage.tsx` | 讀取圖譜；切換身分或語言時重新讀取，之後才回來的舊結果忽略（`ui/requests.ts`）；選取的節點已看不到時清除 |
 | `ui/GraphView.tsx` | 以 cytoscape 畫圖：節點依實體類型著色（`knowledge-model.json` 的 `color`），標籤是 `names[介面語言]`，邊的標籤是關係類型的 `label` |
+| `ui/graph-style.ts` | cytoscape 的樣式：從 `theme.json` 的 CSS 變數讀出顏色（找不到實體類型時用 `graphFallback`），標籤加上背景色的外框；系統切換淺色／深色時由 `GraphView.tsx` 重新套用（[client-config.md](client-config.md)「`theme.json`」） |
 | `ui/EntityPanel.tsx` | 點節點時顯示類型、名稱、相關實體（可點）與出處段落；出處以 `readSource()` 打開原文 |
 | `ui/PathPanel.tsx` | 多跳路徑：選起點與終點，在圖上標示路徑，逐步列出每個關係與它的出處；找不到時顯示固定文字「找不到這兩個實體之間的路徑。」，不區分原因 |
 | `ui/TimelinePage.tsx` | 時間軸：依日期由新到舊列出介面語言的文件與看得到的段落，可依實體篩選；日期直接顯示 `YYYY-MM-DD` 字串，沒有日期時顯示「未註明日期」；本次工作階段上傳的文件加上「上傳」標籤，從上傳頁跳過來時捲動到該文件並標示後淡出（`animationend` 時結束；減少動態效果時不淡出）（[docs/upload.md](upload.md)） |

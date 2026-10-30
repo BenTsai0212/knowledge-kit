@@ -74,7 +74,7 @@ export const manifests: ManifestEntry[] = [
   {
     schema: "theme.schema.json",
     pointer: "",
-    keys: { colors: "required", radius: "required", fonts: "required" } satisfies KeyManifest<ThemeFile>,
+    keys: { colors: "required", darkColors: "required", radius: "required", fonts: "required" } satisfies KeyManifest<ThemeFile>,
   },
   {
     schema: "theme.schema.json",

@@ -101,7 +101,7 @@ export function validateClient(files, dataset, i18n) {
   }
   if (dataset) errors.push(...validateDataset(ajv, dataset));
   if (i18n && languages) errors.push(...validateI18n(ajv, i18n, languages, defaultLanguage));
-  return [...errors, ...checkReferences(valid)];
+  return [...errors, ...checkReferences(valid), ...checkContrast(valid)];
 }
 
 // 資料集只驗證 Schema；語言、類型、可見等級等跨檔規則由匯入程式檢查（docs/dataset.md）。
@@ -219,6 +219,102 @@ function checkReferences(valid) {
       unique(file, `/scenarios/${i}/questions`, s.questions);
       if (roles && !roles.has(s.role)) {
         errors.push({ file, path: `/scenarios/${i}/role`, message: `角色 ${s.role} 不存在` });
+      }
+    });
+  }
+  return errors;
+}
+
+// 對比度（WCAG 2.x）：文字 4.5:1（AA 一般文字），實體類型的節點顏色 3:1（1.4.11 非文字）。
+// 淺色（colors）與深色（darkColors）各檢查一次；淡色底色依 app.css 的 color-mix(in srgb, …) 比例算出。
+// 組合見 docs/client-config.md「對比度」。
+export const TEXT_CONTRAST = 4.5;
+export const GRAPHIC_CONTRAST = 3;
+const SCHEMES = ["colors", "darkColors"];
+const STATUS = ["danger", "warning", "success", "info"];
+// app.css 的淡色比例：提示框與可見等級標籤 14%，選取中的項目 12%
+const TINT = 14;
+const SELECTED_TINT = 12;
+
+const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+
+// color-mix(in srgb, a p%, b)：在 sRGB 數值上線性內插
+export function mix(a, percent, b) {
+  const [x, y] = [rgb(a), rgb(b)];
+  return `#${x.map((v, i) => Math.round((v * percent + y[i] * (100 - percent)) / 100).toString(16).padStart(2, "0")).join("")}`;
+}
+
+function luminance(hex) {
+  const [r, g, b] = rgb(hex).map((v) => {
+    const c = v / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+export function contrast(a, b) {
+  const [l1, l2] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (l1 + 0.05) / (l2 + 0.05);
+}
+
+// 無條件捨去到小數一位，避免 4.46 顯示成 4.5:1 卻不通過
+const ratio = (value) => `${Math.floor(value * 10) / 10}:1`;
+
+function checkContrast(valid) {
+  const theme = valid["theme.json"];
+  if (!theme) return [];
+  const errors = [];
+  const label = (level) => `「${level.label[valid["client.json"]?.defaultLanguage] ?? level.id}」（${level.id}）`;
+  for (const scheme of SCHEMES) {
+    const c = theme[scheme];
+    // [前景鍵, 背景名稱, 背景色]
+    const pairs = [
+      ...["text", "textMuted"].flatMap((fg) => ["background", "surface"].map((bg) => [fg, bg, c[bg]])),
+      ["primary", "surface", c.surface],
+      ["primary", "background", c.background],
+      ["onPrimary", "primary", c.primary],
+      ...STATUS.flatMap((s) => {
+        const tint = [`${s} ${TINT}% + surface`, mix(c[s], TINT, c.surface)];
+        return [
+          [s, "surface", c.surface],
+          [s, "background", c.background],
+          [s, ...tint],
+          ["text", ...tint],
+          ["onStatus", s, c[s]],
+        ];
+      }),
+      ["text", "mark", c.mark],
+      ["text", `primary ${SELECTED_TINT}% + surface`, mix(c.primary, SELECTED_TINT, c.surface)],
+    ];
+    for (const [fg, bg, color] of pairs) {
+      const value = contrast(c[fg], color);
+      if (value < TEXT_CONTRAST) {
+        errors.push({ file: "theme.json", path: `/${scheme}/${fg}`, message: `與 ${bg} 的對比 ${ratio(value)}，需要 ${TEXT_CONTRAST}:1` });
+      }
+    }
+
+    // 可見等級標籤：一般文字色放在等級色的淡色底上
+    valid["access.json"]?.visibilityLevels.forEach((level, i) => {
+      const value = contrast(c.text, mix(level.color, TINT, c.surface));
+      if (value < TEXT_CONTRAST) {
+        errors.push({
+          file: "access.json",
+          path: `/visibilityLevels/${i}/color`,
+          message: `${label(level)}的標籤底色與 ${scheme} 的 text 對比 ${ratio(value)}，需要 ${TEXT_CONTRAST}:1`,
+        });
+      }
+    });
+    // 圖譜的節點：實體類型的顏色放在頁面或面板的背景上
+    valid["knowledge-model.json"]?.entityTypes.forEach((type, i) => {
+      for (const bg of ["background", "surface"]) {
+        const value = contrast(type.color, c[bg]);
+        if (value < GRAPHIC_CONTRAST) {
+          errors.push({
+            file: "knowledge-model.json",
+            path: `/entityTypes/${i}/color`,
+            message: `${label(type)}與 ${scheme} 的 ${bg} 對比 ${ratio(value)}，需要 ${GRAPHIC_CONTRAST}:1`,
+          });
+        }
       }
     });
   }

@@ -86,6 +86,8 @@ export interface ThemeFonts {
 
 export interface ThemeFile {
   colors: ThemeColors;
+  // 深色模式（prefers-color-scheme: dark）的色票
+  darkColors: ThemeColors;
   radius: ThemeRadius;
   fonts: ThemeFonts;
 }

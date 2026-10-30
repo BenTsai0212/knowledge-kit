@@ -21,7 +21,7 @@ npm run check:client
 | 檔案 | Schema | 內容 |
 | --- | --- | --- |
 | `client.json` | `client.schema.json` | 基本資訊、語言、模型、資料集與評測題庫的位置 |
-| `theme.json` | `theme.schema.json` | 色票（含語意色）、圓角、字體 |
+| `theme.json` | `theme.schema.json` | 色票（含語意色，淺色與深色）、圓角、字體 |
 | `knowledge-model.json` | `knowledge-model.schema.json` | 實體類型（含圖譜顏色）、關係類型、別名規則、合併策略 |
 | `access.json` | `access.schema.json` | 可見等級、專案名單、角色 |
 | `scenarios.json` | `scenarios.schema.json` | 示範情境與預設問題 |
@@ -82,7 +82,7 @@ npm run check:client
 
 ## `theme.json`
 
-畫面的顏色與圓角全部來自這裡：`main.tsx` 把每個欄位設成 CSS 變數（`colors.<鍵>` → `--color-<鍵>`、`radius.<鍵>` → `--radius-<鍵>`、`fonts.<鍵>` → `--font-<鍵>`，見 `app/src/ui/theme.ts`），`app.css` 只透過變數取得。實體類型與可見等級的顏色不在這裡，由 `knowledge-model.json`、`access.json` 提供。
+畫面的顏色與圓角全部來自這裡：`main.tsx` 以 `themeStyleSheet()`（`app/src/ui/theme.ts`）產生一段 `<style>`，把每個欄位設成 CSS 變數（`colors.<鍵>` → `--color-<鍵>`、`radius.<鍵>` → `--radius-<鍵>`、`fonts.<鍵>` → `--font-<鍵>`），`app.css` 只透過變數取得。實體類型與可見等級的顏色不在這裡，由 `knowledge-model.json`、`access.json` 提供。
 
 | 欄位 | 必填 | 格式 | 說明 |
 | --- | --- | --- | --- |
@@ -101,6 +101,7 @@ npm run check:client
 | `colors.mark` | 是 | `#RRGGBB` | 原文面板中引用段落的標示底色（`<mark>`） |
 | `colors.overlay` | 是 | `#RRGGBBAA` | 確認視窗後方的遮罩；短提示的陰影也由它算出 |
 | `colors.graphFallback` | 是 | `#RRGGBB` | 找不到實體類型或可見等級時，圖譜節點與等級標籤使用的顏色 |
+| `darkColors.<鍵>` | 是 | 同 `colors` | 深色模式的色票，鍵與 `colors` 完全相同（Schema 以 `$ref` 共用同一份定義），全部必填 |
 | `radius.small` | 是 | 長度（`px` 或 `rem`，或 `0`） | 小圓角：引用編號按鈕 |
 | `radius.medium` | 是 | 同上 | 一般圓角：按鈕、輸入框、提示框、待審卡片 |
 | `radius.large` | 是 | 同上 | 大圓角：卡片、確認視窗、上傳區 |
@@ -109,7 +110,26 @@ npm run check:client
 | `fonts.heading` | 是 | CSS `font-family` 值 | 標題字體 |
 
 - 提示框與可見等級標籤的淡色底色，不另外設欄位：以 `color-mix(in srgb, <狀態色或等級色> 14%, surface)` 算出。
+- **深色模式**：依系統設定（`prefers-color-scheme`）自動切換，沒有手動開關。`colors` 放在 `:root`，`darkColors` 放在 `@media (prefers-color-scheme: dark)` 內，切換完全由 CSS 處理；圓角與字型兩種模式相同。圖譜（cytoscape）不讀 CSS，由 `app/src/ui/graph-style.ts` 的 `graphStyle()` 從 CSS 變數組出樣式，`GraphView.tsx` 監聽系統切換（`watchColorScheme()`）後重新套用。實體類型與可見等級只有一個顏色，淺色、深色共用，所以要選兩種背景上都清楚的顏色（見下方「對比度」）。
 - **不寫死顏色**：`app.css` 與 `app/src/` 的程式中不得出現顏色值（`#hex`、`rgb()`、`hsl()` 等）或色名；`app.css` 中帶顏色的屬性只能由 `var(--…)`、`color-mix(in srgb, …)` 與 `transparent`、`currentColor` 等關鍵字組成。結構測試在 `app/src/ui/theme.test.ts`，也確認 `app.css` 用到的 `--color-*`、`--radius-*`、`--font-*` 都由 `theme.json` 提供。需要新的顏色時，依[擴充 Schema](#擴充-schema) 在 `theme.json` 加欄位。
+
+### 對比度
+
+`check:client` 依 WCAG 2.x 計算對比（sRGB 各通道轉線性後算相對亮度 `L = 0.2126R + 0.7152G + 0.0722B`，對比為 `(L1 + 0.05) / (L2 + 0.05)`），`colors` 與 `darkColors` 各檢查一次。淡色底色依 `app.css` 的 `color-mix(in srgb, …)` 比例，在 sRGB 數值上內插後再比較。
+
+| 前景 | 背景 | 需要 |
+| --- | --- | --- |
+| `text`、`textMuted` | `background`、`surface` | 4.5:1 |
+| `primary` | `surface`、`background`（連結、頁籤、次要按鈕） | 4.5:1 |
+| `onPrimary` | `primary` | 4.5:1 |
+| `danger`、`warning`、`success`、`info` | `surface`、`background`、各自的淡色底（14%） | 4.5:1 |
+| `text` | 各狀態色的淡色底（14%，提示框內文） | 4.5:1 |
+| `onStatus` | `danger`、`warning`、`success`、`info` | 4.5:1 |
+| `text` | `mark`；主色的淡色底（12%，選取中的項目） | 4.5:1 |
+| `text` | 各可見等級的淡色底（`access.json` 的 `color` 14%，等級標籤） | 4.5:1 |
+| 實體類型的 `color`（圖譜節點，非文字） | `background`、`surface` | 3:1 |
+
+錯誤訊息指出配色、欄位與背景，例如 `theme.json /darkColors/textMuted：與 surface 的對比 3.9:1，需要 4.5:1`；可見等級與實體類型會指出是哪一個，例如 `knowledge-model.json /entityTypes/0/color：「人員」（person）與 darkColors 的 background 對比 2.5:1，需要 3:1`。對比值無條件捨去到小數一位。
 
 不使用任何合作夥伴的品牌名稱、wordmark 或專屬字體名稱作為預設值（RFC 0001）。
 
@@ -123,7 +143,7 @@ npm run check:client
 | --- | --- | --- | --- |
 | `id` | 是 | `Id`，不可重複 | 例如 `person`、`project` |
 | `label` | 是 | `LocalizedText` | 顯示名稱 |
-| `color` | 是 | `#RRGGBB` | 圖譜中節點的顏色（[docs/graph.md](graph.md)）。沒有預設值：類型由客戶定義 |
+| `color` | 是 | `#RRGGBB` | 圖譜中節點的顏色（[docs/graph.md](graph.md)），淺色與深色模式共用，與兩組 `background`、`surface` 的對比都要 ≥ 3:1（[對比度](#對比度)）。沒有預設值：類型由客戶定義 |
 | `aliasRules.ignoreCase` | 是 | boolean | 比對名稱與別名時忽略大小寫 |
 | `aliasRules.normalizeWidth` | 是 | boolean | 比對前把全形英數與符號轉為半形 |
 | `aliasRules.ignoreWhitespace` | 是 | boolean | 比對時忽略空白 |
@@ -151,7 +171,7 @@ npm run check:client
 | `id` | 是 | `Id`，不可重複 | 例如 `internal` |
 | `label` | 是 | `LocalizedText` | 顯示名稱 |
 | `rank` | 是 | 0 以上的整數，不可重複 | 越大越機密。角色看得到 `rank` 小於或等於自己等級的內容 |
-| `color` | 是 | `#RRGGBB` | 畫面上可見等級標籤的顏色（時間軸、待審頁、上傳的確認視窗、原文面板）。標籤以淡色背景、該顏色的邊框與一般文字色顯示，所以深淺都能清楚閱讀。沒有預設值 |
+| `color` | 是 | `#RRGGBB` | 畫面上可見等級標籤的顏色（時間軸、待審頁、上傳的確認視窗、原文面板）。標籤以淡色背景、該顏色的邊框與一般文字色顯示，所以深淺都能清楚閱讀；淺色與深色模式共用，`check:client` 檢查標籤的對比（[對比度](#對比度)）。沒有預設值 |
 
 ### `projects[]`
 

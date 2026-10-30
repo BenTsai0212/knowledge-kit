@@ -1,10 +1,10 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "theme.schema.json",
-  "title": "theme.json：色票、圓角、字體",
+  "title": "theme.json：色票（淺色與深色）、圓角、字體",
   "type": "object",
   "additionalProperties": false,
-  "required": ["colors", "radius", "fonts"],
+  "required": ["colors", "darkColors", "radius", "fonts"],
   "definitions": {
     "Color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
     "ColorAlpha": { "description": "帶透明度的顏色 #RRGGBBAA", "type": "string", "pattern": "^#[0-9A-Fa-f]{8}$" },
@@ -49,6 +49,10 @@
         "overlay": { "$ref": "#/definitions/ColorAlpha" },
         "graphFallback": { "$ref": "#/definitions/Color" }
       }
+    },
+    "darkColors": {
+      "description": "深色模式（prefers-color-scheme: dark）的色票，鍵與 colors 相同",
+      "$ref": "#/properties/colors"
     },
     "radius": {
       "type": "object",

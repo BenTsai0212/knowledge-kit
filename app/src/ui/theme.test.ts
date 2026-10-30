@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { clientConfig } from "../client/load";
 import { sources, stripComments } from "../client/source-scan";
 import css from "./app.css?raw";
-import { themeVariables } from "./theme";
+import { graphStyle } from "./graph-style";
+import { DARK_SCHEME, themeStyleSheet, themeVariables, watchColorScheme } from "./theme";
 
 const cssText = css.replace(/\/\*[\s\S]*?\*\//g, "");
 
@@ -74,5 +75,53 @@ describe("主題的結構", () => {
       })
       .map(([p]) => p);
     expect(found).toEqual([]);
+  });
+});
+
+describe("深色模式", () => {
+  const sheet = themeStyleSheet(clientConfig.theme);
+  const [light, dark] = sheet.split(`@media ${DARK_SCHEME}`);
+
+  it("淺色放在 :root，深色放在 prefers-color-scheme: dark 內，每個顏色都有", () => {
+    expect(light).toContain("color-scheme: light dark;");
+    for (const [name, value] of Object.entries(themeVariables(clientConfig.theme))) expect(light).toContain(`${name}: ${value};`);
+    expect(dark).toBeDefined();
+    for (const [name, value] of Object.entries(clientConfig.theme.darkColors)) expect(dark).toContain(`--color-${name}: ${value};`);
+    // 深色只換顏色，圓角與字型沿用
+    expect(dark).not.toMatch(/--(?:radius|font)-/);
+  });
+
+  it("系統切換淺色／深色時通知，取消後不再通知", () => {
+    const listeners = new Set<() => void>();
+    const queries: string[] = [];
+    const fake = (query: string) => {
+      queries.push(query);
+      return {
+        addEventListener: (_type: string, fn: () => void) => listeners.add(fn),
+        removeEventListener: (_type: string, fn: () => void) => listeners.delete(fn),
+      } as unknown as MediaQueryList;
+    };
+    let calls = 0;
+    const stop = watchColorScheme(fake, () => calls++);
+    expect(queries).toEqual([DARK_SCHEME]);
+    for (const fn of listeners) fn();
+    expect(calls).toBe(1);
+    stop();
+    expect(listeners.size).toBe(0);
+  });
+
+  it("圖譜的配色只讀 theme.json 提供的變數，切換時讀到的值跟著改變", () => {
+    const read = new Set<string>();
+    const style = (colors: Record<string, string>) =>
+      graphStyle((name) => {
+        read.add(name);
+        return { ...themeVariables(clientConfig.theme), ...Object.fromEntries(Object.entries(colors).map(([k, v]) => [`--color-${k}`, v])) }[name] ?? "";
+      });
+    const [lightStyle, darkStyle] = [style({}), style({ ...clientConfig.theme.darkColors })];
+    const defined = new Set(Object.keys(themeVariables(clientConfig.theme)));
+    expect([...read].filter((name) => !defined.has(name))).toEqual([]);
+    const nodeColor = (s: ReturnType<typeof graphStyle>) => JSON.stringify(s).match(/"color":"([^"]+)"/)?.[1];
+    expect(nodeColor(lightStyle)).toBe(clientConfig.theme.colors.text);
+    expect(nodeColor(darkStyle)).toBe(clientConfig.theme.darkColors.text);
   });
 });
