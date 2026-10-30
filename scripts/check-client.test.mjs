@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { CONFIG_FILES, DATASET_FILES, I18N_DIR, checkClient, validateClient } from "./check-client.mjs";
+import { CONFIG_FILES, DATASET_FILES, I18N_DIR, checkClient, contrast, mix, validateClient } from "./check-client.mjs";
 
 const readJson = (url) => JSON.parse(readFileSync(url, "utf8"));
 const example = () =>
@@ -32,6 +32,7 @@ describe("check-client", () => {
         "client.json /dataset/path",
         "theme.json /colors/primary",
         "theme.json /colors/overlay",
+        "theme.json /darkColors",
         "theme.json /radius/pill",
         "theme.json /fonts",
         "scenarios.json /scenarios/0/title",
@@ -45,7 +46,51 @@ describe("check-client", () => {
     );
     expect(errors).toContainEqual({ file: "client.json", path: "/displayName", message: "語言 fr 不在 client.json 的 languages 內" });
     expect(errors).toContainEqual({ file: "theme.json", path: "/fonts", message: "缺少必填欄位 heading" });
+    expect(errors).toContainEqual({ file: "theme.json", path: "/darkColors", message: "缺少必填欄位 graphFallback" });
     expect(errors).toContainEqual({ file: "access.json", path: "/roles/0/projects/1", message: "專案 unknown 不存在" });
+  });
+
+  it("對比度的算法：WCAG 2.x 的相對亮度，color-mix 在 sRGB 數值上內插", () => {
+    expect(contrast("#000000", "#FFFFFF")).toBeCloseTo(21, 5);
+    expect(contrast("#FFFFFF", "#000000")).toBeCloseTo(21, 5);
+    expect(contrast("#777777", "#777777")).toBe(1);
+    expect(contrast("#767676", "#FFFFFF")).toBeCloseTo(4.54, 2);
+    expect(mix("#000000", 14, "#FFFFFF")).toBe("#dbdbdb");
+    expect(mix("#B42318", 100, "#FFFFFF")).toBe("#b42318");
+  });
+
+  it("淺色與深色的文字對比不足 4.5:1 時失敗，指出配色、欄位與背景", () => {
+    const files = example();
+    files["theme.json"].darkColors.textMuted = "#555555";
+    files["theme.json"].colors.onStatus = "#B0B0B0";
+    const errors = validateClient(files);
+    expect(errors).toContainEqual({ file: "theme.json", path: "/darkColors/textMuted", message: "與 surface 的對比 2.1:1，需要 4.5:1" });
+    expect(errors.map((e) => e.path)).toContain("/colors/onStatus");
+    expect(errors.every((e) => e.file === "theme.json")).toBe(true);
+  });
+
+  it("淡色底色（提示框、標示）也檢查對比", () => {
+    const files = example();
+    files["theme.json"].darkColors.mark = "#9A8A40";
+    const errors = validateClient(files);
+    expect(errors.map((e) => `${e.path} ${e.message.split(" 的對比")[0]}`)).toEqual(["/darkColors/text 與 mark"]);
+  });
+
+  it("可見等級與實體類型的顏色在任一配色下不足時，指出是哪一個、對哪組背景", () => {
+    const files = example();
+    // 等級標籤的淡色底只有 14%，一般文字色夠深就不會不足；這裡讓深色的 text 變暗來觸發
+    files["theme.json"].darkColors.text = "#6E7681";
+    files["knowledge-model.json"].entityTypes[0].color = "#2F5D8A";
+    const errors = validateClient(files).filter((e) => e.file !== "theme.json");
+    expect(errors).toEqual([
+      ...["public", "internal", "confidential"].map((id, i) => ({
+        file: "access.json",
+        path: `/visibilityLevels/${i}/color`,
+        message: expect.stringMatching(new RegExp(`^「.+」（${id}）的標籤底色與 darkColors 的 text 對比 [\\d.]+:1，需要 4\\.5:1$`)),
+      })),
+      { file: "knowledge-model.json", path: "/entityTypes/0/color", message: "「人員」（person）與 darkColors 的 background 對比 2.5:1，需要 3:1" },
+      { file: "knowledge-model.json", path: "/entityTypes/0/color", message: "「人員」（person）與 darkColors 的 surface 對比 2.2:1，需要 3:1" },
+    ]);
   });
 
   it("LocalizedText 缺少預設語言時失敗", () => {
@@ -169,8 +214,8 @@ describe("check-client", () => {
     expect(props("client.schema.json")).toHaveProperty("evals");
     expect(props("client.schema.json").model.$ref).toBe("common.schema.json#/definitions/ModelCode");
     expect(props("client.schema.json")).toHaveProperty("dataset");
-    // 主題（色票、圓角、字體）
-    expect(schema("theme.schema.json").required).toEqual(["colors", "radius", "fonts"]);
+    // 主題（色票（淺色與深色）、圓角、字體）
+    expect(schema("theme.schema.json").required).toEqual(["colors", "darkColors", "radius", "fonts"]);
   });
 });
 

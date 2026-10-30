@@ -3,7 +3,7 @@
     {
       "id": "person",
       "label": { "zh-TW": "人員", "en": "Person" },
-      "color": "#2F5D8A",
+      "color": "#3D7AB8",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
       "mergeStrategy": "review"
     },

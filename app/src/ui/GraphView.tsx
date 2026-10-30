@@ -5,6 +5,8 @@ import { clientConfig } from "../client/load";
 import type { PathStep } from "../graph/path";
 import type { Graph } from "../graph/read";
 import { entityName } from "./graph-labels";
+import { graphStyle } from "./graph-style";
+import { watchColorScheme } from "./theme";
 
 interface Props {
   graph: Graph;
@@ -17,21 +19,30 @@ interface Props {
 
 const { entityTypes, relationTypes } = clientConfig.knowledgeModel;
 
-// fallback：找不到實體類型時的顏色（theme.json 的 graphFallback）
-function elements(graph: Graph, language: string, fallback: string): ElementDefinition[] {
+// 找不到實體類型時不設 color，由 graphStyle() 套用 theme.json 的 graphFallback
+function elements(graph: Graph, language: string): ElementDefinition[] {
   const color = new Map(entityTypes.map((t) => [t.id, t.color]));
   const relationLabel = new Map(relationTypes.map((t) => [t.id, t.label[language]]));
   // 先排成一個圓作為起始位置，cose 不打亂起始位置（randomize: false），版面每次相同
   const step = (2 * Math.PI) / Math.max(graph.entities.length, 1);
   return [
-    ...graph.entities.map((e, i) => ({
-      data: { id: e.id, label: entityName(e, language), color: color.get(e.type) ?? fallback },
-      position: { x: 300 * Math.cos(i * step), y: 300 * Math.sin(i * step) },
-    })),
+    ...graph.entities.map((e, i) => {
+      const typeColor = color.get(e.type);
+      return {
+        data: { id: e.id, label: entityName(e, language), ...(typeColor === undefined ? {} : { color: typeColor }) },
+        position: { x: 300 * Math.cos(i * step), y: 300 * Math.sin(i * step) },
+      };
+    }),
     ...graph.relations.map((r) => ({
       data: { id: `relation:${r.id}`, source: r.from, target: r.to, label: relationLabel.get(r.type) ?? r.type },
     })),
   ];
+}
+
+// 目前生效的 CSS 變數（淺色或深色）
+function currentStyle() {
+  const style = getComputedStyle(document.documentElement);
+  return graphStyle((name) => style.getPropertyValue(name));
 }
 
 function markPath(cy: Core, path: PathStep[] | null) {
@@ -53,48 +64,11 @@ export function GraphView({ graph, language, selected, path, onSelect }: Props) 
     let cancelled = false;
     void import("cytoscape").then(({ default: cytoscape }) => {
       if (cancelled || container.current === null) return;
-      const style = getComputedStyle(document.documentElement);
       const instance = cytoscape({
         container: container.current,
-        elements: elements(graph, language, style.getPropertyValue("--color-graphFallback")),
+        elements: elements(graph, language),
         layout: { name: "cose", randomize: false, animate: false },
-        style: [
-          {
-            selector: "node",
-            style: {
-              "background-color": "data(color)",
-              label: "data(label)",
-              color: style.getPropertyValue("--color-text"),
-              "font-family": style.getPropertyValue("--font-body"),
-              "font-size": 12,
-              "text-valign": "bottom",
-              "text-margin-y": 4,
-            },
-          },
-          {
-            selector: "edge",
-            style: {
-              width: 1.5,
-              "line-color": style.getPropertyValue("--color-border"),
-              "target-arrow-color": style.getPropertyValue("--color-border"),
-              "target-arrow-shape": "triangle",
-              "curve-style": "bezier",
-              label: "data(label)",
-              "font-size": 9,
-              color: style.getPropertyValue("--color-textMuted"),
-            },
-          },
-          { selector: "node.selected", style: { "border-width": 4, "border-color": style.getPropertyValue("--color-text") } },
-          { selector: "node.path", style: { "border-width": 4, "border-color": style.getPropertyValue("--color-primary") } },
-          {
-            selector: "edge.path",
-            style: {
-              width: 4,
-              "line-color": style.getPropertyValue("--color-primary"),
-              "target-arrow-color": style.getPropertyValue("--color-primary"),
-            },
-          },
-        ],
+        style: currentStyle(),
       });
       instance.on("tap", "node", (e) => select.current(e.target.id()));
       instance.on("tap", (e) => e.target === instance && select.current(null));
@@ -109,6 +83,13 @@ export function GraphView({ graph, language, selected, path, onSelect }: Props) 
     };
     // selected 的變化在下一個 effect 處理，不重建圖
   }, [graph, language]);
+
+  // 系統切換淺色／深色時，CSS 變數已由 @media 改變，重新讀出並套用到 cytoscape
+  useEffect(() => {
+    return watchColorScheme((query) => window.matchMedia(query), () => {
+      cy.current?.style(currentStyle());
+    });
+  }, []);
 
   useEffect(() => {
     cy.current?.nodes().removeClass("selected");

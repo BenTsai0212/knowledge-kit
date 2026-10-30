@@ -16,6 +16,22 @@
     "overlay": "#000000",
     "graphFallback": "#888888"
   },
+  "darkColors": {
+    "primary": "#7EB0E0",
+    "onPrimary": "#0F1A26",
+    "background": "#16191D",
+    "surface": "#1F2328",
+    "text": "#E6EDF3",
+    "textMuted": "#9DA7B3",
+    "border": "#3D444D",
+    "danger": "#FF8A80",
+    "warning": "#E3B341",
+    "success": "#6CC489",
+    "info": "#7EB0E0",
+    "onStatus": "#16191D",
+    "mark": "#5A4A12",
+    "overlay": "#000000A6"
+  },
   "radius": { "small": "4px", "medium": "6px", "large": "8px", "pill": "round" },
   "fonts": { "body": "system-ui, sans-serif" }
 }
