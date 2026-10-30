@@ -7,8 +7,10 @@ import type { Database } from "../db/database";
 import { chunk } from "../upload/chunk";
 import { extractText, formatOf, ParseError } from "../upload/parse";
 import { uploadDocument, UploadError } from "../upload/write";
+import type { ConflictState } from "../conflicts/run";
 import type { ExtractionState } from "../extraction/run";
 import { LevelBadge, ProjectBadge } from "./AccessBadges";
+import { ConflictStatus } from "./ConflictStatus";
 import { ExtractionStatus } from "./ExtractionStatus";
 import { Notice } from "./Notice";
 import { createRequestGate } from "./requests";
@@ -20,15 +22,19 @@ interface Props {
   identity: string;
   language: string;
   // 上傳成功：App 記錄「上傳」標籤，並在背景萃取實體與關係（#44）
-  onUploaded(upload: { documentId: string; title: string; documentLanguage: string; passages: { id: string; content: string }[] }): void;
+  onUploaded(upload: { documentId: string; title: string; date: string | null; documentLanguage: string; passages: { id: string; content: string }[] }): void;
   // 目前身分在本次工作階段上傳的文件的萃取狀態，以及重試
-  extractions: { title: string; state: ExtractionState; running: boolean }[];
+  // conflict：萃取後的比對（#51，conflicts.enabled 時）；還沒開始時為 undefined
+  extractions: Job[];
   onRetryExtraction(documentId: string): void;
+  onRetryConflicts(documentId: string): void;
   // 到時間軸時帶上剛上傳的文件與它的語言，以便捲動到該文件
   onGoto(view: "qa" | "timeline", document?: { id: string; language: string }): void;
 }
 
 const { access, client } = clientConfig;
+
+type Job = { title: string; state: ExtractionState; running: boolean; conflict?: ConflictState; conflictRunning: boolean };
 const PREVIEW_COUNT = 3;
 
 // 預覽成功後在彈出視窗中確認；寫入中不能關閉，同一份預覽只能寫入一次
@@ -39,8 +45,17 @@ type Confirm = {
   error?: UploadFailure;
 };
 
-export function UploadPage({ db, identity, language, onUploaded, extractions, onRetryExtraction, onGoto }: Props) {
+export function UploadPage({ db, identity, language, onUploaded, extractions, onRetryExtraction, onRetryConflicts, onGoto }: Props) {
   const s = strings(language);
+  // 萃取的狀態，以及（開啟比對時）比對的狀態
+  const jobStatus = (job: Job) => (
+    <>
+      <ExtractionStatus state={job.state} running={job.running} language={language} onRetry={() => onRetryExtraction(job.state.documentId)} />
+      {client.conflicts.enabled && (
+        <ConflictStatus state={job.conflict} running={job.conflictRunning} language={language} onRetry={() => onRetryConflicts(job.state.documentId)} />
+      )}
+    </>
+  );
   const role = access.roles.find((r) => r.id === identity);
   const rank = new Map(access.visibilityLevels.map((l) => [l.id, l.rank]));
   const levels = role ? access.visibilityLevels.filter((l) => l.rank <= rank.get(role.visibility)!) : [];
@@ -147,6 +162,7 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
       onUploaded({
         documentId: result.documentId,
         title,
+        date: date === "" ? null : date,
         documentLanguage: docLanguage,
         passages: result.passageIds.map((id, i) => ({ id, content: passages[i] })),
       });
@@ -169,10 +185,10 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
   return (
     <section className="card upload">
       <p className="badge warning">{s.uploadEphemeral}</p>
-      {extractions.map(({ title: docTitle, state, running }) => (
-        <div key={state.documentId} className="card">
-          <p>{docTitle}</p>
-          <ExtractionStatus state={state} running={running} language={language} onRetry={() => onRetryExtraction(state.documentId)} />
+      {extractions.map((job) => (
+        <div key={job.state.documentId} className="card">
+          <p>{job.title}</p>
+          {jobStatus(job)}
         </div>
       ))}
       <div
@@ -331,11 +347,7 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
                 </p>
                 {(() => {
                   const job = extractions.find((x) => x.state.documentId === confirm.result!.documentId);
-                  return (
-                    job && (
-                      <ExtractionStatus state={job.state} running={job.running} language={language} onRetry={() => onRetryExtraction(job.state.documentId)} />
-                    )
-                  );
+                  return job && jobStatus(job);
                 })()}
                 <div className="dialog-actions">
                   <button type="button" onClick={() => onGoto("qa")}>

@@ -2,8 +2,6 @@
 
 上傳文件後，以模型找出新文件與既有段落說法不同的地方，寫成待處理的組合，由主管處理。決策紀錄見 #51。資料表與權限見 [docs/data-model.md](data-model.md)「說法不同」。
 
-> 實作分成 4 個 PR：資料層、偵測、問答的「取代」（以上已完成）、畫面。畫面的部分在最後一個 PR 補上。
-
 偵測結果與上傳的文件一樣，只存在瀏覽器的記憶體資料庫，重新整理頁面就消失。
 
 ## 流程
@@ -133,6 +131,35 @@ If there are no conflicts, reply {"conflicts":[]}.
 - `buildPrompt()` 把新段落接在被取代的段落後面，舊段落加上 `superseded-by="N"`；只補一層，每段只出現一次。system 第 8 條請模型以段落 N 為準。
 - **取代只對看得到新段落的人生效**：決定只在兩段都看得到時讀得到（RLS），看不到新段落的身分在檢索與問答中都與沒有標記時完全相同，不會出現「已過時」或新文件的標題（`app/tests/qa/supersede.test.ts` 以 `oracle.ts` 的 `expectedSupersede()` 比對）。
 
+## 畫面
+
+**背景比對**（`app/src/App.tsx`）：
+- 萃取結束時（`runExtraction()` 回傳），`shouldDetectConflicts()` 為真就接著比對；重試萃取成功後也會接著比對。萃取因邀請碼被拒而停止時不開始。
+- 第一次執行時以 `planConflicts()` 挑選段落並固定下來；之後的「重試比對」只呼叫 `runConflicts()`，送出相同的內容。
+- 與萃取相同：由 App 管理，切換身分、語言或頁籤都不中斷；同一份文件同時只執行一個（`ui/extraction-runner.ts`）。邀請碼使用開始（或重試）當下的碼：沒有碼時記為 `no_access_code`；碼被拒時清除並回到輸入畫面（#26 決定 3）。
+- 比對的狀態只存在記憶體，重新整理就消失。
+
+**上傳頁的比對狀態**（`ui/ConflictStatus.tsx`，`conflicts.enabled` 時顯示在萃取狀態下方）：等待萃取完成、比對中、找到幾組（與捨棄的組數）、超過長度上限而未比對的段落數、沒有相關既有段落的段落數；失敗時以提示框顯示原因與「重試比對」。失敗原因的訊息與萃取共用（`ui/strings.ts` 的 `taskErrorMessage()`）。
+
+**待審頁**（`ui/ReviewPage.tsx`）：
+- 每份文件多一個「說法不同」區塊，列出 `readConflicts()` 讀到的待處理組合。只有說法不同、沒有待審實體與關係的文件也會列出（`review-helpers.ts` 的 `reviewDocuments()`），這時不顯示批次核准的按鈕。
+- 每一組：模型的差異說明（純文字），新說法與既有說法左右並列（窄螢幕時上下排列），各附文件標題、可見等級與專案的標籤、日期、內容與「打開原文」。
+- 三個處理按鈕：「是矛盾，兩者並存」「新說法取代舊說法」「不是矛盾」（`decideConflict()`）。與核准相同：以 ref 防止連點、處理中停用按鈕；資料庫的主鍵也只允許一組有一筆決定。處理後出現短提示「已標記：〈處理方式〉」（沿用 #48 的 `toastText()`），錯誤以提示框顯示在該文件的卡片上方。
+- 「已處理的說法不同」分頁列出已處理的組合與決定。
+- 「待審」頁籤的筆數包含待處理的組數（`pendingCount()`）；比對結束後重新讀取。比對還在進行時，與萃取相同顯示「萃取中」提示與「重新整理」。
+
+**時間軸與原文面板的標示**（`conflicts/marks.ts` 的 `readPassageMarks()`，`readTimeline()`、`readSource()` 的每段加上 `marks`；畫面是 `ui/PassageMarks.tsx`）：
+
+| 決定 | 舊段落 | 新段落 |
+| --- | --- | --- |
+| 兩者並存 | 與〈新文件〉的說法不同 | 與〈舊文件〉的說法不同 |
+| 新說法取代舊說法 | 已由〈新文件〉取代 | 取代〈舊文件〉的說法（#51 決定 2） |
+| 不是矛盾、未處理 | 不標示 | 不標示 |
+
+- 在 `readTimeline()`、`readSource()` 的同一個 `withIdentity()` 中讀取 `conflict_decisions`，**只有看得到另一段時才有標示**（RLS 要求兩段都看得到）。看不到新段落的身分，舊段落在時間軸與原文中都維持原樣。
+- 同一段被多段取代時，「已由…取代」只標示目前身分看得到的新段落中文件日期最新的（日期相同時依段落 id），與問答相同（#51 決定 4）。
+- 點擊標示時打開另一段的原文面板，並標出該段。文件標題以文字節點顯示。
+
 ## 測試
 
 一律以假的 `/api/ask` 執行（`app/src/qa/testing.ts` 的 `fakeTransport`），CI 不呼叫真實 API。
@@ -143,6 +170,8 @@ If there are no conflicts, reply {"conflicts":[]}.
 - `app/tests/conflicts/run.test.ts`：以資料庫與假的 `/api/ask` 測試以上傳者的身分挑選（一般員工不會送出機密段落）、寫入待處理的組合、`max_tokens`／格式錯誤／邀請碼失效／`/api/ask` 的錯誤、重試送出相同的內容、寫入被拒絕、`shouldDetectConflicts()`。
 - `app/tests/conflicts/store.test.ts`：權限（見 docs/data-model.md）。
 - `app/src/qa/prompt.test.ts`、`app/tests/qa/supersede.test.ts`：問答的取代（見上方「問答的取代」）。
+- `app/tests/conflicts/marks.test.ts`：時間軸與原文面板的標示。每個身分（`guest`、`staff`、`manager`、`null`、`nobody`）每段的標示都與 `oracle.ts` 的 `expectedMarks()` 相同（滲漏 0、漏看 0）；**取代不外流**：主管以機密段落取代的公開段落，一般員工的時間軸與原文都沒有標示，也沒有機密文件的標題；以「忽略身分的資料層」做反向驗證。
+- `app/src/ui/review-helpers.test.ts`（`pendingCount()`、`reviewDocuments()`）、`strings.test.ts`（標示的範本、`taskErrorMessage()`）。畫面本身以人工驗收。
 
 ## 限制
 

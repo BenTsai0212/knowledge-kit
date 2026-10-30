@@ -1,6 +1,8 @@
 // 介面文字：集中在本檔，元件與問答模組不寫死文字（#26 決定 4）。正式的翻譯檔格式在 Epic 第 11 項，屆時移到 client/。
 import type { ErrorType } from "../../../worker/src/errors";
 import type { LanguageCode } from "../client/types";
+import type { PassageMarkKind } from "../conflicts/marks";
+import type { ConflictDecision } from "../conflicts/store";
 import type { ParseFailure } from "../upload/parse";
 
 // /api/ask 的錯誤類型（worker/README.md），加上前端自己的錯誤。少了任何一種，型別檢查就會失敗
@@ -155,6 +157,26 @@ export interface UiStrings {
   reviewToastRejected: string;
   reviewGotoGraph: string;
   reviewErrors: Record<"denied" | "conflict", string>;
+  // 說法不同（#51）：待審頁的並列與處理、已處理分頁、處理後的短提示（{name} 換成處理方式）
+  reviewDecidedTab: string;
+  reviewDecidedEmpty: string;
+  conflictSection: string;
+  conflictNew: string;
+  conflictOld: string;
+  conflictDecisions: Record<ConflictDecision, string>;
+  conflictToast: string;
+  // 時間軸與原文面板的標示：{title} 換成另一段所屬文件的標題
+  conflictMarks: Record<PassageMarkKind, string>;
+  // 上傳頁的比對狀態
+  conflictTitle: string;
+  conflictWaiting: string;
+  conflictRunning: string;
+  conflictFound: string;
+  conflictDropped: string;
+  conflictUnchecked: string;
+  conflictUnrelated: string;
+  conflictFailed: string;
+  conflictRetry: string;
   // 標籤與內容之間的分隔（繁中用全形冒號）
   colon: string;
   // 拒答：「沒有資料」與「沒有權限」相同，不透露是否有看不到的文件
@@ -309,6 +331,31 @@ export const STRINGS: Record<LanguageCode, UiStrings> = {
       denied: "沒有權限處理這個項目。",
       conflict: "這個項目已經被處理過，請重新整理。",
     },
+    reviewDecidedTab: "已處理的說法不同",
+    reviewDecidedEmpty: "沒有已處理的說法不同。",
+    conflictSection: "說法不同",
+    conflictNew: "新說法",
+    conflictOld: "既有說法",
+    conflictDecisions: {
+      coexist: "是矛盾，兩者並存",
+      supersede: "新說法取代舊說法",
+      not_conflict: "不是矛盾",
+    },
+    conflictToast: "已標記：{name}",
+    conflictMarks: {
+      conflict: "與〈{title}〉的說法不同",
+      superseded_by: "已由〈{title}〉取代",
+      supersedes: "取代〈{title}〉的說法",
+    },
+    conflictTitle: "比對說法不同",
+    conflictWaiting: "萃取完成後開始比對。",
+    conflictRunning: "比對中…",
+    conflictFound: "找到說法不同的組數",
+    conflictDropped: "捨棄",
+    conflictUnchecked: "超過長度上限、未比對的段落數",
+    conflictUnrelated: "沒有相關既有段落的段落數",
+    conflictFailed: "比對失敗",
+    conflictRetry: "重試比對",
     colon: "：",
     refusal: "找不到可以回答這個問題的資料。",
     uncited: "未附出處",
@@ -476,6 +523,31 @@ export const STRINGS: Record<LanguageCode, UiStrings> = {
       denied: "You don't have permission to handle this item.",
       conflict: "This item has already been handled. Please refresh.",
     },
+    reviewDecidedTab: "Resolved differences",
+    reviewDecidedEmpty: "No differences have been resolved.",
+    conflictSection: "Differing statements",
+    conflictNew: "New statement",
+    conflictOld: "Existing statement",
+    conflictDecisions: {
+      coexist: "A real conflict; keep both",
+      supersede: "The new statement replaces the old one",
+      not_conflict: "Not a conflict",
+    },
+    conflictToast: "Marked: {name}",
+    conflictMarks: {
+      conflict: "Differs from “{title}”",
+      superseded_by: "Superseded by “{title}”",
+      supersedes: "Supersedes “{title}”",
+    },
+    conflictTitle: "Checking for differing statements",
+    conflictWaiting: "Checking starts after extraction finishes.",
+    conflictRunning: "Checking…",
+    conflictFound: "Differences found",
+    conflictDropped: "Discarded",
+    conflictUnchecked: "Passages not checked (over the length limit)",
+    conflictUnrelated: "Passages with no related existing passages",
+    conflictFailed: "Checking failed",
+    conflictRetry: "Retry checking",
     colon: ": ",
     refusal: "I couldn't find information to answer this question.",
     uncited: "No sources cited",
@@ -509,6 +581,15 @@ export function strings(language: LanguageCode): UiStrings {
   if (!Object.hasOwn(STRINGS, language)) throw new Error(`沒有介面文字的語言：${language}`);
   return STRINGS[language];
 }
+
+// 萃取與比對的失敗原因 → 訊息：自己的原因（ExtractFailure）用 extractErrors，其他是 /api/ask 的錯誤類型
+export function taskErrorMessage(language: LanguageCode, error: string): string {
+  const s = strings(language);
+  return Object.hasOwn(s.extractErrors, error) ? s.extractErrors[error as ExtractFailure] : errorMessage(language, error);
+}
+
+// 範本中的 {key} 換成值；以函式替換，不解讀 $& 這類替換字元（比照 toastText）
+export const fill = (template: string, key: string, value: string) => template.replace(`{${key}}`, () => value);
 
 // 錯誤類型 → 使用者看得懂的訊息；不認得的類型用通用訊息
 export function errorMessage(language: LanguageCode, error: string): string {

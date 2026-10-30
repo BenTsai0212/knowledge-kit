@@ -1,6 +1,7 @@
 // 待審頁的核准計畫（#44）：每筆實體的合併選擇，以及批次核准時要送出的項目。
 // 需要選擇合併對象的項目（suggestMerge 的 choose）不能批次核准，只能逐筆決定。
 import type { LocalizedText } from "../client/types";
+import type { ConflictItem } from "../conflicts/store";
 import type { MergeSuggestion } from "../extraction/merge";
 import type { EntityApproval, ReviewDocument } from "../extraction/store";
 
@@ -62,9 +63,21 @@ export const relationReady = (doc: ReviewDocument, relationId: string) => {
   return r !== undefined && [r.from, r.to].every((id) => doc.entities.some((e) => e.id === id && e.status === "approved"));
 };
 
-// 待審筆數（#48）：目前身分看得到的待審實體與關係
-export const pendingCount = (docs: readonly ReviewDocument[]) =>
-  docs.reduce((n, d) => n + [...d.entities, ...d.relations].filter((x) => x.status === "pending").length, 0);
+// 待審筆數（#48）：目前身分看得到的待審實體與關係，加上待處理的說法不同（#51）
+export const pendingCount = (docs: readonly ReviewDocument[], conflicts: readonly Pick<ConflictItem, "decision">[] = []) =>
+  docs.reduce((n, d) => n + [...d.entities, ...d.relations].filter((x) => x.status === "pending").length, 0) +
+  conflicts.filter((c) => c.decision === null).length;
+
+// 待審頁的文件清單（#51）：待審的文件，加上只有說法不同、沒有待審實體與關係的文件（以新段落的文件資訊補上）
+export function reviewDocuments(docs: readonly ReviewDocument[], conflicts: readonly ConflictItem[]): ReviewDocument[] {
+  const out = [...docs];
+  for (const c of conflicts) {
+    if (out.some((d) => d.id === c.documentId)) continue;
+    const p = c.newPassage;
+    out.push({ id: c.documentId, title: p.documentTitle, language: p.language, visibility: p.visibility, project: p.project, entities: [], relations: [] });
+  }
+  return out;
+}
 
 // 名稱輸入框的寬度（size，以半形字元計）：隨內容調整，全形字元算 2 個，不截斷長名稱（#48）
 export const inputSize = (text: string) => Math.max(8, [...text].reduce((n, c) => n + (c.codePointAt(0)! >= 0x2e80 ? 2 : 1), 0) + 2);

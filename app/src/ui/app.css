@@ -559,6 +559,55 @@ label.inline {
   font-size: 0.875rem;
 }
 
+/* 說法不同（#51）：新舊段落左右並列，窄螢幕改為上下排列 */
+.conflict-summary {
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+}
+
+.conflict-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin: 0.5rem 0;
+}
+
+.conflict-side {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+}
+
+.conflict-side h4,
+.conflict-side p {
+  margin: 0 0 0.35rem;
+}
+
+@media (max-width: 640px) {
+  .conflict-pair {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 時間軸與原文面板中段落旁的標示：可以點擊，跳到另一段 */
+.passage-marks {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-left: 0.35rem;
+}
+
+.passage-marks .badge {
+  background: none;
+  cursor: pointer;
+  font-weight: 400;
+}
+
+.passage-marks .mark-superseded_by {
+  border-color: #d4a72c;
+  color: #7d4e00;
+}
+
 /* 核准或退回後的短提示：浮動在視窗上方置中，不隨頁面捲動（#48 審查第 2 次）。區域一直存在（live region） */
 .toast-region {
   position: fixed;

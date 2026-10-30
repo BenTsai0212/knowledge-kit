@@ -1,6 +1,7 @@
 // 時間軸：依日期由新到舊（#42）列出目前身分看得到的文件與段落，只列出介面語言的文件（#31 決定 2），可依實體篩選。
 // 一律經 withIdentity()，權限交給 RLS；日期在 SQL 中轉成字串，不經過 JavaScript 的 Date（不受時區影響）。
 import type { LanguageCode } from "../client/types";
+import { readPassageMarks, type PassageMark } from "../conflicts/marks";
 import type { Database } from "../db/database";
 
 export interface TimelinePassage {
@@ -8,6 +9,8 @@ export interface TimelinePassage {
   content: string;
   // 以本段為出處的實體（只有看得到的）
   entityIds: string[];
+  // 已處理的說法不同與取代（只有看得到另一段時才有）
+  marks: PassageMark[];
 }
 
 export interface TimelineEntry {
@@ -54,7 +57,7 @@ const SQL = `
    ORDER BY d.document_date DESC NULLS LAST, d.id, p.ordinal`;
 
 export async function readTimeline(db: Database, identityId: string | null, options: TimelineOptions): Promise<TimelineEntry[]> {
-  const rows = await db.withIdentity(identityId, async (tx) => (await tx.query<Row>(SQL, [options.language])).rows);
+  const [rows, marks] = await db.withIdentity(identityId, async (tx) => [(await tx.query<Row>(SQL, [options.language])).rows, await readPassageMarks(tx)] as const);
   const entries: TimelineEntry[] = [];
   for (const r of rows) {
     if (options.entityId !== undefined && !r.entity_ids.includes(options.entityId)) continue;
@@ -63,7 +66,7 @@ export async function readTimeline(db: Database, identityId: string | null, opti
       entry = { documentId: r.document_id, title: r.title, date: r.date, language: r.language, visibility: r.visibility, project: r.project, passages: [] };
       entries.push(entry);
     }
-    entry.passages.push({ id: r.passage_id, content: r.content, entityIds: r.entity_ids });
+    entry.passages.push({ id: r.passage_id, content: r.content, entityIds: r.entity_ids, marks: marks.get(r.passage_id) ?? [] });
   }
   return entries;
 }
