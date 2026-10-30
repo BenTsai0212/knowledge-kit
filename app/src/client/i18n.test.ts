@@ -81,6 +81,7 @@ const CJK = /[　-〿぀-ヿ㐀-䶿一-鿿가-힯＀-￯]/;
 const ALLOWED: Record<string, string> = {
   "../dataset/validate.ts": "資料集檢查的錯誤訊息，給開發者（與 check:client 相同）",
   "../dataset/seed.ts": "資料集檢查的錯誤訊息，給開發者",
+  "../evals/validate.ts": "題庫檢查的錯誤訊息，給開發者（與 check:client 相同）",
   "../db/migrate.ts": "migration 的錯誤訊息，給開發者",
   "../db/test-fixtures.ts": "測試資料",
   "../retrieval/tokenize.ts": "中文的停用字",

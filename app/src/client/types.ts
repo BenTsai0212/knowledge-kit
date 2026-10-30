@@ -37,13 +37,25 @@ export interface ConflictsFile {
   minScore?: number;
 }
 
+// 評測台的門檻（docs/evals.md「指標」）：比例的下限；leakage 是有滲漏的題數上限
+export interface EvalThresholdsFile {
+  citation?: number;
+  answer?: number;
+  leakage?: number;
+  refusal?: number;
+}
+
+export interface EvalsFile extends PathRef {
+  thresholds?: EvalThresholdsFile;
+}
+
 export interface ClientFile {
   displayName: LocalizedText;
   defaultLanguage: LanguageCode;
   languages: LanguageCode[];
   model: ModelCode;
   dataset: PathRef;
-  evals: PathRef;
+  evals: EvalsFile;
   retrieval?: RetrievalFile;
   upload?: UploadFile;
   conflicts?: ConflictsFile;
@@ -186,9 +198,15 @@ export interface EntityType extends Omit<EntityTypeFile, "mergeStrategy"> {
 export type RetrievalConfig = Required<RetrievalFile>;
 export type UploadConfig = Required<UploadFile>;
 export type ConflictsConfig = Required<ConflictsFile>;
+export type EvalThresholds = Required<EvalThresholdsFile>;
 
 export interface ClientConfig extends Omit<ClientFiles, "client" | "knowledgeModel"> {
-  client: Omit<ClientFile, "retrieval" | "upload" | "conflicts"> & { retrieval: RetrievalConfig; upload: UploadConfig; conflicts: ConflictsConfig };
+  client: Omit<ClientFile, "evals" | "retrieval" | "upload" | "conflicts"> & {
+    evals: PathRef & { thresholds: EvalThresholds };
+    retrieval: RetrievalConfig;
+    upload: UploadConfig;
+    conflicts: ConflictsConfig;
+  };
   knowledgeModel: {
     entityTypes: EntityType[];
     relationTypes: RelationType[];

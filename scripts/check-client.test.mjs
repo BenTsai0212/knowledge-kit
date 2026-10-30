@@ -1,6 +1,9 @@
-import { readFileSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
-import { CONFIG_FILES, DATASET_FILES, I18N_DIR, checkClient, contrast, mix, validateClient } from "./check-client.mjs";
+import { CONFIG_FILES, DATASET_FILES, EVALS_FILES, I18N_DIR, checkClient, contrast, mix, validateClient } from "./check-client.mjs";
 
 const readJson = (url) => JSON.parse(readFileSync(url, "utf8"));
 const example = () =>
@@ -343,5 +346,96 @@ describe("資料集", () => {
       { file: "data/entities.json", path: "/entities/0/sources", message: "must NOT have fewer than 1 items" },
       { file: "data/relations.json", path: "/relations/0", message: "缺少必填欄位 sources" },
     ]);
+  });
+});
+
+describe("評測題庫", () => {
+  const evals = () => ({
+    root: "evals/",
+    files: Object.fromEntries(Object.keys(EVALS_FILES).map((f) => [f, readJson(new URL(`../client/evals/${f}`, import.meta.url))])),
+  });
+  const check = (data, files = example()) => validateClient(files, undefined, undefined, data);
+  const FILE = "evals/questions.json";
+
+  it("client/evals/ 的範例題庫通過驗證", () => {
+    expect(check(evals())).toEqual([]);
+  });
+
+  it("缺少題庫檔、未知的題庫檔都會失敗", () => {
+    const data = evals();
+    delete data.files["questions.json"];
+    data.files["notes.json"] = {};
+    expect(check(data)).toEqual([
+      { file: FILE, path: "/", message: "缺少題庫檔" },
+      { file: "evals/notes.json", path: "/", message: "未知的題庫檔" },
+    ]);
+  });
+
+  it("Schema：缺欄位、多餘欄位、列舉值、空的同義說法都會失敗", () => {
+    const data = evals();
+    const [q0, q1, q2, q3] = data.files["questions.json"].questions;
+    delete q0.referenceAnswer;
+    q1.note = "x";
+    q2.category = "other";
+    q3.keyPoints = [[]];
+    expect(check(data)).toEqual([
+      { file: FILE, path: "/questions/0", message: "缺少必填欄位 referenceAnswer" },
+      { file: FILE, path: "/questions/1", message: "不允許的欄位 note" },
+      { file: FILE, path: "/questions/2/category", message: expect.stringContaining("allowed values") },
+      { file: FILE, path: "/questions/3/keyPoints/0", message: "must NOT have fewer than 1 items" },
+    ]);
+  });
+
+  it("題目 id 不重複，角色與語言必須存在於 client/ 設定", () => {
+    const data = evals();
+    const questions = data.files["questions.json"].questions;
+    questions[1].id = questions[0].id;
+    questions[2].role = "director";
+    questions[3].language = "ja";
+    expect(check(data)).toEqual([
+      { file: FILE, path: "/questions/1/id", message: `id ${questions[0].id} 重複` },
+      { file: FILE, path: "/questions/2/role", message: "角色 director 不存在" },
+      { file: FILE, path: "/questions/3/language", message: "語言 ja 不在 client.json 的 languages 內" },
+    ]);
+  });
+
+  it("預期回答要有答案段落、關鍵重點與參考答案；預期拒答不能有關鍵重點，參考答案為 null", () => {
+    const data = evals();
+    const questions = data.files["questions.json"].questions;
+    const answer = questions.findIndex((q) => q.expect === "answer");
+    const refusal = questions.findIndex((q) => q.expect === "refusal");
+    Object.assign(questions[answer], { answerPassages: [], keyPoints: [], referenceAnswer: null });
+    Object.assign(questions[refusal], { keyPoints: [["x"]], referenceAnswer: "x" });
+    expect(check(data)).toEqual([
+      { file: FILE, path: `/questions/${answer}/answerPassages`, message: "預期回答時至少要有一個答案段落" },
+      { file: FILE, path: `/questions/${answer}/keyPoints`, message: "預期回答時至少要有一項關鍵重點" },
+      { file: FILE, path: `/questions/${answer}/referenceAnswer`, message: "預期回答時必須有參考答案" },
+      { file: FILE, path: `/questions/${refusal}/keyPoints`, message: "預期拒答時不能有關鍵重點" },
+      { file: FILE, path: `/questions/${refusal}/referenceAnswer`, message: "預期拒答時參考答案必須是 null" },
+    ]);
+  });
+
+  it("門檻：比例為 0～1，滲漏是 0 以上的整數，可省略", () => {
+    const files = example();
+    files["client.json"].evals.thresholds = { citation: 1.5, leakage: 0.5 };
+    expect(validateClient(files).map((e) => e.path)).toEqual(["/evals/thresholds/citation", "/evals/thresholds/leakage"]);
+    delete files["client.json"].evals.thresholds;
+    expect(validateClient(files)).toEqual([]);
+  });
+
+  it("checkClient 讀入 evals.path 的題庫", () => {
+    const dir = mkdtempSync(join(tmpdir(), "kk-client-"));
+    try {
+      cpSync(fileURLToPath(new URL("../client/", import.meta.url)), dir, { recursive: true });
+      writeFileSync(join(dir, "evals", "questions.json"), "{");
+      writeFileSync(join(dir, "evals", "extra.json"), "{}");
+      expect(checkClient(pathToFileURL(`${dir}/`))).toEqual([
+        { file: "evals/questions.json", path: "/", message: expect.stringContaining("JSON 格式錯誤") },
+        { file: "evals/questions.json", path: "/", message: "缺少題庫檔" },
+        { file: "evals/extra.json", path: "/", message: "未知的題庫檔" },
+      ]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

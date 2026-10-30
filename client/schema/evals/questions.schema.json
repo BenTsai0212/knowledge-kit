@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "evals/questions.schema.json",
+  "title": "evals/questions.json：評測題庫",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["questions"],
+  "definitions": {
+    "Synonyms": {
+      "description": "一組同義說法，命中其中一個就算命中這一項；比對前先正規化（NFKC、小寫、去掉空白）",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "pattern": "\\S" }
+    }
+  },
+  "properties": {
+    "questions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "role", "language", "category", "question", "expect", "answerPassages", "keyPoints", "forbidden", "referenceAnswer"],
+        "properties": {
+          "id": { "$ref": "../common.schema.json#/definitions/Id" },
+          "role": { "description": "access.json 的角色 id；以此身分經 withIdentity() 執行", "$ref": "../common.schema.json#/definitions/Id" },
+          "language": {
+            "description": "介面語言，決定回答語言與拒答文字；必須在 client.json 的 languages 內",
+            "$ref": "../common.schema.json#/definitions/LanguageCode"
+          },
+          "category": {
+            "description": "分組顯示用，不影響評分",
+            "type": "string",
+            "enum": ["scenario", "permission", "out-of-scope", "conflict", "extraction-attempt"]
+          },
+          "question": {
+            "description": "問題；長度上限同問答（app/src/qa/prompt.ts 的 MAX_QUESTION_CHARS）",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "pattern": "\\S"
+          },
+          "expect": { "description": "預期結果", "type": "string", "enum": ["answer", "refusal"] },
+          "answerPassages": {
+            "description": "答案段落 id。answer 時至少 1 個且角色看得到；權限題的 refusal 列出角色看不到的答案段落",
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "$ref": "../common.schema.json#/definitions/Id" }
+          },
+          "keyPoints": {
+            "description": "回答必須提到的重點；answer 時至少 1 項，refusal 時為空",
+            "type": "array",
+            "items": { "$ref": "#/definitions/Synonyms" }
+          },
+          "forbidden": {
+            "description": "回答中不能出現的內容（權限滲漏）",
+            "type": "array",
+            "items": { "$ref": "#/definitions/Synonyms" }
+          },
+          "referenceAnswer": {
+            "description": "參考答案（模型評分用）；answer 時必填，refusal 時為 null",
+            "type": ["string", "null"],
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

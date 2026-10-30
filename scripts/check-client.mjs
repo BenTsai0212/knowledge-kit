@@ -1,4 +1,4 @@
-// 以 client/schema/ 的 JSON Schema 驗證 client/ 的設定、翻譯檔與資料集，再檢查跨檔規則。
+// 以 client/schema/ 的 JSON Schema 驗證 client/ 的設定、翻譯檔、資料集與評測題庫，再檢查跨檔規則。
 // 用法：node scripts/check-client.mjs [設定資料夾，預設 client/]
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -23,6 +23,11 @@ export const DATASET_FILES = {
 };
 const DOCUMENT_SCHEMA = "data/document.schema.json";
 
+// 評測題庫（client.json 的 evals.path）內的檔名 → Schema（docs/evals.md）
+export const EVALS_FILES = {
+  "questions.json": "evals/questions.schema.json",
+};
+
 // 翻譯檔：client/i18n/<語言>.json，每種語言一份（docs/client-config.md「翻譯檔」）
 export const I18N_DIR = "i18n/";
 const I18N_SCHEMA = "i18n.schema.json";
@@ -35,7 +40,7 @@ function readJson(url) {
 }
 
 function loadSchemas() {
-  return ["", "data/"].flatMap((sub) =>
+  return ["", "data/", "evals/"].flatMap((sub) =>
     readdirSync(new URL(sub, SCHEMA_DIR))
       .filter((name) => name.endsWith(".schema.json"))
       .map((name) => readJson(new URL(`${sub}${name}`, SCHEMA_DIR))),
@@ -47,8 +52,9 @@ const RELATIVE_PATH = new RegExp(readJson(new URL("common.schema.json", SCHEMA_D
 // files：{ 設定檔名: 解析後的 JSON }。
 // dataset：{ root: dataset.path, files: { 相對於 root 的路徑: 解析後的 JSON } }；省略時不驗證資料集。
 // i18n：{ 語言代碼: 解析後的 JSON }（client/i18n/ 的檔名去掉 .json）；省略時不驗證翻譯檔。
+// evals：{ root: evals.path, files: { 相對於 root 的路徑: 解析後的 JSON } }；省略時不驗證評測題庫。
 // 回傳 [{ file, path, message }]，沒有錯誤時為空陣列。
-export function validateClient(files, dataset, i18n) {
+export function validateClient(files, dataset, i18n, evals) {
   const errors = [];
   const client = files["client.json"];
   const languages = Array.isArray(client?.languages) ? client.languages : null;
@@ -101,6 +107,7 @@ export function validateClient(files, dataset, i18n) {
   }
   if (dataset) errors.push(...validateDataset(ajv, dataset));
   if (i18n && languages) errors.push(...validateI18n(ajv, i18n, languages, defaultLanguage));
+  if (evals) errors.push(...validateEvals(ajv, evals, valid));
   return [...errors, ...checkReferences(valid), ...checkContrast(valid)];
 }
 
@@ -124,6 +131,51 @@ function validateDataset(ajv, { root, files }) {
   for (const rel of Object.keys(files)) {
     if (!(rel in DATASET_FILES) && !DOCUMENT_PATH.test(rel)) errors.push({ file: label(rel), path: "/", message: "未知的資料檔" });
   }
+  return errors;
+}
+
+// 評測題庫：Schema，以及只需 client/ 設定的規則。答案段落是否存在、角色看不看得到需要資料集與 oracle，
+// 由 app/src/evals/validate.ts 檢查（比照資料集，docs/evals.md「檢查」）。
+function validateEvals(ajv, { root, files }, valid) {
+  const errors = [];
+  const label = (rel) => `${root}${rel}`;
+  const ok = {};
+  for (const [rel, schemaId] of Object.entries(EVALS_FILES)) {
+    if (!(rel in files)) {
+      errors.push({ file: label(rel), path: "/", message: "缺少題庫檔" });
+      continue;
+    }
+    const validate = ajv.getSchema(schemaId);
+    if (validate(files[rel])) ok[rel] = files[rel];
+    else for (const e of validate.errors) errors.push({ file: label(rel), path: e.instancePath || "/", message: describe(e) });
+  }
+  for (const rel of Object.keys(files)) {
+    if (!(rel in EVALS_FILES)) errors.push({ file: label(rel), path: "/", message: "未知的題庫檔" });
+  }
+
+  const questions = ok["questions.json"]?.questions;
+  if (!questions) return errors;
+  const file = label("questions.json");
+  const roles = valid["access.json"] && new Set(valid["access.json"].roles.map((r) => r.id));
+  const languages = valid["client.json"]?.languages;
+  const seen = new Set();
+  questions.forEach((q, i) => {
+    const at = `/questions/${i}`;
+    if (seen.has(q.id)) errors.push({ file, path: `${at}/id`, message: `id ${q.id} 重複` });
+    seen.add(q.id);
+    if (roles && !roles.has(q.role)) errors.push({ file, path: `${at}/role`, message: `角色 ${q.role} 不存在` });
+    if (languages && !languages.includes(q.language)) {
+      errors.push({ file, path: `${at}/language`, message: `語言 ${q.language} 不在 client.json 的 languages 內` });
+    }
+    if (q.expect === "answer") {
+      if (q.answerPassages.length === 0) errors.push({ file, path: `${at}/answerPassages`, message: "預期回答時至少要有一個答案段落" });
+      if (q.keyPoints.length === 0) errors.push({ file, path: `${at}/keyPoints`, message: "預期回答時至少要有一項關鍵重點" });
+      if (q.referenceAnswer === null) errors.push({ file, path: `${at}/referenceAnswer`, message: "預期回答時必須有參考答案" });
+    } else {
+      if (q.keyPoints.length > 0) errors.push({ file, path: `${at}/keyPoints`, message: "預期拒答時不能有關鍵重點" });
+      if (q.referenceAnswer !== null) errors.push({ file, path: `${at}/referenceAnswer`, message: "預期拒答時參考答案必須是 null" });
+    }
+  });
   return errors;
 }
 
@@ -327,7 +379,7 @@ function describe(e) {
   return e.message;
 }
 
-// 讀取資料夾中所有頂層 .json 檔、翻譯檔與資料集再驗證；dataset.path、evals.path 必須存在。
+// 讀取資料夾中所有頂層 .json 檔、翻譯檔、資料集與評測題庫再驗證；dataset.path、evals.path 必須存在。
 export function checkClient(dir = DEFAULT_CLIENT_DIR) {
   const base = new URL(dir.toString().endsWith("/") ? dir : `${dir}/`);
   const files = {};
@@ -363,15 +415,16 @@ export function checkClient(dir = DEFAULT_CLIENT_DIR) {
     }
   }
 
-  let dataset;
-  if (paths.dataset) {
-    const root = paths.dataset;
-    dataset = { root, files: {} };
+  const [dataset, evals] = ["dataset", "evals"].map((key) => {
+    const root = paths[key];
+    if (!root) return undefined;
+    const out = { root, files: {} };
     for (const rel of readdirSync(new URL(root, base), { recursive: true })) {
-      if (rel.endsWith(".json")) read(new URL(`${root}${rel}`, base), `${root}${rel}`, dataset.files, rel);
+      if (rel.endsWith(".json")) read(new URL(`${root}${rel}`, base), `${root}${rel}`, out.files, rel);
     }
-  }
-  return [...errors, ...validateClient(files, dataset, i18n)];
+    return out;
+  });
+  return [...errors, ...validateClient(files, dataset, i18n, evals)];
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

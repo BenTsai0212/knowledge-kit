@@ -12,7 +12,7 @@
 npm run check:client
 ```
 
-- 驗證 `client/` 頂層的每個 `.json` 檔與 `i18n/` 的翻譯檔；缺少設定檔、未知的設定檔、多餘的欄位都算錯誤。
+- 驗證 `client/` 頂層的每個 `.json` 檔、`i18n/` 的翻譯檔、資料集與評測題庫；缺少設定檔、未知的設定檔、多餘的欄位都算錯誤。
 - 錯誤逐行印出 `<檔名> <欄位路徑>：<訊息>`，有錯誤時以非 0 結束。CI 的 `checks` job 會執行。
 - 檢查其他資料夾：`node scripts/check-client.mjs <資料夾>`（Schema 一律用 `client/schema/`）。
 
@@ -26,6 +26,7 @@ npm run check:client
 | `access.json` | `access.schema.json` | 可見等級、專案名單、角色 |
 | `scenarios.json` | `scenarios.schema.json` | 示範情境與預設問題 |
 | `i18n/<語言>.json` | `i18n.schema.json` | 介面文字，每種語言一份（見[翻譯檔](#翻譯檔clienti18n)） |
+| `evals/questions.json` | `evals/questions.schema.json` | 評測題庫（`evals.path` 內，見 [docs/evals.md](evals.md)） |
 
 ## 共用格式（`common.schema.json`）
 
@@ -52,7 +53,8 @@ npm run check:client
 | `languages` | 是 | `LanguageCode` 陣列，至少 1 個、不重複 | 支援的語言。範本預設 `["zh-TW", "en"]` |
 | `model` | 是 | `ModelCode` | 問答使用的模型代號。只能填 Worker 端白名單（`worker/src/models.ts` 的 `MODELS`）中的代號；實際模型名稱與 `max_tokens` 由 Worker 決定（ADR 0001）。`check:client` 只檢查格式，代號是否在白名單由 `worker/src/models.test.ts` 檢查 |
 | `dataset.path` | 是 | `RelativePath` | 資料集的資料夾，必須存在。格式見 [docs/dataset.md](dataset.md) |
-| `evals.path` | 是 | `RelativePath` | 評測題庫的資料夾，必須存在。題庫格式在評測台的 Issue 加入 |
+| `evals.path` | 是 | `RelativePath` | 評測題庫的資料夾，必須存在。格式見 [docs/evals.md](evals.md) |
+| `evals.thresholds` | 否 | 物件，見下表 | 評測台四個指標的門檻。省略整個物件或其中的欄位時使用預設值 |
 | `retrieval` | 否 | 物件，見下表 | 檢索參數。省略整個物件或其中的欄位時使用預設值 |
 | `upload` | 否 | 物件，見下表 | 上傳文件的參數。省略整個物件或其中的欄位時使用預設值 |
 | `conflicts` | 否 | 物件，見下表 | 上傳文件與既有段落說法不同的比對。省略整個物件或其中的欄位時使用預設值 |
@@ -64,6 +66,15 @@ npm run check:client
 | `provider` | `keyword-hash` | `keyword-hash` | 使用哪個 `VectorProvider`。值必須登記在 `app/src/retrieval/providers.ts` 的 `PROVIDERS`；新增實作時同時在 Schema 的列舉與 `types.ts` 的 `ProviderId` 加上同名的值 |
 | `topK` | 整數，1～20 | 5 | 回傳前幾名段落 |
 | `minScore` | 0～1 | 0.1 | 最低分數門檻，低於此分數的段落不回傳 |
+
+`evals.thresholds` 的欄位（指標的定義見 [docs/evals.md](evals.md)「指標」）：
+
+| 欄位 | 格式 | 預設值 | 說明 |
+| --- | --- | --- | --- |
+| `citation` | 0～1 | 0.9 | 引用正確的比例下限 |
+| `answer` | 0～1 | 0.8 | 答案正確的比例下限 |
+| `leakage` | 0 以上的整數 | 0 | 有權限滲漏的題數上限 |
+| `refusal` | 0～1 | 1 | 正確拒答的比例下限 |
 
 `upload` 的欄位：
 
@@ -240,13 +251,14 @@ JSON Schema 無法參照另一個檔的值，以下由 `scripts/check-client.mjs
 - 關係類型的 `from`、`to` → `entityTypes`
 - 角色的 `visibility` → `visibilityLevels`；角色的 `projects` → `projects`
 - 情境的 `role` → `roles`
+- 評測題庫的 `id` 不重複、`role` → `roles`、`language` → `languages`，以及 `expect` 與其他欄位的對應；答案段落的存在與可見範圍由 `app/src/evals/validate.ts` 檢查（[docs/evals.md](evals.md)「檢查」）
 
 ## app 如何讀取
 
 `app/src/client/load.ts` 在 build 時以 JSON import 讀入 5 個設定檔，匯出型別為 `ClientConfig` 的 `clientConfig`。翻譯檔由 `app/src/client/i18n.ts` 讀入（見[翻譯檔](#翻譯檔clienti18n)）。
 
 - 執行時不做 ajv 驗證，ajv 不打包進前端；驗證只在 `npm run check:client` 與 CI 執行。
-- 省略的欄位在這裡補上預設值，讀取端拿到的型別一律是必填。目前有 `mergeStrategy`（省略時補成 `review`）、`retrieval` 的各欄位（`RETRIEVAL_DEFAULTS`）、`upload` 的各欄位（`UPLOAD_DEFAULTS`）與 `conflicts` 的各欄位（`CONFLICTS_DEFAULTS`）；預設值與 Schema 的 `default` 相同，由 `load.test.ts` 比對。
+- 省略的欄位在這裡補上預設值，讀取端拿到的型別一律是必填。目前有 `mergeStrategy`（省略時補成 `review`）、`retrieval` 的各欄位（`RETRIEVAL_DEFAULTS`）、`upload` 的各欄位（`UPLOAD_DEFAULTS`）、`conflicts` 的各欄位（`CONFLICTS_DEFAULTS`）與 `evals.thresholds` 的各欄位（`EVAL_THRESHOLDS_DEFAULTS`）；預設值與 Schema 的 `default` 相同，由 `load.test.ts` 比對。
 
 ## 擴充 Schema
 
@@ -254,7 +266,7 @@ JSON Schema 是唯一正本，型別在 `app/src/client/types.ts` 手寫。加�
 
 1. `client/schema/*.schema.json`
 2. `app/src/client/types.ts`：對應的型別
-3. `app/src/client/keys.ts`（資料集為 `app/src/dataset/keys.ts`）：該物件的鍵清單（新物件要新增一筆）
+3. `app/src/client/keys.ts`（資料集為 `app/src/dataset/keys.ts`，評測題庫為 `app/src/evals/keys.ts`）：該物件的鍵清單（新物件要新增一筆）
 4. 有預設值的選填欄位：在 `load.ts` 補上預設值
 5. 範例設定、本文件，以及需要時 `scripts/check-client.mjs` 的跨檔規則與測試
 

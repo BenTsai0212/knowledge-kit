@@ -6,6 +6,8 @@ import type {
   ClientFile,
   ConflictsFile,
   EntityTypeFile,
+  EvalThresholdsFile,
+  EvalsFile,
   KnowledgeModelFile,
   PathRef,
   Project,
@@ -55,7 +57,12 @@ export const manifests: ManifestEntry[] = [
     } satisfies KeyManifest<ClientFile>,
   },
   { schema: "client.schema.json", pointer: "/properties/dataset", keys: pathRef },
-  { schema: "client.schema.json", pointer: "/properties/evals", keys: pathRef },
+  { schema: "client.schema.json", pointer: "/properties/evals", keys: { path: "required", thresholds: "optional" } satisfies KeyManifest<EvalsFile> },
+  {
+    schema: "client.schema.json",
+    pointer: "/properties/evals/properties/thresholds",
+    keys: { citation: "optional", answer: "optional", leakage: "optional", refusal: "optional" } satisfies KeyManifest<EvalThresholdsFile>,
+  },
   {
     schema: "client.schema.json",
     pointer: "/properties/retrieval",

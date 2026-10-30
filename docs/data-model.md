@@ -186,7 +186,7 @@ policy 中的子查詢同樣受 RLS 限制，所以「段落看得到」已包�
 - 比文件更機密的段落、比文件寬鬆的段落、與文件不同專案的段落
 - 只有機密出處的實體、沒有出處的實體與關係、一端看不到的關係
 
-`app/tests/db/oracle.ts` 以 TypeScript 獨立實作本文件的權限規則，算出每個身分「應該看得到」的列，再與 SQL 的結果逐表比對：
+`app/tests/db/oracle.ts` 以 TypeScript 獨立實作本文件的權限規則，算出每個身分「應該看得到」的列，再與 SQL 的結果逐表比對。讀取規則（`expectedVisible()`）放在 `app/src/evals/oracle.ts`，評測台也以它判定滲漏（[docs/evals.md](evals.md)），`app/tests/db/oracle.ts` 重新匯出：
 
 - **滲漏**：查得到但不該看到的列，必須為 0
 - **漏看**：該看到卻查不到的列，也必須為 0，避免以「全部擋掉」通過

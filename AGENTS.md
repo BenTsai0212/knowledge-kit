@@ -44,11 +44,12 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 | `app/src/upload/` | 上傳（說明見 `docs/upload.md`；畫面是 `app/src/ui/UploadPage.tsx`）：`parse.ts` 擷取純文字（`pdf.ts`、`docx.ts` 以動態 import 載入 `pdfjs-dist`、`mammoth`，見 ADR 0002；上限是 `parse.ts` 的常數）、`markdown.ts`、`chunk.ts` 切段；`write.ts` 的 `uploadDocument()` 經 `withIdentity()` 寫入文件與段落（`kk_app` 唯一的寫入；權限由 RLS 執行，見 `docs/data-model.md`「寫入規則」，測試在 `app/tests/upload/`） |
 | `app/src/extraction/` | 上傳文件的萃取（說明見 `docs/extraction.md`）：`run.ts` 分批呼叫 `/api/ask`（`batch.ts`、`prompt.ts`）、`output.ts` 解析與驗證、`merge.ts` 合併比對；`store.ts` 經 `withIdentity()` 寫入待審、讀取待審區、核准與退回（只用 INSERT；規則由 RLS 執行，見 `docs/data-model.md`「待審與核准」，測試在 `app/tests/extraction/`） |
 | `app/src/conflicts/` | 上傳文件與既有段落的說法不同（#51，說明見 `docs/conflicts.md`）：`run.ts` 在萃取後以上傳者的身分挑選段落（`select.ts`）、呼叫一次 `/api/ask`（`prompt.ts`）、解析與驗證（`output.ts`）；`store.ts` 經 `withIdentity()` 寫入偵測結果、讀取與處理（只用 INSERT；規則由 RLS 執行，見 `docs/data-model.md`「說法不同」，測試在 `app/tests/conflicts/`）；`marks.ts` 是時間軸與原文面板的標示（在 `readTimeline()`、`readSource()` 的交易中讀取） |
+| `app/src/evals/` | 評測台（#62，說明見 `docs/evals.md`）：題庫（`client/evals/`）的型別、鍵清單與讀取（`types.ts`、`keys.ts`、`load.ts`）、需要資料集的檢查（`validate.ts`）；`oracle.ts` 是權限讀取規則的獨立實作（`expectedVisible()`，`app/tests/db/oracle.ts` 重新匯出）；`score.ts` 是評分的純函式（引用、關鍵重點、拒答、禁止內容、滲漏、指標彙總；滲漏的反向驗證在 `app/tests/evals/`） |
 | `app/src/sources/` | 引用跳回原文：`source.ts` 的 `readSource()` 經 `withIdentity()` 讀取段落所屬文件中看得到的段落 |
 | `app/src/db/` | 資料層（PGlite＋RLS）：`database.ts` 是唯一入口，`migrations/*.sql` 是 migration；說明見 `docs/data-model.md` |
 | `app/tests/` | 需要放在 `app/src/` 之外的測試（例如會用到被禁止 SQL 的越權測試） |
 | `worker/` | Cloudflare Worker（TypeScript）：`GET /api/health`、`POST /api/ask`（`ask.ts`：同站、邀請碼、body、每日次數的檢查；`upstream.ts`、`sse.ts`：轉發到 Claude Messages API 並轉成精簡的 SSE）；`models.ts` 是模型白名單，`usage.ts` 是計數用的 Durable Object，`testing.ts` 是測試用的假實作；其他請求交給 `dist/` 靜態檔。API 格式、錯誤類型、secret 與已知限制見 `worker/README.md` |
-| `client/` | 客戶設定（`*.json`）、介面翻譯檔（`i18n/<語言>.json`，含拒答文字與各錯誤訊息）、JSON Schema（`schema/`）、虛構資料集（`data/`）與評測題庫（`evals/`）；換客戶只改這裡，說明見 `docs/client-config.md`、`docs/dataset.md` |
+| `client/` | 客戶設定（`*.json`）、介面翻譯檔（`i18n/<語言>.json`，含拒答文字與各錯誤訊息）、JSON Schema（`schema/`）、虛構資料集（`data/`）與評測題庫（`evals/questions.json`，見 `docs/evals.md`）；換客戶只改這裡，說明見 `docs/client-config.md`、`docs/dataset.md` |
 | `scripts/` | 專案腳本（Node ESM，不在 `typecheck` 範圍內）：`check-client.mjs`；`fixtures/invalid-client/` 是故意寫錯的測試資料 |
 | `package.json`、`vite.config.ts`、`vitest.config.ts`、`tsconfig.node.json`、`wrangler.jsonc` | 根目錄的指令與設定（單一 `package.json`，不用 workspaces） |
 | `docs/workflow/` | 憲法與 workflow 手冊 |
