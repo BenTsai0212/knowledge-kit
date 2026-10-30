@@ -67,6 +67,8 @@ npm run check:client
 | `topK` | 整數，1～20 | 5 | 回傳前幾名段落 |
 | `minScore` | 0～1 | 0.1 | 最低分數門檻，低於此分數的段落不回傳 |
 
+評測台的設定 A、B 以 `topK`、`minScore` 為預設值，只在那次評測有效，不寫回 `client.json`（[docs/evals.md](evals.md)「畫面」）。
+
 `evals.thresholds` 的欄位（指標的定義見 [docs/evals.md](evals.md)「指標」）：
 
 | 欄位 | 格式 | 預設值 | 說明 |
@@ -75,6 +77,8 @@ npm run check:client
 | `answer` | 0～1 | 0.8 | 答案正確的比例下限 |
 | `leakage` | 0 以上的整數 | 0 | 有權限滲漏的題數上限 |
 | `refusal` | 0～1 | 1 | 正確拒答的比例下限 |
+
+評測台的總覽以這些門檻顯示通過或未通過（[docs/evals.md](evals.md)「畫面」）。
 
 `upload` 的欄位：
 
@@ -200,7 +204,7 @@ npm run check:client
 | `visibility` | 是 | 可見等級 `id` | 此角色最高可看到的等級；必須存在於 `visibilityLevels` |
 | `projects` | 是 | 專案 `id` 陣列，可為空、不重複 | 此角色可看到的專案；必須存在於 `projects` |
 | `canUpload` | 是 | boolean | 能否上傳文件。可上傳的可見等級與專案同樣限於此角色看得到的範圍，由資料庫的 RLS 執行（`docs/data-model.md`「寫入規則」） |
-| `canReview` | 是 | boolean | 能否核准或退回上傳文件的萃取結果（待審區）。只能審核自己看得到的文件，由資料庫的 RLS 執行（`docs/data-model.md`「待審與核准」） |
+| `canReview` | 是 | boolean | 能否核准或退回上傳文件的萃取結果（待審區）。只能審核自己看得到的文件，由資料庫的 RLS 執行（`docs/data-model.md`「待審與核准」）。也決定是否看得到評測台頁籤（[docs/evals.md](evals.md)「畫面」） |
 
 ## `scenarios.json`
 

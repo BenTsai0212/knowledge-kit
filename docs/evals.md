@@ -2,7 +2,7 @@
 
 以題庫自動評測問答品質，量化 RFC 0001 第一階段門檻 ② 的四個指標，並比較兩組檢索設定。
 
-> 本文件目前涵蓋題庫格式、指標定義、評分（#62 PR 1）、執行、模型評分與費用估算（#62 PR 2）。畫面在後續的 PR 加入。
+題庫格式、指標定義與評分見 #62 PR 1；執行、模型評分與費用估算見 PR 2；畫面見 PR 3。
 
 ## 題庫（`client/evals/questions.json`）
 
@@ -98,7 +98,7 @@
 
 ## 執行
 
-`app/src/evals/run.ts`（畫面在後續的 PR 加入）。
+`app/src/evals/run.ts`（畫面見下一節「畫面」）。
 
 - **資料庫**：評測使用專用的記憶體資料庫（`openEvalDatabase()`：`openDatabase()` 加上資料集 seed，與 App 載入時相同），不納入上傳的文件、待審的處理結果與「說法不同」的決定，結果可以重現（#62 決定 C）。呼叫端在評測結束、停止或離開頁籤時都要 `close()`。
 - **兩組設定**：每組是 `topK` 與 `minScore`，只在這次評測有效，不寫回 `client.json`。在 Retriever 外包一層，把這兩個值帶入每次的 `retrieve()`，`ask()` 不變。兩組時先跑完設定 A 再跑設定 B。
@@ -107,10 +107,26 @@
 - **進度**：每完成一題、停止或結束都呼叫 `onChange`。
 - **停止**：以 `AbortSignal` 中止；進行中的題目不記錄，已完成的結果保留（`status: "stopped"`、`stopReason: "aborted"`）。
 - **錯誤**：
-  - 遇到 `STOP_ERRORS`（`invalid_access_code`、`forbidden_origin`、`daily_limit`、`limit_unavailable`、`misconfigured`、`upstream_quota`、`network`）時停止整次評測，`stopReason` 是該錯誤類型。這些錯誤之後的題目也一定失敗。發生錯誤的那一題不記錄（包括問答已完成、模型評分才遇到錯誤的情況），已完成的結果保留。
+  - 遇到 `STOP_ERRORS`（`invalid_access_code`、`forbidden_origin`、`daily_limit`、`limit_unavailable`、`misconfigured`、`upstream_quota`、`network`）時停止整次評測，`stopReason` 是該錯誤類型。這些錯誤之後的題目也一定失敗。問答遇到這些錯誤時，那一題不記錄。問答已完成、模型評分才遇到這些錯誤時，已經花掉一次呼叫的回答先保存（`grade` 記為 `ungradable`、`gradeError` 記錯誤類型），再停止（#62 決定（給 PR 3）1）。已完成的結果都保留。
   - 其他錯誤（例如 `upstream_overloaded`、串流中斷）記在該題（`score.error`），該題不算通過，接著跑下一題。
   - 畫面上的訊息一律沿用 `errorMessage()`。
 - 次數上限不改程式：完整比較需要的次數超過預設的 `DAILY_LIMIT` 時，由人在本機的 `.dev.vars` 調高；部署給客戶看的版本維持原本的上限（#62 已決定的第 4 點）。
+
+## 畫面
+
+評測台頁籤（`app/src/ui/EvalPage.tsx`；純函式在 `app/src/ui/eval-helpers.ts`）。
+
+- **誰看得到**：只有 `canReview` 的身分（`access.json`）。切換到沒有 `canReview` 的身分時回到問答頁，比照待審頁。需要邀請碼，沒有時顯示邀請碼輸入畫面；遇到 `invalid_access_code` 時與問答相同，清除邀請碼。
+- **設定**：設定 A、設定 B 各有 `topK`（1～20 的整數）與 `minScore`（0～1），預設值取自 `client.json` 的 `retrieval`，只在這次評測有效。設定 B 預設不啟用（只跑一組）。「答案正確改用模型評分」預設不勾選。
+- **上傳的文件**：評測使用專用的記憶體資料庫，不納入上傳的文件；本次工作階段有上傳的文件時，畫面提示「目前有 N 份上傳的文件，不納入評測」。
+- **開始前確認**：按「開始評測」時開啟評測專用資料庫，以 `estimateCalls()` 算出預計次數，確認視窗顯示「最多 N 次呼叫（問答 a、模型評分 b）」，並提醒每日上限（`DAILY_LIMIT`）不夠時先在 `.dev.vars` 調高。取消時關閉資料庫。
+- **進度與停止**：顯示「第 n／N 題」（兩組時 N 是兩組的題數合計）；「停止」以 `AbortSignal` 中止。停止或因錯誤停止時，以 `errorMessage()` 顯示原因，已完成的結果保留。
+- **評測專用資料庫的開關**（#62 決定（給 PR 3）2）：`createEvalDatabases()` 保證同一時間只開一個（舊的關閉後才開新的）。評測結束、按停止、取消確認、離開評測台頁籤（包括切換到沒有 `canReview` 的身分）時都 `close()`。
+- **總覽**：四個指標的數值（通過題數／分母與比例；滲漏是題數）、門檻，以及通過、未通過或未完成。兩組時並排；模型評分時另外顯示無法評分的題數。
+- **每題的結果**：問題、角色、語言、類別、預期結果；每組一欄，顯示各指標的通過與否、回答（可展開）、引用（段落 id 與是否在答案段落內、不存在的引用編號）、命中與沒命中的關鍵重點、模型評分的判定與理由、滲漏原因，錯誤時顯示錯誤訊息。
+- **兩組比較**：兩組都完成、且任一指標（引用、答案、滲漏、拒答）的結果不同的題目標示「兩組不同」（`differs()`），可以只顯示這些題目。
+- **結果的保存**：最近一次的結果由 App 保存在記憶體，切換頁籤後仍可查看；重新整理頁面就會消失。「下載 JSON」（`evalReport()`）的內容是判定方式、狀態與停止原因、開始與結束時間、門檻，以及每組的設定、指標與每題結果；不含邀請碼。
+- 介面文字都在 `client/i18n/`（`tabEvals`、`eval*`）。
 
 ## 模型評分
 
@@ -162,5 +178,7 @@ user 訊息是問題、參考答案（`referenceAnswer`）與回答文字，三�
 - `scripts/check-client.test.mjs`「評測題庫」：Schema 與只需 `client/` 設定的規則。
 - `app/tests/evals/leakage.test.ts`：滲漏判定與反向驗證。
 - `app/src/evals/grade.test.ts`：模型評分的 user 訊息與跳脫、輸出格式錯誤記為無法評分、錯誤與截斷。
-- `app/src/evals/run.test.ts`（假的 `/api/ask`）：預計次數與實際送出次數相同、兩組設定、`daily_limit` 等錯誤時停止並保留結果、其他錯誤記在該題、中止、模型評分。
+- `app/src/evals/run.test.ts`（假的 `/api/ask`）：預計次數與實際送出次數相同、兩組設定、`daily_limit` 等錯誤時停止並保留結果、其他錯誤記在該題、中止、模型評分（遇到 `daily_limit` 時保存該題再停止）。
+- `app/src/ui/eval-helpers.test.ts`：設定表單的範圍、各指標的結果與兩組差異、下載 JSON 的內容、評測專用資料庫同一時間只開一個。
+- 畫面的版面與操作（確認視窗、停止、頁籤的顯示條件）沒有自動測試，由人工確認。
 - `app/src/evals/docs.test.ts`：本文件的模型評分 prompt 與 `GRADE_SYSTEM_PROMPT` 相同。

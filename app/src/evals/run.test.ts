@@ -140,11 +140,17 @@ describe("runEvals：模型評分", () => {
     expect(summarize(sample, results.map((r) => r.score), evals.thresholds, "model", grades).answer).toMatchObject({ passed: 0, total: 3, ungradable: 3 });
   });
 
-  it("模型評分遇到 daily_limit 時停止，該題不記錄；其他錯誤記為無法評分", async () => {
+  it("模型評分遇到 daily_limit 時保存這題（無法評分）再停止；其他錯誤記為無法評分", async () => {
     const limited = context(sample, (body) => (isGrade(body) ? [{ type: "error", error: "daily_limit" }] : reply()(body)));
     const stopped = await runEvals(limited.ctx, { sets: [DEFAULT], mode: "model" });
     expect(stopped).toMatchObject({ status: "stopped", stopReason: "daily_limit" });
-    expect(stopped.sets[0].results).toEqual([]);
+    expect(stopped.sets[0].results).toHaveLength(1);
+    expect(stopped.sets[0].results[0]).toMatchObject({
+      question: "annual-leave-staff",
+      answer: { kind: "answer" },
+      grade: { verdict: "ungradable", reason: null },
+      gradeError: "daily_limit",
+    });
 
     const overloaded = context(sample, (body) => (isGrade(body) ? [{ type: "error", error: "upstream_overloaded" }] : reply()(body)));
     const run = await runEvals(overloaded.ctx, { sets: [DEFAULT], mode: "model" });

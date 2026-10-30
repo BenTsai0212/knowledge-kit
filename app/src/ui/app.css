@@ -641,3 +641,39 @@ label.inline {
 .review-names + * {
   margin-left: 0.5rem;
 }
+
+/* 評測台（#62） */
+.eval-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.eval-settings fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  margin: 0 0 0.5rem;
+}
+
+.eval-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.eval-table th,
+.eval-table td {
+  border-top: 1px solid var(--color-border);
+  padding: 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.eval-result p {
+  margin: 0.25rem 0;
+}
+
+.eval-result .badge {
+  margin: 0 0.25rem 0.25rem 0;
+}

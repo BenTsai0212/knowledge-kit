@@ -32,7 +32,17 @@
     "reviewGotoGraph", "reviewErrors", "reviewDecidedTab", "reviewDecidedEmpty", "conflictSection", "conflictNew",
     "conflictOld", "conflictDecisions", "conflictToast", "conflictMarks", "conflictTitle", "conflictWaiting",
     "conflictRunning", "conflictFound", "conflictDropped", "conflictUnchecked", "conflictUnrelated",
-    "conflictFailed", "conflictRetry", "colon", "progress", "parenthetical", "refusal", "uncited", "incomplete",
+    "conflictFailed", "conflictRetry",
+    "tabEvals", "evalSettings", "evalSetName", "evalTopK", "evalMinScore", "evalUseSetB",
+    "evalModelGrading", "evalInvalidSettings", "evalUploaded", "evalStart", "evalPreparing", "evalStop",
+    "evalRunning", "evalProgress", "evalDone", "evalStopped", "evalAborted", "evalConfirmTitle",
+    "evalConfirmCalls", "evalConfirmLimit", "evalConfirmStart", "evalCancel", "evalDownload", "evalSummary",
+    "evalMetric", "evalThreshold", "evalSettingsValue", "evalAtLeast", "evalAtMost", "evalRate",
+    "evalLeakCount", "evalUngradable", "evalPass", "evalFail", "evalIncomplete", "evalNotApplicable",
+    "evalResults", "evalOnlyDiff", "evalDiffers", "evalQuestion", "evalNotRun", "evalAnswerText",
+    "evalCitations", "evalNoCitations", "evalDropped", "evalKeyPoints", "evalGrade", "evalMetrics",
+    "evalCategories", "evalExpect", "evalVerdicts", "evalLeaks",
+    "colon", "progress", "parenthetical", "refusal", "uncited", "incomplete",
     "errors", "unknownError"
   ],
   "properties": {
@@ -235,6 +245,117 @@
     "conflictUnrelated": { "$ref": "#/definitions/Text" },
     "conflictFailed": { "$ref": "#/definitions/Text" },
     "conflictRetry": { "$ref": "#/definitions/Text" },
+    "tabEvals": { "$ref": "#/definitions/Text" },
+    "evalSettings": { "$ref": "#/definitions/Text" },
+    "evalSetName": { "$ref": "#/definitions/Text" },
+    "evalTopK": { "$ref": "#/definitions/Text" },
+    "evalMinScore": { "$ref": "#/definitions/Text" },
+    "evalUseSetB": { "$ref": "#/definitions/Text" },
+    "evalModelGrading": { "$ref": "#/definitions/Text" },
+    "evalInvalidSettings": { "$ref": "#/definitions/Text" },
+    "evalUploaded": { "$ref": "#/definitions/Text" },
+    "evalStart": { "$ref": "#/definitions/Text" },
+    "evalPreparing": { "$ref": "#/definitions/Text" },
+    "evalStop": { "$ref": "#/definitions/Text" },
+    "evalRunning": { "$ref": "#/definitions/Text" },
+    "evalProgress": { "$ref": "#/definitions/Text" },
+    "evalDone": { "$ref": "#/definitions/Text" },
+    "evalStopped": { "$ref": "#/definitions/Text" },
+    "evalAborted": { "$ref": "#/definitions/Text" },
+    "evalConfirmTitle": { "$ref": "#/definitions/Text" },
+    "evalConfirmCalls": { "$ref": "#/definitions/Text" },
+    "evalConfirmLimit": { "$ref": "#/definitions/Text" },
+    "evalConfirmStart": { "$ref": "#/definitions/Text" },
+    "evalCancel": { "$ref": "#/definitions/Text" },
+    "evalDownload": { "$ref": "#/definitions/Text" },
+    "evalSummary": { "$ref": "#/definitions/Text" },
+    "evalMetric": { "$ref": "#/definitions/Text" },
+    "evalThreshold": { "$ref": "#/definitions/Text" },
+    "evalSettingsValue": { "$ref": "#/definitions/Text" },
+    "evalAtLeast": { "$ref": "#/definitions/Text" },
+    "evalAtMost": { "$ref": "#/definitions/Text" },
+    "evalRate": { "$ref": "#/definitions/Text" },
+    "evalLeakCount": { "$ref": "#/definitions/Text" },
+    "evalUngradable": { "$ref": "#/definitions/Text" },
+    "evalPass": { "$ref": "#/definitions/Text" },
+    "evalFail": { "$ref": "#/definitions/Text" },
+    "evalIncomplete": { "$ref": "#/definitions/Text" },
+    "evalNotApplicable": { "$ref": "#/definitions/Text" },
+    "evalResults": { "$ref": "#/definitions/Text" },
+    "evalOnlyDiff": { "$ref": "#/definitions/Text" },
+    "evalDiffers": { "$ref": "#/definitions/Text" },
+    "evalQuestion": { "$ref": "#/definitions/Text" },
+    "evalNotRun": { "$ref": "#/definitions/Text" },
+    "evalAnswerText": { "$ref": "#/definitions/Text" },
+    "evalCitations": { "$ref": "#/definitions/Text" },
+    "evalNoCitations": { "$ref": "#/definitions/Text" },
+    "evalDropped": { "$ref": "#/definitions/Text" },
+    "evalKeyPoints": { "$ref": "#/definitions/Text" },
+    "evalGrade": { "$ref": "#/definitions/Text" },
+    "evalMetrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "citation", "answer", "leakage", "refusal"
+      ],
+      "properties": {
+        "citation": { "$ref": "#/definitions/Text" },
+        "answer": { "$ref": "#/definitions/Text" },
+        "leakage": { "$ref": "#/definitions/Text" },
+        "refusal": { "$ref": "#/definitions/Text" }
+      }
+    },
+    "evalCategories": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scenario", "permission", "out-of-scope", "conflict", "extraction-attempt"
+      ],
+      "properties": {
+        "scenario": { "$ref": "#/definitions/Text" },
+        "permission": { "$ref": "#/definitions/Text" },
+        "out-of-scope": { "$ref": "#/definitions/Text" },
+        "conflict": { "$ref": "#/definitions/Text" },
+        "extraction-attempt": { "$ref": "#/definitions/Text" }
+      }
+    },
+    "evalExpect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "answer", "refusal"
+      ],
+      "properties": {
+        "answer": { "$ref": "#/definitions/Text" },
+        "refusal": { "$ref": "#/definitions/Text" }
+      }
+    },
+    "evalVerdicts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "correct", "incorrect", "ungradable"
+      ],
+      "properties": {
+        "correct": { "$ref": "#/definitions/Text" },
+        "incorrect": { "$ref": "#/definitions/Text" },
+        "ungradable": { "$ref": "#/definitions/Text" }
+      }
+    },
+    "evalLeaks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "retrieved", "sentPassage", "sentDocument", "cited", "forbidden"
+      ],
+      "properties": {
+        "retrieved": { "$ref": "#/definitions/Text" },
+        "sentPassage": { "$ref": "#/definitions/Text" },
+        "sentDocument": { "$ref": "#/definitions/Text" },
+        "cited": { "$ref": "#/definitions/Text" },
+        "forbidden": { "$ref": "#/definitions/Text" }
+      }
+    },
     "colon": { "$ref": "#/definitions/Text" },
     "progress": { "$ref": "#/definitions/Text" },
     "parenthetical": { "$ref": "#/definitions/Text" },

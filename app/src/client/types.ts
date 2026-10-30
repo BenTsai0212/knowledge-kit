@@ -3,6 +3,8 @@
 import type { ErrorType } from "../../../worker/src/errors";
 import type { PassageMarkKind } from "../conflicts/marks";
 import type { ConflictDecision } from "../conflicts/store";
+import type { Leak, ModelGrade } from "../evals/score";
+import type { EvalCategory, EvalExpect } from "../evals/types";
 import type { ParseFailure } from "../upload/parse";
 
 export type LanguageCode = string;
@@ -388,6 +390,59 @@ export interface UiStrings {
   conflictUnrelated: string;
   conflictFailed: string;
   conflictRetry: string;
+  tabEvals: string;
+  evalSettings: string;
+  evalSetName: string;
+  evalTopK: string;
+  evalMinScore: string;
+  evalUseSetB: string;
+  evalModelGrading: string;
+  evalInvalidSettings: string;
+  evalUploaded: string;
+  evalStart: string;
+  evalPreparing: string;
+  evalStop: string;
+  evalRunning: string;
+  evalProgress: string;
+  evalDone: string;
+  evalStopped: string;
+  evalAborted: string;
+  evalConfirmTitle: string;
+  evalConfirmCalls: string;
+  evalConfirmLimit: string;
+  evalConfirmStart: string;
+  evalCancel: string;
+  evalDownload: string;
+  evalSummary: string;
+  evalMetric: string;
+  evalThreshold: string;
+  evalSettingsValue: string;
+  evalAtLeast: string;
+  evalAtMost: string;
+  evalRate: string;
+  evalLeakCount: string;
+  evalUngradable: string;
+  evalPass: string;
+  evalFail: string;
+  evalIncomplete: string;
+  evalNotApplicable: string;
+  evalResults: string;
+  evalOnlyDiff: string;
+  evalDiffers: string;
+  evalQuestion: string;
+  evalNotRun: string;
+  evalAnswerText: string;
+  evalCitations: string;
+  evalNoCitations: string;
+  evalDropped: string;
+  evalKeyPoints: string;
+  evalGrade: string;
+  evalMetrics: Record<"citation" | "answer" | "leakage" | "refusal", string>;
+  evalCategories: Record<EvalCategory, string>;
+  evalExpect: Record<EvalExpect, string>;
+  evalVerdicts: Record<ModelGrade["verdict"], string>;
+  // 滲漏的原因：{id} 是段落或文件 id，{term} 是命中的禁止說法
+  evalLeaks: Record<Leak["kind"], string>;
   // 標籤與內容之間的分隔（繁中用全形冒號）
   colon: string;
   // 進度（{done}、{total}）與括號附註（{text}、{note}）：符號依語言而定，不寫死在元件中
