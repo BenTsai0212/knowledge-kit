@@ -57,6 +57,26 @@ export interface ThemeColors {
   text: string;
   textMuted: string;
   border: string;
+  // 狀態的文字、邊框與圖示底色
+  danger: string;
+  warning: string;
+  success: string;
+  info: string;
+  // 放在實心狀態色上的文字
+  onStatus: string;
+  // <mark> 的底色
+  mark: string;
+  // 確認視窗的遮罩與陰影（#RRGGBBAA）
+  overlay: string;
+  // 圖譜與標籤找不到類型或等級時的顏色
+  graphFallback: string;
+}
+
+export interface ThemeRadius {
+  small: string;
+  medium: string;
+  large: string;
+  pill: string;
 }
 
 export interface ThemeFonts {
@@ -66,6 +86,7 @@ export interface ThemeFonts {
 
 export interface ThemeFile {
   colors: ThemeColors;
+  radius: ThemeRadius;
   fonts: ThemeFonts;
 }
 

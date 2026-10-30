@@ -37,7 +37,7 @@ describe("圖譜的顯示文字", () => {
       entities: [entity("lin-1", { en: "Lin" }), entity("lin-2", { en: "Lin" }), entity("rd", { en: "R&D" }), entity("solo", { en: "Solo" })],
       relations: [{ id: "r1", type: "member-of", from: "lin-1", to: "rd", sources: [] }],
     };
-    expect(twins.entities.map((e) => entityOptionLabel(twins, e, "en"))).toEqual(["Lin（R&D）", "Lin（lin-2）", "R&D", "Solo"]);
+    expect(twins.entities.map((e) => entityOptionLabel(twins, e, "en"))).toEqual(["Lin (R&D)", "Lin (lin-2)", "R&D", "Solo"]);
   });
 });
 

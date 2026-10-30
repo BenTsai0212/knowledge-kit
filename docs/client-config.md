@@ -21,7 +21,7 @@ npm run check:client
 | 檔案 | Schema | 內容 |
 | --- | --- | --- |
 | `client.json` | `client.schema.json` | 基本資訊、語言、模型、資料集與評測題庫的位置 |
-| `theme.json` | `theme.schema.json` | 色票、字體 |
+| `theme.json` | `theme.schema.json` | 色票（含語意色）、圓角、字體 |
 | `knowledge-model.json` | `knowledge-model.schema.json` | 實體類型（含圖譜顏色）、關係類型、別名規則、合併策略 |
 | `access.json` | `access.schema.json` | 可見等級、專案名單、角色 |
 | `scenarios.json` | `scenarios.schema.json` | 示範情境與預設問題 |
@@ -82,6 +82,8 @@ npm run check:client
 
 ## `theme.json`
 
+畫面的顏色與圓角全部來自這裡：`main.tsx` 把每個欄位設成 CSS 變數（`colors.<鍵>` → `--color-<鍵>`、`radius.<鍵>` → `--radius-<鍵>`、`fonts.<鍵>` → `--font-<鍵>`，見 `app/src/ui/theme.ts`），`app.css` 只透過變數取得。實體類型與可見等級的顏色不在這裡，由 `knowledge-model.json`、`access.json` 提供。
+
 | 欄位 | 必填 | 格式 | 說明 |
 | --- | --- | --- | --- |
 | `colors.primary` | 是 | `#RRGGBB` | 主色：按鈕、連結、重點 |
@@ -91,8 +93,23 @@ npm run check:client
 | `colors.text` | 是 | `#RRGGBB` | 主要文字 |
 | `colors.textMuted` | 是 | `#RRGGBB` | 次要文字 |
 | `colors.border` | 是 | `#RRGGBB` | 邊框與分隔線 |
+| `colors.danger` | 是 | `#RRGGBB` | 錯誤：錯誤文字、錯誤提示框的邊框與圖示 |
+| `colors.warning` | 是 | `#RRGGBB` | 警告：警告標籤與「已有新說法」標示的文字與邊框、警告提示框 |
+| `colors.success` | 是 | `#RRGGBB` | 成功狀態 |
+| `colors.info` | 是 | `#RRGGBB` | 資訊提示框 |
+| `colors.onStatus` | 是 | `#RRGGBB` | 放在實心狀態色（`danger`、`warning`、`success`、`info`）上的文字，例如提示框的圖示 |
+| `colors.mark` | 是 | `#RRGGBB` | 原文面板中引用段落的標示底色（`<mark>`） |
+| `colors.overlay` | 是 | `#RRGGBBAA` | 確認視窗後方的遮罩；短提示的陰影也由它算出 |
+| `colors.graphFallback` | 是 | `#RRGGBB` | 找不到實體類型或可見等級時，圖譜節點與等級標籤使用的顏色 |
+| `radius.small` | 是 | 長度（`px` 或 `rem`，或 `0`） | 小圓角：引用編號按鈕 |
+| `radius.medium` | 是 | 同上 | 一般圓角：按鈕、輸入框、提示框、待審卡片 |
+| `radius.large` | 是 | 同上 | 大圓角：卡片、確認視窗、上傳區 |
+| `radius.pill` | 是 | 同上 | 膠囊形：標籤、筆數（例如 `999px`） |
 | `fonts.body` | 是 | CSS `font-family` 值 | 內文字體 |
 | `fonts.heading` | 是 | CSS `font-family` 值 | 標題字體 |
+
+- 提示框與可見等級標籤的淡色底色，不另外設欄位：以 `color-mix(in srgb, <狀態色或等級色> 14%, surface)` 算出。
+- **不寫死顏色**：`app.css` 與 `app/src/` 的程式中不得出現顏色值（`#hex`、`rgb()`、`hsl()` 等）或色名；`app.css` 中帶顏色的屬性只能由 `var(--…)`、`color-mix(in srgb, …)` 與 `transparent`、`currentColor` 等關鍵字組成。結構測試在 `app/src/ui/theme.test.ts`，也確認 `app.css` 用到的 `--color-*`、`--radius-*`、`--font-*` 都由 `theme.json` 提供。需要新的顏色時，依[擴充 Schema](#擴充-schema) 在 `theme.json` 加欄位。
 
 不使用任何合作夥伴的品牌名稱、wordmark 或專屬字體名稱作為預設值（RFC 0001）。
 

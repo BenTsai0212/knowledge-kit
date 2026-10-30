@@ -19,6 +19,7 @@ import type {
   ThemeColors,
   ThemeFile,
   ThemeFonts,
+  ThemeRadius,
   UiStrings,
   VisibilityLevel,
 } from "./types";
@@ -73,7 +74,7 @@ export const manifests: ManifestEntry[] = [
   {
     schema: "theme.schema.json",
     pointer: "",
-    keys: { colors: "required", fonts: "required" } satisfies KeyManifest<ThemeFile>,
+    keys: { colors: "required", radius: "required", fonts: "required" } satisfies KeyManifest<ThemeFile>,
   },
   {
     schema: "theme.schema.json",
@@ -86,7 +87,20 @@ export const manifests: ManifestEntry[] = [
       text: "required",
       textMuted: "required",
       border: "required",
+      danger: "required",
+      warning: "required",
+      success: "required",
+      info: "required",
+      onStatus: "required",
+      mark: "required",
+      overlay: "required",
+      graphFallback: "required",
     } satisfies KeyManifest<ThemeColors>,
+  },
+  {
+    schema: "theme.schema.json",
+    pointer: "/properties/radius",
+    keys: { small: "required", medium: "required", large: "required", pill: "required" } satisfies KeyManifest<ThemeRadius>,
   },
   {
     schema: "theme.schema.json",

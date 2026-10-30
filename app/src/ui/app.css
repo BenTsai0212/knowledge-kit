@@ -1,4 +1,4 @@
-/* 最小樣式：顏色與字型來自 client/theme.json（main.tsx 設定 CSS 變數）。正式的主題在 Epic 第 11 項。 */
+/* 顏色、圓角與字型一律來自 client/theme.json（main.tsx 設定 --color-*、--radius-*、--font-* 變數），不寫死顏色值（theme.test.ts 檢查）。 */
 * {
   box-sizing: border-box;
 }
@@ -63,7 +63,7 @@ main {
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: var(--radius-large);
   padding: 1rem;
 }
 
@@ -78,28 +78,28 @@ main {
 }
 
 .error {
-  color: #b42318;
+  color: var(--color-danger);
 }
 
 .badge {
   display: inline-block;
   border: 1px solid var(--color-border);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 0 0.5rem;
   font-size: 0.8rem;
   color: var(--color-textMuted);
 }
 
 .badge.warning {
-  border-color: #d4a72c;
-  color: #7d4e00;
+  border-color: var(--color-warning);
+  color: var(--color-warning);
 }
 
 button {
   font: inherit;
   cursor: pointer;
   border: 1px solid var(--color-primary);
-  border-radius: 6px;
+  border-radius: var(--radius-medium);
   background: var(--color-primary);
   color: var(--color-onPrimary);
   padding: 0.25rem 0.75rem;
@@ -123,7 +123,7 @@ select,
 textarea {
   font: inherit;
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--radius-medium);
   padding: 0.25rem 0.5rem;
 }
 
@@ -165,6 +165,7 @@ button.citation {
   padding: 0 0.35rem;
   margin: 0 0.1rem;
   vertical-align: super;
+  border-radius: var(--radius-small);
 }
 
 .source header {
@@ -175,7 +176,7 @@ button.citation {
 }
 
 .source .highlight mark {
-  background: #fff3bf;
+  background: var(--color-mark);
   color: inherit;
 }
 
@@ -215,7 +216,7 @@ button.citation {
 .segmented {
   display: inline-flex;
   border: 1px solid var(--color-primary);
-  border-radius: 6px;
+  border-radius: var(--radius-medium);
   overflow: hidden;
   font-size: 0.875rem;
 }
@@ -258,7 +259,7 @@ button.citation {
 
 .access-badge {
   display: inline-block;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 0 0.5rem;
   font-size: 0.8rem;
   font-weight: 400;
@@ -275,27 +276,27 @@ button.citation {
   background: var(--color-background);
 }
 
-/* 提示框 */
+/* 提示框：種類決定 --notice-color，邊框與圖示用該色，底色是該色的淡色 */
 .notice {
   display: flex;
   gap: 0.75rem;
-  border: 1px solid;
+  border: 1px solid var(--notice-color);
   border-left-width: 4px;
-  border-radius: 6px;
+  border-radius: var(--radius-medium);
   padding: 0.5rem 0.75rem;
-  background: var(--color-surface);
+  background: color-mix(in srgb, var(--notice-color) 14%, var(--color-surface));
 }
 
 .notice-error {
-  border-color: #b42318;
+  --notice-color: var(--color-danger);
 }
 
 .notice-warning {
-  border-color: #d4a72c;
+  --notice-color: var(--color-warning);
 }
 
 .notice-info {
-  border-color: var(--color-primary);
+  --notice-color: var(--color-info);
 }
 
 .notice-icon {
@@ -306,19 +307,8 @@ button.citation {
   text-align: center;
   font-weight: 700;
   line-height: 1.4rem;
-  color: #ffffff;
-}
-
-.notice-error .notice-icon {
-  background: #b42318;
-}
-
-.notice-warning .notice-icon {
-  background: #b07d00;
-}
-
-.notice-info .notice-icon {
-  background: var(--color-primary);
+  color: var(--color-onStatus);
+  background: var(--notice-color);
 }
 
 .notice-body {
@@ -337,7 +327,7 @@ button.citation {
 .graph-canvas {
   height: 480px;
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--radius-medium);
 }
 
 .legend {
@@ -401,19 +391,19 @@ button.citation {
   display: grid;
   gap: 0.25rem;
   border: 2px dashed var(--color-border);
-  border-radius: 8px;
+  border-radius: var(--radius-large);
   padding: 0.75rem;
 }
 
 .upload-dialog {
   max-width: min(640px, 90vw);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: var(--radius-large);
   padding: 1rem;
 }
 
 .upload-dialog::backdrop {
-  background: rgb(0 0 0 / 40%);
+  background: var(--color-overlay);
 }
 
 .upload-dialog dl {
@@ -496,7 +486,7 @@ button.secondary {
 
 .review-list > li {
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--radius-medium);
   padding: 0.5rem 0.75rem;
 }
 
@@ -512,7 +502,7 @@ label.inline {
   margin-left: 0.35rem;
   min-width: 1.5rem;
   padding: 0 0.4rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   color: var(--color-text);
@@ -574,7 +564,7 @@ label.inline {
 
 .conflict-side {
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--radius-medium);
   padding: 0.5rem 0.75rem;
 }
 
@@ -604,8 +594,8 @@ label.inline {
 }
 
 .passage-marks .mark-superseded_by {
-  border-color: #d4a72c;
-  color: #7d4e00;
+  border-color: var(--color-warning);
+  color: var(--color-warning);
 }
 
 /* 核准或退回後的短提示：浮動在視窗上方置中，不隨頁面捲動（#48 審查第 2 次）。區域一直存在（live region） */
@@ -624,8 +614,8 @@ label.inline {
   gap: 0.75rem;
   background: var(--color-surface);
   border: 1px solid var(--color-primary);
-  border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  border-radius: var(--radius-medium);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-overlay) 38%, transparent);
   padding: 0.5rem 0.5rem 0.5rem 1rem;
   animation: toast-in 0.3s ease-out;
 }

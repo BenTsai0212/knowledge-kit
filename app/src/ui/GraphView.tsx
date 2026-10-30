@@ -17,14 +17,15 @@ interface Props {
 
 const { entityTypes, relationTypes } = clientConfig.knowledgeModel;
 
-function elements(graph: Graph, language: string): ElementDefinition[] {
+// fallback：找不到實體類型時的顏色（theme.json 的 graphFallback）
+function elements(graph: Graph, language: string, fallback: string): ElementDefinition[] {
   const color = new Map(entityTypes.map((t) => [t.id, t.color]));
   const relationLabel = new Map(relationTypes.map((t) => [t.id, t.label[language]]));
   // 先排成一個圓作為起始位置，cose 不打亂起始位置（randomize: false），版面每次相同
   const step = (2 * Math.PI) / Math.max(graph.entities.length, 1);
   return [
     ...graph.entities.map((e, i) => ({
-      data: { id: e.id, label: entityName(e, language), color: color.get(e.type) ?? "#888888" },
+      data: { id: e.id, label: entityName(e, language), color: color.get(e.type) ?? fallback },
       position: { x: 300 * Math.cos(i * step), y: 300 * Math.sin(i * step) },
     })),
     ...graph.relations.map((r) => ({
@@ -55,7 +56,7 @@ export function GraphView({ graph, language, selected, path, onSelect }: Props) 
       const style = getComputedStyle(document.documentElement);
       const instance = cytoscape({
         container: container.current,
-        elements: elements(graph, language),
+        elements: elements(graph, language, style.getPropertyValue("--color-graphFallback")),
         layout: { name: "cose", randomize: false, animate: false },
         style: [
           {
