@@ -182,7 +182,7 @@ Rules:
 | `ui/Toolbar.tsx` | 身分切換（`access.json` 的角色，標示「展示用權限」）、語言切換、「虛構資料」標示、更換邀請碼 |
 | `ui/QuestionPanel.tsx` | 依情境分組的預設問題（標示情境的角色）、自由提問（500 字元上限） |
 | `ui/AnswerView.tsx` | 串流文字；結束後引用顯示成可點的編號；標示拒答、未附出處、不完整與錯誤訊息 |
-| `ui/SourcePanel.tsx` | 原文：文件標題與該身分看得到的段落，標示被引用的段落並捲動到該處 |
+| `ui/SourcePanel.tsx` | 原文：文件標題與該身分看得到的段落，標示被引用的段落並捲動到該處；段落旁有說法不同與取代的標示（`ui/PassageMarks.tsx`，點擊後打開另一段，見 [docs/conflicts.md](conflicts.md)「畫面」） |
 
 - **資料庫**：頁面載入時在瀏覽器中以 PGlite 建立記憶體資料庫，執行 migration 並匯入資料集（與測試相同的 `openDatabase()`＋`seedDataset()`）。載入完成前預設問題不能按。
   - 本機量測（`npm run build`＋`npx wrangler dev`、Chrome）：

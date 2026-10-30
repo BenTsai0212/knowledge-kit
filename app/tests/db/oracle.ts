@@ -224,3 +224,26 @@ export function expectedSupersede(
   }
   return out;
 }
+
+// 時間軸與原文面板的標示（docs/conflicts.md「畫面」）：段落 id → 「種類|另一段」。
+// 看得到的「並存」兩段互相標示；「取代」的舊段落只標示 expectedSupersede() 的取代者，新段落標示每一段被它取代的舊段落
+export function expectedMarks(
+  access: AccessFile,
+  data: Sample,
+  conflicts: ConflictSample,
+  identityId: string | null,
+  dates: Record<string, string | null>,
+): Map<string, string[]> {
+  const visible = new Set(expectedConflictVisible(access, data, conflicts, identityId).conflicts);
+  const decision = new Map(conflicts.decisions.map((d) => [d.conflict, d.decision]));
+  const out = new Map<string, string[]>();
+  const add = (id: string, mark: string) => out.set(id, [...(out.get(id) ?? []), mark].sort());
+  for (const c of conflicts.conflicts.filter((c) => visible.has(c.id))) {
+    if (decision.get(c.id) === "coexist") {
+      add(c.oldPassage, `conflict|${c.newPassage}`);
+      add(c.newPassage, `conflict|${c.oldPassage}`);
+    } else if (decision.get(c.id) === "supersede") add(c.newPassage, `supersedes|${c.oldPassage}`);
+  }
+  for (const [old, by] of expectedSupersede(access, data, conflicts, identityId, dates)) add(old, `superseded_by|${by}`);
+  return out;
+}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import workerReadme from "../../../worker/README.md?raw";
 import { clientConfig } from "../client/load";
-import { errorMessage, STRINGS, strings } from "./strings";
+import { errorMessage, fill, STRINGS, strings, taskErrorMessage } from "./strings";
 
 // 巢狀物件攤平成 "errors.daily_limit" 這類鍵
 const flatten = (value: object, prefix = ""): [string, unknown][] =>
@@ -40,5 +40,23 @@ describe("錯誤訊息", () => {
     expect(errorMessage("en", "network")).toBe(STRINGS.en.errors.network);
     expect(errorMessage("zh-TW", "something_new")).toBe(STRINGS["zh-TW"].unknownError);
     expect(errorMessage("en", "toString")).toBe(STRINGS.en.unknownError);
+  });
+
+  it("萃取與比對的失敗原因：自己的原因用 extractErrors，其他依 /api/ask 的錯誤類型", () => {
+    expect(taskErrorMessage("zh-TW", "format")).toBe(STRINGS["zh-TW"].extractErrors.format);
+    expect(taskErrorMessage("en", "no_access_code")).toBe(STRINGS.en.extractErrors.no_access_code);
+    expect(taskErrorMessage("en", "daily_limit")).toBe(STRINGS.en.errors.daily_limit);
+    expect(taskErrorMessage("zh-TW", "toString")).toBe(STRINGS["zh-TW"].unknownError);
+  });
+});
+
+describe("fill", () => {
+  it("換掉 {key}，不解讀替換字元（標題以文字顯示）", () => {
+    expect(fill(STRINGS["zh-TW"].conflictMarks.superseded_by, "title", "青翼進度")).toBe("已由〈青翼進度〉取代");
+    expect(fill("{title}", "title", "$& $1")).toBe("$& $1");
+  });
+
+  it("每種語言的標示範本都有 {title}", () => {
+    for (const s of Object.values(STRINGS)) for (const t of Object.values(s.conflictMarks)) expect(t).toContain("{title}");
   });
 });

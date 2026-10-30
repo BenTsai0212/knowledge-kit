@@ -4,6 +4,7 @@ import { readGraph, type Graph } from "../graph/read";
 import { readTimeline, type TimelineEntry } from "../graph/timeline";
 import { AccessBadges } from "./AccessBadges";
 import { entityOptionLabel } from "./graph-labels";
+import { PassageMarks } from "./PassageMarks";
 import { createRequestGate } from "./requests";
 import { strings } from "./strings";
 
@@ -116,6 +117,7 @@ export function TimelinePage({ db, identity, language, uploaded, focus, onFocuse
                     <button type="button" className="link" onClick={() => onOpenSource(p.id)}>
                       {s.openSource}
                     </button>
+                    <PassageMarks marks={p.marks} language={language} onOpenSource={onOpenSource} />
                   </li>
                 ))}
               </ul>

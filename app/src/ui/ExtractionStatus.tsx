@@ -1,7 +1,7 @@
 // 上傳後的萃取狀態（#44）：萃取中（第幾批）、已送審的筆數、捨棄的筆數、未萃取的段落、失敗時可以重試。
 import type { ExtractionState } from "../extraction/run";
 import { Notice } from "./Notice";
-import { errorMessage, strings, type ExtractFailure } from "./strings";
+import { strings, taskErrorMessage } from "./strings";
 
 interface Props {
   state: ExtractionState;
@@ -11,8 +11,6 @@ interface Props {
   onRetry(): void;
 }
 
-const EXTRACT_FAILURES = new Set<string>(["format", "truncated", "write", "no_access_code"]);
-
 export function ExtractionStatus({ state, running: active, language, onRetry }: Props) {
   const s = strings(language);
   const total = state.batches.length;
@@ -21,7 +19,7 @@ export function ExtractionStatus({ state, running: active, language, onRetry }: 
   const failed = state.batches.filter((b) => b.status === "failed");
   const notRun = active ? 0 : state.batches.filter((b) => b.status === "waiting").length;
   const sum = (key: "entities" | "relations" | "dropped") => state.batches.reduce((n, b) => n + b[key], 0);
-  const message = (error: string) => (EXTRACT_FAILURES.has(error) ? s.extractErrors[error as ExtractFailure] : errorMessage(language, error));
+  const message = (error: string) => taskErrorMessage(language, error);
   // 失敗的原因不重複列出
   const reasons = [...new Set(failed.map((b) => b.error ?? "failed"))];
 

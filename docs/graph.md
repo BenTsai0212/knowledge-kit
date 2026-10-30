@@ -58,13 +58,14 @@ shortestPath(graph, "person-huang-jianhong", "project-longpier");
 
 ```ts
 const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "project-bluewing" });
-// [{ documentId, title, date: "2026-02-10", language, passages: [{ id, content, entityIds }] }, …]
+// [{ documentId, title, date: "2026-02-10", language, passages: [{ id, content, entityIds, marks }] }, …]
 ```
 
 - **單位**：文件，附上其中看得到的段落（依文件中的順序）。沒有看得到的段落的文件不列出。
 - **排序**：依日期由新到舊（#42）；沒有日期的文件排在最後（`date` 為 `null`）。日期相同時依文件 id。
 - **語言**：只列出與介面語言相同的文件（#31 決定 2），與問答一致。
 - **依實體篩選**：只留以該實體為出處的段落，以及有這類段落的文件。`entityIds` 是以該段為出處、且看得到的實體。
+- **標示**：`marks` 是已處理的說法不同與取代（「與〈文件〉的說法不同」「已由〈文件〉取代」「取代〈文件〉的說法」），只有看得到另一段時才有，見 [docs/conflicts.md](conflicts.md)「畫面」。`readSource()` 的段落也有同樣的 `marks`。
 - **日期**：在 SQL 中以 `to_char(document_date, 'YYYY-MM-DD')` 轉成字串，不經過 JavaScript 的 `Date`，避免時區讓日期差一天；畫面直接顯示該字串。
 - 參考資料集中，依「青翼專案」篩選時，中文與英文都能看出上市時間從第二季（較早的文件）改為第三季（2026-05-15 的進度更新）；由新到舊排列，所以第三季的進度更新在上面。上市時間的 4 段是 `project-bluewing` 的出處（#31 決定 4）。
 

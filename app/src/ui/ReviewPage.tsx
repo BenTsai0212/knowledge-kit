@@ -1,10 +1,12 @@
 // 待審頁（#44，docs/extraction.md「畫面」）：只有 canReview 的身分看得到。依文件分組列出待審的實體與關係，
 // 可以修改名稱、選擇合併對象、勾選後批次核准、核准整份文件、退回；另有「已退回」分頁。
 // 卡片平常只顯示名稱，按「編輯名稱」才可以修改；出處預設 2 行、標出實體名稱；核准或退回後顯示短提示（#48）。
-// 讀取與寫入都經 store.ts（RLS 決定看得到、能核准什麼）；模型輸出一律以文字節點顯示。
+// 每份文件另有「說法不同」區塊（#51）：新舊段落並列、三選一處理；已處理的在「已處理的說法不同」分頁。
+// 讀取與寫入都經 store.ts、conflicts/store.ts（RLS 決定看得到、能核准什麼）；模型輸出一律以文字節點顯示。
 import { Fragment, useEffect, useRef, useState } from "react";
 import { clientConfig } from "../client/load";
 import type { LocalizedText } from "../client/types";
+import { decideConflict, readConflicts, type ConflictDecision, type ConflictItem, type ConflictPassage } from "../conflicts/store";
 import type { Database } from "../db/database";
 import { suggestMerge, type MergeSuggestion } from "../extraction/merge";
 import { approve, readReview, reject, ReviewError, type EntityApproval, type ReviewDocument, type ReviewEntity } from "../extraction/store";
@@ -22,6 +24,7 @@ import {
   inputSize,
   namesInvalid,
   relationReady,
+  reviewDocuments,
   toastText,
   type EntityChoice,
 } from "./review-helpers";
@@ -45,13 +48,18 @@ const TOAST_MS = 10_000;
 
 const { client, knowledgeModel } = clientConfig;
 
+// 說法不同的三種處理方式（#51 決定 4），依按鈕的順序
+const CONFLICT_DECISIONS: readonly ConflictDecision[] = ["coexist", "supersede", "not_conflict"];
+
 // 待審實體沒有主要名稱（name），依介面語言取 names
 const pendingName = (e: ReviewEntity, language: string) => e.names[language] || Object.values(e.names)[0] || e.id;
 
 export function ReviewPage({ db, identity, language, extracting, onOpenSource, onChanged, onGotoGraph }: Props) {
   const s = strings(language);
-  const [tab, setTab] = useState<"pending" | "rejected">("pending");
+  // decided：已處理的說法不同（#51）
+  const [tab, setTab] = useState<"pending" | "rejected" | "decided">("pending");
   const [docs, setDocs] = useState<ReviewDocument[] | null>(null);
+  const [conflicts, setConflicts] = useState<ConflictItem[]>([]);
   const [graph, setGraph] = useState<Graph | null>(null);
   const [choices, setChoices] = useState<Record<string, EntityChoice>>({});
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
@@ -73,9 +81,10 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
 
   useEffect(() => {
     const ticket = reads.current.begin();
-    void Promise.all([readReview(db, identity), readGraph(db, identity)]).then(([d, g]) => {
+    void Promise.all([readReview(db, identity), readGraph(db, identity), readConflicts(db, identity)]).then(([d, g, c]) => {
       if (!ticket.isCurrent()) return;
-      setDocs(d);
+      setDocs(reviewDocuments(d, c));
+      setConflicts(c);
       setGraph(g);
       setSelected(new Set());
     });
@@ -194,8 +203,31 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
       </ul>
     );
   };
-  const visibleDocs = docs.filter((d) =>
-    tab === "pending" ? [...d.entities, ...d.relations].some((x) => x.status === "pending") : [...d.entities, ...d.relations].some((x) => x.status === "rejected"),
+  // 每份文件在目前分頁要列出的說法不同：待審分頁是待處理的，已處理分頁是已處理的
+  const conflictsOf = (docId: string) =>
+    conflicts.filter((c) => c.documentId === docId && (tab === "pending" ? c.decision === null : tab === "decided" && c.decision !== null));
+  const itemStatus = tab === "pending" ? "pending" : tab === "rejected" ? "rejected" : null;
+  const visibleDocs = docs.filter((d) => [...d.entities, ...d.relations].some((x) => x.status === itemStatus) || conflictsOf(d.id).length > 0);
+  const decide = (docId: string, conflictId: string, decision: ConflictDecision) =>
+    void run(docId, () => decideConflict(db, identity, conflictId, decision), {
+      text: toastText({ one: s.conflictToast, many: s.conflictToast }, [s.conflictDecisions[decision]]),
+      graph: false,
+    });
+  // 新舊說法的一側：文件標題、等級與專案的標籤、日期、內容（文件的語言）與「打開原文」
+  const conflictSide = (label: string, p: ConflictPassage) => (
+    <div className="conflict-side">
+      <h4>{label}</h4>
+      <p>
+        <span lang={p.language}>{p.documentTitle}</span> <AccessBadges visibility={p.visibility} project={p.project} language={language} />{" "}
+        <time className="muted" dateTime={p.date ?? undefined}>
+          {p.date ?? s.undated}
+        </time>
+      </p>
+      <p lang={p.language}>{p.content}</p>
+      <button type="button" className="link" onClick={() => onOpenSource(p.id)}>
+        {s.openSource}
+      </button>
+    </div>
   );
 
   return (
@@ -208,6 +240,9 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
           </button>
           <button type="button" aria-pressed={tab === "rejected"} onClick={() => setTab("rejected")}>
             {s.reviewRejectedTab}
+          </button>
+          <button type="button" aria-pressed={tab === "decided"} onClick={() => setTab("decided")}>
+            {s.reviewDecidedTab}
           </button>
         </div>
         <button type="button" className="icon-button" aria-label={s.reviewRefresh} title={s.reviewRefresh} disabled={busy} onClick={refresh}>
@@ -240,11 +275,14 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
         )}
       </div>
       {extracting && <Notice kind="info" title={s.reviewExtracting} action={{ label: s.reviewRefresh, onClick: refresh, disabled: busy }} />}
-      {visibleDocs.length === 0 && <p className="card muted">{tab === "pending" ? s.reviewEmpty : s.reviewRejectedEmpty}</p>}
+      {visibleDocs.length === 0 && (
+        <p className="card muted">{tab === "pending" ? s.reviewEmpty : tab === "rejected" ? s.reviewRejectedEmpty : s.reviewDecidedEmpty}</p>
+      )}
 
       {visibleDocs.map((doc) => {
-        const pendingEntities = doc.entities.filter((e) => (tab === "pending" ? e.status === "pending" : e.status === "rejected"));
-        const pendingRelations = doc.relations.filter((r) => (tab === "pending" ? r.status === "pending" : r.status === "rejected"));
+        const pendingEntities = doc.entities.filter((e) => e.status === itemStatus);
+        const pendingRelations = doc.relations.filter((r) => r.status === itemStatus);
+        const docConflicts = conflictsOf(doc.id);
         const approvedCount = [...doc.entities, ...doc.relations].filter((x) => x.status === "approved").length;
         const batchable = [...pendingEntities.filter((e) => canBatch(suggestions[e.id])).map((e) => e.id), ...pendingRelations.map((r) => r.id)];
         return (
@@ -269,7 +307,8 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                 {approvedCount}
               </p>
             )}
-            {tab === "pending" && (
+            {/* 只有說法不同、沒有待審實體與關係的文件不顯示批次核准 */}
+            {tab === "pending" && pendingEntities.length + pendingRelations.length > 0 && (
               <div className="dialog-actions">
                 <button type="button" className="secondary" disabled={busy} onClick={() => setSelected(new Set(batchable))}>
                   {s.reviewSelectAll}
@@ -283,7 +322,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
               </div>
             )}
 
-            <h3>{s.reviewEntities}</h3>
+            {pendingEntities.length > 0 && <h3>{s.reviewEntities}</h3>}
             <ul className="review-list">
               {pendingEntities.map((e) => {
                 const suggestion = suggestions[e.id];
@@ -406,6 +445,32 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                         {s.reviewReject}
                       </button>
                       {!relationReady(doc, r.id) && <span className="muted">{s.reviewRelationBlocked}</span>}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+
+            {/* 說法不同（#51）：新舊段落左右並列，附模型的差異說明（純文字）；待審分頁有三個處理按鈕，已處理分頁顯示決定 */}
+            {docConflicts.length > 0 && <h3>{s.conflictSection}</h3>}
+            <ul className="review-list">
+              {docConflicts.map((c) => (
+                <li key={c.id}>
+                  <p className="conflict-summary" lang={c.newPassage.language}>
+                    {c.summary}
+                  </p>
+                  {c.decision !== null && <span className="badge">{s.conflictDecisions[c.decision]}</span>}
+                  <div className="conflict-pair">
+                    {conflictSide(s.conflictNew, c.newPassage)}
+                    {conflictSide(s.conflictOld, c.oldPassage)}
+                  </div>
+                  {c.decision === null && (
+                    <div className="dialog-actions">
+                      {CONFLICT_DECISIONS.map((d) => (
+                        <button key={d} type="button" className={d === "not_conflict" ? "secondary" : undefined} disabled={busy} onClick={() => decide(doc.id, c.id, d)}>
+                          {busy ? s.reviewWorking : s.conflictDecisions[d]}
+                        </button>
+                      ))}
                     </div>
                   )}
                 </li>

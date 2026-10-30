@@ -1,7 +1,21 @@
 import { describe, expect, it } from "vitest";
+import type { ConflictItem, ConflictPassage } from "../conflicts/store";
 import type { MergeSuggestion } from "../extraction/merge";
 import type { ReviewDocument, ReviewEntity, ReviewRelation } from "../extraction/store";
-import { batchPlan, canBatch, entityApproval, highlightSegments, initialChoice, inputSize, namesComplete, namesInvalid, pendingCount, relationReady, toastText } from "./review-helpers";
+import {
+  batchPlan,
+  canBatch,
+  entityApproval,
+  highlightSegments,
+  initialChoice,
+  inputSize,
+  namesComplete,
+  namesInvalid,
+  pendingCount,
+  relationReady,
+  reviewDocuments,
+  toastText,
+} from "./review-helpers";
 
 const entity = (id: string, status: ReviewEntity["status"] = "pending"): ReviewEntity => ({
   id,
@@ -90,6 +104,41 @@ describe("pendingCount", () => {
     const b = doc([entity("pe-d")], [relation("pr-x", "pe-d", "pe-d", "approved")]);
     expect(pendingCount([a, b])).toBe(3);
     expect(pendingCount([])).toBe(0);
+  });
+
+  it("加上待處理的說法不同（#51），已處理的不計", () => {
+    const a = doc([entity("pe-a")], []);
+    expect(pendingCount([a], [{ decision: null }, { decision: "coexist" }, { decision: null }])).toBe(3);
+    expect(pendingCount([], [{ decision: "not_conflict" }])).toBe(0);
+  });
+});
+
+describe("reviewDocuments", () => {
+  const passage = (documentId: string): ConflictPassage => ({
+    id: `${documentId}-p`,
+    documentId,
+    documentTitle: `標題 ${documentId}`,
+    visibility: "internal",
+    project: "bluewing",
+    date: null,
+    language: "en",
+    content: "x",
+  });
+  const conflict = (id: string, documentId: string): ConflictItem => ({
+    id,
+    documentId,
+    summary: "s",
+    newPassage: passage(documentId),
+    oldPassage: passage("old"),
+    decision: null,
+  });
+
+  it("待審的文件在前；只有說法不同的文件以新段落的文件資訊補上，不重複", () => {
+    const a = doc([entity("pe-a")], []);
+    const docs = reviewDocuments([a], [conflict("pc-1", "d"), conflict("pc-2", "e"), conflict("pc-3", "e")]);
+    expect(docs.map((d) => d.id)).toEqual(["d", "e"]);
+    expect(docs[0]).toBe(a);
+    expect(docs[1]).toEqual({ id: "e", title: "標題 e", language: "en", visibility: "internal", project: "bluewing", entities: [], relations: [] });
   });
 });
 
