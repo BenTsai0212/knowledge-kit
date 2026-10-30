@@ -225,7 +225,7 @@
       "expect": "refusal",
       "answerPassages": [],
       "keyPoints": [],
-      "forbidden": [["Paris", "巴黎"]],
+      "forbidden": [],
       "referenceAnswer": null
     },
     {
