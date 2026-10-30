@@ -251,7 +251,7 @@ JSON Schema 無法參照另一個檔的值，以下由 `scripts/check-client.mjs
 - 關係類型的 `from`、`to` → `entityTypes`
 - 角色的 `visibility` → `visibilityLevels`；角色的 `projects` → `projects`
 - 情境的 `role` → `roles`
-- 評測題庫的 `id` 不重複、`role` → `roles`、`language` → `languages`，以及 `expect` 與其他欄位的對應；答案段落的存在與可見範圍由 `app/src/evals/validate.ts` 檢查（[docs/evals.md](evals.md)「檢查」）
+- 評測題庫的 `id` 不重複、`role` → `roles`、`language` → `languages`，以及 `expect` 與其他欄位的對應；答案段落的存在與可見範圍由 `app/src/evals/validate.ts` 檢查，只有 `npm test` 會執行，換客戶後兩者都要跑（[docs/evals.md](evals.md)「檢查」）
 
 ## app 如何讀取
 
