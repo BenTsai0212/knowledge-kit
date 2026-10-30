@@ -12,7 +12,7 @@
 npm run check:client
 ```
 
-- 驗證 `client/` 頂層的每個 `.json` 檔；缺少設定檔、未知的設定檔、多餘的欄位都算錯誤。
+- 驗證 `client/` 頂層的每個 `.json` 檔與 `i18n/` 的翻譯檔；缺少設定檔、未知的設定檔、多餘的欄位都算錯誤。
 - 錯誤逐行印出 `<檔名> <欄位路徑>：<訊息>`，有錯誤時以非 0 結束。CI 的 `checks` job 會執行。
 - 檢查其他資料夾：`node scripts/check-client.mjs <資料夾>`（Schema 一律用 `client/schema/`）。
 
@@ -25,6 +25,7 @@ npm run check:client
 | `knowledge-model.json` | `knowledge-model.schema.json` | 實體類型（含圖譜顏色）、關係類型、別名規則、合併策略 |
 | `access.json` | `access.schema.json` | 可見等級、專案名單、角色 |
 | `scenarios.json` | `scenarios.schema.json` | 示範情境與預設問題 |
+| `i18n/<語言>.json` | `i18n.schema.json` | 介面文字，每種語言一份（見[翻譯檔](#翻譯檔clienti18n)） |
 
 ## 共用格式（`common.schema.json`）
 
@@ -167,6 +168,32 @@ npm run check:client
 | `questions[].text` | 是 | `LocalizedText` | 預設問題，至少 1 題 |
 | `questions[].answerPassages` | 是 | 資料集段落 `id` 陣列，至少 1 個、不重複 | 答案所在的段落；必須存在於資料集（匯入程式檢查），且該情境的角色看得到 |
 
+## 翻譯檔（`client/i18n/`）
+
+畫面上的所有介面文字（按鈕、標題、提示、拒答文字、錯誤訊息、「虛構資料」「展示用權限」標示）放在 `client/i18n/<語言>.json`，每種語言一份完整的檔案；檔名是 `client.json` 的 `languages` 中的語言代碼（例如 `zh-TW.json`、`en.json`）。角色、情境、類型等客戶自己的名稱仍用各設定檔的 `LocalizedText`。
+
+**新增語言**：在 `languages` 加上語言代碼，複製一份既有的翻譯檔改名並翻譯全部的值。不用改程式：`app/src/client/i18n.ts` 以 `import.meta.glob` 讀入資料夾中的所有翻譯檔。
+
+### 格式
+
+- 鍵與 `app/src/client/types.ts` 的 `UiStrings` 相同，是巢狀的物件：大部分是頂層的字串，錯誤訊息等依類型分組（`errors`、`uploadErrors`、`extractErrors`、`reviewErrors`、`conflictDecisions`、`conflictMarks`），例如 `errors.daily_limit`。鍵的正本是 `client/schema/i18n.schema.json`。
+- 值是非空字串（不能只有空白）。
+- 帶參數的文字以 `{camelCase}` 標示，例如 `"已核准 {count} 筆"`、`"已由〈{title}〉取代"`、`"{done}／{total}"`；程式以 `fill(template, { count: 3 })` 代入（一次掃過，值中的 `{…}`、`$&` 不再解讀）。各語言的參數必須相同，順序可以不同。
+- 翻譯檔中不放邏輯：數量不同要換句子時（例如單複數）拆成多個鍵，比照 `reviewToastApprovedOne`／`reviewToastApproved`。
+- 標點與括號依語言而定，也放在翻譯檔（`colon`、`listSeparator`、`progress`、`parenthetical`）。
+
+### 檢查（`npm run check:client`）
+
+- `languages` 的每一種都要有翻譯檔，缺少就失敗；不在 `languages` 內的翻譯檔也失敗。
+- 依 `i18n.schema.json` 驗證：缺少的鍵、多出來的鍵（含巢狀物件中）、空字串都會失敗。
+- 每個鍵的參數集合與預設語言（預設語言的檔有誤時，用第一個通過 Schema 的語言）相同，例如 `i18n/en.json /reviewToastApproved：參數 （無） 與 zh-TW 的 {count} 不同`。
+
+### 程式如何讀取
+
+- 只透過 `app/src/client/i18n.ts`：`strings(language)` 取得該語言的全部文字，`errorMessage()`、`taskErrorMessage()` 把錯誤類型轉成訊息，`fill()` 代入參數。元件與問答模組不寫死文字（AGENTS.md 第 5 節）。
+- 結構測試（`app/src/client/i18n.test.ts`）確認：只有 `i18n.ts` 讀取 `client/i18n/`；`app/src/` 中沒有殘留的文字表（`UiStrings` 型別的物件、依語言分的物件）；非測試的 `.ts`／`.tsx` 去掉註解後沒有中日韓文字（含全形標點）。給開發者的錯誤訊息、測試資料、停用字等不是畫面文字的檔，逐一列在測試的例外清單並寫明原因；元件與 `App.tsx` 不能列入。
+- **限制**：結構測試只抓得到中日韓文字，寫死的英文介面文字（例如 JSX 中的 `<p>Loading</p>`）抓不到，要靠審查把關。
+
 ## 跨檔規則
 
 JSON Schema 無法參照另一個檔的值，以下由 `scripts/check-client.mjs` 在 Schema 驗證之後檢查。某個檔沒有通過 Schema 時，不對它做參照檢查，先修正 Schema 錯誤。
@@ -179,7 +206,7 @@ JSON Schema 無法參照另一個檔的值，以下由 `scripts/check-client.mjs
 
 ## app 如何讀取
 
-`app/src/client/load.ts` 在 build 時以 JSON import 讀入 5 個設定檔，匯出型別為 `ClientConfig` 的 `clientConfig`。
+`app/src/client/load.ts` 在 build 時以 JSON import 讀入 5 個設定檔，匯出型別為 `ClientConfig` 的 `clientConfig`。翻譯檔由 `app/src/client/i18n.ts` 讀入（見[翻譯檔](#翻譯檔clienti18n)）。
 
 - 執行時不做 ajv 驗證，ajv 不打包進前端；驗證只在 `npm run check:client` 與 CI 執行。
 - 省略的欄位在這裡補上預設值，讀取端拿到的型別一律是必填。目前有 `mergeStrategy`（省略時補成 `review`）、`retrieval` 的各欄位（`RETRIEVAL_DEFAULTS`）、`upload` 的各欄位（`UPLOAD_DEFAULTS`）與 `conflicts` 的各欄位（`CONFLICTS_DEFAULTS`）；預設值與 Schema 的 `default` 相同，由 `load.test.ts` 比對。
@@ -194,12 +221,14 @@ JSON Schema 是唯一正本，型別在 `app/src/client/types.ts` 手寫。加�
 4. 有預設值的選填欄位：在 `load.ts` 補上預設值
 5. 範例設定、本文件，以及需要時 `scripts/check-client.mjs` 的跨檔規則與測試
 
+新增介面文字時，同樣改 `i18n.schema.json`、`types.ts` 的 `UiStrings`、`keys.ts` 的鍵清單，並在**每一份**翻譯檔加上該鍵。
+
 漏改時會被擋下：
 
 - 型別與鍵清單不一致（多鍵、少鍵、必填標錯）→ `npm run typecheck` 失敗（`satisfies KeyManifest<T>`）
 - 鍵清單與 Schema 的 `properties`、`required` 不一致，或 Schema 中有物件沒有鍵清單 → `npm test` 失敗（`app/src/client/schema-sync.test.ts`）
 - 範例設定缺欄位或型別不符 → `npm run typecheck` 失敗（`load.ts`）
-- 範例設定不符合 Schema（含列舉值）→ `npm run check:client` 失敗
+- 範例設定不符合 Schema（含列舉值）、翻譯檔缺鍵或參數不一致 → `npm run check:client` 失敗
 
 ## 測試資料
 

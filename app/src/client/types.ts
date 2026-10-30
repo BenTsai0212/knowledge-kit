@@ -1,5 +1,10 @@
 // client/*.json 的型別。JSON Schema（client/schema/）是唯一正本；改 Schema 時同步修改本檔與 keys.ts。
 
+import type { ErrorType } from "../../../worker/src/errors";
+import type { PassageMarkKind } from "../conflicts/marks";
+import type { ConflictDecision } from "../conflicts/store";
+import type { ParseFailure } from "../upload/parse";
+
 export type LanguageCode = string;
 export type LocalizedText = Record<LanguageCode, string>;
 export type Id = string;
@@ -165,4 +170,195 @@ export interface ClientConfig extends Omit<ClientFiles, "client" | "knowledgeMod
     entityTypes: EntityType[];
     relationTypes: RelationType[];
   };
+}
+
+// 介面文字的鍵：錯誤與失敗原因的類型（翻譯檔中錯誤訊息的鍵）
+
+// /api/ask 的錯誤類型（worker/README.md），加上前端自己的錯誤。少了任何一種，型別檢查就會失敗
+export type AskErrorType =
+  | ErrorType
+  // fetch 失敗（離線、連不到伺服器）
+  | "network"
+  // 不是 SSE，也不是 Worker 的 JSON 錯誤
+  | "unexpected_response"
+  // ask() 在送出前的檢查
+  | "empty_question"
+  | "question_too_long";
+
+// 上傳失敗的原因：解析（ParseFailure）、寫入（denied：被 RLS 拒絕；invalid：格式不符）、沒有選檔也沒有貼上文字
+export type UploadFailure = ParseFailure | "denied" | "invalid" | "no_input";
+
+// 萃取的失敗原因（run.ts 之外，以及畫面自己的 no_access_code）；/api/ask 的錯誤類型用 errors
+export type ExtractFailure = "format" | "truncated" | "write" | "no_access_code";
+
+// client/i18n/<語言>.json（i18n.schema.json）。帶參數的文字以 {camelCase} 標示，由 i18n.ts 的 fill() 代入
+export interface UiStrings {
+  loading: string;
+  loadFailed: string;
+  // 標示：資料是虛構的、身分切換只是展示權限
+  fictionalData: string;
+  demoPermissions: string;
+  identity: string;
+  language: string;
+  accessCodeTitle: string;
+  accessCodeLabel: string;
+  accessCodeHint: string;
+  accessCodeSubmit: string;
+  changeAccessCode: string;
+  presetQuestions: string;
+  // 預設問題旁標示情境的角色；提問一律以目前選的身分（#26 決定 1）
+  scenarioRole: string;
+  questionLabel: string;
+  questionPlaceholder: string;
+  askButton: string;
+  answering: string;
+  emptyAnswer: string;
+  openSource: string;
+  sourceTitle: string;
+  closeSource: string;
+  views: string;
+  tabQa: string;
+  tabGraph: string;
+  legend: string;
+  graphEmpty: string;
+  selectEntity: string;
+  relatedEntities: string;
+  entitySources: string;
+  tabTimeline: string;
+  pathTitle: string;
+  pathFrom: string;
+  pathTo: string;
+  pathChoose: string;
+  // 找不到路徑時的固定文字：不區分沒有連通或看不到（不透露是否因權限而找不到）
+  pathNotFound: string;
+  timelineFilter: string;
+  timelineAll: string;
+  timelineEmpty: string;
+  undated: string;
+  tabUpload: string;
+  uploadNotAllowed: string;
+  // 上傳內容只存在瀏覽器記憶體
+  uploadEphemeral: string;
+  uploadFile: string;
+  uploadPaste: string;
+  uploadPastePlaceholder: string;
+  uploadDocTitle: string;
+  uploadLanguage: string;
+  uploadVisibility: string;
+  uploadProject: string;
+  uploadNoProject: string;
+  uploadDate: string;
+  uploadPreview: string;
+  uploadParsing: string;
+  uploadPassageCount: string;
+  uploadSubmit: string;
+  uploadDone: string;
+  uploadGotoQa: string;
+  uploadGotoTimeline: string;
+  uploadErrors: Record<UploadFailure, string>;
+  uploadDrop: string;
+  uploadClearFile: string;
+  // 依可見等級與專案算出看得到的角色（#42）
+  uploadAudience: string;
+  listSeparator: string;
+  uploadConfirmTitle: string;
+  uploadBack: string;
+  uploadShowAll: string;
+  uploadWriting: string;
+  uploadAnother: string;
+  // 時間軸中本次工作階段上傳的文件
+  timelineUploaded: string;
+  extractTitle: string;
+  extractRunning: string;
+  extractDone: string;
+  extractEntities: string;
+  extractRelations: string;
+  extractDropped: string;
+  extractSkipped: string;
+  extractFailed: string;
+  // 萃取停止後還沒執行的批次（例如邀請碼被拒），重試時一併送出
+  extractNotRun: string;
+  extractRetry: string;
+  extractErrors: Record<ExtractFailure, string>;
+  tabReview: string;
+  reviewPendingTab: string;
+  reviewRejectedTab: string;
+  reviewEmpty: string;
+  reviewRejectedEmpty: string;
+  reviewExtracting: string;
+  reviewRefresh: string;
+  reviewEntities: string;
+  reviewRelations: string;
+  reviewSelectAll: string;
+  reviewApproveSelected: string;
+  reviewApproveDocument: string;
+  reviewApprove: string;
+  reviewReject: string;
+  reviewWorking: string;
+  reviewNeedsChoice: string;
+  reviewChoose: string;
+  reviewCreateNew: string;
+  reviewMergeInto: string;
+  reviewMergeHint: string;
+  reviewApprovedCount: string;
+  reviewRejectedWithEntity: string;
+  reviewRelationBlocked: string;
+  // 核准前修改的名稱，每種語言都必須有值（#47 審查）
+  reviewNamesRequired: string;
+  reviewSkippedNames: string;
+  // 提示框的標題與動作（#48）
+  noticeParseTitle: string;
+  noticeWriteTitle: string;
+  noticeReviewTitle: string;
+  uploadChooseAgain: string;
+  // 確認視窗右上角 ✕ 的 aria-label
+  dialogClose: string;
+  // 待審頁第二層（待審／已退回）的 aria-label
+  reviewStatusTabs: string;
+  // 待審卡片（#48）：編輯名稱、出處段落的展開與收合
+  reviewEditNames: string;
+  reviewEditDone: string;
+  reviewExpand: string;
+  reviewCollapse: string;
+  // 核准或退回後的短提示：一筆時 {name} 換成項目名稱，多筆時 {count} 換成筆數
+  reviewToastApprovedOne: string;
+  reviewToastApproved: string;
+  reviewToastRejectedOne: string;
+  reviewToastRejected: string;
+  reviewGotoGraph: string;
+  reviewErrors: Record<"denied" | "conflict", string>;
+  // 說法不同（#51）：待審頁的並列與處理、已處理分頁、處理後的短提示（{name} 換成處理方式）
+  reviewDecidedTab: string;
+  reviewDecidedEmpty: string;
+  conflictSection: string;
+  conflictNew: string;
+  conflictOld: string;
+  conflictDecisions: Record<ConflictDecision, string>;
+  conflictToast: string;
+  // 時間軸與原文面板的標示：{title} 換成另一段所屬文件的標題
+  conflictMarks: Record<PassageMarkKind, string>;
+  // 上傳頁的比對狀態
+  conflictTitle: string;
+  conflictWaiting: string;
+  conflictRunning: string;
+  conflictFound: string;
+  conflictDropped: string;
+  conflictUnchecked: string;
+  conflictUnrelated: string;
+  conflictFailed: string;
+  conflictRetry: string;
+  // 標籤與內容之間的分隔（繁中用全形冒號）
+  colon: string;
+  // 進度（{done}、{total}）與括號附註（{text}、{note}）：符號依語言而定，不寫死在元件中
+  progress: string;
+  parenthetical: string;
+  // 拒答：「沒有資料」與「沒有權限」相同，不透露是否有看不到的文件
+  refusal: string;
+  // 不是拒答、但沒有任何有效引用的回答
+  uncited: string;
+  // 串流中斷或被截斷，保留已收到的內容
+  incomplete: string;
+  errors: Record<AskErrorType, string>;
+  // 不認得的錯誤類型
+  unknownError: string;
 }

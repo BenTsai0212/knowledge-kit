@@ -139,7 +139,7 @@ If there are no conflicts, reply {"conflicts":[]}.
 - 與萃取相同：由 App 管理，切換身分、語言或頁籤都不中斷；同一份文件同時只執行一個（`ui/extraction-runner.ts`）。邀請碼使用開始（或重試）當下的碼：沒有碼時記為 `no_access_code`；碼被拒時清除並回到輸入畫面（#26 決定 3）。
 - 比對的狀態只存在記憶體，重新整理就消失。
 
-**上傳頁的比對狀態**（`ui/ConflictStatus.tsx`，`conflicts.enabled` 時顯示在萃取狀態下方）：等待萃取完成、比對中、找到幾組（與捨棄的組數）、超過長度上限而未比對的段落數、沒有相關既有段落的段落數；失敗時以提示框顯示原因與「重試比對」。失敗原因的訊息與萃取共用（`ui/strings.ts` 的 `taskErrorMessage()`）。
+**上傳頁的比對狀態**（`ui/ConflictStatus.tsx`，`conflicts.enabled` 時顯示在萃取狀態下方）：等待萃取完成、比對中、找到幾組（與捨棄的組數）、超過長度上限而未比對的段落數、沒有相關既有段落的段落數；失敗時以提示框顯示原因與「重試比對」。失敗原因的訊息與萃取共用（`client/i18n.ts` 的 `taskErrorMessage()`）。
 
 **待審頁**（`ui/ReviewPage.tsx`）：
 - 每份文件多一個「說法不同」區塊，列出 `readConflicts()` 讀到的待處理組合。只有說法不同、沒有待審實體與關係的文件也會列出（`review-helpers.ts` 的 `reviewDocuments()`），這時不顯示批次核准的按鈕。
@@ -171,7 +171,7 @@ If there are no conflicts, reply {"conflicts":[]}.
 - `app/tests/conflicts/store.test.ts`：權限（見 docs/data-model.md）。
 - `app/src/qa/prompt.test.ts`、`app/tests/qa/supersede.test.ts`：問答的取代（見上方「問答的取代」）。
 - `app/tests/conflicts/marks.test.ts`：時間軸與原文面板的標示。每個身分（`guest`、`staff`、`manager`、`null`、`nobody`）每段的標示都與 `oracle.ts` 的 `expectedMarks()` 相同（滲漏 0、漏看 0）；**取代不外流**：主管以機密段落取代的公開段落，一般員工的時間軸與原文都沒有標示，也沒有機密文件的標題；以「忽略身分的資料層」做反向驗證。
-- `app/src/ui/review-helpers.test.ts`（`pendingCount()`、`reviewDocuments()`）、`strings.test.ts`（標示的範本、`taskErrorMessage()`）。畫面本身以人工驗收。
+- `app/src/ui/review-helpers.test.ts`（`pendingCount()`、`reviewDocuments()`）、`client/i18n.test.ts`（標示的範本、`taskErrorMessage()`）。畫面本身以人工驗收。
 
 ## 限制
 

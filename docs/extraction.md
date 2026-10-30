@@ -19,7 +19,7 @@
 
 | 失敗原因（`error`） | 情況 |
 | --- | --- |
-| `/api/ask` 的錯誤類型（例如 `daily_limit`） | 沿用 #26 的錯誤訊息（`ui/strings.ts` 的 `errors`） |
+| `/api/ask` 的錯誤類型（例如 `daily_limit`） | 沿用 #26 的錯誤訊息（翻譯檔的 `errors`） |
 | `invalid_access_code` | 該批記為失敗，**停止**；後面的批次保持等待，留待重試。已寫入的批次不受影響 |
 | `truncated` | `done` 的 `stopReason` 是 `max_tokens`，回應被截斷 |
 | `upstream_interrupted` | 串流沒有 `done` 或 `error` 就結束 |

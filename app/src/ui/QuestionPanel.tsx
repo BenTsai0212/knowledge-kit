@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { clientConfig } from "../client/load";
 import { MAX_QUESTION_CHARS } from "../qa/prompt";
-import { strings } from "./strings";
+import { strings } from "../client/i18n";
 
 interface Props {
   language: string;

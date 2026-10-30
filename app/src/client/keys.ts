@@ -19,6 +19,7 @@ import type {
   ThemeColors,
   ThemeFile,
   ThemeFonts,
+  UiStrings,
   VisibilityLevel,
 } from "./types";
 
@@ -158,5 +159,103 @@ export const manifests: ManifestEntry[] = [
     schema: "scenarios.schema.json",
     pointer: "/properties/scenarios/items/properties/questions/items",
     keys: { id: "required", text: "required", answerPassages: "required" } satisfies KeyManifest<Question>,
+  },
+];
+
+// client/i18n/<語言>.json：鍵很多，每行列多個
+const uiStrings = {
+  loading: "required", loadFailed: "required", fictionalData: "required", demoPermissions: "required",
+  identity: "required", language: "required", accessCodeTitle: "required", accessCodeLabel: "required",
+  accessCodeHint: "required", accessCodeSubmit: "required", changeAccessCode: "required",
+  presetQuestions: "required", scenarioRole: "required", questionLabel: "required",
+  questionPlaceholder: "required", askButton: "required", answering: "required", emptyAnswer: "required",
+  openSource: "required", sourceTitle: "required", closeSource: "required", views: "required", tabQa: "required",
+  tabGraph: "required", legend: "required", graphEmpty: "required", selectEntity: "required",
+  relatedEntities: "required", entitySources: "required", tabTimeline: "required", pathTitle: "required",
+  pathFrom: "required", pathTo: "required", pathChoose: "required", pathNotFound: "required",
+  timelineFilter: "required", timelineAll: "required", timelineEmpty: "required", undated: "required",
+  tabUpload: "required", uploadNotAllowed: "required", uploadEphemeral: "required", uploadFile: "required",
+  uploadPaste: "required", uploadPastePlaceholder: "required", uploadDocTitle: "required",
+  uploadLanguage: "required", uploadVisibility: "required", uploadProject: "required",
+  uploadNoProject: "required", uploadDate: "required", uploadPreview: "required", uploadParsing: "required",
+  uploadPassageCount: "required", uploadSubmit: "required", uploadDone: "required", uploadGotoQa: "required",
+  uploadGotoTimeline: "required", uploadErrors: "required", uploadDrop: "required", uploadClearFile: "required",
+  uploadAudience: "required", listSeparator: "required", uploadConfirmTitle: "required", uploadBack: "required",
+  uploadShowAll: "required", uploadWriting: "required", uploadAnother: "required", timelineUploaded: "required",
+  extractTitle: "required", extractRunning: "required", extractDone: "required", extractEntities: "required",
+  extractRelations: "required", extractDropped: "required", extractSkipped: "required",
+  extractFailed: "required", extractNotRun: "required", extractRetry: "required", extractErrors: "required",
+  tabReview: "required", reviewPendingTab: "required", reviewRejectedTab: "required", reviewEmpty: "required",
+  reviewRejectedEmpty: "required", reviewExtracting: "required", reviewRefresh: "required",
+  reviewEntities: "required", reviewRelations: "required", reviewSelectAll: "required",
+  reviewApproveSelected: "required", reviewApproveDocument: "required", reviewApprove: "required",
+  reviewReject: "required", reviewWorking: "required", reviewNeedsChoice: "required", reviewChoose: "required",
+  reviewCreateNew: "required", reviewMergeInto: "required", reviewMergeHint: "required",
+  reviewApprovedCount: "required", reviewRejectedWithEntity: "required", reviewRelationBlocked: "required",
+  reviewNamesRequired: "required", reviewSkippedNames: "required", noticeParseTitle: "required",
+  noticeWriteTitle: "required", noticeReviewTitle: "required", uploadChooseAgain: "required",
+  dialogClose: "required", reviewStatusTabs: "required", reviewEditNames: "required", reviewEditDone: "required",
+  reviewExpand: "required", reviewCollapse: "required", reviewToastApprovedOne: "required",
+  reviewToastApproved: "required", reviewToastRejectedOne: "required", reviewToastRejected: "required",
+  reviewGotoGraph: "required", reviewErrors: "required", reviewDecidedTab: "required",
+  reviewDecidedEmpty: "required", conflictSection: "required", conflictNew: "required", conflictOld: "required",
+  conflictDecisions: "required", conflictToast: "required", conflictMarks: "required", conflictTitle: "required",
+  conflictWaiting: "required", conflictRunning: "required", conflictFound: "required",
+  conflictDropped: "required", conflictUnchecked: "required", conflictUnrelated: "required",
+  conflictFailed: "required", conflictRetry: "required", colon: "required", progress: "required",
+  parenthetical: "required", refusal: "required", uncited: "required", incomplete: "required",
+  errors: "required", unknownError: "required",
+} satisfies KeyManifest<UiStrings>;
+
+export const i18nManifests: ManifestEntry[] = [
+  { schema: "i18n.schema.json", pointer: "", keys: uiStrings },
+  {
+    schema: "i18n.schema.json",
+    pointer: "/properties/uploadErrors",
+    keys: {
+      unsupported: "required", too_large: "required", too_long: "required", empty: "required", no_text: "required",
+      failed: "required", denied: "required", invalid: "required", no_input: "required",
+    } satisfies KeyManifest<UiStrings["uploadErrors"]>,
+  },
+  {
+    schema: "i18n.schema.json",
+    pointer: "/properties/extractErrors",
+    keys: {
+      format: "required", truncated: "required", write: "required", no_access_code: "required",
+    } satisfies KeyManifest<UiStrings["extractErrors"]>,
+  },
+  {
+    schema: "i18n.schema.json",
+    pointer: "/properties/reviewErrors",
+    keys: {
+      denied: "required", conflict: "required",
+    } satisfies KeyManifest<UiStrings["reviewErrors"]>,
+  },
+  {
+    schema: "i18n.schema.json",
+    pointer: "/properties/conflictDecisions",
+    keys: {
+      coexist: "required", supersede: "required", not_conflict: "required",
+    } satisfies KeyManifest<UiStrings["conflictDecisions"]>,
+  },
+  {
+    schema: "i18n.schema.json",
+    pointer: "/properties/conflictMarks",
+    keys: {
+      conflict: "required", superseded_by: "required", supersedes: "required",
+    } satisfies KeyManifest<UiStrings["conflictMarks"]>,
+  },
+  {
+    schema: "i18n.schema.json",
+    pointer: "/properties/errors",
+    keys: {
+      forbidden_origin: "required", invalid_access_code: "required", daily_limit: "required",
+      invalid_request: "required", unknown_model: "required", prompt_too_long: "required",
+      limit_unavailable: "required", misconfigured: "required", method_not_allowed: "required",
+      upstream_quota: "required", upstream_overloaded: "required", upstream_timeout: "required",
+      upstream_error: "required", upstream_refusal: "required", upstream_interrupted: "required",
+      network: "required", unexpected_response: "required", empty_question: "required",
+      question_too_long: "required",
+    } satisfies KeyManifest<UiStrings["errors"]>,
   },
 ];

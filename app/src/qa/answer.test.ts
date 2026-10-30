@@ -4,7 +4,7 @@ import { dataset } from "../dataset/load";
 import { seedDataset } from "../dataset/seed";
 import { openDatabase, type Database } from "../db/database";
 import { openRetriever, type Retriever } from "../retrieval/retrieve";
-import { STRINGS } from "../ui/strings";
+import { strings } from "../client/i18n";
 import { ask, type QaContext } from "./answer";
 import { escapeText, MAX_QUESTION_CHARS, REFUSAL_MARKER } from "./prompt";
 import { answered, fakeTransport } from "./testing";
@@ -68,7 +68,7 @@ describe("ask：流程", () => {
 });
 
 describe("ask：拒答", () => {
-  const refusal = { kind: "refusal", text: STRINGS["zh-TW"].refusal };
+  const refusal = { kind: "refusal", text: strings("zh-TW").refusal };
 
   it("檢索沒有結果時在本機拒答，不呼叫 /api/ask", async () => {
     const { ctx, transport } = context();
@@ -99,7 +99,7 @@ describe("ask：拒答", () => {
 
   it("拒答文字依介面語言", async () => {
     const { ctx } = context(() => answered(REFUSAL_MARKER));
-    expect(await ask(ctx, { ...LEAVE, language: "en" })).toEqual({ kind: "refusal", text: STRINGS.en.refusal });
+    expect(await ask(ctx, { ...LEAVE, language: "en" })).toEqual({ kind: "refusal", text: strings("en").refusal });
   });
 
   it("模型沒有輸出任何文字時視為拒答", async () => {

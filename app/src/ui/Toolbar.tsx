@@ -1,5 +1,5 @@
 import { clientConfig } from "../client/load";
-import { strings } from "./strings";
+import { strings } from "../client/i18n";
 
 interface Props {
   language: string;

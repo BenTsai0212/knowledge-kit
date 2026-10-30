@@ -66,7 +66,7 @@
 | 擷取後的字數 | 50,000 字元 | `too_long` |
 | 段落數 | 500 段 | `too_long` |
 
-上限是 `app/src/upload/parse.ts` 的常數（保護瀏覽器，不讓客戶調整）。各種失敗都顯示固定訊息（`app/src/ui/strings.ts` 的 `uploadErrors`）：
+上限是 `app/src/upload/parse.ts` 的常數（保護瀏覽器，不讓客戶調整）。各種失敗都顯示固定訊息（翻譯檔 `client/i18n/<語言>.json` 的 `uploadErrors`）：
 
 | 原因 | 情況 |
 | --- | --- |

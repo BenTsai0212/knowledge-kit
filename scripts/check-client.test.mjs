@@ -1,11 +1,13 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { CONFIG_FILES, DATASET_FILES, checkClient, validateClient } from "./check-client.mjs";
+import { CONFIG_FILES, DATASET_FILES, I18N_DIR, checkClient, validateClient } from "./check-client.mjs";
 
 const readJson = (url) => JSON.parse(readFileSync(url, "utf8"));
 const example = () =>
   Object.fromEntries(Object.keys(CONFIG_FILES).map((f) => [f, readJson(new URL(`../client/${f}`, import.meta.url))]));
 const schema = (name) => readJson(new URL(`../client/schema/${name}`, import.meta.url));
+const i18n = () =>
+  Object.fromEntries(["zh-TW", "en"].map((l) => [l, readJson(new URL(`../client/${I18N_DIR}${l}.json`, import.meta.url))]));
 const DOC = "documents/employee-handbook.zh-TW.json";
 const dataset = () => ({
   root: "data/",
@@ -167,6 +169,83 @@ describe("check-client", () => {
     expect(props("client.schema.json")).toHaveProperty("dataset");
     // 主題（色票、字體）
     expect(schema("theme.schema.json").required).toEqual(["colors", "fonts"]);
+  });
+});
+
+describe("翻譯檔", () => {
+  const check = (data, files = example()) => validateClient(files, undefined, data);
+
+  it("client/i18n/ 的範例翻譯檔通過驗證", () => {
+    expect(check(i18n())).toEqual([]);
+  });
+
+  it("缺少語言的翻譯檔、不在 languages 內的翻譯檔都會失敗", () => {
+    const data = i18n();
+    delete data.en;
+    data.fr = structuredClone(data["zh-TW"]);
+    expect(check(data)).toEqual([
+      { file: "i18n/en.json", path: "/", message: "缺少翻譯檔" },
+      { file: "i18n/fr.json", path: "/", message: "語言 fr 不在 client.json 的 languages 內" },
+    ]);
+  });
+
+  it("鍵必須完全一致：缺少或多出來的鍵（含巢狀物件）都會失敗", () => {
+    const data = i18n();
+    delete data.en.loading;
+    data.en.logo = "Logo";
+    delete data["zh-TW"].errors.daily_limit;
+    data["zh-TW"].uploadErrors.extra = "多出來的";
+    expect(check(data)).toEqual(
+      expect.arrayContaining([
+        { file: "i18n/en.json", path: "/", message: "缺少必填欄位 loading" },
+        { file: "i18n/en.json", path: "/", message: "不允許的欄位 logo" },
+        { file: "i18n/zh-TW.json", path: "/errors", message: "缺少必填欄位 daily_limit" },
+        { file: "i18n/zh-TW.json", path: "/uploadErrors", message: "不允許的欄位 extra" },
+      ]),
+    );
+  });
+
+  it("空字串或只有空白的文字會失敗", () => {
+    const data = i18n();
+    data.en.loading = " ";
+    expect(check(data).map((e) => `${e.file} ${e.path}`)).toEqual(["i18n/en.json /loading"]);
+  });
+
+  it("帶參數的文字在各語言中的參數必須相同", () => {
+    const data = i18n();
+    data.en.reviewToastApproved = "Approved";
+    data.en.conflictMarks.conflict = "Differs from {name}";
+    data.en.progress = "{done} of {total} ({done})";
+    expect(check(data)).toEqual([
+      { file: "i18n/en.json", path: "/reviewToastApproved", message: "參數 （無） 與 zh-TW 的 {count} 不同" },
+      { file: "i18n/en.json", path: "/conflictMarks/conflict", message: "參數 {name} 與 zh-TW 的 {title} 不同" },
+    ]);
+  });
+
+  it("預設語言的翻譯檔有誤時，以其他語言為準比對參數", () => {
+    const data = i18n();
+    delete data["zh-TW"].loading;
+    data.en.conflictToast = "Marked";
+    const files = example();
+    files["client.json"].languages = ["zh-TW", "en", "ja"];
+    data.ja = structuredClone(data.en);
+    data.ja.conflictToast = "{name}";
+    expect(check(data, files)).toEqual([
+      { file: "i18n/zh-TW.json", path: "/", message: "缺少必填欄位 loading" },
+      { file: "i18n/ja.json", path: "/conflictToast", message: "參數 {name} 與 en 的 （無） 不同" },
+    ]);
+  });
+
+  it("故意寫錯的翻譯檔會失敗", () => {
+    const errors = checkClient(new URL("./fixtures/invalid-client/", import.meta.url)).filter((e) => e.file.startsWith(I18N_DIR));
+    expect(errors).toEqual(
+      expect.arrayContaining([
+        { file: "i18n/zh-TW.json", path: "/", message: "缺少翻譯檔" },
+        { file: "i18n/fr.json", path: "/", message: "語言 fr 不在 client.json 的 languages 內" },
+        { file: "i18n/en.json", path: "/", message: "不允許的欄位 logo" },
+        { file: "i18n/en.json", path: "/", message: "缺少必填欄位 loadFailed" },
+      ]),
+    );
   });
 });
 

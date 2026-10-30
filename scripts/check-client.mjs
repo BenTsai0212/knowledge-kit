@@ -1,4 +1,4 @@
-// 以 client/schema/ 的 JSON Schema 驗證 client/ 的設定與資料集，再檢查跨檔規則。
+// 以 client/schema/ 的 JSON Schema 驗證 client/ 的設定、翻譯檔與資料集，再檢查跨檔規則。
 // 用法：node scripts/check-client.mjs [設定資料夾，預設 client/]
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -22,6 +22,12 @@ export const DATASET_FILES = {
   "relations.json": "data/relations.schema.json",
 };
 const DOCUMENT_SCHEMA = "data/document.schema.json";
+
+// 翻譯檔：client/i18n/<語言>.json，每種語言一份（docs/client-config.md「翻譯檔」）
+export const I18N_DIR = "i18n/";
+const I18N_SCHEMA = "i18n.schema.json";
+// 帶參數文字的參數：{camelCase}
+const PARAM = /\{([A-Za-z]+)\}/g;
 const DOCUMENT_PATH = /^documents\/[^/]+\.json$/;
 
 function readJson(url) {
@@ -40,8 +46,9 @@ const RELATIVE_PATH = new RegExp(readJson(new URL("common.schema.json", SCHEMA_D
 
 // files：{ 設定檔名: 解析後的 JSON }。
 // dataset：{ root: dataset.path, files: { 相對於 root 的路徑: 解析後的 JSON } }；省略時不驗證資料集。
+// i18n：{ 語言代碼: 解析後的 JSON }（client/i18n/ 的檔名去掉 .json）；省略時不驗證翻譯檔。
 // 回傳 [{ file, path, message }]，沒有錯誤時為空陣列。
-export function validateClient(files, dataset) {
+export function validateClient(files, dataset, i18n) {
   const errors = [];
   const client = files["client.json"];
   const languages = Array.isArray(client?.languages) ? client.languages : null;
@@ -93,6 +100,7 @@ export function validateClient(files, dataset) {
     errors.push({ file: "client.json", path: "/defaultLanguage", message: `${defaultLanguage} 不在 languages 內` });
   }
   if (dataset) errors.push(...validateDataset(ajv, dataset));
+  if (i18n && languages) errors.push(...validateI18n(ajv, i18n, languages, defaultLanguage));
   return [...errors, ...checkReferences(valid)];
 }
 
@@ -115,6 +123,43 @@ function validateDataset(ajv, { root, files }) {
   for (const rel of documents) check(rel, DOCUMENT_SCHEMA);
   for (const rel of Object.keys(files)) {
     if (!(rel in DATASET_FILES) && !DOCUMENT_PATH.test(rel)) errors.push({ file: label(rel), path: "/", message: "未知的資料檔" });
+  }
+  return errors;
+}
+
+// 翻譯檔：languages 的每一種都要有，不能多；鍵由 i18n.schema.json 檢查（全部必填、不允許多餘的鍵）；
+// 通過 Schema 的檔再比對每個鍵的參數，以預設語言（沒有通過時用第一個通過的語言）為準。
+function validateI18n(ajv, i18n, languages, defaultLanguage) {
+  const errors = [];
+  const label = (language) => `${I18N_DIR}${language}.json`;
+  const validate = ajv.getSchema(I18N_SCHEMA);
+  const valid = [];
+  for (const language of languages) {
+    if (!(language in i18n)) errors.push({ file: label(language), path: "/", message: "缺少翻譯檔" });
+  }
+  for (const [language, data] of Object.entries(i18n)) {
+    if (!languages.includes(language)) {
+      errors.push({ file: label(language), path: "/", message: `語言 ${language} 不在 client.json 的 languages 內` });
+    } else if (validate(data)) {
+      valid.push(language);
+    } else {
+      for (const e of validate.errors) errors.push({ file: label(language), path: e.instancePath || "/", message: describe(e) });
+    }
+  }
+  const base = valid.includes(defaultLanguage) ? defaultLanguage : valid[0];
+  const params = (text) => [...new Set([...text.matchAll(PARAM)].map((m) => `{${m[1]}}`))].sort();
+  const show = (list) => (list.length > 0 ? list.join("、") : "（無）");
+  const texts = (data, path = "") =>
+    Object.entries(data).flatMap(([k, v]) => (typeof v === "string" ? [[`${path}/${k}`, v]] : texts(v, `${path}/${k}`)));
+  const expected = base ? Object.fromEntries(texts(i18n[base])) : {};
+  for (const language of valid.filter((l) => l !== base)) {
+    for (const [path, text] of texts(i18n[language])) {
+      const want = params(expected[path]);
+      const got = params(text);
+      if (want.join() !== got.join()) {
+        errors.push({ file: label(language), path, message: `參數 ${show(got)} 與 ${base} 的 ${show(want)} 不同` });
+      }
+    }
   }
   return errors;
 }
@@ -186,7 +231,7 @@ function describe(e) {
   return e.message;
 }
 
-// 讀取資料夾中所有頂層 .json 檔與資料集再驗證；dataset.path、evals.path 必須存在。
+// 讀取資料夾中所有頂層 .json 檔、翻譯檔與資料集再驗證；dataset.path、evals.path 必須存在。
 export function checkClient(dir = DEFAULT_CLIENT_DIR) {
   const base = new URL(dir.toString().endsWith("/") ? dir : `${dir}/`);
   const files = {};
@@ -212,6 +257,16 @@ export function checkClient(dir = DEFAULT_CLIENT_DIR) {
     else errors.push({ file: "client.json", path: `/${key}/path`, message: `資料夾 ${value} 不存在` });
   }
 
+  const i18n = {};
+  const i18nDir = new URL(I18N_DIR, base);
+  if (existsSync(i18nDir) && statSync(i18nDir).isDirectory()) {
+    for (const entry of readdirSync(i18nDir, { withFileTypes: true })) {
+      if (entry.isFile() && entry.name.endsWith(".json")) {
+        read(new URL(entry.name, i18nDir), `${I18N_DIR}${entry.name}`, i18n, entry.name.slice(0, -".json".length));
+      }
+    }
+  }
+
   let dataset;
   if (paths.dataset) {
     const root = paths.dataset;
@@ -220,7 +275,7 @@ export function checkClient(dir = DEFAULT_CLIENT_DIR) {
       if (rel.endsWith(".json")) read(new URL(`${root}${rel}`, base), `${root}${rel}`, dataset.files, rel);
     }
   }
-  return [...errors, ...validateClient(files, dataset)];
+  return [...errors, ...validateClient(files, dataset, i18n)];
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

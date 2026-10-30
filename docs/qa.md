@@ -104,7 +104,7 @@ Rules:
 | 模型判斷段落不足以回答 | 模型輸出 `[[NO_ANSWER]]`；出現在任何位置都算拒答（較保守） | 是 |
 | 模型沒有輸出任何文字就正常結束 | 視為拒答 | 是 |
 
-- 拒答一律回 `app/src/ui/strings.ts` 的固定文字（依介面語言），不區分以上情況：
+- 拒答一律回翻譯檔（`client/i18n/<語言>.json`）`refusal` 的固定文字（依介面語言），不區分以上情況：
   - 繁中：找不到可以回答這個問題的資料。
   - 英文：I couldn't find information to answer this question.
 - **不透露是否有看不到的文件**：看不到的段落在 RLS 就被濾掉，「沒有資料」與「沒有權限」走同一條路；拒答文字也不提權限。`answer.test.ts` 確認一般員工問調薪、主管問題庫外的問題、本機拒答三者的結果完全相同。
@@ -150,7 +150,7 @@ Rules:
 
 ## 錯誤
 
-`/api/ask` 的錯誤類型（[worker/README.md](../worker/README.md)）與前端自己的錯誤，都在 `app/src/ui/strings.ts` 的 `errors` 對應到使用者看得懂的訊息，以 `errorMessage(language, error)` 取得；不認得的類型用通用訊息。`AskErrorType` 引用 Worker 的 `ErrorType`，少了任何一種，型別檢查就會失敗；`strings.test.ts` 另外比對 `worker/README.md` 的錯誤類型表。
+`/api/ask` 的錯誤類型（[worker/README.md](../worker/README.md)）與前端自己的錯誤，都在翻譯檔的 `errors` 對應到使用者看得懂的訊息，以 `app/src/client/i18n.ts` 的 `errorMessage(language, error)` 取得；不認得的類型用通用訊息。`AskErrorType`（`app/src/client/types.ts`）引用 Worker 的 `ErrorType`，少了任何一種，型別檢查就會失敗；`i18n.test.ts` 另外比對 `worker/README.md` 的錯誤類型表。
 
 | 類型 | 來源 | 繁中訊息（多個類型同列時為摘要） |
 | --- | --- | --- |
@@ -167,9 +167,9 @@ Rules:
 | `unexpected_response` | 前端：不是 SSE、不是 JSON 錯誤，或事件格式錯誤 | 伺服器的回應無法辨識，請稍後再試。 |
 | `empty_question`、`question_too_long` | 前端：送出前的檢查 | 請輸入問題。／問題太長，請縮短後再試。 |
 
-各類型的完整文字（繁中與英文）以 `strings.ts` 為準。
+各類型的完整文字（繁中與英文）以 `client/i18n/` 的翻譯檔為準。
 
-**串流中斷**：已收到文字後才收到 `error` 事件、連線中斷，或串流沒有 `done` 就結束時，保留已收到的文字並照樣解析引用，`incomplete` 為 `true`、附上 `error`；畫面標示「回答不完整」（`strings.ts` 的 `incomplete`）與錯誤訊息。`done` 的 `stopReason` 為 `max_tokens`（被截斷）時同樣標示不完整。還沒收到任何文字就失敗時回 `kind: "error"`。
+**串流中斷**：已收到文字後才收到 `error` 事件、連線中斷，或串流沒有 `done` 就結束時，保留已收到的文字並照樣解析引用，`incomplete` 為 `true`、附上 `error`；畫面標示「回答不完整」（翻譯檔的 `incomplete`）與錯誤訊息。`done` 的 `stopReason` 為 `max_tokens`（被截斷）時同樣標示不完整。還沒收到任何文字就失敗時回 `kind: "error"`。
 
 ## 畫面
 
@@ -196,7 +196,7 @@ Rules:
   - 進行中的提問以 `AbortSignal` 取消連線（`apiTransport` 把 signal 傳給 `fetch`），之後才收到的 `onText` 與 `ask()` 的結果都忽略；原文的讀取也一樣。
   - 新的提問開始時，前一個提問同樣被捨棄。
 - **原文**（`app/src/sources/source.ts`）：`readSource(db, identityId, passageId)` 經 `withIdentity()` 讀取段落所屬的文件，以及其中該身分看得到的段落（依順序）；看不到時回 `null`。文件中看不到的段落直接省略，不標示「有段落被隱藏」。`app/tests/sources/source.test.ts` 以 `oracle.ts` 對每個身分 × 每段段落測試。
-- **介面文字**：都在 `ui/strings.ts`（繁中＋英文）；角色、情境、公司名稱來自 `client/`；語言名稱以 `Intl.DisplayNames` 用該語言自己的名稱顯示。
+- **介面文字**：都在翻譯檔 `client/i18n/<語言>.json`，只透過 `app/src/client/i18n.ts` 讀取（[docs/client-config.md](client-config.md)「翻譯檔」）；角色、情境、公司名稱來自 `client/`；語言名稱以 `Intl.DisplayNames` 用該語言自己的名稱顯示。
 - 畫面沒有自動測試（DOM 測試套件未核准；Playwright 在 Epic 第 12 項）。可以抽出的邏輯（邀請碼的保存、提問的捨棄、引用的切割、原文的權限）以 Vitest 測試。
 
 ## 測試

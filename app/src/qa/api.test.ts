@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Retriever } from "../retrieval/retrieve";
-import { errorMessage } from "../ui/strings";
+import { errorMessage } from "../client/i18n";
 import { ask, type QaContext } from "./answer";
 import { apiTransport } from "./api";
 import type { AskBody, AskEvent } from "./types";
