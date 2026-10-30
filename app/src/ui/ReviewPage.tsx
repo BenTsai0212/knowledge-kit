@@ -28,7 +28,7 @@ import {
   toastText,
   type EntityChoice,
 } from "./review-helpers";
-import { strings } from "./strings";
+import { strings } from "../client/i18n";
 import { createToastTimer, type ToastTimer } from "./toast-timer";
 
 interface Props {

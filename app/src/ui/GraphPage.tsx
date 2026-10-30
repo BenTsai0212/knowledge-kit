@@ -7,7 +7,7 @@ import { EntityPanel } from "./EntityPanel";
 import { GraphView } from "./GraphView";
 import { PathPanel } from "./PathPanel";
 import { createRequestGate } from "./requests";
-import { strings } from "./strings";
+import { strings } from "../client/i18n";
 
 interface Props {
   db: Database;

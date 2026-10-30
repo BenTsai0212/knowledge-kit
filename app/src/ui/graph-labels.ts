@@ -1,4 +1,5 @@
 // 圖譜的顯示文字：實體名稱依介面語言（names），類型與關係類型的名稱來自 knowledge-model.json。
+import { fill, strings } from "../client/i18n";
 import { clientConfig } from "../client/load";
 import type { Graph, GraphEntity, SourcePassage } from "../graph/read";
 
@@ -36,7 +37,7 @@ export function entityOptionLabel(graph: Graph, entity: GraphEntity, language: s
   const same = graph.entities.filter((e) => entityName(e, language) === name);
   if (same.length < 2) return name;
   const first = relatedEntities(graph, entity.id, language)[0];
-  return first ? `${name}（${entityName(first.entity, language)}）` : `${name}（${entity.id}）`;
+  return fill(strings(language).parenthetical, { text: name, note: first ? entityName(first.entity, language) : entity.id });
 }
 
 export interface DisplaySource extends SourcePassage {

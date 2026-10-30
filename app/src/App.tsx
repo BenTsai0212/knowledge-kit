@@ -22,7 +22,7 @@ import { pendingCount } from "./ui/review-helpers";
 import { createExtractionRunner } from "./ui/extraction-runner";
 import { createRequestGate } from "./ui/requests";
 import { SourcePanel } from "./ui/SourcePanel";
-import { strings } from "./ui/strings";
+import { strings } from "./client/i18n";
 import { TimelinePage } from "./ui/TimelinePage";
 import { UploadPage } from "./ui/UploadPage";
 import { Toolbar } from "./ui/Toolbar";

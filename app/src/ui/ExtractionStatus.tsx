@@ -1,7 +1,7 @@
 // 上傳後的萃取狀態（#44）：萃取中（第幾批）、已送審的筆數、捨棄的筆數、未萃取的段落、失敗時可以重試。
 import type { ExtractionState } from "../extraction/run";
 import { Notice } from "./Notice";
-import { strings, taskErrorMessage } from "./strings";
+import { fill, strings, taskErrorMessage } from "../client/i18n";
 
 interface Props {
   state: ExtractionState;
@@ -28,7 +28,7 @@ export function ExtractionStatus({ state, running: active, language, onRetry }: 
       <h3>{s.extractTitle}</h3>
       {active && running >= 0 && (
         <p className="muted">
-          {s.extractRunning} {running + 1}／{total}
+          {s.extractRunning} {fill(s.progress, { done: running + 1, total })}
         </p>
       )}
       <p>
@@ -41,7 +41,7 @@ export function ExtractionStatus({ state, running: active, language, onRetry }: 
         {s.extractDropped} {sum("dropped")}
         <span className="muted">
           {" · "}
-          {done}／{total}
+          {fill(s.progress, { done, total })}
         </span>
       </p>
       {state.skipped.length > 0 && (

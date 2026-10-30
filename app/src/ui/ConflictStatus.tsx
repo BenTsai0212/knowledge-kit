@@ -1,7 +1,7 @@
 // 上傳後的比對狀態（#51，docs/conflicts.md「畫面」）：等待萃取完成、比對中、找到幾組、未比對的段落、失敗時可以重試。
 import type { ConflictState } from "../conflicts/run";
 import { Notice } from "./Notice";
-import { strings, taskErrorMessage } from "./strings";
+import { strings, taskErrorMessage } from "../client/i18n";
 
 interface Props {
   // 還沒開始（萃取還沒結束）時為 undefined

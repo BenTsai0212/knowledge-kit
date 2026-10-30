@@ -1,6 +1,6 @@
 import type { Graph } from "../graph/read";
 import { entityName, entityTypeLabel, relatedEntities, sourcesForLanguage } from "./graph-labels";
-import { strings } from "./strings";
+import { strings } from "../client/i18n";
 
 interface Props {
   graph: Graph;

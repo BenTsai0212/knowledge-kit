@@ -14,7 +14,8 @@ import { ConflictStatus } from "./ConflictStatus";
 import { ExtractionStatus } from "./ExtractionStatus";
 import { Notice } from "./Notice";
 import { createRequestGate } from "./requests";
-import { strings, type UploadFailure } from "./strings";
+import { fill, strings } from "../client/i18n";
+import type { UploadFailure } from "../client/types";
 import { audienceRoles, formatBytes, todayIso } from "./upload-helpers";
 
 interface Props {
@@ -207,7 +208,7 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
         <p className="muted">{s.uploadDrop}</p>
         {file !== null && (
           <p>
-            {file.name}（{formatBytes(file.size)}）{" "}
+            {fill(s.parenthetical, { text: file.name, note: formatBytes(file.size) })}{" "}
             <button type="button" className="link" onClick={clearFile}>
               {s.uploadClearFile}
             </button>

@@ -2,7 +2,7 @@
 // 段落只透過 Retriever 取得（權限由 RLS 決定）；本模組不直接查詢資料庫（structure.test.ts 檢查）。
 import type { LanguageCode, LocalizedText, ModelCode } from "../client/types";
 import type { Retriever } from "../retrieval/retrieve";
-import { strings } from "../ui/strings";
+import { strings } from "../client/i18n";
 import { resolveCitations } from "./citations";
 import { buildPrompt, MAX_QUESTION_CHARS, REFUSAL_MARKER } from "./prompt";
 import type { AskEvent, AskTransport } from "./types";

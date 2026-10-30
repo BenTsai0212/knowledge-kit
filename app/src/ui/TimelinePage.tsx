@@ -6,7 +6,7 @@ import { AccessBadges } from "./AccessBadges";
 import { entityOptionLabel } from "./graph-labels";
 import { PassageMarks } from "./PassageMarks";
 import { createRequestGate } from "./requests";
-import { strings } from "./strings";
+import { strings } from "../client/i18n";
 
 interface Props {
   db: Database;

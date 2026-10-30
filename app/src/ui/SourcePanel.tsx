@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import type { SourceDocument } from "../sources/source";
 import { AccessBadges } from "./AccessBadges";
 import { PassageMarks } from "./PassageMarks";
-import { strings } from "./strings";
+import { strings } from "../client/i18n";
 
 interface Props {
   language: string;

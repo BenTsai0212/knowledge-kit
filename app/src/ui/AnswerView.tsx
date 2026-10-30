@@ -1,6 +1,6 @@
 import type { Answer } from "../qa/answer";
 import { splitCitations } from "../qa/citations";
-import { errorMessage, strings } from "./strings";
+import { errorMessage, strings } from "../client/i18n";
 
 export interface AnswerState {
   question: string;

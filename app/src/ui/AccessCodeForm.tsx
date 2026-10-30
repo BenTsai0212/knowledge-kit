@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { errorMessage, strings } from "./strings";
+import { errorMessage, strings } from "../client/i18n";
 
 interface Props {
   language: string;
