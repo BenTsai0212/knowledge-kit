@@ -1,0 +1,12 @@
+{
+  "id": "product-overview-zh",
+  "title": "產品簡介",
+  "language": "zh-TW",
+  "date": "2026-04-15",
+  "visibility": "public",
+  "passages": [
+    { "id": "product-overview-zh-01", "text": "本公司代理的產品有四項：Tessiva 血壓監測儀（BP-220）、IP-300 輸液幫浦、US-800 超音波主機與 Tessiva 超音波探頭（UP-35）。" },
+    { "id": "product-overview-zh-02", "text": "注意：有兩款產品都叫 Tessiva。Tessiva 血壓監測儀（型號 BP-220）是 Corvane Medtech 的產品；Tessiva 超音波探頭（型號 UP-35）是 Lumiden Instruments 的產品。" },
+    { "id": "product-overview-zh-03", "text": "IP-300 輸液幫浦是 Corvane Medtech 的產品；US-800 超音波主機是 Lumiden Instruments 的產品，可搭配 Tessiva 超音波探頭使用。" }
+  ]
+}

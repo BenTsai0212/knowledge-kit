@@ -1,0 +1,12 @@
+{
+  "id": "account-owners-en",
+  "title": "Account Owner List",
+  "language": "en",
+  "date": "2026-09-01",
+  "visibility": "internal",
+  "passages": [
+    { "id": "account-owners-en-01", "text": "The account owner for Qinglan Hospital (Qinglan) is sales representative Jiarong Lin; the account owner for Songjian Hospital (Songjian) is sales manager Wenyan Hsu." },
+    { "id": "account-owners-en-02", "text": "Qinglan Hospital uses the Tessiva Blood Pressure Monitor and the IP-300 Infusion Pump; Songjian Hospital uses the US-800 Ultrasound System and the Tessiva Ultrasound Probe." },
+    { "id": "account-owners-en-03", "text": "Repairs and calibration at hospitals are scheduled by Technical Service, led by Jiahao Cheng." }
+  ]
+}

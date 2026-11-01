@@ -1,0 +1,11 @@
+{
+  "id": "warranty-2025-en",
+  "title": "Warranty Policy (2025 Edition)",
+  "language": "en",
+  "date": "2025-01-01",
+  "visibility": "internal",
+  "passages": [
+    { "id": "warranty-2025-en-01", "text": "Main units sold by the company carry a 1-year warranty, starting from the hospital's acceptance date." },
+    { "id": "warranty-2025-en-02", "text": "Failures from normal use during the warranty period are repaired free of charge; damage from misuse and consumables are not covered." }
+  ]
+}

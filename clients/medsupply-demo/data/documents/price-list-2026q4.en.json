@@ -1,0 +1,13 @@
+{
+  "id": "price-list-2026q4-en",
+  "title": "2026 Q4 Price List",
+  "language": "en",
+  "date": "2026-10-01",
+  "visibility": "internal",
+  "passages": [
+    { "id": "price-list-2026q4-en-01", "text": "The list price of the Tessiva Blood Pressure Monitor (BP-220) is NT$48,000 per unit." },
+    { "id": "price-list-2026q4-en-02", "text": "The list price of the IP-300 Infusion Pump is NT$125,000 per unit." },
+    { "id": "price-list-2026q4-en-03", "text": "The list price of the US-800 Ultrasound System is NT$1,380,000 per unit; the Tessiva Ultrasound Probe (UP-35) is NT$86,000 each." },
+    { "id": "price-list-2026q4-en-04", "text": "This price list applies from October 1, 2026 and replaces the Q3 price list; always quote from the latest quarterly price list." }
+  ]
+}

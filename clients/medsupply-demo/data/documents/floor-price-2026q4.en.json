@@ -1,0 +1,12 @@
+{
+  "id": "floor-price-2026q4-en",
+  "title": "2026 Q4 Discount Floor and Margin Sheet",
+  "language": "en",
+  "date": "2026-10-01",
+  "visibility": "confidential",
+  "passages": [
+    { "id": "floor-price-2026q4-en-01", "text": "The discount floor for the Tessiva Blood Pressure Monitor (BP-220) is NT$39,000 per unit, with a gross margin of about 22%." },
+    { "id": "floor-price-2026q4-en-02", "text": "The discount floor for the IP-300 Infusion Pump is NT$102,000 per unit, with a gross margin of about 18%." },
+    { "id": "floor-price-2026q4-en-03", "text": "Any quotation below the discount floor requires approval from the General Manager." }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "id": "employee-handbook-en",
+  "title": "Employee Handbook",
+  "language": "en",
+  "date": "2026-01-05",
+  "visibility": "internal",
+  "passages": [
+    { "id": "employee-handbook-en-01", "text": "Office hours are 8:30 a.m. to 5:30 p.m., Monday to Friday." },
+    { "id": "employee-handbook-en-02", "text": "For domestic business trips, lodging is reimbursed up to NT$2,800 per night, and receipts are required." },
+    { "id": "employee-handbook-en-03", "text": "Employees receive 7 days of annual leave after one year of service and 10 days after two years." },
+    { "id": "employee-handbook-en-04", "text": "Business trips should use high-speed rail or trains; taxi use must be explained." }
+  ]
+}

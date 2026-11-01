@@ -1,0 +1,12 @@
+{
+  "id": "tessiva-bp-catalog-en",
+  "title": "Tessiva Blood Pressure Monitor BP-220 Catalog",
+  "language": "en",
+  "date": "2026-04-01",
+  "visibility": "public",
+  "passages": [
+    { "id": "tessiva-bp-catalog-en-01", "text": "The Tessiva Blood Pressure Monitor (model BP-220) is a bedside blood pressure monitoring product made by Corvane Medtech." },
+    { "id": "tessiva-bp-catalog-en-02", "text": "The BP-220 measures blood pressure and pulse rate automatically at set intervals and stores up to 1,000 readings." },
+    { "id": "tessiva-bp-catalog-en-03", "text": "Standard accessories include an adult cuff, a pediatric cuff, and a power adapter." }
+  ]
+}

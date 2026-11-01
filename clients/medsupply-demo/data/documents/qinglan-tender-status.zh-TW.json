@@ -1,0 +1,13 @@
+{
+  "id": "qinglan-tender-status-zh",
+  "title": "青嵐醫院新院區設備標案進度報告",
+  "language": "zh-TW",
+  "date": "2026-10-20",
+  "visibility": "internal",
+  "project": "qinglan-tender",
+  "passages": [
+    { "id": "qinglan-tender-status-zh-01", "text": "青嵐醫院新院區設備標案的投標截止日為 2026 年 12 月 15 日下午 5 點，由業務主管許文彥主責、業務林佳蓉協助。" },
+    { "id": "qinglan-tender-status-zh-02", "text": "標案涉及 60 台 Tessiva 血壓監測儀與 40 台 IP-300 輸液幫浦；投標文件已完成約七成，原廠授權書已於 10 月 16 日取得。" },
+    { "id": "qinglan-tender-status-zh-03", "text": "青嵐新院區標案的預計投標金額為新台幣 7,250,000 元，平均折扣約 8%，已經總經理核准。", "visibility": "confidential" }
+  ]
+}

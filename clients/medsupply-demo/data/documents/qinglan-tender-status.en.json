@@ -1,0 +1,13 @@
+{
+  "id": "qinglan-tender-status-en",
+  "title": "Qinglan Hospital New Wing Equipment Tender Status Report",
+  "language": "en",
+  "date": "2026-10-20",
+  "visibility": "internal",
+  "project": "qinglan-tender",
+  "passages": [
+    { "id": "qinglan-tender-status-en-01", "text": "The bid deadline for the Qinglan Hospital new wing equipment tender is 5 p.m. on December 15, 2026. Sales manager Wenyan Hsu leads the tender, assisted by sales representative Jiarong Lin." },
+    { "id": "qinglan-tender-status-en-02", "text": "The tender covers 60 Tessiva Blood Pressure Monitors and 40 IP-300 Infusion Pumps; the bid documents are about 70% complete, and the manufacturer authorization letter was received on October 16." },
+    { "id": "qinglan-tender-status-en-03", "text": "The planned bid amount for the Qinglan new wing tender is NT$7,250,000, an average discount of about 8%, approved by the General Manager.", "visibility": "confidential" }
+  ]
+}

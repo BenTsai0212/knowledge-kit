@@ -1,0 +1,12 @@
+{
+  "id": "tessiva-bp-service-manual-en",
+  "title": "Tessiva Blood Pressure Monitor BP-220 Service and Calibration Manual",
+  "language": "en",
+  "date": "2026-06-01",
+  "visibility": "internal",
+  "passages": [
+    { "id": "tessiva-bp-service-manual-en-01", "text": "As preventive maintenance, clean the cuff and hose and check the battery every 6 months." },
+    { "id": "tessiva-bp-service-manual-en-02", "text": "The Tessiva Blood Pressure Monitor (BP-220) must be calibrated every 12 months against a certified pressure reference." },
+    { "id": "tessiva-bp-service-manual-en-03", "text": "If a reading differs from the pressure reference by more than 3 mmHg during calibration, stop using the unit and contact Technical Service." }
+  ]
+}

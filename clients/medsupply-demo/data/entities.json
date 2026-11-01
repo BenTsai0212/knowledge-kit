@@ -1,0 +1,124 @@
+{
+  "entities": [
+    {
+      "id": "product-tessiva-bp",
+      "type": "product",
+      "name": "Tessiva 血壓監測儀",
+      "names": { "zh-TW": "Tessiva 血壓監測儀（BP-220）", "en": "Tessiva Blood Pressure Monitor (BP-220)" },
+      "aliases": ["Tessiva Blood Pressure Monitor", "BP-220"],
+      "sources": ["product-overview-zh-02", "tessiva-bp-catalog-en-01", "price-list-2026q4-zh-01", "price-list-2026q4-en-01", "service-summary-zh-01", "tessiva-bp-service-manual-en-02"]
+    },
+    {
+      "id": "product-tessiva-probe",
+      "type": "product",
+      "name": "Tessiva 超音波探頭",
+      "names": { "zh-TW": "Tessiva 超音波探頭（UP-35）", "en": "Tessiva Ultrasound Probe (UP-35)" },
+      "aliases": ["Tessiva Ultrasound Probe", "UP-35"],
+      "sources": ["product-overview-zh-02", "tessiva-probe-catalog-en-01", "tessiva-probe-catalog-en-03", "price-list-2026q4-zh-03", "price-list-2026q4-en-03"]
+    },
+    {
+      "id": "product-ip-300",
+      "type": "product",
+      "name": "IP-300 輸液幫浦",
+      "names": { "zh-TW": "IP-300 輸液幫浦", "en": "IP-300 Infusion Pump" },
+      "aliases": ["IP-300 Infusion Pump", "IP-300"],
+      "sources": ["product-overview-zh-03", "price-list-2026q4-zh-02", "price-list-2026q4-en-02", "service-summary-zh-02"]
+    },
+    {
+      "id": "product-us-800",
+      "type": "product",
+      "name": "US-800 超音波主機",
+      "names": { "zh-TW": "US-800 超音波主機", "en": "US-800 Ultrasound System" },
+      "aliases": ["US-800 Ultrasound System", "US-800"],
+      "sources": ["product-overview-zh-03", "tessiva-probe-catalog-en-02", "price-list-2026q4-zh-03", "price-list-2026q4-en-03"]
+    },
+    {
+      "id": "manufacturer-corvane",
+      "type": "manufacturer",
+      "name": "Corvane Medtech",
+      "names": { "zh-TW": "Corvane Medtech", "en": "Corvane Medtech" },
+      "aliases": ["Corvane"],
+      "sources": ["company-profile-zh-02", "company-profile-en-02", "product-overview-zh-02", "tessiva-bp-catalog-en-01"]
+    },
+    {
+      "id": "manufacturer-lumiden",
+      "type": "manufacturer",
+      "name": "Lumiden Instruments",
+      "names": { "zh-TW": "Lumiden Instruments", "en": "Lumiden Instruments" },
+      "aliases": ["Lumiden"],
+      "sources": ["company-profile-zh-02", "company-profile-en-02", "product-overview-zh-02", "tessiva-probe-catalog-en-01"]
+    },
+    {
+      "id": "hospital-qinglan",
+      "type": "hospital",
+      "name": "青嵐醫院",
+      "names": { "zh-TW": "青嵐醫院", "en": "Qinglan Hospital" },
+      "aliases": ["青嵐", "Qinglan Hospital", "Qinglan"],
+      "sources": ["account-owners-zh-01", "account-owners-en-01", "account-owners-zh-02", "account-owners-en-02"]
+    },
+    {
+      "id": "hospital-songjian",
+      "type": "hospital",
+      "name": "松澗醫院",
+      "names": { "zh-TW": "松澗醫院", "en": "Songjian Hospital" },
+      "aliases": ["松澗", "Songjian Hospital", "Songjian"],
+      "sources": ["account-owners-zh-01", "account-owners-en-01", "account-owners-zh-02", "account-owners-en-02"]
+    },
+    {
+      "id": "person-hsu-wenyan",
+      "type": "person",
+      "name": "許文彥",
+      "names": { "zh-TW": "許文彥", "en": "Wenyan Hsu" },
+      "aliases": ["Wenyan Hsu"],
+      "sources": ["account-owners-zh-01", "account-owners-en-01", "qinglan-tender-status-zh-01", "qinglan-tender-status-en-01"]
+    },
+    {
+      "id": "person-lin-jiarong",
+      "type": "person",
+      "name": "林佳蓉",
+      "names": { "zh-TW": "林佳蓉", "en": "Jiarong Lin" },
+      "aliases": ["Jiarong Lin"],
+      "sources": ["account-owners-zh-01", "account-owners-en-01", "qinglan-tender-status-zh-01", "qinglan-tender-status-en-01"]
+    },
+    {
+      "id": "person-cheng-jiahao",
+      "type": "person",
+      "name": "鄭家豪",
+      "names": { "zh-TW": "鄭家豪", "en": "Jiahao Cheng" },
+      "aliases": ["Jiahao Cheng"],
+      "sources": ["service-summary-zh-04", "account-owners-zh-03", "account-owners-en-03"]
+    },
+    {
+      "id": "person-kao-yalin",
+      "type": "person",
+      "name": "高雅琳",
+      "names": { "zh-TW": "高雅琳", "en": "Yalin Kao" },
+      "aliases": ["Yalin Kao"],
+      "sources": ["warranty-2026-zh-02", "warranty-2026-en-02"]
+    },
+    {
+      "id": "tender-qinglan-new-wing",
+      "type": "tender",
+      "name": "青嵐醫院新院區設備標案",
+      "names": { "zh-TW": "青嵐醫院新院區設備標案", "en": "Qinglan Hospital New Wing Equipment Tender" },
+      "aliases": ["青嵐新院區標案", "Qinglan New Wing Tender"],
+      "sources": ["qinglan-tender-status-zh-01", "qinglan-tender-status-en-01", "qinglan-tender-status-zh-02", "qinglan-tender-status-en-02"]
+    },
+    {
+      "id": "policy-warranty",
+      "type": "policy",
+      "name": "保固規定",
+      "names": { "zh-TW": "保固規定", "en": "Warranty Policy" },
+      "aliases": ["Warranty Policy"],
+      "sources": ["warranty-2025-zh-01", "warranty-2025-en-01", "warranty-2026-zh-01", "warranty-2026-en-01", "warranty-2026-zh-02", "warranty-2026-en-02"]
+    },
+    {
+      "id": "policy-employee-handbook",
+      "type": "policy",
+      "name": "員工手冊",
+      "names": { "zh-TW": "員工手冊", "en": "Employee Handbook" },
+      "aliases": ["Employee Handbook"],
+      "sources": ["employee-handbook-zh-02", "employee-handbook-en-02"]
+    }
+  ]
+}
