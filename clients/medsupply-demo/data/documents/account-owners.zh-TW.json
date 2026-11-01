@@ -1,0 +1,12 @@
+{
+  "id": "account-owners-zh",
+  "title": "客戶負責人清單",
+  "language": "zh-TW",
+  "date": "2026-09-01",
+  "visibility": "internal",
+  "passages": [
+    { "id": "account-owners-zh-01", "text": "青嵐醫院（簡稱青嵐）由業務林佳蓉負責；松澗醫院（簡稱松澗）由業務主管許文彥負責。" },
+    { "id": "account-owners-zh-02", "text": "青嵐醫院使用 Tessiva 血壓監測儀與 IP-300 輸液幫浦；松澗醫院使用 US-800 超音波主機與 Tessiva 超音波探頭。" },
+    { "id": "account-owners-zh-03", "text": "醫院的維修與校正由技術服務部安排，技術主管是鄭家豪。" }
+  ]
+}

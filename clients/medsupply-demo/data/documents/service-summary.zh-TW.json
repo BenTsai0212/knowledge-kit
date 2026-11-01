@@ -1,0 +1,13 @@
+{
+  "id": "service-summary-zh",
+  "title": "保養與校正重點摘要",
+  "language": "zh-TW",
+  "date": "2026-06-15",
+  "visibility": "internal",
+  "passages": [
+    { "id": "service-summary-zh-01", "text": "Tessiva 血壓監測儀（BP-220）的校正週期為每 12 個月一次，另外每 6 個月做一次清潔與電池檢查。" },
+    { "id": "service-summary-zh-02", "text": "IP-300 輸液幫浦的校正週期為每 6 個月一次，校正時須檢查流速誤差。" },
+    { "id": "service-summary-zh-03", "text": "US-800 超音波主機每 12 個月做一次影像品質檢查；Tessiva 超音波探頭（UP-35）每次保養時檢查探頭表面與線材。" },
+    { "id": "service-summary-zh-04", "text": "本摘要由技術主管鄭家豪維護；與原廠英文手冊不一致時，以原廠手冊為準。" }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "tessiva-probe-catalog-en",
+  "title": "Tessiva Ultrasound Probe UP-35 Catalog",
+  "language": "en",
+  "date": "2026-05-12",
+  "visibility": "public",
+  "passages": [
+    { "id": "tessiva-probe-catalog-en-01", "text": "The Tessiva Ultrasound Probe (model UP-35) is a convex ultrasound probe product made by Lumiden Instruments." },
+    { "id": "tessiva-probe-catalog-en-02", "text": "The UP-35 connects to the Lumiden US-800 Ultrasound System and is designed for abdominal imaging." },
+    { "id": "tessiva-probe-catalog-en-03", "text": "Note: this Tessiva is an ultrasound probe from Lumiden Instruments, not the Tessiva Blood Pressure Monitor from Corvane Medtech." }
+  ]
+}

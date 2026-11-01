@@ -1,0 +1,12 @@
+{
+  "id": "company-profile-zh",
+  "title": "公司簡介",
+  "language": "zh-TW",
+  "date": "2026-01-10",
+  "visibility": "public",
+  "passages": [
+    { "id": "company-profile-zh-01", "text": "示例醫材是約 40 人的醫療器材代理商，部門有業務部、技術服務部、法規與品保部、管理部。" },
+    { "id": "company-profile-zh-02", "text": "示例醫材代理兩家原廠的產品：Corvane Medtech 的血壓監測儀與輸液幫浦，以及 Lumiden Instruments 的超音波主機與探頭。" },
+    { "id": "company-profile-zh-03", "text": "業務部負責報價與醫院客戶，技術服務部負責安裝、保養與校正，法規與品保部負責產品登記與保固規定，管理部負責人事、財務與行政。" }
+  ]
+}

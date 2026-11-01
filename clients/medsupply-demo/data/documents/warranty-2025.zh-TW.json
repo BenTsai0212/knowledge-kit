@@ -1,0 +1,11 @@
+{
+  "id": "warranty-2025-zh",
+  "title": "保固規定（2025 年版）",
+  "language": "zh-TW",
+  "date": "2025-01-01",
+  "visibility": "internal",
+  "passages": [
+    { "id": "warranty-2025-zh-01", "text": "本公司銷售的主機保固 1 年，自醫院驗收日起算。" },
+    { "id": "warranty-2025-zh-02", "text": "保固期間內因正常使用造成的故障免費維修；人為損壞與耗材不在保固範圍。" }
+  ]
+}

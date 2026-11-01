@@ -1,0 +1,13 @@
+{
+  "id": "employee-handbook-zh",
+  "title": "員工手冊",
+  "language": "zh-TW",
+  "date": "2026-01-05",
+  "visibility": "internal",
+  "passages": [
+    { "id": "employee-handbook-zh-01", "text": "上班時間為週一至週五上午 8 點 30 分至下午 5 點 30 分。" },
+    { "id": "employee-handbook-zh-02", "text": "國內出差的住宿費每晚報支上限為新台幣 2,800 元，須檢附收據。" },
+    { "id": "employee-handbook-zh-03", "text": "到職滿一年有 7 天特休，滿兩年有 10 天。" },
+    { "id": "employee-handbook-zh-04", "text": "出差交通以高鐵或火車為原則，搭乘計程車須說明原因。" }
+  ]
+}

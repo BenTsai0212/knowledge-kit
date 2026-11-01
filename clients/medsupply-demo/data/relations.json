@@ -1,3 +1,18 @@
 {
-  "relations": []
+  "relations": [
+    { "id": "corvane-supplies-tessiva-bp", "type": "supplies", "from": "manufacturer-corvane", "to": "product-tessiva-bp", "sources": ["product-overview-zh-02", "tessiva-bp-catalog-en-01"] },
+    { "id": "corvane-supplies-ip-300", "type": "supplies", "from": "manufacturer-corvane", "to": "product-ip-300", "sources": ["product-overview-zh-03"] },
+    { "id": "lumiden-supplies-tessiva-probe", "type": "supplies", "from": "manufacturer-lumiden", "to": "product-tessiva-probe", "sources": ["product-overview-zh-02", "tessiva-probe-catalog-en-01"] },
+    { "id": "lumiden-supplies-us-800", "type": "supplies", "from": "manufacturer-lumiden", "to": "product-us-800", "sources": ["product-overview-zh-03", "tessiva-probe-catalog-en-02"] },
+    { "id": "lin-responsible-for-qinglan", "type": "responsible-for", "from": "person-lin-jiarong", "to": "hospital-qinglan", "sources": ["account-owners-zh-01", "account-owners-en-01"] },
+    { "id": "hsu-responsible-for-songjian", "type": "responsible-for", "from": "person-hsu-wenyan", "to": "hospital-songjian", "sources": ["account-owners-zh-01", "account-owners-en-01"] },
+    { "id": "hsu-responsible-for-tender", "type": "responsible-for", "from": "person-hsu-wenyan", "to": "tender-qinglan-new-wing", "sources": ["qinglan-tender-status-zh-01", "qinglan-tender-status-en-01"] },
+    { "id": "lin-responsible-for-tender", "type": "responsible-for", "from": "person-lin-jiarong", "to": "tender-qinglan-new-wing", "sources": ["qinglan-tender-status-zh-01", "qinglan-tender-status-en-01"] },
+    { "id": "qinglan-uses-tessiva-bp", "type": "uses", "from": "hospital-qinglan", "to": "product-tessiva-bp", "sources": ["account-owners-zh-02", "account-owners-en-02"] },
+    { "id": "qinglan-uses-ip-300", "type": "uses", "from": "hospital-qinglan", "to": "product-ip-300", "sources": ["account-owners-zh-02", "account-owners-en-02"] },
+    { "id": "songjian-uses-us-800", "type": "uses", "from": "hospital-songjian", "to": "product-us-800", "sources": ["account-owners-zh-02", "account-owners-en-02"] },
+    { "id": "songjian-uses-tessiva-probe", "type": "uses", "from": "hospital-songjian", "to": "product-tessiva-probe", "sources": ["account-owners-zh-02", "account-owners-en-02"] },
+    { "id": "tender-involves-tessiva-bp", "type": "involves", "from": "tender-qinglan-new-wing", "to": "product-tessiva-bp", "sources": ["qinglan-tender-status-zh-02", "qinglan-tender-status-en-02"] },
+    { "id": "tender-involves-ip-300", "type": "involves", "from": "tender-qinglan-new-wing", "to": "product-ip-300", "sources": ["qinglan-tender-status-zh-02", "qinglan-tender-status-en-02"] }
+  ]
 }

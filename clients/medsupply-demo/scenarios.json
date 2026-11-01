@@ -1,3 +1,91 @@
 {
-  "scenarios": []
+  "scenarios": [
+    {
+      "id": "partner-public",
+      "title": { "zh-TW": "經銷夥伴查公開資訊", "en": "Partner looks up public information" },
+      "description": { "zh-TW": "以經銷夥伴身分只能看到公開的公司與產品資訊", "en": "Distribution partners can only see public company and product information" },
+      "role": "partner",
+      "questions": [
+        {
+          "id": "company-departments",
+          "text": { "zh-TW": "示例醫材有哪些部門？", "en": "What departments does Demo Medical Supply have?" },
+          "answerPassages": ["company-profile-zh-01", "company-profile-en-01"]
+        },
+        {
+          "id": "tessiva-products",
+          "text": { "zh-TW": "兩款 Tessiva 是什麼產品？", "en": "What are the two Tessiva products?" },
+          "answerPassages": ["product-overview-zh-02", "tessiva-bp-catalog-en-01", "tessiva-probe-catalog-en-01"]
+        }
+      ]
+    },
+    {
+      "id": "engineer-field-service",
+      "title": { "zh-TW": "工程師到醫院維修", "en": "Engineer on a hospital service call" },
+      "description": { "zh-TW": "以技術服務工程師身分查保固、校正週期與出差規定", "en": "Look up warranty, calibration intervals, and travel rules as a service engineer" },
+      "role": "engineer",
+      "questions": [
+        {
+          "id": "main-unit-warranty",
+          "text": { "zh-TW": "主機的保固是幾年？", "en": "How many years is the warranty on a main unit?" },
+          "answerPassages": ["warranty-2026-zh-01", "warranty-2025-zh-01", "warranty-2026-en-01", "warranty-2025-en-01"]
+        },
+        {
+          "id": "tessiva-bp-calibration",
+          "text": { "zh-TW": "Tessiva 血壓監測儀的校正週期是多久？", "en": "How often does the Tessiva Blood Pressure Monitor need to be calibrated?" },
+          "answerPassages": ["service-summary-zh-01", "tessiva-bp-service-manual-en-02"]
+        },
+        {
+          "id": "lodging-limit",
+          "text": { "zh-TW": "出差住宿的報支上限是多少？", "en": "What is the lodging reimbursement limit for business trips?" },
+          "answerPassages": ["employee-handbook-zh-02", "employee-handbook-en-02"]
+        }
+      ]
+    },
+    {
+      "id": "sales-quote-tender",
+      "title": { "zh-TW": "業務報價與標案", "en": "Sales quotes and tenders" },
+      "description": { "zh-TW": "以業務（標案小組成員）身分查客戶、產品、牌價與標案進度", "en": "Look up accounts, products, list prices, and tender status as a sales representative on the tender team" },
+      "role": "sales",
+      "questions": [
+        {
+          "id": "qinglan-owner",
+          "text": { "zh-TW": "青嵐醫院由誰負責？", "en": "Who is the account owner for Qinglan Hospital?" },
+          "answerPassages": ["account-owners-zh-01", "account-owners-en-01"]
+        },
+        {
+          "id": "tessiva-manufacturers",
+          "text": { "zh-TW": "兩款 Tessiva 各是哪家原廠的什麼產品？", "en": "Which manufacturer makes each of the two Tessiva products?" },
+          "answerPassages": ["product-overview-zh-02", "tessiva-bp-catalog-en-01", "tessiva-probe-catalog-en-01"]
+        },
+        {
+          "id": "tessiva-bp-list-price",
+          "text": { "zh-TW": "Tessiva 血壓監測儀的牌價是多少？", "en": "What is the list price of the Tessiva Blood Pressure Monitor?" },
+          "answerPassages": ["price-list-2026q4-zh-01", "price-list-2026q4-en-01"]
+        },
+        {
+          "id": "tender-deadline",
+          "text": { "zh-TW": "青嵐新院區標案的投標截止日是哪天？", "en": "When is the bid deadline for the Qinglan new wing tender?" },
+          "answerPassages": ["qinglan-tender-status-zh-01", "qinglan-tender-status-en-01"]
+        }
+      ]
+    },
+    {
+      "id": "gm-approval",
+      "title": { "zh-TW": "總經理核准折扣", "en": "General manager approves discounts" },
+      "description": { "zh-TW": "以總經理身分查底價與標案的投標金額", "en": "Check discount floors and the tender bid amount as the general manager" },
+      "role": "gm",
+      "questions": [
+        {
+          "id": "tessiva-bp-floor-price",
+          "text": { "zh-TW": "Tessiva 血壓監測儀的折扣底限是多少？", "en": "What is the discount floor for the Tessiva Blood Pressure Monitor?" },
+          "answerPassages": ["floor-price-2026q4-zh-01", "floor-price-2026q4-en-01"]
+        },
+        {
+          "id": "tender-bid-amount",
+          "text": { "zh-TW": "青嵐新院區標案的投標金額是多少？", "en": "What is the bid amount for the Qinglan new wing tender?" },
+          "answerPassages": ["qinglan-tender-status-zh-03", "qinglan-tender-status-en-03"]
+        }
+      ]
+    }
+  ]
 }

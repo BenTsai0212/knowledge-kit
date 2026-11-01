@@ -1,0 +1,12 @@
+{
+  "id": "company-profile-en",
+  "title": "Company Profile",
+  "language": "en",
+  "date": "2026-01-10",
+  "visibility": "public",
+  "passages": [
+    { "id": "company-profile-en-01", "text": "Demo Medical Supply is a medical device distributor with about 40 employees and four departments: Sales, Technical Service, Regulatory and Quality, and Administration." },
+    { "id": "company-profile-en-02", "text": "Demo Medical Supply distributes products from two manufacturers: blood pressure monitors and infusion pumps from Corvane Medtech, and ultrasound systems and probes from Lumiden Instruments." },
+    { "id": "company-profile-en-03", "text": "Sales handles quotations and hospital accounts; Technical Service handles installation, maintenance, and calibration; Regulatory and Quality handles product registration and the warranty policy; Administration handles HR, finance, and general affairs." }
+  ]
+}

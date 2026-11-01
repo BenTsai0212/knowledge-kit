@@ -1,0 +1,12 @@
+{
+  "id": "floor-price-2026q4-zh",
+  "title": "2026 年第四季底價與毛利表",
+  "language": "zh-TW",
+  "date": "2026-10-01",
+  "visibility": "confidential",
+  "passages": [
+    { "id": "floor-price-2026q4-zh-01", "text": "Tessiva 血壓監測儀（BP-220）的折扣底限為每台新台幣 39,000 元，毛利率約 22%。" },
+    { "id": "floor-price-2026q4-zh-02", "text": "IP-300 輸液幫浦的折扣底限為每台新台幣 102,000 元，毛利率約 18%。" },
+    { "id": "floor-price-2026q4-zh-03", "text": "低於折扣底限的報價須經總經理核准。" }
+  ]
+}

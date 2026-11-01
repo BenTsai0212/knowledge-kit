@@ -1,0 +1,13 @@
+{
+  "id": "price-list-2026q4-zh",
+  "title": "2026 年第四季價目表",
+  "language": "zh-TW",
+  "date": "2026-10-01",
+  "visibility": "internal",
+  "passages": [
+    { "id": "price-list-2026q4-zh-01", "text": "Tessiva 血壓監測儀（BP-220）牌價為每台新台幣 48,000 元。" },
+    { "id": "price-list-2026q4-zh-02", "text": "IP-300 輸液幫浦牌價為每台新台幣 125,000 元。" },
+    { "id": "price-list-2026q4-zh-03", "text": "US-800 超音波主機牌價為每台新台幣 1,380,000 元；Tessiva 超音波探頭（UP-35）牌價為每支新台幣 86,000 元。" },
+    { "id": "price-list-2026q4-zh-04", "text": "本價目表自 2026 年 10 月 1 日起適用，取代第三季價目表；報價前請確認使用最新一季的價目表。" }
+  ]
+}

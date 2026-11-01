@@ -1,0 +1,11 @@
+{
+  "id": "warranty-2026-en",
+  "title": "Warranty Policy (2026 Edition)",
+  "language": "en",
+  "date": "2026-03-01",
+  "visibility": "internal",
+  "passages": [
+    { "id": "warranty-2026-en-01", "text": "From March 1, 2026, main units carry a 2-year warranty and accessories (such as cuffs and ultrasound probes) carry a 1-year warranty, starting from the hospital's acceptance date." },
+    { "id": "warranty-2026-en-02", "text": "This edition replaces the 2025 warranty policy; use it when answering hospitals. Yalin Kao of Regulatory and Quality is responsible for interpreting the policy." }
+  ]
+}

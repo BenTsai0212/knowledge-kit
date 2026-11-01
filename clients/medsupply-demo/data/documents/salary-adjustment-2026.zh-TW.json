@@ -1,0 +1,11 @@
+{
+  "id": "salary-adjustment-2026-zh",
+  "title": "2026 年調薪公告",
+  "language": "zh-TW",
+  "date": "2026-02-15",
+  "visibility": "confidential",
+  "passages": [
+    { "id": "salary-adjustment-2026-zh-01", "text": "2026 年平均調薪幅度為 3.2%，自 3 月起生效。" },
+    { "id": "salary-adjustment-2026-zh-02", "text": "技術服務部因現場人力吃緊，另加發每月新台幣 2,000 元的現場服務津貼。" }
+  ]
+}
