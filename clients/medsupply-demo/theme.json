@@ -1,6 +1,6 @@
 {
   "colors": {
-    "primary": "#2F5D8A",
+    "primary": "#0E7E72",
     "onPrimary": "#FFFFFF",
     "background": "#F7F7F5",
     "surface": "#FFFFFF",
@@ -17,7 +17,7 @@
     "graphFallback": "#888888"
   },
   "darkColors": {
-    "primary": "#7EB0E0",
+    "primary": "#14B8A6",
     "onPrimary": "#0F1A26",
     "background": "#16191D",
     "surface": "#1F2328",
