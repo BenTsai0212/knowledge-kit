@@ -6,36 +6,34 @@ import { openApp, openTab, s, switchIdentity } from "./support/app";
 // #RRGGBB → getComputedStyle 的 rgb(r, g, b)
 const rgb = (hex: string) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(", ")})`;
 
-// 400 段的虛構文字：每段超過 chunk.ts 的短段落門檻，各自成為一段（上限是 parse.ts 的 MAX_PASSAGES）
-const LONG_TEXT = Array.from({ length: 400 }, (_, i) => `Paragraph ${i + 1} of a fictional note used to make the upload write take longer.`).join("\n\n");
-
 test.beforeEach(async ({ page }) => {
   await openApp(page);
 });
 
-test("上傳寫入中按 Esc：視窗不關閉，寫入照常完成；完成後 Esc 可以關閉", async ({ page }) => {
+test("上傳寫入中按 Esc：寫入不中斷、只寫入一次；完成後 Esc 可以關閉", async ({ page }) => {
   await switchIdentity(page, "manager");
   await openTab(page, s.tabUpload);
-  // 寫入只在瀏覽器內的 PGlite 進行，很快就結束：以段落數多的虛構文字（一段寫入一列）並放慢 CPU（只有 Chromium 有 CDP），
-  // 讓 Esc 落在寫入中
-  await page.getByLabel(s.uploadDocTitle).fill("E2E long note");
-  await page.getByLabel(s.uploadPaste).fill(LONG_TEXT);
+  await page.getByLabel(s.uploadFile).setInputFiles("e2e/fixtures/upload-note.md");
   await page.getByRole("button", { name: s.uploadPreview }).click();
   const dialog = page.getByRole("dialog", { name: s.uploadConfirmTitle });
   await expect(dialog).toBeVisible();
 
-  const cdp = await page.context().newCDPSession(page);
-  await cdp.send("Emulation.setCPUThrottlingRate", { rate: 20 });
+  // PGlite 在主執行緒執行：寫入期間瀏覽器不處理按鍵，也無法從外部看到「上傳中」的狀態（放慢 CPU 或加長文件都一樣）。
+  // 所以按下上傳後立刻按 Esc，按鍵排在寫入之後處理；視窗可能顯示完成，也可能已被這次 Esc 關閉
   await dialog.getByRole("button", { name: s.uploadSubmit, exact: true }).click();
-  // 寫入已結束才看到時這裡失敗（不會默默通過），CI 會重試
-  await expect(dialog.getByRole("button", { name: s.uploadWriting })).toBeVisible();
   await page.keyboard.press("Escape");
-  await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+  const done = dialog.getByText(s.uploadDone);
+  await expect(async () => expect((await dialog.isHidden()) || (await done.isVisible())).toBe(true)).toPass({ timeout: 30_000 });
+  if (await dialog.isVisible()) {
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+  }
 
-  await expect(dialog.getByText(s.uploadDone)).toBeVisible({ timeout: 60_000 });
-  await expect(dialog).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(dialog).toBeHidden();
+  // 寫入完成且只有一份
+  await openTab(page, s.tabTimeline);
+  const uploaded = page.locator("ol.timeline > li").filter({ has: page.locator(".badge").getByText(s.timelineUploaded, { exact: true }) });
+  await expect(uploaded).toHaveCount(1);
+  await expect(uploaded).toContainText("upload-note");
 });
 
 test("評測執行中離開頁籤再回來：顯示已停止，不停在執行中", async ({ page }) => {
