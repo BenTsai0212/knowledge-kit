@@ -1,9 +1,7 @@
 // 冒煙測試（#66）：各頁籤能打開並完成基本操作。/api/ask 一律是假的回應（support/fake-ask.ts）。
-import { expect, test, type Page } from "@playwright/test";
-import { language, openApp, openTab, presetQuestions, s, switchIdentity } from "./support/app";
+import { expect, test } from "@playwright/test";
+import { language, openApp, openTab, presetQuestions, s, sourcePanel, switchIdentity } from "./support/app";
 import { FAKE_ANSWER_LEAD, FAKE_ENTITY_NAMES } from "./support/fake-ask";
-
-const sourcePanel = (page: Page) => page.getByRole("complementary", { name: s.sourceTitle });
 
 test.beforeEach(async ({ page }) => {
   await openApp(page);

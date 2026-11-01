@@ -106,7 +106,7 @@
 - **逐題執行**：一題一題依序執行，不並行。每題以題庫的 `role` 與 `language` 呼叫與一般問答相同的 `ask()`，同時記下檢索回傳的段落 id 與送出的 body（`Observation`），以 `scoreQuestion()` 評分。檢索不到段落或 prompt 放不下時，`ask()` 在本機拒答，不呼叫 `/api/ask`。
 - **預計呼叫次數**（`estimateCalls()`）：檢索在本機進行，所以開始前以每組設定各跑一次檢索，算出實際會送出的問答次數；模型評分以上限計算（會送出的 `expect: "answer"` 題目各一次，實際上回答被拒答時不呼叫）。畫面顯示「最多 N 次」，經確認才開始。
 - **進度**：每完成一題、停止或結束都呼叫 `onChange`。
-- **停止**：以 `AbortSignal` 中止；進行中的題目不記錄，已完成的結果保留（`status: "stopped"`、`stopReason: "aborted"`）。
+- **停止**：以 `AbortSignal` 中止；進行中的題目不記錄，已完成的結果保留（`status: "stopped"`、`stopReason: "aborted"`）。離開頁籤時先中止再關閉資料庫，進行中的檢索可能因此失敗；中止後的例外同樣記為停止，不停在「執行中」（#66）。
 - **錯誤**：
   - 遇到 `STOP_ERRORS`（`invalid_access_code`、`forbidden_origin`、`daily_limit`、`limit_unavailable`、`misconfigured`、`upstream_quota`、`network`）時停止整次評測，`stopReason` 是該錯誤類型。這些錯誤之後的題目也一定失敗。問答遇到這些錯誤時，那一題不記錄。問答已完成、模型評分才遇到這些錯誤時，已經花掉一次呼叫的回答先保存（`grade` 記為 `ungradable`、`gradeError` 記錯誤類型），再停止（#62 決定（給 PR 3）1）。已完成的結果都保留。
   - 其他錯誤（例如 `upstream_overloaded`、串流中斷）記在該題（`score.error`），該題不算通過，接著跑下一題。

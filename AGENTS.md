@@ -54,7 +54,7 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 | `app/tests/` | 需要放在 `app/src/` 之外的測試（例如會用到被禁止 SQL 的越權測試） |
 | `worker/` | Cloudflare Worker（TypeScript）：`GET /api/health`、`POST /api/ask`（`ask.ts`：同站、邀請碼、body、每日次數的檢查；`upstream.ts`、`sse.ts`：轉發到 Claude Messages API 並轉成精簡的 SSE）；`models.ts` 是模型白名單，`usage.ts` 是計數用的 Durable Object，`testing.ts` 是測試用的假實作；其他請求交給 `dist/` 靜態檔。API 格式、錯誤類型、secret 與已知限制見 `worker/README.md` |
 | `client/` | 客戶設定（`*.json`）、介面翻譯檔（`i18n/<語言>.json`，含拒答文字與各錯誤訊息）、JSON Schema（`schema/`）、虛構資料集（`data/`）與評測題庫（`evals/questions.json`，見 `docs/evals.md`）；換客戶只改這裡，說明見 `docs/client-config.md`、`docs/dataset.md` |
-| `e2e/` | Playwright 的端對端測試（`*.spec.ts`）；`support/fake-ask.ts` 是假的 `/api/ask`，`support/app.ts` 是共用操作（介面文字從 `client/i18n/` 讀取）；`fixtures/` 是上傳用的虛構檔案；設定在根目錄的 `playwright.config.ts`（說明見 `docs/testing.md`） |
+| `e2e/` | Playwright 的端對端測試（`*.spec.ts`：冒煙 `smoke`、越權 `access`、互動邊角 `interactions`）；`support/fake-ask.ts` 是假的 `/api/ask`（含串流到一半的假回應），`support/app.ts` 是共用操作（介面文字從 `client/i18n/` 讀取），`support/dataset.ts` 以 `app/src/evals/oracle.ts` 算出各身分看不到的段落；`fixtures/` 是上傳用的虛構檔案；設定在根目錄的 `playwright.config.ts`（說明見 `docs/testing.md`） |
 | `scripts/` | 專案腳本（Node ESM，不在 `typecheck` 範圍內）：`check-client.mjs`、`check-sensitive.mjs`（敏感資料檢查）；`fixtures/invalid-client/` 是故意寫錯的測試資料 |
 | `package.json`、`vite.config.ts`、`vitest.config.ts`、`playwright.config.ts`、`tsconfig.node.json`、`wrangler.jsonc` | 根目錄的指令與設定（單一 `package.json`，不用 workspaces） |
 | `docs/workflow/` | 憲法與 workflow 手冊 |

@@ -1,5 +1,5 @@
 // 端對端測試共用的操作（#66）。畫面文字一律從 client/i18n 讀取，測試中不寫死；只用預設語言（client.json 的 defaultLanguage）。
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import access from "../../client/access.json" with { type: "json" };
 import client from "../../client/client.json" with { type: "json" };
 import en from "../../client/i18n/en.json" with { type: "json" };
@@ -34,8 +34,15 @@ export async function switchIdentity(page: Page, id: RoleId): Promise<void> {
   await page.getByRole("banner").getByLabel(s.identity).selectOption({ label: role.label[language] });
 }
 
-// 切換頁籤；待審頁籤的名稱後面接著筆數，所以比對開頭
-export async function openTab(page: Page, label: string): Promise<void> {
+// 頁籤的按鈕；待審頁籤的名稱後面接著筆數，所以比對開頭
+export function tab(page: Page, label: string): Locator {
   const name = new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
-  await page.getByRole("navigation", { name: s.views }).getByRole("button", { name }).click();
+  return page.getByRole("navigation", { name: s.views }).getByRole("button", { name });
 }
+
+// 切換頁籤
+export async function openTab(page: Page, label: string): Promise<void> {
+  await tab(page, label).click();
+}
+
+export const sourcePanel = (page: Page) => page.getByRole("complementary", { name: s.sourceTitle });

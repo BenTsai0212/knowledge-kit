@@ -28,7 +28,7 @@ export function fakeReply(body: AskBody): string | null {
   return null;
 }
 
-const event = (name: string, data: unknown) => `event: ${name}\ndata: ${JSON.stringify(data)}\n\n`;
+export const event = (name: string, data: unknown) => `event: ${name}\ndata: ${JSON.stringify(data)}\n\n`;
 
 // 回答分成兩段 delta，確認前端會依序串接
 export function sseBody(text: string): string {
@@ -46,4 +46,46 @@ export async function routeFakeAsk(page: Page): Promise<void> {
     }
     await route.fulfill({ status: 200, headers: { "Content-Type": "text/event-stream" }, body: sseBody(text) });
   });
+}
+
+// 串流到一半的回答（越權測試「串流中切換身分」）：route.fulfill 一次送出整個 body，做不出串流中的狀態，
+// 所以在頁面內替換 fetch，/api/ask 回一個由測試逐段送出的 ReadableStream。須在 page.goto 之前呼叫
+interface HeldStream {
+  controller: ReadableStreamDefaultController<Uint8Array> | null;
+  cancelled: boolean;
+}
+type HeldWindow = Window & { __e2eAsk?: HeldStream };
+
+export async function holdAskStream(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const w = window as HeldWindow;
+    const original = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      if (!url.endsWith("/api/ask")) return original(input, init);
+      const held: HeldStream = { controller: null, cancelled: false };
+      w.__e2eAsk = held;
+      const body = new ReadableStream<Uint8Array>({
+        start: (controller) => void (held.controller = controller),
+        cancel: () => void (held.cancelled = true),
+      });
+      return Promise.resolve(new Response(body, { status: 200, headers: { "Content-Type": "text/event-stream" } }));
+    };
+  });
+}
+
+// 已送出 /api/ask，串流開著
+export const askStreamOpen = (page: Page) => page.evaluate(() => (window as HeldWindow).__e2eAsk?.controller != null);
+// 前端已取消讀取（捨棄或讀完後都會取消）
+export const askStreamCancelled = (page: Page) => page.evaluate(() => (window as HeldWindow).__e2eAsk?.cancelled === true);
+
+// 送出一段 SSE；串流已被取消時忽略
+export async function pushAskStream(page: Page, chunk: string): Promise<void> {
+  await page.evaluate((text) => {
+    try {
+      (window as HeldWindow).__e2eAsk?.controller?.enqueue(new TextEncoder().encode(text));
+    } catch {
+      // 已取消的串流不能再寫入
+    }
+  }, chunk);
 }
