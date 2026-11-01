@@ -22,7 +22,7 @@ const files: Widen<ClientFiles> = { client, theme, knowledgeModel, access, scena
 export const RETRIEVAL_DEFAULTS: RetrievalConfig = { provider: "keyword-hash", topK: 5, minScore: 0.1 };
 export const UPLOAD_DEFAULTS: UploadConfig = { passageMaxChars: 300, extractMaxBatches: 3 };
 export const CONFLICTS_DEFAULTS: ConflictsConfig = { enabled: false, candidatesPerPassage: 3, minScore: 0.15 };
-export const EVAL_THRESHOLDS_DEFAULTS: EvalThresholds = { citation: 0.9, answer: 0.8, leakage: 0, refusal: 1 };
+export const EVAL_THRESHOLDS_DEFAULTS: EvalThresholds = { citation: 0.9, answer: 0.8, refusal: 1 };
 
 export function normalizeClient(raw: ClientFiles): ClientConfig {
   return {

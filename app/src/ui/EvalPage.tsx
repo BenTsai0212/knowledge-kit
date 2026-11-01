@@ -6,7 +6,7 @@ import { clientConfig } from "../client/load";
 import { dataset } from "../dataset/load";
 import { evalQuestions } from "../evals/load";
 import { estimateCalls, openEvalDatabase, runEvals, type EvalContext, type EvalRun, type EvalSettings, type QuestionResult } from "../evals/run";
-import type { Metric, Summary } from "../evals/score";
+import { LEAKAGE_LIMIT, type Metric, type Summary } from "../evals/score";
 import type { EvalQuestion } from "../evals/types";
 import { apiTransport } from "../qa/api";
 import { openRetriever } from "../retrieval/retrieve";
@@ -295,7 +295,7 @@ export function EvalPage({ language, accessCode, uploadedCount, run, onRun, onRe
                 {METRICS.map((key) => (
                   <tr key={key}>
                     <th scope="row">{s.evalMetrics[key]}</th>
-                    <td>{key === "leakage" ? fill(s.evalAtMost, { count: thresholds.leakage }) : fill(s.evalAtLeast, { percent: percent(thresholds[key]) })}</td>
+                    <td>{key === "leakage" ? fill(s.evalAtMost, { count: LEAKAGE_LIMIT }) : fill(s.evalAtLeast, { percent: percent(thresholds[key]) })}</td>
                     {summaries.map((summary, i) => (
                       <td key={i}>{metricCell(summary, key)}</td>
                     ))}

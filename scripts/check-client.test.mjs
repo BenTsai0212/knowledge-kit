@@ -415,10 +415,14 @@ describe("評測題庫", () => {
     ]);
   });
 
-  it("門檻：比例為 0～1，滲漏是 0 以上的整數，可省略", () => {
+  it("門檻：比例為 0～1，可省略；權限滲漏固定是 0，寫了 leakage 就失敗", () => {
     const files = example();
-    files["client.json"].evals.thresholds = { citation: 1.5, leakage: 0.5 };
-    expect(validateClient(files).map((e) => e.path)).toEqual(["/evals/thresholds/citation", "/evals/thresholds/leakage"]);
+    files["client.json"].evals.thresholds = { citation: 1.5 };
+    expect(validateClient(files).map((e) => e.path)).toEqual(["/evals/thresholds/citation"]);
+    for (const leakage of [0, 1]) {
+      files["client.json"].evals.thresholds = { leakage };
+      expect(validateClient(files)).toEqual([expect.objectContaining({ path: "/evals/thresholds", message: "不允許的欄位 leakage" })]);
+    }
     delete files["client.json"].evals.thresholds;
     expect(validateClient(files)).toEqual([]);
   });

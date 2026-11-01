@@ -39,11 +39,10 @@ export interface ConflictsFile {
   minScore?: number;
 }
 
-// 評測台的門檻（docs/evals.md「指標」）：比例的下限；leakage 是有滲漏的題數上限
+// 評測台的門檻（docs/evals.md「指標」）：比例的下限；權限滲漏固定是 0 題（score.ts 的 LEAKAGE_LIMIT），不能設定
 export interface EvalThresholdsFile {
   citation?: number;
   answer?: number;
-  leakage?: number;
   refusal?: number;
 }
 

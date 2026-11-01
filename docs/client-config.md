@@ -76,8 +76,9 @@ npm run check:client
 | --- | --- | --- | --- |
 | `citation` | 0～1 | 0.9 | 引用正確的比例下限 |
 | `answer` | 0～1 | 0.8 | 答案正確的比例下限 |
-| `leakage` | 0 以上的整數 | 0 | 有權限滲漏的題數上限 |
 | `refusal` | 0～1 | 1 | 正確拒答的比例下限 |
+
+權限滲漏的上限固定是 0 題，不能設定；`client.json` 寫了 `leakage` 時 `check:client` 失敗（#75 決定）。
 
 評測台的總覽以這些門檻顯示通過或未通過（[docs/evals.md](evals.md)「畫面」）。
 

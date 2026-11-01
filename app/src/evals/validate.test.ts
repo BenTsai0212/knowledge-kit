@@ -58,9 +58,12 @@ describe("validateEvals", () => {
 describe("參考情境的題庫", () => {
   const questions = evalQuestions.questions;
 
-  it("約 20 題，繁中與英文都有，涵蓋每個類別", () => {
-    expect(questions.length).toBeGreaterThanOrEqual(18);
-    expect(questions.length).toBeLessThanOrEqual(25);
+  it("題數符合 docs/playbook/eval-question-bank.md 的建議：情境題 8 題以上、預期回答 15 題以上（#75 決定）", () => {
+    expect(questions.filter((q) => q.category === "scenario").length).toBeGreaterThanOrEqual(8);
+    expect(questions.filter((q) => q.expect === "answer").length).toBeGreaterThanOrEqual(15);
+  });
+
+  it("繁中與英文都有，涵蓋每個類別", () => {
     expect(new Set(questions.map((q) => q.language))).toEqual(new Set(clientConfig.client.languages));
     expect(new Set(questions.map((q) => q.category))).toEqual(
       new Set(["scenario", "permission", "out-of-scope", "conflict", "extraction-attempt"]),

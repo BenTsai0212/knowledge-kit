@@ -63,7 +63,7 @@ describe("evalReport", () => {
     const set: SetRun = { settings: { topK: 5, minScore: 0.1 }, results: [result({ id: questions[0].id })] };
     const run: EvalRun = { mode: "keyPoints", sets: [set], status: "stopped", stopReason: "daily_limit", startedAt: "2026-10-30T00:00:00.000Z" };
     const report = evalReport(run, questions, thresholds);
-    expect(report).toMatchObject({ mode: "keyPoints", status: "stopped", stopReason: "daily_limit", finishedAt: null, thresholds });
+    expect(report).toMatchObject({ mode: "keyPoints", status: "stopped", stopReason: "daily_limit", finishedAt: null, thresholds: { ...thresholds, leakage: 0 } });
     expect(report.sets[0].settings).toEqual(set.settings);
     expect(report.sets[0].summary).toEqual(setSummary(questions, set, thresholds, "keyPoints"));
     expect(report.sets[0].summary.complete).toBe(false);

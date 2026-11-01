@@ -29,13 +29,12 @@
       "properties": {
         "path": { "$ref": "common.schema.json#/definitions/RelativePath" },
         "thresholds": {
-          "description": "評測台的門檻；省略的欄位使用預設值（docs/evals.md）",
+          "description": "評測台的門檻；省略的欄位使用預設值。權限滲漏固定是 0 題，不在此設定（docs/evals.md）",
           "type": "object",
           "additionalProperties": false,
           "properties": {
             "citation": { "description": "引用正確的比例下限", "type": "number", "minimum": 0, "maximum": 1, "default": 0.9 },
             "answer": { "description": "答案正確的比例下限", "type": "number", "minimum": 0, "maximum": 1, "default": 0.8 },
-            "leakage": { "description": "有權限滲漏的題數上限", "type": "integer", "minimum": 0, "default": 0 },
             "refusal": { "description": "正確拒答的比例下限", "type": "number", "minimum": 0, "maximum": 1, "default": 1 }
           }
         }
