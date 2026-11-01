@@ -83,6 +83,8 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 - **漢字維持 `bigram`**（#83 決定 3）：改用 `Intl.Segmenter` 時，字典裡沒有的專有名詞會被拆開（「青翼專案」→ 青、翼、專案），參考情境有答案段落的名次變差，而且斷詞結果隨 ICU 版本而不同，CI、本機與各版 Chrome 的分數可能不一致。`segmenter` 留給不以空白分詞、又不適合雙字組的文字（例如泰文）。
 - **結構測試**（`app/src/language/structure.test.ts`）：`app/src/`、`worker/` 中語言模組以外的程式不得有文字類別的 Unicode 屬性（`\p{Script=…}` 等）、CJK 範圍的 `\u` 跳脫、含 CJK 字元或 `. ! ?` 的字元類別、停用詞表。
 
+完整步驟（含客戶資料夾要改的地方與語意向量的比較）見 [docs/playbook/add-language.md](playbook/add-language.md)。
+
 **新增語言**時只修改客戶資料夾（`client.json` 的 `languages`、翻譯檔、資料集）與語言模組：
 
 1. 以空白分詞、文字類別已有規則的語言（例如法文、德文）：不必改語言模組；但英文停用詞與去掉複數 `s` 的規則套用在所有「其他文字」上，需要時在 `scripts.ts` 為該文字類別另加規則。

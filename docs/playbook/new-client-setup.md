@@ -30,7 +30,7 @@
 ## 2. 基本設定（`client.json`）
 
 - `displayName`：使用虛構名稱；客戶書面同意後才可以用真實名稱（[資料安全說明](data-security.md)）。
-- `languages`、`defaultLanguage`：依需求確認清單 D1。第 1 階段支援 `zh-TW` 與 `en`；其他語言見第 14 項（新增語言步驟文件）。
+- `languages`、`defaultLanguage`：依需求確認清單 D1。已驗證的語言是 `zh-TW`、`en`、`ja`；其他語言先依[新增語言步驟](add-language.md)判斷要改什麼。
 - `model`、`retrieval`、`upload`、`evals.thresholds`：先用預設值，評測後才依結果調整。
 - `conflicts.enabled`：客戶有新舊說法的需求（B6）時設為 `true`。
 
@@ -89,7 +89,7 @@
 
 ## 5. 示範情境與評測題庫
 
-1. **`scenarios.json`**：填入檢查點 1 確認的情境，每個預設問題列出答案段落（該情境的角色要看得到）。 `npm run check:clients` 會以每種語言檢索預設問題，同語言的答案段落要在前 K 名內（`app/src/retrieval/scenarios.target.test.ts`）。
+1. **`scenarios.json`**：填入檢查點 1 確認的情境，每個預設問題列出答案段落（該情境的角色要看得到）。`npm run check:clients` 會以每種語言檢索預設問題，同語言的答案段落要在前 K 名內（`app/src/retrieval/scenarios.target.test.ts`）。
 2. **`evals/questions.json`**：依[評測題庫建立步驟](eval-question-bank.md)出題：
    - 情境題 8 題以上、回答題（`expect: "answer"`）15 題以上；
    - 權限題至少 4 組（同一個問題，一個角色能答、另一個拒答）；

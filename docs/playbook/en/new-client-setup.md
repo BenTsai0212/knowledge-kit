@@ -30,7 +30,7 @@ Every step has an "Acceptance" check; move on only when it passes. At each **⏸
 ## 2. Basic settings (`client.json`)
 
 - `displayName`: use a fictional name; use the real name only with the client's written permission ([Data security](data-security.md)).
-- `languages`, `defaultLanguage`: per requirements checklist D1. Phase 1 supports `zh-TW` and `en`; for other languages see item 14 (adding a language).
+- `languages`, `defaultLanguage`: per requirements checklist D1. Verified languages are `zh-TW`, `en`, and `ja`; for any other language, first use [Adding a language](add-language.md) to decide what to change.
 - `model`, `retrieval`, `upload`, `evals.thresholds`: start with the defaults; adjust only after evaluation.
 - `conflicts.enabled`: set to `true` when the client needs old and new information compared (B6).
 
