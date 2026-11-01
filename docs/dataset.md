@@ -109,7 +109,7 @@ template 預設的**虛構**資料：範例公司（Example Co.）的文件、�
 - 實體與關係的出處段落存在
 - 文件、段落、實體、關係的 id 不重複（段落 id 在整個資料集中唯一）
 - `scenarios.json` 每個問題的 `answerPassages` 存在於資料集
-- `dataset.path` 為 `data/`：`import.meta.glob` 的路徑必須是字面值，所以 app 目前只支援這個位置
+- `dataset.path` 為 `data/`：`import.meta.glob` 的路徑必須是 `@client/` 開頭的字面值，所以 app 目前只支援這個位置
 
 錯誤的格式與 `check:client` 相同：`<檔名> <JSON 路徑>：<訊息>`，檔名相對於 `client/`。
 

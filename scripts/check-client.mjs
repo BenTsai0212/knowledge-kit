@@ -1,9 +1,11 @@
 // 以 client/schema/ 的 JSON Schema 驗證 client/ 的設定、翻譯檔、資料集與評測題庫，再檢查跨檔規則。
-// 用法：node scripts/check-client.mjs [設定資料夾，預設 client/]
+// 用法：node scripts/check-client.mjs [設定資料夾，預設為 KK_CLIENT 選定的客戶，未設定時 client/]
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import Ajv from "ajv";
+import { resolveClientDir } from "./client-dir.mjs";
 
+// Schema 是產品的一部分，固定用 client/schema/，不隨客戶切換（#77 決定 2）
 const SCHEMA_DIR = new URL("../client/schema/", import.meta.url);
 const DEFAULT_CLIENT_DIR = new URL("../client/", import.meta.url);
 
@@ -429,7 +431,13 @@ export function checkClient(dir = DEFAULT_CLIENT_DIR) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const arg = process.argv[2];
-  const dir = arg ? pathToFileURL(`${arg.replace(/\/?$/, "/")}`) : DEFAULT_CLIENT_DIR;
+  let dir;
+  try {
+    dir = pathToFileURL(`${(arg ?? resolveClientDir()).replace(/\/?$/, "/")}`);
+  } catch (err) {
+    console.error(err.message);
+    process.exit(1);
+  }
   const errors = checkClient(dir);
   for (const e of errors) console.error(`${e.file} ${e.path}：${e.message}`);
   if (errors.length > 0) {

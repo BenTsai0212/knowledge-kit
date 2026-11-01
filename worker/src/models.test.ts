@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import client from "../../client/client.json";
+import client from "@client/client.json";
 import { isModelCode, MODELS } from "./models";
 
 describe("模型白名單", () => {

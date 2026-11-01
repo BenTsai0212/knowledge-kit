@@ -6,7 +6,7 @@
 
 ## 題庫（`client/evals/questions.json`）
 
-位置是 `client.json` 的 `evals.path`（app 只支援 `evals/`，因為 JSON import 的路徑必須是字面值）。Schema 是 `client/schema/evals/questions.schema.json`，型別在 `app/src/evals/types.ts`，讀取在 `app/src/evals/load.ts`。
+位置是 `client.json` 的 `evals.path`（app 只支援 `evals/`，因為 JSON import 的路徑必須是 `@client/` 開頭的字面值，見 [docs/client-config.md](client-config.md)「多客戶與切換」）。Schema 是 `client/schema/evals/questions.schema.json`，型別在 `app/src/evals/types.ts`，讀取在 `app/src/evals/load.ts`。
 
 ```json
 {

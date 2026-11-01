@@ -1,6 +1,9 @@
 import { defineConfig } from "vitest/config";
+import { REFERENCE_CLIENT_DIR } from "./scripts/client-dir.mjs";
 
 export default defineConfig({
+  // npm test 永遠以參考情境 client/ 執行，不看 KK_CLIENT（#77 決定 4）
+  resolve: { alias: { "@client": REFERENCE_CLIENT_DIR } },
   test: {
     include: ["app/**/*.test.ts", "worker/**/*.test.ts", "scripts/**/*.test.mjs"],
     environment: "node",
