@@ -1,20 +1,14 @@
-// 端對端測試共用的操作（#66）。畫面文字一律從 client/i18n 讀取，測試中不寫死；只用預設語言（client.json 的 defaultLanguage）。
+// 端對端測試共用的操作（#66）。畫面文字一律從選定客戶的 i18n 讀取，測試中不寫死；只用預設語言（client.json 的 defaultLanguage）。
 import { expect, type Locator, type Page } from "@playwright/test";
-import access from "../../client/access.json" with { type: "json" };
-import client from "../../client/client.json" with { type: "json" };
-import en from "../../client/i18n/en.json" with { type: "json" };
-import zhTW from "../../client/i18n/zh-TW.json" with { type: "json" };
-import scenarios from "../../client/scenarios.json" with { type: "json" };
+import { access, language, s, scenarios } from "./client";
 import { routeFakeAsk } from "./fake-ask";
 
-const TRANSLATIONS = { "zh-TW": zhTW, en };
-export const language = client.defaultLanguage as keyof typeof TRANSLATIONS;
-export const s = TRANSLATIONS[language];
+export { language, s };
 
 // 邀請碼：假的 /api/ask 不檢查，任意虛構字串即可（只存在 sessionStorage）
 const ACCESS_CODE = "e2e-access-code";
 
-export type RoleId = (typeof access.roles)[number]["id"];
+export type RoleId = string;
 
 // 預設問題（scenarios.json）；資料庫載入完成前停用
 export const presetQuestions = scenarios.scenarios.flatMap((x) => x.questions.map((q) => ({ role: x.role as RoleId, text: q.text[language] })));

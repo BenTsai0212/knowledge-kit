@@ -1,9 +1,11 @@
 // 假的 /api/ask（#66）：以 page.route 攔下請求，依 system 的開頭分辨問答、萃取、比對與評分，回傳最小的合法回應。
 // 格式見 worker/README.md：N 個 delta 事件，最後一個 done。不使用真實金鑰、不啟動 Worker。
 import type { Page } from "@playwright/test";
+import { client, knowledgeModel } from "./client";
 
-// 萃取時回傳的實體名稱（虛構）；待審頁以此找到上傳後的待審項目
-export const FAKE_ENTITY_NAMES = { "zh-TW": "端對端測試員", en: "E2E Tester" };
+// 萃取時回傳的實體（虛構）：類型是 knowledge-model.json 的第一個，每種語言用同一個名稱；待審頁以此找到上傳後的待審項目
+export const FAKE_ENTITY_NAME = "E2E Tester";
+const FAKE_ENTITY_NAMES = Object.fromEntries(client.languages.map((l) => [l, FAKE_ENTITY_NAME]));
 // 問答的回答：引用 prompt 中的第 1 段，通過 citations.ts 的引用解析
 export const FAKE_ANSWER_LEAD = "這是測試用的回答";
 const FAKE_ANSWER = `${FAKE_ANSWER_LEAD} [1]。`;
@@ -19,7 +21,7 @@ export function fakeReply(body: AskBody): string | null {
   if (system.startsWith("You answer questions")) return FAKE_ANSWER;
   if (system.startsWith("You extract entities")) {
     return JSON.stringify({
-      entities: [{ key: "e1", type: "person", names: FAKE_ENTITY_NAMES, sources: [1] }],
+      entities: [{ key: "e1", type: knowledgeModel.entityTypes[0].id, names: FAKE_ENTITY_NAMES, sources: [1] }],
       relations: [],
     });
   }
