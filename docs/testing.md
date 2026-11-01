@@ -64,7 +64,7 @@ repo 預計公開，CI 紀錄也會公開，所以兩者的輸出都**不包含�
 
 - **看不到的段落**以 `app/src/evals/oracle.ts` 的 `expectedVisible()` 從 `client/data/` 算出（`e2e/support/dataset.ts`），不以畫面或資料庫的結果為準；畫面文字以每段開頭 20 個字元比對（空白先合併）。切換前先確認畫面上確實有看不到的段落，比對本身才有效。
 - **串流中的回答**：`route.fulfill` 一次送出整個 body，做不出串流到一半的狀態，所以 `holdAskStream()` 在頁面內替換 `fetch`，由測試以 `pushAskStream()` 逐段送出。
-- **上傳寫入中按 Esc**：寫入在瀏覽器內的 PGlite 很快結束，測試以 CDP 的 `Emulation.setCPUThrottlingRate` 放慢 CPU（只有 Chromium 可用）。寫入已結束才按到 Esc 時測試失敗，不會默默通過。
+- **上傳寫入中按 Esc**：寫入在瀏覽器內的 PGlite 很快結束，測試上傳 400 段的虛構文字（一段寫入一列），並以 CDP 的 `Emulation.setCPUThrottlingRate` 放慢 CPU（只有 Chromium 可用）。寫入已結束才按到 Esc 時測試失敗，不會默默通過。
 
 ### 本機執行
 

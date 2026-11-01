@@ -6,6 +6,9 @@ import { openApp, openTab, s, switchIdentity } from "./support/app";
 // #RRGGBB → getComputedStyle 的 rgb(r, g, b)
 const rgb = (hex: string) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(", ")})`;
 
+// 400 段的虛構文字：每段超過 chunk.ts 的短段落門檻，各自成為一段（上限是 parse.ts 的 MAX_PASSAGES）
+const LONG_TEXT = Array.from({ length: 400 }, (_, i) => `Paragraph ${i + 1} of a fictional note used to make the upload write take longer.`).join("\n\n");
+
 test.beforeEach(async ({ page }) => {
   await openApp(page);
 });
@@ -13,12 +16,14 @@ test.beforeEach(async ({ page }) => {
 test("上傳寫入中按 Esc：視窗不關閉，寫入照常完成；完成後 Esc 可以關閉", async ({ page }) => {
   await switchIdentity(page, "manager");
   await openTab(page, s.tabUpload);
-  await page.getByLabel(s.uploadFile).setInputFiles("e2e/fixtures/upload-note.md");
+  // 寫入只在瀏覽器內的 PGlite 進行，很快就結束：以段落數多的虛構文字（一段寫入一列）並放慢 CPU（只有 Chromium 有 CDP），
+  // 讓 Esc 落在寫入中
+  await page.getByLabel(s.uploadDocTitle).fill("E2E long note");
+  await page.getByLabel(s.uploadPaste).fill(LONG_TEXT);
   await page.getByRole("button", { name: s.uploadPreview }).click();
   const dialog = page.getByRole("dialog", { name: s.uploadConfirmTitle });
   await expect(dialog).toBeVisible();
 
-  // 寫入只在瀏覽器內的 PGlite 進行，很快就結束；放慢 CPU，讓 Esc 落在寫入中（只有 Chromium 有 CDP）
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 20 });
   await dialog.getByRole("button", { name: s.uploadSubmit, exact: true }).click();
@@ -27,7 +32,7 @@ test("上傳寫入中按 Esc：視窗不關閉，寫入照常完成；完成後 
   await page.keyboard.press("Escape");
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
 
-  await expect(dialog.getByText(s.uploadDone)).toBeVisible();
+  await expect(dialog.getByText(s.uploadDone)).toBeVisible({ timeout: 60_000 });
   await expect(dialog).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
