@@ -1,7 +1,7 @@
 // 互動的邊角（#66）：上傳寫入中按 Esc、評測執行中離開頁籤、深色模式。/api/ask 一律是假的回應（support/fake-ask.ts）。
 import { expect, test } from "@playwright/test";
-import theme from "../client/theme.json" with { type: "json" };
 import { openApp, openTab, s, switchIdentity } from "./support/app";
+import { NO_REVIEWER, NO_UPLOADER, reviewer, theme, uploader } from "./support/client";
 
 // #RRGGBB → getComputedStyle 的 rgb(r, g, b)
 const rgb = (hex: string) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(", ")})`;
@@ -11,7 +11,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("上傳寫入中按 Esc：寫入不中斷、只寫入一次；完成後 Esc 可以關閉", async ({ page }) => {
-  await switchIdentity(page, "manager");
+  test.skip(uploader === undefined, NO_UPLOADER);
+  await switchIdentity(page, uploader!.id);
   await openTab(page, s.tabUpload);
   await page.getByLabel(s.uploadFile).setInputFiles("e2e/fixtures/upload-note.md");
   await page.getByRole("button", { name: s.uploadPreview }).click();
@@ -37,6 +38,7 @@ test("上傳寫入中按 Esc：寫入不中斷、只寫入一次；完成後 Esc
 });
 
 test("評測執行中離開頁籤再回來：顯示已停止，不停在執行中", async ({ page }) => {
+  test.skip(reviewer === undefined, NO_REVIEWER);
   // 評測的第一個 /api/ask 停住不回，評測停在執行中；之後註冊的 route 優先
   let release = () => {};
   const held = new Promise<void>((resolve) => (release = resolve));
@@ -47,7 +49,7 @@ test("評測執行中離開頁籤再回來：顯示已停止，不停在執行�
     await route.fallback().catch(() => {});
   });
 
-  await switchIdentity(page, "manager");
+  await switchIdentity(page, reviewer!.id);
   await openTab(page, s.tabEvals);
   await page.getByRole("button", { name: s.evalStart }).click();
   const dialog = page.getByRole("dialog", { name: s.evalConfirmTitle });

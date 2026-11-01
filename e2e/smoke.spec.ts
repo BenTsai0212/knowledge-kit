@@ -1,7 +1,8 @@
 // 冒煙測試（#66）：各頁籤能打開並完成基本操作。/api/ask 一律是假的回應（support/fake-ask.ts）。
 import { expect, test } from "@playwright/test";
-import { language, openApp, openTab, presetQuestions, s, sourcePanel, switchIdentity } from "./support/app";
-import { FAKE_ANSWER_LEAD, FAKE_ENTITY_NAMES } from "./support/fake-ask";
+import { openApp, openTab, presetQuestions, s, sourcePanel, switchIdentity } from "./support/app";
+import { NO_REVIEWER, NO_REVIEWING_UPLOADER, reviewer, reviewingUploader } from "./support/client";
+import { FAKE_ANSWER_LEAD, FAKE_ENTITY_NAME } from "./support/fake-ask";
 
 test.beforeEach(async ({ page }) => {
   await openApp(page);
@@ -19,8 +20,9 @@ test("問答：回答附出處，點出處打開原文", async ({ page }) => {
   await expect(sourcePanel(page).locator("mark")).toBeVisible();
 });
 
+// 用能審查的身分中看得最多的；沒有時用預設身分（第一個）
 test("圖譜：畫出畫布，點節點打開實體面板", async ({ page }) => {
-  await switchIdentity(page, "manager");
+  if (reviewer !== undefined) await switchIdentity(page, reviewer.id);
   await openTab(page, s.tabGraph);
   const canvas = page.locator(".graph-canvas");
   await expect(canvas.locator("canvas").first()).toBeVisible();
@@ -53,7 +55,8 @@ test("時間軸：列出文件，打開原文", async ({ page }) => {
 });
 
 test("上傳與待審：上傳 Markdown，萃取的實體出現在待審", async ({ page }) => {
-  await switchIdentity(page, "manager");
+  test.skip(reviewingUploader === undefined, NO_REVIEWING_UPLOADER);
+  await switchIdentity(page, reviewingUploader!.id);
   await openTab(page, s.tabUpload);
   await page.getByLabel(s.uploadFile).setInputFiles("e2e/fixtures/upload-note.md");
   await page.getByRole("button", { name: s.uploadPreview }).click();
@@ -67,7 +70,7 @@ test("上傳與待審：上傳 Markdown，萃取的實體出現在待審", async
 
   // 萃取在背景執行；結束前打開待審頁時看不到，按重新整理再讀一次
   await openTab(page, s.tabReview);
-  const item = page.getByRole("checkbox", { name: FAKE_ENTITY_NAMES[language] });
+  const item = page.getByRole("checkbox", { name: FAKE_ENTITY_NAME });
   await expect(async () => {
     await page.getByRole("button", { name: s.reviewRefresh }).first().click();
     await expect(item).toBeVisible({ timeout: 2_000 });
@@ -75,7 +78,8 @@ test("上傳與待審：上傳 Markdown，萃取的實體出現在待審", async
 });
 
 test("評測台：估算後執行到完成", async ({ page }) => {
-  await switchIdentity(page, "manager");
+  test.skip(reviewer === undefined, NO_REVIEWER);
+  await switchIdentity(page, reviewer!.id);
   await openTab(page, s.tabEvals);
   await page.getByRole("button", { name: s.evalStart }).click();
   const dialog = page.getByRole("dialog", { name: s.evalConfirmTitle });

@@ -14,14 +14,17 @@ export default defineConfig({
   retries: ci ? 2 : 0,
   timeout: 120_000,
   expect: { timeout: 30_000 },
-  reporter: ci ? [["list"], ["html", { open: "never" }]] : "list",
+  // skip-reporter：列出略過的測試與原因，參考情境有略過時失敗（#77）
+  reporter: ci
+    ? [["list"], ["./e2e/support/skip-reporter.ts"], ["html", { open: "never" }]]
+    : [["list"], ["./e2e/support/skip-reporter.ts"]],
   use: {
     baseURL: "http://localhost:4173",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  // 先 npm run build；預覽頁沒有 /api/*，/api/ask 由測試以 page.route 回應
+  // 先 npm run build（客戶用同一個 KK_CLIENT build，測試讀的客戶資料見 e2e/support/client.ts）；預覽頁沒有 /api/*，/api/ask 由測試以 page.route 回應
   webServer: {
     command: "npx vite preview --port 4173 --strictPort",
     url: "http://localhost:4173",

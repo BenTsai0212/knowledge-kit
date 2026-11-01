@@ -1,5 +1,6 @@
 # Playwright（#66，ADR 0004；說明見 docs/testing.md）。push 到 main 後執行，另可用 workflow_dispatch 對分支手動執行。
 # 不使用任何 secret：/api/ask 一律由測試以 page.route 回傳假的回應。失敗時上傳 trace 與截圖。
+# 參考情境 client/ 與 clients/ 底下的每個客戶各跑一格（#77）；略過的測試與原因寫在 job summary，參考情境有略過時失敗。
 name: E2E
 
 on:
@@ -11,9 +12,30 @@ permissions:
   contents: read
 
 jobs:
+  list:
+    runs-on: ubuntu-latest
+    outputs:
+      clients: ${{ steps.list.outputs.clients }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: list
+        name: 列出客戶
+        # "" 是參考情境；其餘是 clients/ 底下的資料夾（與 scripts/check-clients.mjs 的 listClients() 相同）
+        run: |
+          clients=$(node --input-type=module -e 'import { listClients } from "./scripts/check-clients.mjs"; console.log(JSON.stringify(["", ...listClients()]))')
+          echo "clients=$clients" >> "$GITHUB_OUTPUT"
+
   playwright:
+    needs: list
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        client: ${{ fromJSON(needs.list.outputs.clients) }}
+    name: playwright (${{ matrix.client || 'client' }})
+    env:
+      KK_CLIENT: ${{ matrix.client }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,7 +54,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright
+          name: playwright-${{ matrix.client || 'client' }}
           path: |
             test-results/
             playwright-report/
