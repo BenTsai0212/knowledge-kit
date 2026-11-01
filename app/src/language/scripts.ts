@@ -26,7 +26,12 @@ export interface ScriptRule {
 const stripPluralS = (word: string) => (word.length > 3 && word.endsWith("s") && !word.endsWith("ss") ? word.slice(0, -1) : word);
 
 // 依序比對；一段文字只屬於第一個符合的類別
-export const SCRIPTS: readonly ScriptRule[] = [{ chars: "\\p{Script=Han}", mode: "bigram", stopwords: "zh", joinsWithoutSpace: true }];
+export const SCRIPTS: readonly ScriptRule[] = [
+  { chars: "\\p{Script=Han}", mode: "bigram", stopwords: "zh", joinsWithoutSpace: true },
+  // 日文的片假名（外來語，連同長音符號 ー）以整個詞為關鍵字；平假名多為助詞與語尾，以 bigram 處理並去掉日文停用字
+  { chars: "\\p{Script=Katakana}\\u30fc", mode: "word", joinsWithoutSpace: true },
+  { chars: "\\p{Script=Hiragana}", mode: "bigram", stopwords: "ja", joinsWithoutSpace: true },
+];
 
 // 其他文字與數字（拉丁字母等）
 export const OTHER: ScriptRule = { chars: "\\p{L}\\p{N}", mode: "word", stopwords: "en", stem: stripPluralS, joinsWithoutSpace: false };

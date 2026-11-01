@@ -21,6 +21,19 @@ describe("segments：依文字類別切段", () => {
     expect([en.stem("desks"), en.stem("class"), en.stem("bus"), zh.stem("專案")]).toEqual(["desk", "class", "bus", "專案"]);
   });
 
+  it("日文：漢字為 bigram，片假名（含長音符號）為 word，平假名為 bigram 並套用日文停用字", () => {
+    expect(brief("人事部のマネージャーは誰ですか？")).toEqual([
+      ["人事部", "bigram"],
+      ["の", "bigram"],
+      ["マネージャー", "word"],
+      ["は", "bigram"],
+      ["誰", "bigram"],
+      ["ですか", "bigram"],
+    ]);
+    const [, hiragana, katakana] = segments("部のマ");
+    expect([hiragana.isStopword("の"), hiragana.isStopword("つ"), katakana.isStopword("の")]).toEqual([true, false, false]);
+  });
+
   it("文字類別可指定 segmenter：以 Intl.Segmenter 切成 word", () => {
     const kana: ScriptRule = { chars: "\\p{Script=Hiragana}\\p{Script=Katakana}", mode: "segmenter", locale: "ja", joinsWithoutSpace: true };
     const out = brief("テスト desk", [kana]);
@@ -50,6 +63,13 @@ describe("相連與句尾", () => {
     expect(joinLine("公告，", "說明")).toBe("公告，說明");
     expect(joinLine("公告", "Desk")).toBe("公告 Desk");
     expect(joinLine("The", "desk")).toBe("The desk");
+  });
+
+  it("換行：假名與漢字、全形標點之間直接相連", () => {
+    expect(joinLine("サンプル社は", "家具メーカーです")).toBe("サンプル社は家具メーカーです");
+    expect(joinLine("テスト", "Desk")).toBe("テスト Desk");
+    expect(joinSentence("完成しました。", "次は")).toBe("完成しました。次は");
+    expect(splitSentences("完成しました。次は移行です！")).toEqual(["完成しました。", "次は移行です！"]);
   });
 
   it("句子：前一句以漢字或全形標點結尾時直接相連", () => {

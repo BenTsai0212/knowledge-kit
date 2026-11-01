@@ -41,6 +41,20 @@ describe("tokenize：英文", () => {
   });
 });
 
+describe("tokenize：日文", () => {
+  it("片假名以整個詞為關鍵字，平假名的助詞與語尾不計", () => {
+    expect(tokenize("人事部のマネージャーは誰ですか？").keywords).toEqual(["人事", "事部", "マネージャー"]);
+  });
+
+  it("平假名中不全是停用字的組合仍計入", () => {
+    expect(tokenize("いつ").keywords).toEqual(["いつ"]);
+  });
+
+  it("半形片假名以 NFKC 轉成全形", () => {
+    expect(tokenize("ﾏﾈｰｼﾞｬｰ")).toEqual(tokenize("マネージャー"));
+  });
+});
+
 describe("tokenize：混排與正規化", () => {
   it("中英混排時各自切詞", () => {
     expect(tokenize("Bluewing 青翼桌").keywords).toEqual(["bluewing", "青翼", "翼桌"]);
