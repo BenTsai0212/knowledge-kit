@@ -1,0 +1,52 @@
+{
+  "entityTypes": [
+    {
+      "id": "product",
+      "label": { "zh-TW": "產品", "en": "Product" },
+      "color": "#3D7AB8",
+      "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
+      "mergeStrategy": "review"
+    },
+    {
+      "id": "manufacturer",
+      "label": { "zh-TW": "原廠", "en": "Manufacturer" },
+      "color": "#8A5CC2",
+      "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
+      "mergeStrategy": "review"
+    },
+    {
+      "id": "hospital",
+      "label": { "zh-TW": "醫院", "en": "Hospital" },
+      "color": "#2E7D5B",
+      "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
+      "mergeStrategy": "review"
+    },
+    {
+      "id": "person",
+      "label": { "zh-TW": "人員", "en": "Person" },
+      "color": "#C2410C",
+      "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
+      "mergeStrategy": "review"
+    },
+    {
+      "id": "tender",
+      "label": { "zh-TW": "標案", "en": "Tender" },
+      "color": "#B26A00",
+      "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": false },
+      "mergeStrategy": "review"
+    },
+    {
+      "id": "policy",
+      "label": { "zh-TW": "規章", "en": "Policy" },
+      "color": "#0E7C86",
+      "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
+      "mergeStrategy": "review"
+    }
+  ],
+  "relationTypes": [
+    { "id": "supplies", "label": { "zh-TW": "供應", "en": "Supplies" }, "from": ["manufacturer"], "to": ["product"] },
+    { "id": "responsible-for", "label": { "zh-TW": "負責", "en": "Responsible for" }, "from": ["person"], "to": ["hospital", "tender"] },
+    { "id": "uses", "label": { "zh-TW": "使用", "en": "Uses" }, "from": ["hospital"], "to": ["product"] },
+    { "id": "involves", "label": { "zh-TW": "涉及", "en": "Involves" }, "from": ["tender"], "to": ["product"] }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "visibilityLevels": [
+    { "id": "public", "label": { "zh-TW": "公開", "en": "Public" }, "rank": 0, "color": "#4F7A65" },
+    { "id": "internal", "label": { "zh-TW": "內部", "en": "Internal" }, "rank": 1, "color": "#2F5D8A" },
+    { "id": "confidential", "label": { "zh-TW": "機密", "en": "Confidential" }, "rank": 2, "color": "#B42318" }
+  ],
+  "projects": [
+    { "id": "qinglan-tender", "label": { "zh-TW": "青嵐新院區標案", "en": "Qinglan New Wing Tender" } }
+  ],
+  "roles": [
+    { "id": "partner", "label": { "zh-TW": "經銷夥伴", "en": "Distribution Partner" }, "visibility": "public", "projects": [], "canUpload": false, "canReview": false },
+    { "id": "engineer", "label": { "zh-TW": "技術服務工程師", "en": "Service Engineer" }, "visibility": "internal", "projects": [], "canUpload": true, "canReview": false },
+    { "id": "sales", "label": { "zh-TW": "業務", "en": "Sales Representative" }, "visibility": "internal", "projects": ["qinglan-tender"], "canUpload": true, "canReview": false },
+    { "id": "gm", "label": { "zh-TW": "總經理", "en": "General Manager" }, "visibility": "confidential", "projects": ["qinglan-tender"], "canUpload": true, "canReview": true }
+  ]
+}
