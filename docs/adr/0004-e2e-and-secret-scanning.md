@@ -1,6 +1,6 @@
 # ADR 0004：Playwright 與 gitleaks
 
-- 狀態：Proposed
+- 狀態：Accepted（2026-11-01）
 - 日期：2026-11-01
 - 決定者：@BenTsai0212
 - 相關：#66（敏感資料檢查與 Playwright）、Epic #3 第 12 項、ADR 0001（核准的套件與偵測工具）

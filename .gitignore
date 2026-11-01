@@ -8,3 +8,4 @@ tools/workflow/runner/PAUSE
 dist/
 .wrangler/
 .dev.vars
+.sensitive-names.local
