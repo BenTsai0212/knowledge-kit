@@ -82,7 +82,7 @@ log 不含金鑰、邀請碼與提示全文。
 
 ## 模型白名單
 
-`src/models.ts` 的 `MODELS`：代號 → 實際模型名稱、`max_tokens`、effort。`client/client.json` 的 `model` 只能填這裡的鍵（`src/models.test.ts` 會檢查）。目前只有一個代號：
+`src/models.ts` 的 `MODELS`：代號 → 實際模型名稱、`max_tokens`、effort。`client/client.json` 的 `model` 只能填這裡的鍵（`src/models.target.test.ts` 會檢查，客戶檢查也會對各客戶執行）。目前只有一個代號：
 
 | 代號 | 模型 | `max_tokens` | effort |
 | --- | --- | --- | --- |

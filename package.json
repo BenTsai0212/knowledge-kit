@@ -9,6 +9,7 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "check:client": "node scripts/check-client.mjs",
+    "check:clients": "node scripts/check-clients.mjs",
     "check:sensitive": "node scripts/check-sensitive.mjs"
   },
   "dependencies": {

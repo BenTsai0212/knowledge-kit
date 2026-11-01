@@ -10,10 +10,6 @@ const copy = (): QuestionsFile => structuredClone(evalQuestions);
 const indexOf = (file: QuestionsFile, id: string) => file.questions.findIndex((q) => q.id === id);
 
 describe("validateEvals", () => {
-  it("client/evals/ 的題庫通過檢查", () => {
-    expect(validateEvals(clientConfig, dataset, evalQuestions)).toEqual([]);
-  });
-
   it("答案段落必須存在於資料集", () => {
     const file = copy();
     const i = indexOf(file, "annual-leave-staff");
