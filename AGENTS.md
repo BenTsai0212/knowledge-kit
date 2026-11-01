@@ -62,7 +62,7 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 | `package.json`、`vite.config.ts`、`vitest.config.ts`、`vitest.clients.config.ts`（客戶檢查的 target 測試）、`playwright.config.ts`、`tsconfig.node.json`、`wrangler.jsonc` | 根目錄的指令與設定（單一 `package.json`，不用 workspaces） |
 | `docs/workflow/` | 憲法與 workflow 手冊 |
 | `docs/rfcs/`、`docs/adr/` | 專案章程與決策紀錄 |
-| `docs/playbook/` | 方法與文件套件（需求確認清單、資料盤點表、資料安全說明、評測題庫建立步驟、驗收指標）；入口是 [docs/playbook/README.md](docs/playbook/README.md)，英文版在 `docs/playbook/en/`，兩份一起改 |
+| `docs/playbook/` | 方法與文件套件（需求確認清單、資料盤點表、資料安全說明、評測題庫建立步驟、驗收指標、落地新客戶步驟 `new-client-setup.md`）；入口是 [docs/playbook/README.md](docs/playbook/README.md)，英文版在 `docs/playbook/en/`，兩份一起改 |
 | `tools/workflow/` | workflow 工具（Node，自帶 `package.json`）；`hooks/confirm-main.mjs` 是合併與 push 到 main 前的確認 hook；`check-pr-body.mjs` 檢查 PR 描述有 `Closes`／`Refs #N`（`fast-lane` 除外）；`runner/` 是自動化模組的 runner（ADR 0003，指令見第 2 節）；`bootstrap-github.mjs`、`config.json` 不適用（見第 2 節） |
 | `.claude/settings.json` | Claude Code 設定：在 `PreToolUse`（Bash）註冊確認 hook |
 | `templates/` | Claude Project 範本與預設不啟用的模組檔案 |
@@ -71,6 +71,7 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 ## 4. 工作流程
 
 - 實作一張 Issue：`/work-on-issue <編號>`，依 `docs/workflow/agent-workflow.md`。
+- 建立新客戶的 demo：`/new-client <Issue 編號>`（Issue 用「新客戶 demo」範本建立），依 `docs/playbook/new-client-setup.md` 在 `clients/<名稱>/` 建立，三個 ⏸ 檢查點停下等 `## 決定`。
 - 執行 GitHub 操作清單：`/pm-apply`，依 `docs/workflow/pm-actions.md`；`confirm` 等級須經人同意。
 - 一張 Issue 一條分支（`feat/`、`fix/`、`docs/`、`chore/`、`ci/`），一個 PR，目標 400 行內。
 - 完成且無合併後待辦寫 `Closes #N`，否則寫 `Refs #N`；依 PR 範本填寫。

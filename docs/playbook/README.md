@@ -9,8 +9,9 @@
 | 3 | [資料安全說明](data-security.md) | 可直接給客戶 | 說明 demo 怎麼處理資料、哪些資料不能放進 demo |
 | 4 | [評測題庫建立步驟](eval-question-bank.md) | 內部（可附給客戶參考） | 和客戶一起出題，量化問答品質 |
 | 5 | [驗收指標](acceptance-metrics.md) | 內部（可附給客戶參考） | demo 交付前要達到的門檻，以及怎麼解讀結果 |
+| 6 | [落地新客戶步驟](new-client-setup.md) | 內部（給 coding agent） | 依訪談與盤點建立 clients/<名稱>/ 的 demo |
 
-技術設定（`client/` 的每個檔案）見 [docs/client-config.md](../client-config.md)；落地新客戶的完整步驟見第 13 項（落地新客戶步驟文件，尚未撰寫）。
+技術設定（`client/` 的每個檔案）見 [docs/client-config.md](../client-config.md)；落地新客戶的完整步驟見[落地新客戶步驟](new-client-setup.md)。
 
 ## 寫法原則
 
