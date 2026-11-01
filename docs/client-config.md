@@ -2,6 +2,7 @@
 
 所有依客戶而變的內容集中在 `client/`，換客戶時只修改這裡，不改程式（RFC 0001）。
 每個設定檔對應 `client/schema/` 的一份 JSON Schema；跨檔的規則由 `scripts/check-client.mjs` 檢查。
+訪談客戶、盤點資料、出題與驗收的方法見 [docs/playbook/README.md](playbook/README.md)。
 
 > **發現客戶差異未涵蓋時，先擴充 Schema，不在程式中寫死。**（ADR 0001 後果）
 > 擴充步驟見[擴充 Schema](#擴充-schema)。

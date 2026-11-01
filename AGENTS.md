@@ -55,10 +55,11 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 | `worker/` | Cloudflare Worker（TypeScript）：`GET /api/health`、`POST /api/ask`（`ask.ts`：同站、邀請碼、body、每日次數的檢查；`upstream.ts`、`sse.ts`：轉發到 Claude Messages API 並轉成精簡的 SSE）；`models.ts` 是模型白名單，`usage.ts` 是計數用的 Durable Object，`testing.ts` 是測試用的假實作；其他請求交給 `dist/` 靜態檔。API 格式、錯誤類型、secret 與已知限制見 `worker/README.md` |
 | `client/` | 客戶設定（`*.json`）、介面翻譯檔（`i18n/<語言>.json`，含拒答文字與各錯誤訊息）、JSON Schema（`schema/`）、虛構資料集（`data/`）與評測題庫（`evals/questions.json`，見 `docs/evals.md`）；換客戶只改這裡，說明見 `docs/client-config.md`、`docs/dataset.md` |
 | `e2e/` | Playwright 的端對端測試（`*.spec.ts`：冒煙 `smoke`、越權 `access`、互動邊角 `interactions`）；`support/fake-ask.ts` 是假的 `/api/ask`（含串流到一半的假回應），`support/app.ts` 是共用操作（介面文字從 `client/i18n/` 讀取），`support/dataset.ts` 以 `app/src/evals/oracle.ts` 算出各身分看不到的段落；`fixtures/` 是上傳用的虛構檔案；設定在根目錄的 `playwright.config.ts`（說明見 `docs/testing.md`） |
-| `scripts/` | 專案腳本（Node ESM，不在 `typecheck` 範圍內）：`check-client.mjs`、`check-sensitive.mjs`（敏感資料檢查）；`fixtures/invalid-client/` 是故意寫錯的測試資料 |
+| `scripts/` | 專案腳本（Node ESM，不在 `typecheck` 範圍內）：`check-client.mjs`、`check-sensitive.mjs`（敏感資料檢查）、`playbook.test.mjs`（`docs/playbook/` 繁中與英文的檔名、`##` 標題數量與相對連結）；`fixtures/invalid-client/` 是故意寫錯的測試資料 |
 | `package.json`、`vite.config.ts`、`vitest.config.ts`、`playwright.config.ts`、`tsconfig.node.json`、`wrangler.jsonc` | 根目錄的指令與設定（單一 `package.json`，不用 workspaces） |
 | `docs/workflow/` | 憲法與 workflow 手冊 |
 | `docs/rfcs/`、`docs/adr/` | 專案章程與決策紀錄 |
+| `docs/playbook/` | 方法與文件套件（需求確認清單、資料盤點表、資料安全說明、評測題庫建立步驟、驗收指標）；入口是 [docs/playbook/README.md](docs/playbook/README.md)，英文版在 `docs/playbook/en/`，兩份一起改 |
 | `tools/workflow/` | workflow 工具（Node，自帶 `package.json`）；`hooks/confirm-main.mjs` 是合併與 push 到 main 前的確認 hook；`check-pr-body.mjs` 檢查 PR 描述有 `Closes`／`Refs #N`（`fast-lane` 除外）；`runner/` 是自動化模組的 runner（ADR 0003，指令見第 2 節）；`bootstrap-github.mjs`、`config.json` 不適用（見第 2 節） |
 | `.claude/settings.json` | Claude Code 設定：在 `PreToolUse`（Bash）註冊確認 hook |
 | `templates/` | Claude Project 範本與預設不啟用的模組檔案 |
