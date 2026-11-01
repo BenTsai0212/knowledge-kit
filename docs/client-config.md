@@ -301,7 +301,7 @@ npm run check:clients <名稱>      # 只檢查 clients/<名稱>/
 3. **build**：`vite build` 輸出到暫存資料夾，結束後刪除，不覆蓋 `dist/`。
 
 - `clients/` 底下的每個資料夾都視為客戶（檔案如 `README.md` 不算）；沒有 `client.json` 或名稱不合法時失敗，不略過。
-- **target 測試**只放與客戶無關的斷言，不用參考情境的 id：`app/src/dataset/dataset.target.test.ts`（資料集通過 `validateDataset()`）、`app/src/evals/evals.target.test.ts`（題庫通過 `validateEvals()`，含以 oracle 計算的可見範圍）、`worker/src/models.target.test.ts`（`client.json` 的 `model` 在 Worker 白名單內）。檔名也符合 `*.test.ts`，`npm test` 會以 `client/` 再執行一次。
+- **target 測試**只放與客戶無關的斷言，不用參考情境的 id：`app/src/dataset/dataset.target.test.ts`（資料集通過 `validateDataset()`）、`app/src/evals/evals.target.test.ts`（題庫通過 `validateEvals()`，含以 oracle 計算的可見範圍）、`app/src/retrieval/scenarios.target.test.ts`（預設問題以每種語言檢索，同語言的答案段落在前 K 名內）、`worker/src/models.target.test.ts`（`client.json` 的 `model` 在 Worker 白名單內）。檔名也符合 `*.test.ts`，`npm test` 會以 `client/` 再執行一次。
 - CI 的 `clients` job（`workflows/ci.yml`）在每個 PR 與 push 到 main 時執行 `npm run check:clients`。
 
 ## 擴充 Schema

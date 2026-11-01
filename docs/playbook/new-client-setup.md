@@ -89,7 +89,7 @@
 
 ## 5. 示範情境與評測題庫
 
-1. **`scenarios.json`**：填入檢查點 1 確認的情境，每個預設問題列出答案段落（該情境的角色要看得到）。
+1. **`scenarios.json`**：填入檢查點 1 確認的情境，每個預設問題列出答案段落（該情境的角色要看得到）。 `npm run check:clients` 會以每種語言檢索預設問題，同語言的答案段落要在前 K 名內（`app/src/retrieval/scenarios.target.test.ts`）。
 2. **`evals/questions.json`**：依[評測題庫建立步驟](eval-question-bank.md)出題：
    - 情境題 8 題以上、回答題（`expect: "answer"`）15 題以上；
    - 權限題至少 4 組（同一個問題，一個角色能答、另一個拒答）；

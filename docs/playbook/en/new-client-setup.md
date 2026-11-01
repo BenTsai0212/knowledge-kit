@@ -89,7 +89,7 @@ The format is in [docs/dataset.md](../../dataset.md). Write the documents confir
 
 ## 5. Demo scenarios and question bank
 
-1. **`scenarios.json`**: fill in the scenarios confirmed at Checkpoint 1, listing answer passages for each default question (visible to the scenario's role).
+1. **`scenarios.json`**: fill in the scenarios confirmed at Checkpoint 1, listing answer passages for each default question (visible to the scenario's role). `npm run check:clients` retrieves each default question in every language and requires the same-language answer passages in the top K (`app/src/retrieval/scenarios.target.test.ts`).
 2. **`evals/questions.json`**: write questions following [Building the evaluation question bank](eval-question-bank.md):
    - 8 or more scenario questions and 15 or more questions that expect an answer (`expect: "answer"`);
    - at least 4 permission pairs (the same question: one role answers, another refuses);

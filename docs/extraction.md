@@ -51,7 +51,7 @@ Rules:
 3. Entity types (use the id): {entityTypes}.
 4. Relation types (use the id; from → to): {relationTypes}.
 5. Give each entity a short key (e1, e2, …), its type, its name in every one of these languages: {languages}, and the numbers of the passages that mention it.
-6. If a name appears in only one language, give the standard name in the other language only if the passages or common usage make it clear. For people's names you are not sure about, repeat the original name; do not transliterate.
+6. If a name appears in only one language, give the standard name in the other languages only if the passages or common usage make it clear. For people's names you are not sure about, repeat the original name; do not transliterate.
 7. Relations refer to entity keys and must list the numbers of the passages that state them.
 8. Keep the output compact: list each entity once and add no explanations.
 9. Reply with one JSON object and nothing else, in this shape:
