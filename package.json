@@ -7,7 +7,8 @@
     "build": "vite build",
     "typecheck": "tsc -p app && tsc -p worker && tsc -p tsconfig.node.json",
     "test": "vitest run",
-    "check:client": "node scripts/check-client.mjs"
+    "check:client": "node scripts/check-client.mjs",
+    "check:sensitive": "node scripts/check-sensitive.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.12",

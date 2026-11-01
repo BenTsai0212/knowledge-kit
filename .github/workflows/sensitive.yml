@@ -1,0 +1,80 @@
+# 敏感資料檢查（#66，ADR 0004；說明見 docs/testing.md）。失敗即擋。
+# 紀錄會公開：腳本只輸出檔案、行號與清單第幾項，gitleaks 以 --redact 遮蔽金鑰。
+name: Sensitive data
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  sensitive-names:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 個人 email 與禁用名稱
+        # secret 只在這個 step 使用；讀不到時腳本失敗並說明原因（fork 來的 PR 拿不到 secret，也會失敗）
+        env:
+          SENSITIVE_NAMES: ${{ secrets.SENSITIVE_NAMES }}
+        run: node scripts/check-sensitive.mjs
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    env:
+      # 升級時重新查證版本與 SHA-256，並更新 ADR 0004
+      GITLEAKS_VERSION: 8.30.1
+      GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 安裝 gitleaks（固定版本＋SHA-256）
+        run: |
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          cd "$RUNNER_TEMP"
+          curl -fsSL -o "$archive" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          echo "${GITLEAKS_SHA256}  ${archive}" | sha256sum -c -
+          mkdir gitleaks-bin
+          tar -xzf "$archive" -C gitleaks-bin gitleaks
+          echo "$RUNNER_TEMP/gitleaks-bin" >> "$GITHUB_PATH"
+      - name: 假金鑰會被擋（反向驗證）
+        # 假金鑰在執行時產生，不寫進 repo
+        run: |
+          fake="$RUNNER_TEMP/fake-secret"
+          mkdir "$fake"
+          {
+            echo "github_token = \"ghp_$(openssl rand -hex 18)\""
+            echo "aws_access_key_id = \"AKIA$(LC_ALL=C tr -dc 'A-Z2-7' < /dev/urandom | head -c 16)\""
+          } > "$fake/config.env"
+          set +e
+          output=$(gitleaks dir "$fake" --redact --exit-code 1 2>&1)
+          status=$?
+          set -e
+          echo "$output"
+          if [ "$status" -ne 1 ] || ! grep -q "leaks found" <<< "$output"; then
+            echo "::error::gitleaks 沒有擋下假金鑰（結束碼 $status）"
+            exit 1
+          fi
+      - name: 掃描新增的 commit
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.sha }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            range="${PR_BASE}..${PR_HEAD}"
+          elif [ "$PUSH_BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            # 新建立的分支沒有 before，掃描整段歷史
+            range="$PUSH_AFTER"
+          else
+            range="${PUSH_BEFORE}..${PUSH_AFTER}"
+          fi
+          gitleaks git --log-opts="$range" --redact --exit-code 1
