@@ -61,7 +61,7 @@ export const manifests: ManifestEntry[] = [
   {
     schema: "client.schema.json",
     pointer: "/properties/evals/properties/thresholds",
-    keys: { citation: "optional", answer: "optional", leakage: "optional", refusal: "optional" } satisfies KeyManifest<EvalThresholdsFile>,
+    keys: { citation: "optional", answer: "optional", refusal: "optional" } satisfies KeyManifest<EvalThresholdsFile>,
   },
   {
     schema: "client.schema.json",

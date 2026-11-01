@@ -66,7 +66,6 @@ describe("normalizeClient", () => {
     expect(EVAL_THRESHOLDS_DEFAULTS).toEqual({
       citation: props.citation.default,
       answer: props.answer.default,
-      leakage: props.leakage.default,
       refusal: props.refusal.default,
     });
   });

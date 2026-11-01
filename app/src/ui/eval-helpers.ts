@@ -1,7 +1,7 @@
 // 評測台畫面（EvalPage.tsx）用的純函式：設定表單、各組的指標、兩組差異、下載 JSON，以及評測專用資料庫的開關。
 import type { EvalThresholds } from "../client/types";
 import type { EvalRun, EvalSettings, QuestionResult, SetRun } from "../evals/run";
-import { answerCorrect, summarize, type AnswerMode, type ModelGrade, type Summary } from "../evals/score";
+import { answerCorrect, LEAKAGE_LIMIT, summarize, type AnswerMode, type ModelGrade, type Summary } from "../evals/score";
 import type { EvalQuestion } from "../evals/types";
 
 export const TOP_K_MAX = 20;
@@ -41,7 +41,7 @@ export function differs(a: QuestionResult | undefined, b: QuestionResult | undef
   return (Object.keys(x) as (keyof typeof x)[]).some((k) => x[k] !== y[k]);
 }
 
-// 下載 JSON 的內容：設定、門檻、每組的指標與每題結果、開始與結束時間；不含邀請碼
+// 下載 JSON 的內容：設定、門檻（含固定的權限滲漏上限，格式與門檻可設定時相同）、每組的指標與每題結果、開始與結束時間；不含邀請碼
 export function evalReport(run: EvalRun, questions: EvalQuestion[], thresholds: EvalThresholds) {
   return {
     mode: run.mode,
@@ -49,7 +49,7 @@ export function evalReport(run: EvalRun, questions: EvalQuestion[], thresholds: 
     stopReason: run.stopReason ?? null,
     startedAt: run.startedAt,
     finishedAt: run.finishedAt ?? null,
-    thresholds,
+    thresholds: { ...thresholds, leakage: LEAKAGE_LIMIT },
     sets: run.sets.map((set) => ({
       settings: set.settings,
       summary: setSummary(questions, set, thresholds, run.mode),

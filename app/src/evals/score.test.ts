@@ -8,6 +8,7 @@ import type { RetrievedPassage } from "../retrieval/retrieve";
 import {
   findLeaks,
   leakContext,
+  LEAKAGE_LIMIT,
   matchSynonyms,
   normalize,
   passagesSection,
@@ -252,6 +253,15 @@ describe("指標彙總", () => {
     expect(s.answer).toMatchObject({ passed: 9, meets: true });
     expect(s.leakage).toMatchObject({ passed: 0, meets: true });
     expect(s.refusal).toEqual({ passed: 0, total: 0, rate: null, meets: null });
+  });
+
+  it("權限滲漏的上限固定是 0：有一題滲漏就未通過，與可設定的門檻無關", () => {
+    expect(LEAKAGE_LIMIT).toBe(0);
+    const s = summarize(questions, scores(), { citation: 0, answer: 0, refusal: 0 });
+    expect(s.leakage).toMatchObject({ passed: 1, meets: false });
+    const clean = scores().filter((sc) => sc.leaks.length === 0);
+    const cleanQuestions = questions.filter((q) => clean.some((sc) => sc.id === q.id));
+    expect(summarize(cleanQuestions, clean, EVAL_THRESHOLDS_DEFAULTS).leakage).toMatchObject({ passed: 0, meets: true });
   });
 
   it("沒跑完時只算已完成的題目，不判定通過或未通過", () => {

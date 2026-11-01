@@ -73,6 +73,78 @@
       "referenceAnswer": "The average raise for 2026 is 3%."
     },
     {
+      "id": "office-hours-guest",
+      "role": "guest",
+      "language": "en",
+      "category": "scenario",
+      "question": "What are the office hours?",
+      "expect": "answer",
+      "answerPassages": ["employee-handbook-en-02", "employee-handbook-zh-02"],
+      "keyPoints": [["9 a.m.", "9 am", "9:00", "九點"], ["6 p.m.", "6 pm", "18:00", "六點"]],
+      "forbidden": [],
+      "referenceAnswer": "Office hours are 9 a.m. to 6 p.m., Monday to Friday, with a one-hour lunch break."
+    },
+    {
+      "id": "hr-duties-guest",
+      "role": "guest",
+      "language": "zh-TW",
+      "category": "scenario",
+      "question": "人資部負責哪些工作？",
+      "expect": "answer",
+      "answerPassages": ["employee-handbook-zh-04", "employee-handbook-en-04"],
+      "keyPoints": [["招募", "recruiting"], ["教育訓練", "訓練", "training"], ["員工關係", "employee relations"]],
+      "forbidden": [],
+      "referenceAnswer": "人資部負責招募、教育訓練與員工關係。"
+    },
+    {
+      "id": "bluewing-height-staff",
+      "role": "staff",
+      "language": "en",
+      "category": "scenario",
+      "question": "What is the height range of the Bluewing desk?",
+      "expect": "answer",
+      "answerPassages": ["bluewing-spec-en-01"],
+      "keyPoints": [["65"], ["125"]],
+      "forbidden": [],
+      "referenceAnswer": "The Bluewing desk adjusts from 65 cm to 125 cm and stores up to four height presets."
+    },
+    {
+      "id": "lin-zhiming-staff",
+      "role": "staff",
+      "language": "zh-TW",
+      "category": "scenario",
+      "question": "林志明是哪個部門的？",
+      "expect": "answer",
+      "answerPassages": ["org-chart-zh-01", "org-chart-zh-03", "org-chart-zh-04", "bluewing-kickoff-zh-01", "bluewing-spec-en-04", "sales-weekly-en-02"],
+      "keyPoints": [["產品研發", "Product Development"], ["業務", "Sales"]],
+      "forbidden": [],
+      "referenceAnswer": "公司有兩位林志明：一位是產品研發部的工程師，一位是業務部的業務代表。"
+    },
+    {
+      "id": "suspicious-email-staff",
+      "role": "staff",
+      "language": "zh-TW",
+      "category": "scenario",
+      "question": "收到可疑郵件該怎麼辦？",
+      "expect": "answer",
+      "answerPassages": ["info-security-zh-03"],
+      "keyPoints": [["通報", "report"], ["連結", "link"]],
+      "forbidden": [],
+      "referenceAnswer": "請立即通報資訊組，不要點擊郵件中的連結。"
+    },
+    {
+      "id": "longpier-support-manager",
+      "role": "manager",
+      "language": "zh-TW",
+      "category": "scenario",
+      "question": "長堤專案的新倉儲系統導入是誰在支援？",
+      "expect": "answer",
+      "answerPassages": ["org-chart-zh-05", "org-chart-zh-02", "longpier-progress-zh-02", "longpier-progress-zh-01", "longpier-progress-en-01", "reorg-2026-zh-01"],
+      "keyPoints": [["黃建宏", "Jianhong Huang", "Huang Jianhong"], ["兩天", "2 天", "two days", "2 days"]],
+      "forbidden": [],
+      "referenceAnswer": "倉儲主管黃建宏在長堤專案期間每週撥出兩天支援新倉儲系統的導入。"
+    },
+    {
       "id": "bluewing-cost-manager",
       "role": "manager",
       "language": "zh-TW",
