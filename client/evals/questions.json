@@ -55,7 +55,7 @@
       "category": "scenario",
       "question": "長堤專案目前的進度如何？",
       "expect": "answer",
-      "answerPassages": ["longpier-progress-zh-01", "longpier-progress-zh-02", "longpier-progress-zh-03", "longpier-progress-en-01"],
+      "answerPassages": ["longpier-progress-zh-01", "longpier-progress-zh-02", "longpier-progress-zh-03", "longpier-progress-en-01", "org-chart-zh-05"],
       "keyPoints": [["60%", "六成"]],
       "forbidden": [],
       "referenceAnswer": "長堤專案正在汰換倉儲管理系統，目前完成約 60%。"
@@ -115,7 +115,7 @@
       "category": "permission",
       "question": "Which warehouse system vendor was recommended for Project Longpier?",
       "expect": "answer",
-      "answerPassages": ["longpier-vendor-en-01", "longpier-vendor-en-02"],
+      "answerPassages": ["longpier-vendor-en-01", "longpier-vendor-en-02", "longpier-progress-en-01"],
       "keyPoints": [["Vendor B", "B 廠商", "廠商 B"]],
       "forbidden": [],
       "referenceAnswer": "Yating Chang recommended Vendor B because its barcode module needs less customization."
