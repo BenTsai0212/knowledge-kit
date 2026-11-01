@@ -10,6 +10,7 @@ Method documents for preparing a second-brain demo for a new client. In order of
 | 4 | [Building the evaluation question bank](eval-question-bank.md) | Internal (can be shared for reference) | Write questions with the client and measure answer quality |
 | 5 | [Acceptance metrics](acceptance-metrics.md) | Internal (can be shared for reference) | Thresholds the demo must meet before delivery, and how to read the results |
 | 6 | [New client setup](new-client-setup.md) | Internal (for a coding agent) | Build the demo in clients/<name>/ from the interview and inventory |
+| 7 | [Adding a language](add-language.md) | Internal (for a coding agent and decision makers) | Add a language to a client's demo; when semantic vectors are needed |
 
 Technical settings (each file in `client/`) are described in [docs/client-config.md](../../client-config.md); the full steps for setting up a new client are in [New client setup](new-client-setup.md).
 
