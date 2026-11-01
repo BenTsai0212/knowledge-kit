@@ -1,6 +1,7 @@
-// client/scenarios.json 的預設問題：以情境的角色檢索，答案段落要在前 K 名內（K 為 client.json 的設定）。
-// #22 決定 2：每題以中文與英文各檢索一次，只要求與問題同語言的答案段落；跨語言檢索是第 2 階段。
-// 參考資料集的每題在兩種語言都有答案段落（#26），所以 14 個檢查都要通過。
+// target 測試（#83 決定 4）：npm test 以 client/ 執行，客戶檢查（npm run check:clients）以選定的客戶執行，
+// 所以新增語言的客戶也會檢查該語言的檢索。
+// scenarios.json 的預設問題：以情境的角色檢索，答案段落要在前 K 名內（K 為 client.json 的設定）。
+// #22 決定 2：每題以 client.json 的每種語言各檢索一次，只要求與問題同語言的答案段落；跨語言檢索是第 2 階段。
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { clientConfig } from "../client/load";
 import { dataset } from "../dataset/load";
@@ -43,8 +44,8 @@ describe(`預設問題：同語言的答案段落在前 ${clientConfig.client.re
   });
 });
 
-// 每題在每種語言都有答案段落（#26 補上英文段落）；跨語言檢索是第 2 階段，不能靠它通過
+// 每題在每種語言都有問題文字與答案段落（參考情境見 #26）；跨語言檢索是第 2 階段，不能靠它通過
 it("每題在每種語言都有同語言的答案段落", () => {
-  expect(cases.filter((c) => c.expected.length === 0).map((c) => c.name)).toEqual([]);
+  expect(cases.filter((c) => c.text === undefined || c.expected.length === 0).map((c) => c.name)).toEqual([]);
   expect(cases).toHaveLength(clientConfig.scenarios.scenarios.flatMap((s) => s.questions).length * LANGUAGES.length);
 });

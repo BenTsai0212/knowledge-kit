@@ -21,7 +21,7 @@ template 預設的**虛構**資料：範例公司（Example Co.）的文件、�
 刻意放入、供之後功能展示的內容：
 
 - **同名但不同人**：兩位「林志明」是不同的實體（`person-lin-zhiming-rd`、`person-lin-zhiming-sales`），英文名都是 Zhiming Lin，以部門區分。`org-chart-zh-04` 明確說明公司有兩位林志明。這是人物的合併策略預設送審的理由（`docs/client-config.md`）。
-- **每題預設問題都有兩種語言的答案段落**：檢索不支援跨語言（第 2 階段），所以英文問題要有英文的答案段落。新增預設問題時同樣補齊（`app/src/retrieval/scenarios.test.ts` 會檢查）。
+- **每題預設問題都有兩種語言的答案段落**：檢索不支援跨語言（第 2 階段），所以英文問題要有英文的答案段落。新增預設問題時同樣補齊（`app/src/retrieval/scenarios.target.test.ts` 會檢查，客戶檢查也會執行）。
 - **中英文別名**：人物的中文名在 `name`、英文名在 `aliases`。中文文件用中文名，英文文件用英文名，例如王小明＝Ming Wang。畫面顯示用的名稱另外放在 `names`（每種介面語言一個）。
 - **矛盾**：青翼桌的上市時間，中文與英文各有一組。
   - 中文：`bluewing-kickoff-zh-02`（2026-02-10）寫第二季；較新的 `bluewing-status-zh-01`（2026-05-15）寫延後到第三季
