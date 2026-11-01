@@ -1,6 +1,6 @@
 # 測試與 CI 的檢查
 
-單元測試、型別檢查與 build 的指令見 [AGENTS.md](../AGENTS.md) 第 2 節。本文件說明 #66 加入的敏感資料檢查；套件與執行檔的來源見 [ADR 0004](adr/0004-e2e-and-secret-scanning.md)。
+單元測試、型別檢查與 build 的指令見 [AGENTS.md](../AGENTS.md) 第 2 節。本文件說明 #66 加入的敏感資料檢查與 Playwright；套件與執行檔的來源見 [ADR 0004](adr/0004-e2e-and-secret-scanning.md)。
 
 ## 敏感資料檢查
 
@@ -42,3 +42,38 @@ repo 預計公開，CI 紀錄也會公開，所以兩者的輸出都**不包含�
 - 掃描範圍：PR 是 `base..head` 之間新增的 commit，push 到 `main` 是 `before..after`。不加自訂規則檔，也不加 allowlist。
 - 每次執行前，先在 `$RUNNER_TEMP` 產生假的 GitHub token 與 AWS access key，確認 `gitleaks dir` 會擋下（反向驗證）；沒擋下時 job 失敗。假金鑰不寫進 repo。
 - 整段 git 歷史的掃描由人在本機執行（安裝 gitleaks 是人的決定，見 AGENTS.md 第 6 節）：`gitleaks git --redact --exit-code 1`，在 repo 根目錄執行；結果記錄在 #66。
+
+## Playwright
+
+畫面層的端對端測試（`@playwright/test`，只用 Chromium）。測試在 `e2e/`，不在 Vitest 的範圍內，`npm test` 不會執行；型別檢查包含在 `npm run typecheck`（`e2e/tsconfig.json`）。
+
+- 對 `npm run build` 產生的 `dist/` 執行：`playwright.config.ts` 的 `webServer` 以 `vite preview`（port 4173）提供預覽頁。
+- `/api/ask` 一律由測試以 `page.route` 回傳假的 SSE（`e2e/support/fake-ask.ts`），依 `system` 的開頭分辨問答、萃取、比對與評分；不使用真實金鑰，也不啟動 Worker。不認得的請求回錯誤，測試因而失敗。
+- 畫面文字一律從 `client/i18n/` 讀取（`e2e/support/app.ts`），只用預設語言；身分以 Toolbar 的選單切換。
+- 不使用固定的等待時間，只靠 Playwright 的自動等待與會重試的斷言；資料庫是否載入完成，以預設問題的按鈕可以按為準。
+- `workers: 1`（每個頁面在瀏覽器內建一個 PGlite）；CI 中失敗時重試 2 次，第一次重試時記錄 trace，失敗時保留截圖。
+
+### 本機執行
+
+```bash
+npx playwright install chromium   # 第一次執行前；macOS 不加 --with-deps
+npm run build
+npm run test:e2e                  # 即 npx playwright test
+```
+
+已有在 port 4173 執行中的預覽頁時直接使用（CI 中一律自己啟動）。修改 `app/` 或 `client/` 後要重新 `npm run build`。
+
+### CI
+
+`.github/workflows/e2e.yml` 只在 push 到 `main` 後執行，不在 PR 執行（ADR 0004）。要對分支執行時，用 `workflow_dispatch`：Actions → E2E → Run workflow，或 `gh workflow run e2e.yml --ref <分支>`。`workflow_dispatch` 只對預設分支上已有的 workflow 有效，所以 `e2e.yml` 合併到 `main` 之前無法手動執行。
+
+- 權限只有 `contents: read`，不使用任何 secret。
+- main 上失敗時由決策中心另開修正 Issue（workflow 不會自動開 Issue）。
+
+### 失敗時查看 artifact
+
+失敗時 workflow 上傳名為 `playwright` 的 artifact（`test-results/` 與 `playwright-report/`，保留 14 天）：
+
+1. 在 Actions 的該次執行頁面最下方的 Artifacts 下載 `playwright`，解壓縮。
+2. trace：`npx playwright show-trace test-results/<測試>/trace.zip`（逐步的畫面、網路與主控台紀錄）。
+3. 報告：`npx playwright show-report playwright-report`；失敗的截圖也在 `test-results/<測試>/` 中。

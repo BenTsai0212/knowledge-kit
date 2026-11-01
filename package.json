@@ -5,8 +5,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "typecheck": "tsc -p app && tsc -p worker && tsc -p tsconfig.node.json",
+    "typecheck": "tsc -p app && tsc -p worker && tsc -p tsconfig.node.json && tsc -p e2e",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "check:client": "node scripts/check-client.mjs",
     "check:sensitive": "node scripts/check-sensitive.mjs"
   },
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261027.1",
+    "@playwright/test": "1.64.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",

@@ -1,0 +1,39 @@
+# Playwright（#66，ADR 0004；說明見 docs/testing.md）。push 到 main 後執行，另可用 workflow_dispatch 對分支手動執行。
+# 不使用任何 secret：/api/ask 一律由測試以 page.route 回傳假的回應。失敗時上傳 trace 與截圖。
+name: E2E
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: 安裝
+        run: npm ci
+      - name: build
+        run: npm run build
+      - name: 安裝 Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Playwright
+        run: npx playwright test
+      - name: 上傳 trace 與截圖
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 14

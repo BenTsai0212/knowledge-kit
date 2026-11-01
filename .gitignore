@@ -9,3 +9,5 @@ dist/
 .wrangler/
 .dev.vars
 .sensitive-names.local
+test-results/
+playwright-report/
