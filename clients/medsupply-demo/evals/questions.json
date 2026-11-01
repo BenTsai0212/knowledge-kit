@@ -161,7 +161,7 @@
       "role": "engineer",
       "language": "zh-TW",
       "category": "conflict",
-      "question": "主機的保固是幾年？",
+      "question": "主機和配件的保固各是幾年？",
       "expect": "answer",
       "answerPassages": ["warranty-2026-zh-01", "warranty-2026-zh-02", "warranty-2025-zh-01", "warranty-2025-zh-02"],
       "keyPoints": [["2 年", "兩年", "二年"], ["配件"]],
@@ -173,7 +173,7 @@
       "role": "engineer",
       "language": "en",
       "category": "conflict",
-      "question": "How many years is the warranty on a main unit?",
+      "question": "How long are the warranties on main units and accessories?",
       "expect": "answer",
       "answerPassages": ["warranty-2026-en-01", "warranty-2026-en-02", "warranty-2025-en-01", "warranty-2025-en-02"],
       "keyPoints": [["2-year", "2 year", "two-year", "two year"], ["accessor"]],
@@ -223,10 +223,10 @@
       "category": "permission",
       "question": "Tessiva 血壓監測儀的牌價是多少？",
       "expect": "answer",
-      "answerPassages": ["price-list-2026q4-zh-01", "price-list-2026q4-zh-04"],
+      "answerPassages": ["price-list-2026q4-zh-01", "price-list-2026q4-zh-04", "product-overview-zh-02"],
       "keyPoints": [["48,000", "48000", "4.8 萬"]],
       "forbidden": [["39,000", "39000", "3.9 萬"], ["22%"]],
-      "referenceAnswer": "Tessiva 血壓監測儀（BP-220）2026 年第四季的牌價是每台新台幣 48,000 元。"
+      "referenceAnswer": "Tessiva 血壓監測儀（BP-220）的牌價是每台新台幣 48,000 元。"
     },
     {
       "id": "tessiva-bp-list-price-partner",
@@ -259,10 +259,10 @@
       "category": "permission",
       "question": "Tessiva 血壓監測儀的折扣底限是多少？",
       "expect": "answer",
-      "answerPassages": ["floor-price-2026q4-zh-01", "floor-price-2026q4-zh-03", "price-list-2026q4-zh-01"],
+      "answerPassages": ["floor-price-2026q4-zh-01", "floor-price-2026q4-zh-03", "price-list-2026q4-zh-01", "product-overview-zh-02"],
       "keyPoints": [["39,000", "39000", "3.9 萬"]],
       "forbidden": [],
-      "referenceAnswer": "Tessiva 血壓監測儀（BP-220）的折扣底限是每台新台幣 39,000 元，毛利率約 22%；低於底限的報價須經總經理核准。"
+      "referenceAnswer": "Tessiva 血壓監測儀（BP-220）的折扣底限是每台新台幣 39,000 元，毛利率約 22%。"
     },
     {
       "id": "tessiva-bp-floor-price-gm-en",
@@ -271,7 +271,7 @@
       "category": "permission",
       "question": "What is the discount floor for the Tessiva Blood Pressure Monitor?",
       "expect": "answer",
-      "answerPassages": ["floor-price-2026q4-en-01", "floor-price-2026q4-en-03", "price-list-2026q4-en-01"],
+      "answerPassages": ["floor-price-2026q4-en-01", "floor-price-2026q4-en-03", "price-list-2026q4-en-01", "tessiva-bp-catalog-en-01"],
       "keyPoints": [["39,000", "39000"]],
       "forbidden": [],
       "referenceAnswer": "The discount floor for the Tessiva Blood Pressure Monitor (BP-220) is NT$39,000 per unit, with a gross margin of about 22%."
