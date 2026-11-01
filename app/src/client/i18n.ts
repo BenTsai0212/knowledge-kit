@@ -1,8 +1,8 @@
-// 介面文字的唯一讀取模組：client/i18n/<語言>.json 在 build 時讀入，新增語言只要加一份檔案（docs/client-config.md「翻譯檔」）。
+// 介面文字的唯一讀取模組：選定客戶的 i18n/<語言>.json（@client 別名） 在 build 時讀入，新增語言只要加一份檔案（docs/client-config.md「翻譯檔」）。
 // 鍵與參數由 npm run check:client 檢查（i18n.schema.json 與 scripts/check-client.mjs），執行時不驗證。
 import type { AskErrorType, ExtractFailure, LanguageCode, UiStrings } from "./types";
 
-const files = import.meta.glob<UiStrings>("../../../client/i18n/*.json", { eager: true, import: "default" });
+const files = import.meta.glob<UiStrings>("@client/i18n/*.json", { eager: true, import: "default" });
 
 // 檔名（不含 .json）→ 介面文字
 export const TRANSLATIONS: Readonly<Record<LanguageCode, UiStrings>> = Object.fromEntries(

@@ -1,7 +1,8 @@
 # 客戶設定（`client/`）
 
-所有依客戶而變的內容集中在 `client/`，換客戶時只修改這裡，不改程式（RFC 0001）。
+所有依客戶而變的內容集中在客戶設定資料夾（`client/` 的結構），換客戶時只修改設定，不改程式（RFC 0001）。
 每個設定檔對應 `client/schema/` 的一份 JSON Schema；跨檔的規則由 `scripts/check-client.mjs` 檢查。
+`client/` 也是參考情境與測試基準；客戶各自的設定放在 `clients/<名稱>/`，以 `KK_CLIENT` 選擇（見[多客戶與切換](#多客戶與切換)）。
 訪談客戶、盤點資料、出題與驗收的方法見 [docs/playbook/README.md](playbook/README.md)。
 
 > **發現客戶差異未涵蓋時，先擴充 Schema，不在程式中寫死。**（ADR 0001 後果）
@@ -15,7 +16,7 @@ npm run check:client
 
 - 驗證 `client/` 頂層的每個 `.json` 檔、`i18n/` 的翻譯檔、資料集與評測題庫；缺少設定檔、未知的設定檔、多餘的欄位都算錯誤。
 - 錯誤逐行印出 `<檔名> <欄位路徑>：<訊息>`，有錯誤時以非 0 結束。CI 的 `checks` job 會執行。
-- 檢查其他資料夾：`node scripts/check-client.mjs <資料夾>`（Schema 一律用 `client/schema/`）。
+- 檢查其他資料夾：`node scripts/check-client.mjs <資料夾>`（Schema 一律用 `client/schema/`）。沒有給資料夾時檢查 `KK_CLIENT` 選定的客戶（[多客戶與切換](#多客戶與切換)），例如 `KK_CLIENT=<名稱> npm run check:client`。
 
 ## 檔案
 
@@ -261,10 +262,27 @@ JSON Schema 無法參照另一個檔的值，以下由 `scripts/check-client.mjs
 
 ## app 如何讀取
 
-`app/src/client/load.ts` 在 build 時以 JSON import 讀入 5 個設定檔，匯出型別為 `ClientConfig` 的 `clientConfig`。翻譯檔由 `app/src/client/i18n.ts` 讀入（見[翻譯檔](#翻譯檔clienti18n)）。
+`app/src/client/load.ts` 在 build 時以 JSON import（`@client/…`，見[多客戶與切換](#多客戶與切換)）讀入 5 個設定檔，匯出型別為 `ClientConfig` 的 `clientConfig`。翻譯檔由 `app/src/client/i18n.ts` 讀入（見[翻譯檔](#翻譯檔clienti18n)）。
 
 - 執行時不做 ajv 驗證，ajv 不打包進前端；驗證只在 `npm run check:client` 與 CI 執行。
 - 省略的欄位在這裡補上預設值，讀取端拿到的型別一律是必填。目前有 `mergeStrategy`（省略時補成 `review`）、`retrieval` 的各欄位（`RETRIEVAL_DEFAULTS`）、`upload` 的各欄位（`UPLOAD_DEFAULTS`）、`conflicts` 的各欄位（`CONFLICTS_DEFAULTS`）與 `evals.thresholds` 的各欄位（`EVAL_THRESHOLDS_DEFAULTS`）；預設值與 Schema 的 `default` 相同，由 `load.test.ts` 比對。
+
+## 多客戶與切換
+
+`client/` 是參考情境與測試基準，換客戶時不修改；客戶放在 `clients/<名稱>/`，結構與 `client/` 相同，但不含 `schema/`（Schema 是產品的一部分，一律用 `client/schema/`）。（#77 決定）
+
+- **選擇**：環境變數 `KK_CLIENT=<名稱>` 對應 `clients/<名稱>/`，未設定或空字串時用 `client/`。名稱只能用小寫英文字母、數字與 `-`。資料夾或其中的 `client.json` 不存在、名稱不合法時直接失敗，例如 `KK_CLIENT=foo：找不到 clients/foo/client.json`。規則只寫在 `scripts/client-dir.mjs` 的 `resolveClientDir()`（測試在 `client-dir.test.mjs`）。
+- **`@client` 別名**：`app/src`、`worker/src` 一律以 `@client/…` 讀取客戶資料（JSON import 與 `import.meta.glob`），不以相對路徑指到 `client/`。`client/schema/` 不隨客戶切換，不在此限。結構測試 `app/src/client/client-dir.test.ts` 擋下新的字面路徑。
+- **各工具的對應**：
+
+  | 工具 | `@client` 指向 |
+  | --- | --- |
+  | `npm run dev`、`npm run build`（`vite.config.ts`） | `KK_CLIENT` 選定的客戶；`wrangler dev` 提供的 `dist/` 因此也是該客戶 |
+  | `npm run check:client`（沒有給資料夾時） | `KK_CLIENT` 選定的客戶 |
+  | `npm test`（`vitest.config.ts`） | 固定為 `client/`，不看 `KK_CLIENT`；既有測試以參考情境的 id 撰寫 |
+  | `npm run typecheck`（`app/`、`worker/`、`e2e/` 的 tsconfig `paths`） | 固定為 `client/`；其他客戶的 JSON 形狀由 `check:client`（ajv）檢查 |
+
+- `dataset.path`、`evals.path` 仍只支援 `data/`、`evals/`：JSON import 與 `import.meta.glob` 的路徑必須是 `@client/` 開頭的字面值，指的是選定客戶資料夾內的 `data/`、`evals/`。
 
 ## 擴充 Schema
 

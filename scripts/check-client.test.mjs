@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -441,5 +442,16 @@ describe("評測題庫", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it("沒有給資料夾時依 KK_CLIENT 選擇，資料夾不存在時以非 0 結束並說明原因", () => {
+    const script = fileURLToPath(new URL("./check-client.mjs", import.meta.url));
+    const run = (KK_CLIENT) => spawnSync(process.execPath, [script], { encoding: "utf8", env: { ...process.env, KK_CLIENT } });
+    const missing = run("nope");
+    expect(missing.status).toBe(1);
+    expect(missing.stderr).toContain("KK_CLIENT=nope：找不到 clients/nope/client.json");
+    const reference = run("");
+    expect(reference.status).toBe(0);
+    expect(reference.stdout).toContain(fileURLToPath(new URL("../client/", import.meta.url)));
   });
 });

@@ -9,6 +9,7 @@
     "skipLibCheck": true,
     "isolatedModules": true,
     "resolveJsonModule": true,
+    "paths": { "@client/*": ["../client/*"] },
     "types": ["@cloudflare/workers-types"]
   },
   "include": ["src"]

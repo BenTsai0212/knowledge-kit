@@ -1,9 +1,10 @@
-// 在 build 時讀入 client/*.json。驗證由 npm run check:client（ajv）在 CI 執行，不打包進前端。
-import access from "../../../client/access.json";
-import client from "../../../client/client.json";
-import knowledgeModel from "../../../client/knowledge-model.json";
-import scenarios from "../../../client/scenarios.json";
-import theme from "../../../client/theme.json";
+// 在 build 時讀入選定客戶的 *.json（@client 別名，見 docs/client-config.md「多客戶與切換」）。驗證由 npm run check:client（ajv）在 CI 執行，不打包進前端。
+// typecheck 只對參考情境 client/ 比對形狀（tsconfig 的 paths）；其他客戶由 ajv 檢查。
+import access from "@client/access.json";
+import client from "@client/client.json";
+import knowledgeModel from "@client/knowledge-model.json";
+import scenarios from "@client/scenarios.json";
+import theme from "@client/theme.json";
 import type { ClientConfig, ClientFiles, ConflictsConfig, EvalThresholds, RetrievalConfig, UploadConfig } from "./types";
 
 // JSON import 的字串型別會放寬成 string，列舉值無法在編譯時比對；

@@ -31,7 +31,7 @@ export function relatedEntities(graph: Graph, entityId: string, language: string
     });
 }
 
-// 下拉選單用的名稱：顯示名稱相同的實體（例如兩位林志明）加上第一個相關實體的名稱以便區分
+// 下拉選單用的名稱：顯示名稱相同的實體（例如同名的兩個人）加上第一個相關實體的名稱以便區分
 export function entityOptionLabel(graph: Graph, entity: GraphEntity, language: string): string {
   const name = entityName(entity, language);
   const same = graph.entities.filter((e) => entityName(e, language) === name);

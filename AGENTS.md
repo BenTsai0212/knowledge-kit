@@ -23,6 +23,7 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 - 型別檢查：`npm run typecheck`（`app/`、`worker/`、根目錄設定檔、`e2e/` 各一份 tsconfig）
 - 單元測試：`npm test`（Vitest，`app/**/*.test.ts`、`worker/**/*.test.ts`、`scripts/**/*.test.mjs`）
 - client 設定檢查：`npm run check:client`（以 ajv 依 `client/schema/` 驗證 `client/`，並檢查跨檔規則與淺色、深色配色的對比度；見 `docs/client-config.md`）
+- 切換客戶：環境變數 `KK_CLIENT=<名稱>` 讓 `dev`、`build`、`check:client` 改用 `clients/<名稱>/`（不存在時失敗）；`npm test` 與 `typecheck` 永遠用 `client/`（`docs/client-config.md`「多客戶與切換」）
 - Playwright：`npx playwright install chromium`（第一次）→ `npm run build` → `npm run test:e2e`（`e2e/`，只用 Chromium；`/api/ask` 一律是 `page.route` 的假回應；見 `docs/testing.md`）。runner 不在本機啟動瀏覽器，結果以 CI 的 `E2E` workflow 為準。
 - 敏感資料檢查：`npm run check:sensitive`（`git ls-files` 中的個人 email 與禁用名稱；本機清單是不進版本控制的 `.sensitive-names.local`，沒有時只檢查 email。清單內容由人設定，agent 不讀取、不建立；見 `docs/testing.md`）
 - build：`npm run build`（輸出到 `dist/`）
@@ -39,7 +40,7 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 
 | 路徑 | 內容 |
 | --- | --- |
-| `app/` | 前端（Vite＋React＋TypeScript）；`index.html` 與 `src/`；`src/client/` 是 `client/` 設定的型別與讀取（改 Schema 時同步修改，見 `docs/client-config.md`）；`src/client/i18n.ts` 是介面文字唯一的讀取模組（`strings()`、`fill()`、`errorMessage()`；結構測試在 `i18n.test.ts`）；`src/client/source-scan.ts` 是結構測試共用的原始碼掃描 |
+| `app/` | 前端（Vite＋React＋TypeScript）；`index.html` 與 `src/`；`src/client/` 是 `client/` 設定的型別與讀取（改 Schema 時同步修改，見 `docs/client-config.md`）；`src/client/i18n.ts` 是介面文字唯一的讀取模組（`strings()`、`fill()`、`errorMessage()`；結構測試在 `i18n.test.ts`）；`src/client/source-scan.ts` 是結構測試共用的原始碼掃描；客戶資料一律以 `@client/…` 別名讀取，不以相對路徑指到 `client/`（`client/schema/` 除外；結構測試在 `src/client/client-dir.test.ts`） |
 | `app/src/dataset/` | 資料集（`client/data/`）的型別、鍵清單、讀取（`load.ts`）、跨檔檢查（`validate.ts`）與匯入（`seed.ts`） |
 | `app/src/retrieval/` | 檢索：`retrieve.ts` 經 `withIdentity()` 取段落再計分；`VectorProvider` 接口（`types.ts`）、預設實作 `keyword-hash`（`tokenize.ts`、`keyword-hash.ts`）；使用哪個實作只在 `providers.ts` 決定（`providers.test.ts` 檢查）；說明見 `docs/retrieval.md` |
 | `app/src/qa/` | 問答：`answer.ts` 的 `ask()`（`retrieve()` → 本機拒答 → `prompt.ts` 組 prompt → `/api/ask` → 拒答標記與 `citations.ts` 的引用解析）；`types.ts` 是 `/api/ask` 的傳輸接口，`api.ts`（＋`sse.ts`）是真的實作，`testing.ts` 是測試用的假實作（測試不呼叫真實 API）；只透過 `retrieve()` 取得段落（`structure.test.ts` 檢查）；說明見 `docs/qa.md` |
@@ -53,9 +54,9 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 | `app/src/db/` | 資料層（PGlite＋RLS）：`database.ts` 是唯一入口，`migrations/*.sql` 是 migration；說明見 `docs/data-model.md` |
 | `app/tests/` | 需要放在 `app/src/` 之外的測試（例如會用到被禁止 SQL 的越權測試） |
 | `worker/` | Cloudflare Worker（TypeScript）：`GET /api/health`、`POST /api/ask`（`ask.ts`：同站、邀請碼、body、每日次數的檢查；`upstream.ts`、`sse.ts`：轉發到 Claude Messages API 並轉成精簡的 SSE）；`models.ts` 是模型白名單，`usage.ts` 是計數用的 Durable Object，`testing.ts` 是測試用的假實作；其他請求交給 `dist/` 靜態檔。API 格式、錯誤類型、secret 與已知限制見 `worker/README.md` |
-| `client/` | 客戶設定（`*.json`）、介面翻譯檔（`i18n/<語言>.json`，含拒答文字與各錯誤訊息）、JSON Schema（`schema/`）、虛構資料集（`data/`）與評測題庫（`evals/questions.json`，見 `docs/evals.md`）；換客戶只改這裡，說明見 `docs/client-config.md`、`docs/dataset.md` |
+| `client/` | 客戶設定（`*.json`）、介面翻譯檔（`i18n/<語言>.json`，含拒答文字與各錯誤訊息）、JSON Schema（`schema/`）、虛構資料集（`data/`）與評測題庫（`evals/questions.json`，見 `docs/evals.md`）；參考情境與測試基準，`KK_CLIENT` 可改用 `clients/<名稱>/`，說明見 `docs/client-config.md`、`docs/dataset.md` |
 | `e2e/` | Playwright 的端對端測試（`*.spec.ts`：冒煙 `smoke`、越權 `access`、互動邊角 `interactions`）；`support/fake-ask.ts` 是假的 `/api/ask`（含串流到一半的假回應），`support/app.ts` 是共用操作（介面文字從 `client/i18n/` 讀取），`support/dataset.ts` 以 `app/src/evals/oracle.ts` 算出各身分看不到的段落；`fixtures/` 是上傳用的虛構檔案；設定在根目錄的 `playwright.config.ts`（說明見 `docs/testing.md`） |
-| `scripts/` | 專案腳本（Node ESM，不在 `typecheck` 範圍內）：`check-client.mjs`、`check-sensitive.mjs`（敏感資料檢查）、`playbook.test.mjs`（`docs/playbook/` 繁中與英文的檔名、`##` 標題數量與相對連結）；`fixtures/invalid-client/` 是故意寫錯的測試資料 |
+| `scripts/` | 專案腳本（Node ESM，不在 `typecheck` 範圍內）：`client-dir.mjs`（`KK_CLIENT` 對應的客戶資料夾，`vite.config.ts`、`vitest.config.ts` 與 `check-client.mjs` 共用）、`check-client.mjs`、`check-sensitive.mjs`（敏感資料檢查）、`playbook.test.mjs`（`docs/playbook/` 繁中與英文的檔名、`##` 標題數量與相對連結）；`fixtures/invalid-client/` 是故意寫錯的測試資料 |
 | `package.json`、`vite.config.ts`、`vitest.config.ts`、`playwright.config.ts`、`tsconfig.node.json`、`wrangler.jsonc` | 根目錄的指令與設定（單一 `package.json`，不用 workspaces） |
 | `docs/workflow/` | 憲法與 workflow 手冊 |
 | `docs/rfcs/`、`docs/adr/` | 專案章程與決策紀錄 |
