@@ -52,6 +52,19 @@ repo 預計公開，CI 紀錄也會公開，所以兩者的輸出都**不包含�
 - 畫面文字一律從 `client/i18n/` 讀取（`e2e/support/app.ts`），只用預設語言；身分以 Toolbar 的選單切換。
 - 不使用固定的等待時間，只靠 Playwright 的自動等待與會重試的斷言；資料庫是否載入完成，以預設問題的按鈕可以按為準。
 - `workers: 1`（每個頁面在瀏覽器內建一個 PGlite）；CI 中失敗時重試 2 次，第一次重試時記錄 trace，失敗時保留截圖。
+- `e2e/tsconfig.json` 加入 `vite/client` 的型別，因為測試匯入的 `app/src/evals/oracle.ts` 會連帶檢查使用 `import.meta.glob` 的檔案；沒有 `@types/node`，用到的 `node:fs` 在 `e2e/support/node-fs.d.ts` 自行宣告。
+
+### 測試內容
+
+| 檔案 | 內容 |
+| --- | --- |
+| `smoke.spec.ts` | 冒煙：問答附出處、圖譜、時間軸、上傳與待審、評測台能打開並完成基本操作 |
+| `access.spec.ts` | 越權：打開原文後切換身分，原文面板與時間軸不殘留看不到的段落；串流回答中切換身分；待審與評測台只給 `canReview` 的身分；在評測台切換成沒有 `canReview` 的身分 |
+| `interactions.spec.ts` | 互動邊角：上傳寫入中按 Esc；評測執行中離開頁籤再回來顯示「已停止」；深色模式（`emulateMedia`） |
+
+- **看不到的段落**以 `app/src/evals/oracle.ts` 的 `expectedVisible()` 從 `client/data/` 算出（`e2e/support/dataset.ts`），不以畫面或資料庫的結果為準；畫面文字以每段開頭 20 個字元比對（空白先合併）。切換前先確認畫面上確實有看不到的段落，比對本身才有效。
+- **串流中的回答**：`route.fulfill` 一次送出整個 body，做不出串流到一半的狀態，所以 `holdAskStream()` 在頁面內替換 `fetch`，由測試以 `pushAskStream()` 逐段送出。
+- **上傳寫入中按 Esc**：寫入在瀏覽器內的 PGlite 很快結束，測試以 CDP 的 `Emulation.setCPUThrottlingRate` 放慢 CPU（只有 Chromium 可用）。寫入已結束才按到 Esc 時測試失敗，不會默默通過。
 
 ### 本機執行
 

@@ -116,6 +116,30 @@ describe("runEvals", () => {
     expect(run).toMatchObject({ status: "stopped", stopReason: "aborted" });
     expect(run.sets[0].results).toHaveLength(1);
   });
+
+  it("中止後檢索因資料庫關閉而失敗：記為停止，不停在執行中", async () => {
+    const controller = new AbortController();
+    const { ctx } = context();
+    const closing: EvalContext = {
+      ...ctx,
+      retriever: {
+        retrieve: async () => {
+          controller.abort();
+          throw new Error("database closed");
+        },
+      },
+    };
+    const seen: EvalRun[] = [];
+    const run = await runEvals(closing, { sets: [DEFAULT], mode: "keyPoints" }, (r) => seen.push(r), controller.signal);
+    expect(run).toMatchObject({ status: "stopped", stopReason: "aborted" });
+    expect(seen.at(-1)?.status).toBe("stopped");
+  });
+
+  it("沒有中止時的例外照常拋出", async () => {
+    const { ctx } = context();
+    const broken: EvalContext = { ...ctx, retriever: { retrieve: async () => Promise.reject(new Error("boom")) } };
+    await expect(runEvals(broken, { sets: [DEFAULT], mode: "keyPoints" })).rejects.toThrow("boom");
+  });
 });
 
 describe("runEvals：模型評分", () => {

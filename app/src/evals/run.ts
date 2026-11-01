@@ -121,29 +121,35 @@ export async function runEvals(
   const { model, displayName } = ctx.config.client;
 
   onChange(run);
-  for (let s = 0; s < plan.sets.length; s++) {
-    for (const q of ctx.questions) {
-      if (signal?.aborted) return stop("aborted");
-      const retrieved: string[] = [];
-      const bodies: AskBody[] = [];
-      const transport: AskTransport = { send: (body, sig) => (bodies.push(body), ctx.transport.send(body, sig)) };
-      const qa = { retriever: settingsRetriever(ctx.retriever, plan.sets[s], retrieved), transport, model, displayName };
-      const answer = await ask(qa, { identityId: q.role, text: q.question, language: q.language }, undefined, signal);
-      if (signal?.aborted) return stop("aborted");
-      const error = answerError(answer);
-      if (error !== undefined && STOP_ERRORS.has(error)) return stop(error);
-
-      const result: QuestionResult = { question: q.id, answer, score: scoreQuestion(q, { retrieved, bodies, answer }, leaks(q.role)) };
-      if (plan.mode === "model" && q.expect === "answer" && answer.kind === "answer" && q.referenceAnswer !== null) {
-        const graded = await gradeAnswer({ transport: ctx.transport, model }, { question: q.question, reference: q.referenceAnswer, answer: answer.text }, signal);
+  try {
+    for (let s = 0; s < plan.sets.length; s++) {
+      for (const q of ctx.questions) {
         if (signal?.aborted) return stop("aborted");
-        result.grade = graded.grade;
-        if (graded.error !== undefined) result.gradeError = graded.error;
+        const retrieved: string[] = [];
+        const bodies: AskBody[] = [];
+        const transport: AskTransport = { send: (body, sig) => (bodies.push(body), ctx.transport.send(body, sig)) };
+        const qa = { retriever: settingsRetriever(ctx.retriever, plan.sets[s], retrieved), transport, model, displayName };
+        const answer = await ask(qa, { identityId: q.role, text: q.question, language: q.language }, undefined, signal);
+        if (signal?.aborted) return stop("aborted");
+        const error = answerError(answer);
+        if (error !== undefined && STOP_ERRORS.has(error)) return stop(error);
+
+        const result: QuestionResult = { question: q.id, answer, score: scoreQuestion(q, { retrieved, bodies, answer }, leaks(q.role)) };
+        if (plan.mode === "model" && q.expect === "answer" && answer.kind === "answer" && q.referenceAnswer !== null) {
+          const graded = await gradeAnswer({ transport: ctx.transport, model }, { question: q.question, reference: q.referenceAnswer, answer: answer.text }, signal);
+          if (signal?.aborted) return stop("aborted");
+          result.grade = graded.grade;
+          if (graded.error !== undefined) result.gradeError = graded.error;
+        }
+        update({ sets: run.sets.map((set, i) => (i === s ? { ...set, results: [...set.results, result] } : set)) });
+        // 模型評分遇到 STOP_ERRORS：已花掉一次呼叫的回答先保存（無法評分），再停止（#62 決定（給 PR 3）1）
+        if (result.gradeError !== undefined && STOP_ERRORS.has(result.gradeError)) return stop(result.gradeError);
       }
-      update({ sets: run.sets.map((set, i) => (i === s ? { ...set, results: [...set.results, result] } : set)) });
-      // 模型評分遇到 STOP_ERRORS：已花掉一次呼叫的回答先保存（無法評分），再停止（#62 決定（給 PR 3）1）
-      if (result.gradeError !== undefined && STOP_ERRORS.has(result.gradeError)) return stop(result.gradeError);
     }
+  } catch (e) {
+    // 離開評測台時先中止再關閉資料庫：進行中的檢索可能因資料庫已關閉而失敗，記為停止，不停在「執行中」（#66）
+    if (signal?.aborted) return stop("aborted");
+    throw e;
   }
   return update({ status: "done", finishedAt: new Date().toISOString() });
 }
