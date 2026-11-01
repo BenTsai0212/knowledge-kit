@@ -55,7 +55,7 @@ Based on sections B and C of the requirements checklist and the data inventory.
 - Relation types: per B3.
 - Merge strategy: `review` by default; use `auto` only for types whose names are known to be unique within the client (for example departments) (B5).
 
-**Demo scenario design**: per A3 and A4, design 3–5 scenarios (one role per scenario, 2–4 default questions each). Write them as a list first; answer passages are filled in at step 5. At least one scenario must show "the same question gives different answers for different roles".
+**Demo scenario design**: per A3 and A4, design 3–5 scenarios (one role per scenario, 2–4 default questions each). Write them as a list first; answer passages are filled in at step 5. At least one scenario must show "the same question gives different answers for different roles". Every default question needs question text and same-language answer passages in every language in `client.json`, so a document that exists in only one language cannot be the answer source for a default question (it can still be used in the question bank).
 
 **Acceptance**: `npm run check:client -- clients/<name>/` reports no errors for `access.json` or `knowledge-model.json`.
 
@@ -83,7 +83,7 @@ The format is in [docs/dataset.md](../../dataset.md). Write the documents confir
   - Old and new information: when the client needs it, one pair of passages that disagree, with different dates
   - Same name: when the client mentioned people or things with the same name (B5), one such pair
 - **Entities and relations**: every entity's `names` covers all languages; every entity and relation has source passages.
-- **Phase 1 does not support cross-language retrieval**: every default question needs answer passages in the question's language.
+- **Phase 1 does not support cross-language retrieval**: every default question needs answer passages in every language; question bank questions may use only one language, but their answer passages must be in the question's language.
 
 **Acceptance**: the settings check and dataset check of `npm run check:clients <name>` pass.
 
@@ -139,6 +139,6 @@ Post the results of both runs, the fixes made, and screenshots (light and dark) 
 
 ## Done
 
-- Open a PR (`Closes` the client's Issue) with the records of all three checkpoints, the `check:clients` and Playwright results, and the evaluation results.
+- Open a PR after step 7 (`Refs` the client's Issue, not `Closes`) with the records of Checkpoints 1 and 2, the `check:clients` and Playwright results, and the commands and results table for step 8. Merge the PR and close the Issue only after Checkpoint 3 passes.
 - Deployment is decided separately (`worker/README.md`, section "正式部署"); these steps end with a demo that runs locally.
 - In a client's own fork, `SENSITIVE_NAMES` is set by that fork; do not put names the client has agreed to use on the list.
