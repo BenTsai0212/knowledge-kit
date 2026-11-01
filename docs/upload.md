@@ -51,14 +51,14 @@
 
 `chunk(text, passageMaxChars)`：
 
-1. 以空行分段。段落內的換行，兩側都是漢字或全形標點時直接相連，否則換成空白。
+1. 以空行分段。段落內的換行，兩側都是漢字、假名或全形標點時直接相連，否則換成空白。
 2. 20 字元內的段落（通常是標題）併入下一段，讓標題留在內容的段落中。
-3. 超過 `passageMaxChars` 的段落依句尾斷開：中文的「。！？」，英文的 `. ! ?` 後接空白。
+3. 超過 `passageMaxChars` 的段落依句尾斷開：中文與日文的「。！？」，英文的 `. ! ?` 後接空白。
 4. 單句仍超過上限時硬切。長度以字元（code point）計算。
 
-步驟 1 的換行相連、步驟 3 的句尾與斷開後的句子相連（前一句以漢字或全形標點結尾時不加空白），規則都在語言模組 `app/src/language/`（#83），`chunk.ts` 只負責段落的合併與長度限制。
+步驟 1 的換行相連、步驟 3 的句尾與斷開後的句子相連（前一句以漢字、假名或全形標點結尾時不加空白），規則都在語言模組 `app/src/language/`（#83），`chunk.ts` 只負責段落的合併與長度限制。
 
-**新增語言**：句尾標點或換行相連的方式不同時（例如日文的假名在換行時直接相連），只修改語言模組的 `scripts.ts`，不改 `chunk.ts`；做法見 [docs/retrieval.md](retrieval.md)「語言模組」。
+**新增語言**：句尾標點或換行相連的方式不同時（例如句尾不是「。！？」或 `. ! ?` 的語言），只修改語言模組的 `scripts.ts`，不改 `chunk.ts`；做法見 [docs/retrieval.md](retrieval.md)「語言模組」。
 
 `passageMaxChars` 是 `client.json` 的 `upload.passageMaxChars`（預設 300，範圍 100～1000，見 [docs/client-config.md](client-config.md)）。300 字元約是參考資料集段落的 2～3 倍；5 段合計仍遠低於問答的 `PROMPT_CHAR_BUDGET`。
 
