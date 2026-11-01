@@ -100,7 +100,7 @@ template 預設的**虛構**資料：範例公司（Example Co.）的文件、�
 - `client.json` 的 `dataset.path`、`evals.path` 指到的資料夾存在
 - 資料集每個檔案符合 Schema；必要的檔案存在、至少一份文件、沒有未知的資料檔
 
-**跨檔規則**（`app/src/dataset/validate.ts`，匯入時執行；`validate.test.ts` 確認 `client/data/` 通過，CI 的 `npm test` 執行）：
+**跨檔規則**（`app/src/dataset/validate.ts`，匯入時執行；`dataset.target.test.ts` 確認資料集通過：`npm test` 對 `client/data/`、客戶檢查 `npm run check:clients` 對各客戶執行，見 [docs/client-config.md](client-config.md)「客戶檢查」）：
 
 - 文件與段落的語言屬於 `client.json` 的 `languages`
 - 可見等級與專案存在於 `access.json`

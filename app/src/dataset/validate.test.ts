@@ -11,10 +11,6 @@ const copy = (): { config: ClientConfig; data: Dataset } => ({
 });
 
 describe("validateDataset", () => {
-  it("client/data/ 的資料集通過檢查", () => {
-    expect(validateDataset(clientConfig, dataset)).toEqual([]);
-  });
-
   it("讀入文件、實體與關係", () => {
     expect(Object.keys(dataset.documents)).toContain(HANDBOOK);
     expect(dataset.entities.entities.length).toBeGreaterThan(0);

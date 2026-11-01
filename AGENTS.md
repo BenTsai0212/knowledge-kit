@@ -24,13 +24,14 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 - 單元測試：`npm test`（Vitest，`app/**/*.test.ts`、`worker/**/*.test.ts`、`scripts/**/*.test.mjs`）
 - client 設定檢查：`npm run check:client`（以 ajv 依 `client/schema/` 驗證 `client/`，並檢查跨檔規則與淺色、深色配色的對比度；見 `docs/client-config.md`）
 - 切換客戶：環境變數 `KK_CLIENT=<名稱>` 讓 `dev`、`build`、`check:client` 改用 `clients/<名稱>/`（不存在時失敗）；`npm test` 與 `typecheck` 永遠用 `client/`（`docs/client-config.md`「多客戶與切換」）
+- 客戶檢查：`npm run check:clients [名稱]`（不給名稱時檢查 `clients/` 底下每個客戶，沒有時略過；每個客戶依序執行設定檢查、`vitest.clients.config.ts` 的 `*.target.test.ts`、build 到暫存資料夾）。以參數指定客戶，不在指令前加 `KK_CLIENT`；只檢查設定時用 `npm run check:client -- clients/<名稱>/`（`docs/client-config.md`「客戶檢查」）
 - Playwright：`npx playwright install chromium`（第一次）→ `npm run build` → `npm run test:e2e`（`e2e/`，只用 Chromium；`/api/ask` 一律是 `page.route` 的假回應；見 `docs/testing.md`）。runner 不在本機啟動瀏覽器，結果以 CI 的 `E2E` workflow 為準。
 - 敏感資料檢查：`npm run check:sensitive`（`git ls-files` 中的個人 email 與禁用名稱；本機清單是不進版本控制的 `.sensitive-names.local`，沒有時只檢查 email。清單內容由人設定，agent 不讀取、不建立；見 `docs/testing.md`）
 - build：`npm run build`（輸出到 `dist/`）
 - 本機 Worker：`npm run build` 後 `npx wrangler dev`（提供 `dist/` 與 `/api/*`；`wrangler.jsonc` 只供本機，不部署）。secret 與變數放在不進版本控制的 `.dev.vars`（`cp .dev.vars.example .dev.vars`，金鑰由人填入）；與 `npm run dev` 併用時，Vite 把 `/api/*` 轉給 `wrangler dev`（見 `worker/README.md`）
 - workflow 工具測試：`npm test --prefix tools/workflow`（Node 內建 `node --test`，無相依套件）
 - PR 描述檢查：`PR_BODY='Closes #1' PR_LABELS='[]' node tools/workflow/check-pr-body.mjs`（CI 的 `PR body` workflow 在 PR 開啟、編輯、更新與標籤變更時執行）
-- CI 的 `checks` job 依序執行 `npm ci` → `npm run check:client` → `npm run typecheck` → `npm test` → `npm run build` → workflow 工具測試。
+- CI 的 `checks` job 依序執行 `npm ci` → `npm run check:client` → `npm run typecheck` → `npm test` → `npm run build` → workflow 工具測試；`clients` job 執行 `npm run check:clients`。
 - CI 的 `E2E` workflow（`workflows/e2e.yml`）：只在 push 到 main 後執行，另可 `gh workflow run e2e.yml --ref <分支>` 手動執行（`e2e.yml` 已在 main 上時才有效）；失敗時上傳 trace 與截圖為 artifact `playwright`（`docs/testing.md`）。
 - CI 的 `Sensitive data` workflow（PR 與 push 到 main）：`sensitive-names` job 以 repo secret `SENSITIVE_NAMES` 執行 `node scripts/check-sensitive.mjs`（讀不到 secret 時失敗）；`gitleaks` job 以固定版本＋SHA-256 的 gitleaks 掃描新增的 commit（ADR 0004、`docs/testing.md`）。
 - runner（自動化模組，ADR 0003；說明見 `tools/workflow/runner/README.md`）：`node tools/workflow/runner/agent-runner.mjs --dry-run` 試跑（只顯示會挑哪一件，不改 GitHub、不動 worktree），`--now` 手動執行一件。設定放在不進版本控制的 `tools/workflow/runner/config.local.json`。**排程（launchd）的安裝與移除由人執行**，agent 不安裝、不移除。〔#52 啟用自動化模組｜停用自動化模組時〕
@@ -55,16 +56,17 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 | `app/tests/` | 需要放在 `app/src/` 之外的測試（例如會用到被禁止 SQL 的越權測試） |
 | `worker/` | Cloudflare Worker（TypeScript）：`GET /api/health`、`POST /api/ask`（`ask.ts`：同站、邀請碼、body、每日次數的檢查；`upstream.ts`、`sse.ts`：轉發到 Claude Messages API 並轉成精簡的 SSE）；`models.ts` 是模型白名單，`usage.ts` 是計數用的 Durable Object，`testing.ts` 是測試用的假實作；其他請求交給 `dist/` 靜態檔。API 格式、錯誤類型、secret 與已知限制見 `worker/README.md` |
 | `client/` | 客戶設定（`*.json`）、介面翻譯檔（`i18n/<語言>.json`，含拒答文字與各錯誤訊息）、JSON Schema（`schema/`）、虛構資料集（`data/`）與評測題庫（`evals/questions.json`，見 `docs/evals.md`）；參考情境與測試基準，`KK_CLIENT` 可改用 `clients/<名稱>/`，說明見 `docs/client-config.md`、`docs/dataset.md` |
+| `clients/` | 各客戶的設定（`clients/<名稱>/`，結構同 `client/` 但不含 `schema/`）；本 repo 只有 `README.md`，不放任何客戶（#77 決定 7） |
 | `e2e/` | Playwright 的端對端測試（`*.spec.ts`：冒煙 `smoke`、越權 `access`、互動邊角 `interactions`）；`support/fake-ask.ts` 是假的 `/api/ask`（含串流到一半的假回應），`support/app.ts` 是共用操作（介面文字從 `client/i18n/` 讀取），`support/dataset.ts` 以 `app/src/evals/oracle.ts` 算出各身分看不到的段落；`fixtures/` 是上傳用的虛構檔案；設定在根目錄的 `playwright.config.ts`（說明見 `docs/testing.md`） |
-| `scripts/` | 專案腳本（Node ESM，不在 `typecheck` 範圍內）：`client-dir.mjs`（`KK_CLIENT` 對應的客戶資料夾，`vite.config.ts`、`vitest.config.ts` 與 `check-client.mjs` 共用）、`check-client.mjs`、`check-sensitive.mjs`（敏感資料檢查）、`playbook.test.mjs`（`docs/playbook/` 繁中與英文的檔名、`##` 標題數量與相對連結）；`fixtures/invalid-client/` 是故意寫錯的測試資料 |
-| `package.json`、`vite.config.ts`、`vitest.config.ts`、`playwright.config.ts`、`tsconfig.node.json`、`wrangler.jsonc` | 根目錄的指令與設定（單一 `package.json`，不用 workspaces） |
+| `scripts/` | 專案腳本（Node ESM，不在 `typecheck` 範圍內）：`client-dir.mjs`（`KK_CLIENT` 對應的客戶資料夾，`vite.config.ts`、`vitest.config.ts`、`vitest.clients.config.ts` 與 `check-client.mjs` 共用）、`check-client.mjs`、`check-clients.mjs`（客戶檢查）、`check-sensitive.mjs`（敏感資料檢查）、`playbook.test.mjs`（`docs/playbook/` 繁中與英文的檔名、`##` 標題數量與相對連結）；`fixtures/invalid-client/` 是故意寫錯的測試資料 |
+| `package.json`、`vite.config.ts`、`vitest.config.ts`、`vitest.clients.config.ts`（客戶檢查的 target 測試）、`playwright.config.ts`、`tsconfig.node.json`、`wrangler.jsonc` | 根目錄的指令與設定（單一 `package.json`，不用 workspaces） |
 | `docs/workflow/` | 憲法與 workflow 手冊 |
 | `docs/rfcs/`、`docs/adr/` | 專案章程與決策紀錄 |
 | `docs/playbook/` | 方法與文件套件（需求確認清單、資料盤點表、資料安全說明、評測題庫建立步驟、驗收指標）；入口是 [docs/playbook/README.md](docs/playbook/README.md)，英文版在 `docs/playbook/en/`，兩份一起改 |
 | `tools/workflow/` | workflow 工具（Node，自帶 `package.json`）；`hooks/confirm-main.mjs` 是合併與 push 到 main 前的確認 hook；`check-pr-body.mjs` 檢查 PR 描述有 `Closes`／`Refs #N`（`fast-lane` 除外）；`runner/` 是自動化模組的 runner（ADR 0003，指令見第 2 節）；`bootstrap-github.mjs`、`config.json` 不適用（見第 2 節） |
 | `.claude/settings.json` | Claude Code 設定：在 `PreToolUse`（Bash）註冊確認 hook |
 | `templates/` | Claude Project 範本與預設不啟用的模組檔案 |
-| `.github/` | Issue／PR 範本、標籤定義、CI（`workflows/ci.yml`：`checks` job；`workflows/pr-body.yml`：PR 描述檢查；`workflows/sensitive.yml`：敏感資料檢查；`workflows/e2e.yml`：Playwright）；沒有部署 workflow |
+| `.github/` | Issue／PR 範本、標籤定義、CI（`workflows/ci.yml`：`checks` 與 `clients` job；`workflows/pr-body.yml`：PR 描述檢查；`workflows/sensitive.yml`：敏感資料檢查；`workflows/e2e.yml`：Playwright）；沒有部署 workflow |
 
 ## 4. 工作流程
 

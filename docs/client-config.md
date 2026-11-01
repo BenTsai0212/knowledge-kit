@@ -16,7 +16,7 @@ npm run check:client
 
 - 驗證 `client/` 頂層的每個 `.json` 檔、`i18n/` 的翻譯檔、資料集與評測題庫；缺少設定檔、未知的設定檔、多餘的欄位都算錯誤。
 - 錯誤逐行印出 `<檔名> <欄位路徑>：<訊息>`，有錯誤時以非 0 結束。CI 的 `checks` job 會執行。
-- 檢查其他資料夾：`node scripts/check-client.mjs <資料夾>`（Schema 一律用 `client/schema/`）。沒有給資料夾時檢查 `KK_CLIENT` 選定的客戶（[多客戶與切換](#多客戶與切換)），例如 `KK_CLIENT=<名稱> npm run check:client`。
+- 檢查其他資料夾：`node scripts/check-client.mjs <資料夾>`（Schema 一律用 `client/schema/`）。例如 `npm run check:client -- clients/<名稱>/`。沒有給資料夾時檢查 `KK_CLIENT` 選定的客戶（[多客戶與切換](#多客戶與切換)）。
 
 ## 檔案
 
@@ -53,7 +53,7 @@ npm run check:client
 | `displayName` | 是 | `LocalizedText` | 客戶的顯示名稱，用在頁面標題等處。一律使用虛構名稱 |
 | `defaultLanguage` | 是 | `LanguageCode` | 預設語言；必須在 `languages` 內 |
 | `languages` | 是 | `LanguageCode` 陣列，至少 1 個、不重複 | 支援的語言。範本預設 `["zh-TW", "en"]` |
-| `model` | 是 | `ModelCode` | 問答使用的模型代號。只能填 Worker 端白名單（`worker/src/models.ts` 的 `MODELS`）中的代號；實際模型名稱與 `max_tokens` 由 Worker 決定（ADR 0001）。`check:client` 只檢查格式，代號是否在白名單由 `worker/src/models.test.ts` 檢查 |
+| `model` | 是 | `ModelCode` | 問答使用的模型代號。只能填 Worker 端白名單（`worker/src/models.ts` 的 `MODELS`）中的代號；實際模型名稱與 `max_tokens` 由 Worker 決定（ADR 0001）。`check:client` 只檢查格式，代號是否在白名單由 `worker/src/models.target.test.ts` 檢查（`npm test` 與客戶檢查都會執行） |
 | `dataset.path` | 是 | `RelativePath` | 資料集的資料夾，必須存在。格式見 [docs/dataset.md](dataset.md) |
 | `evals.path` | 是 | `RelativePath` | 評測題庫的資料夾，必須存在。格式見 [docs/evals.md](evals.md) |
 | `evals.thresholds` | 否 | 物件，見下表 | 評測台四個指標的門檻。省略整個物件或其中的欄位時使用預設值 |
@@ -279,10 +279,29 @@ JSON Schema 無法參照另一個檔的值，以下由 `scripts/check-client.mjs
   | --- | --- |
   | `npm run dev`、`npm run build`（`vite.config.ts`） | `KK_CLIENT` 選定的客戶；`wrangler dev` 提供的 `dist/` 因此也是該客戶 |
   | `npm run check:client`（沒有給資料夾時） | `KK_CLIENT` 選定的客戶 |
+  | `npm run check:clients [名稱]`（`vitest.clients.config.ts`） | 參數指定的客戶（見[客戶檢查](#客戶檢查)） |
   | `npm test`（`vitest.config.ts`） | 固定為 `client/`，不看 `KK_CLIENT`；既有測試以參考情境的 id 撰寫 |
   | `npm run typecheck`（`app/`、`worker/`、`e2e/` 的 tsconfig `paths`） | 固定為 `client/`；其他客戶的 JSON 形狀由 `check:client`（ajv）檢查 |
 
 - `dataset.path`、`evals.path` 仍只支援 `data/`、`evals/`：JSON import 與 `import.meta.glob` 的路徑必須是 `@client/` 開頭的字面值，指的是選定客戶資料夾內的 `data/`、`evals/`。
+- **不需要環境變數的寫法**：檢查設定用 `npm run check:client -- clients/<名稱>/`，檢查整個客戶用 `npm run check:clients <名稱>`。`KK_CLIENT=<名稱>` 只用在由人執行的 `npm run dev`／`npm run build`。（#77 決定（給 PR 2））
+
+### 客戶檢查
+
+```bash
+npm run check:clients            # clients/ 底下的每個客戶；沒有客戶時印出「略過」並以 0 結束
+npm run check:clients <名稱>      # 只檢查 clients/<名稱>/
+```
+
+`scripts/check-clients.mjs` 替每個客戶依序執行下列步驟，子程序的 `KK_CLIENT` 由腳本設定；任一步失敗時該客戶失敗，最後列出失敗的客戶並以非 0 結束。
+
+1. **設定檢查**：`check-client.mjs clients/<名稱>/`（Schema、跨檔、翻譯檔、對比度）。
+2. **target 測試**：`vitest run --config vitest.clients.config.ts`，`@client` 指向該客戶，只跑 `*.target.test.ts`。
+3. **build**：`vite build` 輸出到暫存資料夾，結束後刪除，不覆蓋 `dist/`。
+
+- `clients/` 底下的每個資料夾都視為客戶（檔案如 `README.md` 不算）；沒有 `client.json` 或名稱不合法時失敗，不略過。
+- **target 測試**只放與客戶無關的斷言，不用參考情境的 id：`app/src/dataset/dataset.target.test.ts`（資料集通過 `validateDataset()`）、`app/src/evals/evals.target.test.ts`（題庫通過 `validateEvals()`，含以 oracle 計算的可見範圍）、`worker/src/models.target.test.ts`（`client.json` 的 `model` 在 Worker 白名單內）。檔名也符合 `*.test.ts`，`npm test` 會以 `client/` 再執行一次。
+- CI 的 `clients` job（`workflows/ci.yml`）在每個 PR 與 push 到 main 時執行 `npm run check:clients`。
 
 ## 擴充 Schema
 

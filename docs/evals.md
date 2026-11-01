@@ -177,7 +177,8 @@ user 訊息是問題、參考答案（`referenceAnswer`）與回答文字，三�
 ## 測試
 
 - `app/src/evals/score.test.ts`：引用（全部正確、部分錯誤、`dropped`、沒有引用）、關鍵重點（同義說法、全形、大小寫）、拒答、禁止內容、滲漏的各種原因、指標彙總（分母、門檻、未完成、模型評分與無法評分）。
-- `app/src/evals/validate.test.ts`：題庫的跨檔檢查與涵蓋範圍。
+- `app/src/evals/validate.test.ts`：題庫的跨檔檢查（以參考情境的 id 做的變異）與參考題庫的涵蓋範圍。
+- `app/src/evals/evals.target.test.ts`：選定客戶的題庫通過跨檔檢查（`npm test` 對 `client/`、客戶檢查 `npm run check:clients` 對各客戶執行）。
 - `scripts/check-client.test.mjs`「評測題庫」：Schema 與只需 `client/` 設定的規則。
 - `app/tests/evals/leakage.test.ts`：滲漏判定與反向驗證。
 - `app/src/evals/grade.test.ts`：模型評分的 user 訊息與跳脫、輸出格式錯誤記為無法評分、錯誤與截斷。

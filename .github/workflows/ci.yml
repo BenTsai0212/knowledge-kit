@@ -30,3 +30,17 @@ jobs:
         run: npm run build
       - name: workflow 工具測試
         run: npm test --prefix tools/workflow
+
+  # clients/ 底下每個客戶的設定檢查、target 測試與 build；沒有客戶時略過（docs/client-config.md「客戶檢查」）
+  clients:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: 安裝
+        run: npm ci
+      - name: 客戶檢查
+        run: npm run check:clients
