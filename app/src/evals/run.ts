@@ -137,11 +137,12 @@ export async function runEvals(
       if (plan.mode === "model" && q.expect === "answer" && answer.kind === "answer" && q.referenceAnswer !== null) {
         const graded = await gradeAnswer({ transport: ctx.transport, model }, { question: q.question, reference: q.referenceAnswer, answer: answer.text }, signal);
         if (signal?.aborted) return stop("aborted");
-        if (graded.error !== undefined && STOP_ERRORS.has(graded.error)) return stop(graded.error);
         result.grade = graded.grade;
         if (graded.error !== undefined) result.gradeError = graded.error;
       }
       update({ sets: run.sets.map((set, i) => (i === s ? { ...set, results: [...set.results, result] } : set)) });
+      // 模型評分遇到 STOP_ERRORS：已花掉一次呼叫的回答先保存（無法評分），再停止（#62 決定（給 PR 3）1）
+      if (result.gradeError !== undefined && STOP_ERRORS.has(result.gradeError)) return stop(result.gradeError);
     }
   }
   return update({ status: "done", finishedAt: new Date().toISOString() });

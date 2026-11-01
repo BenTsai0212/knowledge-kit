@@ -223,7 +223,21 @@ const uiStrings = {
   conflictDecisions: "required", conflictToast: "required", conflictMarks: "required", conflictTitle: "required",
   conflictWaiting: "required", conflictRunning: "required", conflictFound: "required",
   conflictDropped: "required", conflictUnchecked: "required", conflictUnrelated: "required",
-  conflictFailed: "required", conflictRetry: "required", colon: "required", progress: "required",
+  conflictFailed: "required", conflictRetry: "required",
+  tabEvals: "required", evalSettings: "required", evalSetName: "required", evalTopK: "required",
+  evalMinScore: "required", evalUseSetB: "required", evalModelGrading: "required", evalInvalidSettings: "required",
+  evalUploaded: "required", evalStart: "required", evalPreparing: "required", evalStop: "required",
+  evalRunning: "required", evalProgress: "required", evalDone: "required", evalStopped: "required",
+  evalAborted: "required", evalConfirmTitle: "required", evalConfirmCalls: "required", evalConfirmLimit: "required",
+  evalConfirmStart: "required", evalCancel: "required", evalDownload: "required", evalSummary: "required",
+  evalMetric: "required", evalThreshold: "required", evalSettingsValue: "required", evalAtLeast: "required",
+  evalAtMost: "required", evalRate: "required", evalLeakCount: "required", evalUngradable: "required",
+  evalPass: "required", evalFail: "required", evalIncomplete: "required", evalNotApplicable: "required",
+  evalResults: "required", evalOnlyDiff: "required", evalDiffers: "required", evalQuestion: "required",
+  evalNotRun: "required", evalAnswerText: "required", evalCitations: "required", evalNoCitations: "required",
+  evalDropped: "required", evalKeyPoints: "required", evalGrade: "required", evalMetrics: "required",
+  evalCategories: "required", evalExpect: "required", evalVerdicts: "required", evalLeaks: "required",
+  colon: "required", progress: "required",
   parenthetical: "required", refusal: "required", uncited: "required", incomplete: "required",
   errors: "required", unknownError: "required",
 } satisfies KeyManifest<UiStrings>;
@@ -265,6 +279,41 @@ export const i18nManifests: ManifestEntry[] = [
     keys: {
       conflict: "required", superseded_by: "required", supersedes: "required",
     } satisfies KeyManifest<UiStrings["conflictMarks"]>,
+  },
+  {
+    schema: "i18n.schema.json",
+    pointer: "/properties/evalMetrics",
+    keys: {
+      citation: "required", answer: "required", leakage: "required", refusal: "required",
+    } satisfies KeyManifest<UiStrings["evalMetrics"]>,
+  },
+  {
+    schema: "i18n.schema.json",
+    pointer: "/properties/evalCategories",
+    keys: {
+      scenario: "required", permission: "required", "out-of-scope": "required", conflict: "required", "extraction-attempt": "required",
+    } satisfies KeyManifest<UiStrings["evalCategories"]>,
+  },
+  {
+    schema: "i18n.schema.json",
+    pointer: "/properties/evalExpect",
+    keys: {
+      answer: "required", refusal: "required",
+    } satisfies KeyManifest<UiStrings["evalExpect"]>,
+  },
+  {
+    schema: "i18n.schema.json",
+    pointer: "/properties/evalVerdicts",
+    keys: {
+      correct: "required", incorrect: "required", ungradable: "required",
+    } satisfies KeyManifest<UiStrings["evalVerdicts"]>,
+  },
+  {
+    schema: "i18n.schema.json",
+    pointer: "/properties/evalLeaks",
+    keys: {
+      retrieved: "required", sentPassage: "required", sentDocument: "required", cited: "required", forbidden: "required",
+    } satisfies KeyManifest<UiStrings["evalLeaks"]>,
   },
   {
     schema: "i18n.schema.json",

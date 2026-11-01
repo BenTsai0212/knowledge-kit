@@ -1,4 +1,5 @@
-// 主畫面：PGlite 在瀏覽器中載入並匯入資料集；身分與語言切換；問答（需要邀請碼）、圖譜、時間軸、上傳（後三者不呼叫模型）四個頁籤；引用跳回原文。
+// 主畫面：PGlite 在瀏覽器中載入並匯入資料集；身分與語言切換；問答（需要邀請碼）、圖譜、時間軸、上傳（後三者不呼叫模型）四個頁籤，
+// canReview 的身分另有待審與評測台（需要邀請碼）；引用跳回原文。
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clientConfig } from "./client/load";
 import { planConflicts, runConflicts, shouldDetectConflicts, type ConflictState } from "./conflicts/run";
@@ -6,6 +7,7 @@ import { readConflicts } from "./conflicts/store";
 import { dataset } from "./dataset/load";
 import { seedDataset } from "./dataset/seed";
 import { openDatabase, type Database } from "./db/database";
+import type { EvalRun } from "./evals/run";
 import { planExtraction, runExtraction, type ExtractionState } from "./extraction/run";
 import { readReview } from "./extraction/store";
 import { ask } from "./qa/answer";
@@ -15,6 +17,7 @@ import { readSource, type SourceDocument } from "./sources/source";
 import { clearAccessCode, loadAccessCode, saveAccessCode } from "./ui/access-code";
 import { AccessCodeForm } from "./ui/AccessCodeForm";
 import { AnswerView, type AnswerState } from "./ui/AnswerView";
+import { EvalPage } from "./ui/EvalPage";
 import { GraphPage } from "./ui/GraphPage";
 import { QuestionPanel } from "./ui/QuestionPanel";
 import { ReviewPage } from "./ui/ReviewPage";
@@ -29,7 +32,9 @@ import { Toolbar } from "./ui/Toolbar";
 
 const { client, access } = clientConfig;
 
-type View = "qa" | "graph" | "timeline" | "upload" | "review";
+type View = "qa" | "graph" | "timeline" | "upload" | "review" | "evals";
+// 只有 canReview 的身分看得到的頁籤
+const REVIEWER_VIEWS: View[] = ["review", "evals"];
 
 export function App() {
   const [view, setView] = useState<View>("qa");
@@ -66,6 +71,8 @@ export function App() {
   const canReview = access.roles.find((r) => r.id === identity)?.canReview ?? false;
   const [reviewVersion, setReviewVersion] = useState(0);
   const [pending, setPending] = useState<{ identity: string; count: number } | null>(null);
+  // 評測台最近一次的結果（#62）：只在記憶體，切換頁籤後仍可查看與下載
+  const [evalRun, setEvalRun] = useState<EvalRun | null>(null);
   const s = strings(language);
 
   useEffect(() => {
@@ -201,8 +208,8 @@ export function App() {
         onIdentity={(id) => {
           discard();
           setIdentity(id);
-          // 沒有 canReview 的身分看不到待審頁籤
-          if (view === "review" && !access.roles.find((r) => r.id === id)?.canReview) setView("qa");
+          // 沒有 canReview 的身分看不到待審與評測台頁籤（離開評測台時停止評測、關閉評測專用資料庫）
+          if (REVIEWER_VIEWS.includes(view) && !access.roles.find((r) => r.id === id)?.canReview) setView("qa");
         }}
         onLanguage={(code) => (discard(), setLanguage(code))}
         onChangeAccessCode={
@@ -224,7 +231,7 @@ export function App() {
             ["graph", s.tabGraph],
             ["timeline", s.tabTimeline],
             ["upload", s.tabUpload],
-            ...(canReview ? ([["review", s.tabReview]] as const) : []),
+            ...(canReview ? ([["review", s.tabReview], ["evals", s.tabEvals]] as const) : []),
           ] as const
         ).map(([id, label]) => (
           <button key={id} type="button" aria-current={view === id ? "page" : undefined} onClick={() => setView(id)}>
@@ -235,12 +242,21 @@ export function App() {
       </nav>
       {loadFailed ? (
         <p className="card error">{s.loadFailed}</p>
-      ) : view !== "qa" ? (
+      ) : view !== "qa" && (view !== "evals" || accessCode !== null) ? (
         <main>
           {db === null ? (
             <p className="card muted">{s.loading}</p>
           ) : view === "graph" ? (
             <GraphPage db={db} identity={identity} language={language} onOpenSource={onOpenSource} />
+          ) : view === "evals" ? (
+            <EvalPage
+              language={language}
+              accessCode={accessCode ?? ""}
+              uploadedCount={uploaded.size}
+              run={evalRun}
+              onRun={setEvalRun}
+              onRejectAccessCode={rejectAccessCode}
+            />
           ) : view === "review" ? (
             <ReviewPage
               key={`${identity}|${language}`}
