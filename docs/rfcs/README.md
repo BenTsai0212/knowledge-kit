@@ -39,4 +39,4 @@
 | 編號 | 標題 | 狀態 |
 | --- | --- | --- |
 | [0001](0001-project-charter.md) | knowledge-kit 專案章程 | Accepted |
-| [0002](0002-public-release.md) | 公開與授權 | Accepted |
+| [0002](0002-public-release.md) | 公開發表與授權 | Accepted |
