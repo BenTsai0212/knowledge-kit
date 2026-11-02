@@ -1,4 +1,5 @@
-// 只供本機 wrangler dev；不含部署設定（routes、account_id、自訂網域）。
+// 頂層供本機 wrangler dev；env.demo 是線上 demo（#100，部署由人執行，步驟見 docs/deploy.md）。
+// 不含 account_id、routes、自訂網域；secret 不寫在這裡。
 {
   "name": "knowledge-kit",
   "main": "./worker/src/index.ts",
@@ -13,5 +14,25 @@
   "durable_objects": {
     "bindings": [{ "name": "USAGE", "class_name": "UsageCounter" }]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["UsageCounter"] }]
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["UsageCounter"] }],
+  "env": {
+    // npx wrangler deploy --env demo → https://knowledge-kit-demo.<帳號子網域>.workers.dev
+    // durable_objects 與 vars 不會從頂層繼承，要在這裡重寫
+    "demo": {
+      "name": "knowledge-kit-demo",
+      "workers_dev": true,
+      "durable_objects": {
+        "bindings": [{ "name": "USAGE", "class_name": "UsageCounter" }]
+      },
+      // 數值的意義見 worker/README.md「secret 與變數」，選擇方式見 docs/deploy.md「費用上限」。
+      // 改數值走 PR；部署時以這裡為準（在主控台改的變數會被下一次部署蓋掉）
+      "vars": {
+        "DISABLED_GROUPS": "",
+        "DAILY_LIMIT": "100",
+        "GLOBAL_DAILY_LIMIT": "200",
+        "MAX_PROMPT_CHARS": "20000",
+        "ALLOWED_ORIGINS": ""
+      }
+    }
+  }
 }
