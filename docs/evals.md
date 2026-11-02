@@ -110,7 +110,7 @@
 - **進度**：每完成一題、停止或結束都呼叫 `onChange`。
 - **停止**：以 `AbortSignal` 中止；進行中的題目不記錄，已完成的結果保留（`status: "stopped"`、`stopReason: "aborted"`）。離開頁籤時先中止再關閉資料庫，進行中的檢索可能因此失敗；中止後的例外同樣記為停止，不停在「執行中」（#66）。
 - **錯誤**：
-  - 遇到 `STOP_ERRORS`（`invalid_access_code`、`forbidden_origin`、`daily_limit`、`limit_unavailable`、`misconfigured`、`upstream_quota`、`network`）時停止整次評測，`stopReason` 是該錯誤類型。這些錯誤之後的題目也一定失敗。問答遇到這些錯誤時，那一題不記錄。問答已完成、模型評分才遇到這些錯誤時，已經花掉一次呼叫的回答先保存（`grade` 記為 `ungradable`、`gradeError` 記錯誤類型），再停止（#62 決定（給 PR 3）1）。已完成的結果都保留。
+  - 遇到 `STOP_ERRORS`（`invalid_access_code`、`forbidden_origin`、`daily_limit`、`global_daily_limit`、`limit_unavailable`、`misconfigured`、`upstream_quota`、`network`）時停止整次評測，`stopReason` 是該錯誤類型。這些錯誤之後的題目也一定失敗。問答遇到這些錯誤時，那一題不記錄。問答已完成、模型評分才遇到這些錯誤時，已經花掉一次呼叫的回答先保存（`grade` 記為 `ungradable`、`gradeError` 記錯誤類型），再停止（#62 決定（給 PR 3）1）。已完成的結果都保留。
   - 其他錯誤（例如 `upstream_overloaded`、串流中斷）記在該題（`score.error`），該題不算通過，接著跑下一題。
   - 畫面上的訊息一律沿用 `errorMessage()`。
 - 次數上限不改程式：完整比較需要的次數超過預設的 `DAILY_LIMIT` 時，由人在本機的 `.dev.vars` 調高；部署給客戶看的版本維持原本的上限（#62 已決定的第 4 點）。

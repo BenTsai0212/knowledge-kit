@@ -249,6 +249,7 @@
     "forbidden_origin": "這個網址無法使用問答功能。",
     "invalid_access_code": "邀請碼不正確，請重新輸入。",
     "daily_limit": "今天的提問次數已用完，請明天再試。",
+    "global_daily_limit": "今天的線上試用額度已用完（所有使用者共用），請明天（台灣時間早上 8 點後）再試，或在本機執行。",
     "invalid_request": "送出的內容格式有誤，請重新整理頁面後再試。",
     "unknown_model": "模型設定有誤，請聯絡管理者。",
     "prompt_too_long": "問題與參考資料太長，請縮短問題後再試。",

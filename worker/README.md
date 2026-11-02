@@ -30,9 +30,9 @@ Worker 依序檢查以下各項，任何一步失敗都直接回錯誤，不呼�
 3. body
 4. 模型代號
 5. 提示長度
-6. 當日次數
+6. 當日次數：先檢查此邀請碼的 `DAILY_LIMIT`，再檢查全站（所有邀請碼合計）的 `GLOBAL_DAILY_LIMIT`
 
-檢查失敗的請求不計入次數。
+檢查失敗的請求不計入次數。被全站上限擋下時，此邀請碼已扣的一次不退還。
 
 ### 回應
 
@@ -58,6 +58,7 @@ Worker 依序檢查以下各項，任何一步失敗都直接回錯誤，不呼�
 | `unknown_model` | 400 | 模型代號不在白名單 |
 | `prompt_too_long` | 400 | `system` 與所有 `content` 的字元數合計超過 `MAX_PROMPT_CHARS` |
 | `daily_limit` | 429 | 此邀請碼今日次數已滿 |
+| `global_daily_limit` | 429 | 全站（所有邀請碼合計）今日次數已滿（`GLOBAL_DAILY_LIMIT`） |
 | `limit_unavailable` | 503 | 計數用的 Durable Object 無法使用（例如免費額度用完），此時不放行 |
 | `misconfigured` | 500 | secret 或變數未設定或格式錯誤 |
 | `method_not_allowed` | 405 | 不是 `POST` |
@@ -98,6 +99,7 @@ Opus 5.5 的 thinking 無法關閉，thinking 的 token 也算在 `max_tokens` �
 | `ACCESS_CODES` | secret | （必填） | 邀請碼，格式 `組名:碼,碼;組名:碼`。組名為小寫英數與 `-`（最多 32 字元），碼至少 8 個英數字元，同一個碼不可出現在兩組 |
 | `DISABLED_GROUPS` | 變數 | 空 | 停用的組，逗號分隔；停用後該組的碼回 401 |
 | `DAILY_LIMIT` | 變數 | 30 | 每個邀請碼每日次數上限，以 UTC 換日 |
+| `GLOBAL_DAILY_LIMIT` | 變數 | （不限制） | 全站（所有邀請碼合計）每日次數上限，以 UTC 換日；未設定或空值時不限制。超過時回 429 `global_daily_limit` |
 | `MAX_PROMPT_CHARS` | 變數 | 20000 | 提示的字元數上限 |
 | `ALLOWED_ORIGINS` | 變數 | 空 | 同站以外允許的 `Origin`，逗號分隔；空值表示只允許同站 |
 
@@ -118,7 +120,7 @@ Opus 5.5 的 thinking 無法關閉，thinking 的 token 也算在 `max_tokens` �
 
 ## 已知限制
 
-- 同站檢查只防瀏覽器的跨站呼叫：拿到邀請碼的人可以用 curl 偽造 `Origin`。費用上限實際靠邀請碼與每日次數。
+- 同站檢查只防瀏覽器的跨站呼叫：拿到邀請碼的人可以用 curl 偽造 `Origin`。費用上限實際靠邀請碼與每日次數（每個碼的 `DAILY_LIMIT`，以及設定時全站的 `GLOBAL_DAILY_LIMIT`）。
 - 次數以 UTC 換日，也就是台灣時間早上 8 點。上游失敗時已扣的次數不退還，Worker 也不重試。
 - 計數用的 Durable Object 使用 SQLite 後端，這也是免費方案唯一能用的後端。
   - 免費方案每日 100,000 次請求，額度用完時 `/api/ask` 回 503 `limit_unavailable`。

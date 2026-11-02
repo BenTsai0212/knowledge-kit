@@ -366,7 +366,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "forbidden_origin", "invalid_access_code", "daily_limit", "invalid_request", "unknown_model", "prompt_too_long",
+        "forbidden_origin", "invalid_access_code", "daily_limit", "global_daily_limit", "invalid_request", "unknown_model", "prompt_too_long",
         "limit_unavailable", "misconfigured", "method_not_allowed", "upstream_quota", "upstream_overloaded",
         "upstream_timeout", "upstream_error", "upstream_refusal", "upstream_interrupted", "network",
         "unexpected_response", "empty_question", "question_too_long"
@@ -375,6 +375,7 @@
         "forbidden_origin": { "$ref": "#/definitions/Text" },
         "invalid_access_code": { "$ref": "#/definitions/Text" },
         "daily_limit": { "$ref": "#/definitions/Text" },
+        "global_daily_limit": { "$ref": "#/definitions/Text" },
         "invalid_request": { "$ref": "#/definitions/Text" },
         "unknown_model": { "$ref": "#/definitions/Text" },
         "prompt_too_long": { "$ref": "#/definitions/Text" },

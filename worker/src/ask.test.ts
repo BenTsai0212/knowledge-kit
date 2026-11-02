@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { handleAsk } from "./ask";
+import { GLOBAL_USAGE_KEY, handleAsk, type LogEntry } from "./ask";
 import { ask, body, CODE, env, fakeUpstream, memoryUsage, ORIGIN } from "./testing";
 import type { UsageLimiter } from "./usage";
 
@@ -58,7 +58,7 @@ describe("邀請碼", () => {
     expect(text).not.toContain(CODE);
   });
 
-  it.each([["DAILY_LIMIT", "0"], ["DAILY_LIMIT", "abc"], ["MAX_PROMPT_CHARS", "-1"]])("%s=%s 回 500", async (name, value) => {
+  it.each([["DAILY_LIMIT", "0"], ["DAILY_LIMIT", "abc"], ["GLOBAL_DAILY_LIMIT", "0"], ["GLOBAL_DAILY_LIMIT", "1.5"], ["MAX_PROMPT_CHARS", "-1"]])("%s=%s 回 500", async (name, value) => {
     await expectError(ask({ env: { ...env, [name]: value } }), 500, "misconfigured");
   });
 });
@@ -136,5 +136,69 @@ describe("每日次數", () => {
     const upstream = fakeUpstream();
     await expectError(ask({ usage: broken, fetch: upstream.fetch }), 503, "limit_unavailable");
     expect(upstream.requests).toEqual([]);
+  });
+});
+
+describe("全站每日次數", () => {
+  const global = { ...env, GLOBAL_DAILY_LIMIT: "3" };
+
+  it("未設定時不限制，也不計數", async () => {
+    const { usage, calls } = memoryUsage();
+    await expectOk(ask({ usage }));
+    await expectOk(ask({ usage, env: { ...env, GLOBAL_DAILY_LIMIT: " " } }));
+    expect(calls.some((c) => c.key === GLOBAL_USAGE_KEY)).toBe(false);
+  });
+
+  it("所有邀請碼合計超過 GLOBAL_DAILY_LIMIT 回 429 global_daily_limit，不呼叫上游；換日（UTC）後恢復", async () => {
+    const { usage } = memoryUsage();
+    const upstream = fakeUpstream();
+    const day1 = new Date("2026-10-28T23:59:00Z");
+    await expectOk(ask({ usage, env: global, now: day1, fetch: upstream.fetch }));
+    await expectOk(ask({ usage, env: global, now: day1, fetch: upstream.fetch }));
+    await expectOk(ask({ usage, env: global, now: day1, fetch: upstream.fetch, headers: { "X-Access-Code": "TEST5678" } }));
+    await expectError(ask({ usage, env: global, now: day1, fetch: upstream.fetch, headers: { "X-Access-Code": "TEST5678" } }), 429, "global_daily_limit");
+    expect(upstream.requests).toHaveLength(3);
+    await expectOk(ask({ usage, env: global, now: new Date("2026-10-29T00:00:00Z"), headers: { "X-Access-Code": "TEST5678" } }));
+  });
+
+  it("先檢查每個碼的上限：碼已用完時回 daily_limit，不計入全站", async () => {
+    const { usage, calls } = memoryUsage();
+    await ask({ usage, env: global });
+    await ask({ usage, env: global });
+    await expectError(ask({ usage, env: global }), 429, "daily_limit");
+    expect(calls.filter((c) => c.key === GLOBAL_USAGE_KEY).map((c) => c.limit)).toEqual([3, 3]);
+  });
+
+  it("被全站上限擋下時，該碼已扣的一次不退還", async () => {
+    const { usage, calls } = memoryUsage();
+    const one = { ...env, GLOBAL_DAILY_LIMIT: "1" };
+    await expectOk(ask({ usage, env: one, headers: { "X-Access-Code": "TEST5678" } }));
+    await expectError(ask({ usage, env: one }), 429, "global_daily_limit");
+    await expectError(ask({ usage, env: one }), 429, "global_daily_limit");
+    // DAILY_LIMIT=2 的兩次都已扣掉
+    await expectError(ask({ usage, env: one }), 429, "daily_limit");
+    expect(calls.filter((c) => c.key === GLOBAL_USAGE_KEY)).toHaveLength(3);
+  });
+
+  it("全站計數無法使用時回 503，不呼叫上游", async () => {
+    const memory = memoryUsage();
+    const broken: UsageLimiter = {
+      consume: async (key, date, limit) => {
+        if (key === GLOBAL_USAGE_KEY) throw new Error("exceeded");
+        return memory.usage.consume(key, date, limit);
+      },
+    };
+    const upstream = fakeUpstream();
+    await expectError(ask({ usage: broken, env: global, fetch: upstream.fetch }), 503, "limit_unavailable");
+    expect(upstream.requests).toEqual([]);
+  });
+
+  it("log 記錄錯誤類型與組名", async () => {
+    const logs: LogEntry[] = [];
+    const { usage } = memoryUsage();
+    await ask({ usage, env: { ...env, GLOBAL_DAILY_LIMIT: "1" }, headers: { "X-Access-Code": "TEST5678" } });
+    await ask({ usage, env: { ...env, GLOBAL_DAILY_LIMIT: "1" }, logs });
+    expect(logs).toHaveLength(1);
+    expect(logs[0]).toMatchObject({ status: 429, error: "global_daily_limit", group: "sales" });
   });
 });

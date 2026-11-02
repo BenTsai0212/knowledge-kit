@@ -157,6 +157,7 @@ Rules:
 | `forbidden_origin` | Worker | 這個網址無法使用問答功能。 |
 | `invalid_access_code` | Worker | 邀請碼不正確，請重新輸入。（畫面清除 `sessionStorage` 中的碼並回到輸入畫面，#26 決定 3） |
 | `daily_limit` | Worker | 今天的提問次數已用完，請明天再試。 |
+| `global_daily_limit` | Worker | 今天的線上試用額度已用完（所有使用者共用），請明天（台灣時間早上 8 點後）再試，或在本機執行。 |
 | `invalid_request`、`method_not_allowed` | Worker | 送出的內容（方式）有誤，請重新整理頁面後再試。 |
 | `unknown_model`、`misconfigured`、`upstream_quota` | Worker | 設定或額度的問題，請聯絡管理者。 |
 | `prompt_too_long` | Worker | 問題與參考資料太長，請縮短問題後再試。 |

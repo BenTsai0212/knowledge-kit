@@ -1,4 +1,4 @@
-// 每個邀請碼的每日次數。每個碼一個 Durable Object（以碼的 SHA-256 命名），以 UTC 日期換日。
+// 每日次數。每個邀請碼一個 Durable Object（以碼的 SHA-256 命名），全站另有一個（ask.ts 的 GLOBAL_USAGE_KEY）；以 UTC 日期換日。
 export interface UsageRecord {
   date: string;
   count: number;

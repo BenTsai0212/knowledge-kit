@@ -320,7 +320,7 @@ export const i18nManifests: ManifestEntry[] = [
     pointer: "/properties/errors",
     keys: {
       forbidden_origin: "required", invalid_access_code: "required", daily_limit: "required",
-      invalid_request: "required", unknown_model: "required", prompt_too_long: "required",
+      global_daily_limit: "required", invalid_request: "required", unknown_model: "required", prompt_too_long: "required",
       limit_unavailable: "required", misconfigured: "required", method_not_allowed: "required",
       upstream_quota: "required", upstream_overloaded: "required", upstream_timeout: "required",
       upstream_error: "required", upstream_refusal: "required", upstream_interrupted: "required",

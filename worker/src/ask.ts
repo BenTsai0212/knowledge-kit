@@ -1,4 +1,4 @@
-// POST /api/ask。依序檢查同站、邀請碼、body、當日次數；任何一步失敗都不呼叫上游。
+// POST /api/ask。依序檢查同站、邀請碼、body、當日次數（每個碼，再來是全站）；任何一步失敗都不呼叫上游。
 // 通過後轉發到 Claude Messages API 並串流回傳（upstream.ts）。
 import { ConfigError, findAccessCode, parseAccessCodes, parseList, type AccessCode } from "./access";
 import { errorResponse, type ErrorType } from "./errors";
@@ -12,6 +12,7 @@ export interface AskEnv {
   ACCESS_CODES?: string;
   DISABLED_GROUPS?: string;
   DAILY_LIMIT?: string;
+  GLOBAL_DAILY_LIMIT?: string;
   MAX_PROMPT_CHARS?: string;
   ALLOWED_ORIGINS?: string;
 }
@@ -41,14 +42,18 @@ interface AskConfig {
   codes: AccessCode[];
   disabledGroups: Set<string>;
   dailyLimit: number;
+  // 全站（所有碼合計）的每日次數；未設定時不限制
+  globalDailyLimit: number | undefined;
   maxPromptChars: number;
   allowedOrigins: string[];
 }
 
 export const DEFAULT_DAILY_LIMIT = 30;
 export const DEFAULT_MAX_PROMPT_CHARS = 20_000;
+// 全站計數的 Durable Object 名稱；每個碼的名稱是 64 字元的雜湊值，不會重複
+export const GLOBAL_USAGE_KEY = "global";
 
-function positiveInt(name: string, raw: string | undefined, fallback: number): number {
+function positiveInt<T extends number | undefined>(name: string, raw: string | undefined, fallback: T): number | T {
   if (raw === undefined || raw.trim() === "") return fallback;
   const value = Number(raw);
   if (!Number.isInteger(value) || value <= 0) throw new ConfigError(`${name} 必須是正整數`);
@@ -63,6 +68,7 @@ async function readConfig(env: AskEnv): Promise<AskConfig> {
     codes: await parseAccessCodes(env.ACCESS_CODES),
     disabledGroups: new Set(parseList(env.DISABLED_GROUPS)),
     dailyLimit: positiveInt("DAILY_LIMIT", env.DAILY_LIMIT, DEFAULT_DAILY_LIMIT),
+    globalDailyLimit: positiveInt("GLOBAL_DAILY_LIMIT", env.GLOBAL_DAILY_LIMIT, undefined),
     maxPromptChars: positiveInt("MAX_PROMPT_CHARS", env.MAX_PROMPT_CHARS, DEFAULT_MAX_PROMPT_CHARS),
     allowedOrigins: parseList(env.ALLOWED_ORIGINS),
   };
@@ -102,14 +108,18 @@ export async function handleAsk(request: Request, env: AskEnv, deps: AskDeps): P
   entry.model = parsed.ask.model;
   entry.promptChars = parsed.promptChars;
 
-  let allowed: boolean;
+  // 先扣每個碼的次數，再扣全站的次數；被全站上限擋下時，該碼已扣的一次不退還
+  const date = utcDate(deps.now());
+  let limited: ErrorType | undefined;
   try {
-    allowed = await deps.usage.consume(match.key, utcDate(deps.now()), config.dailyLimit);
+    if (!(await deps.usage.consume(match.key, date, config.dailyLimit))) limited = "daily_limit";
+    else if (config.globalDailyLimit !== undefined && !(await deps.usage.consume(GLOBAL_USAGE_KEY, date, config.globalDailyLimit)))
+      limited = "global_daily_limit";
   } catch {
     // 免費額度用完等情況；為了不讓費用失控，此時不放行
     return fail("limit_unavailable", 503);
   }
-  if (!allowed) return fail("daily_limit", 429);
+  if (limited) return fail(limited, 429);
 
   // 上游失敗時不退還次數（#16 決定 3），也不重試
   let upstream: Response;
