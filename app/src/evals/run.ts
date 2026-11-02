@@ -20,6 +20,7 @@ export const STOP_ERRORS: ReadonlySet<string> = new Set([
   "invalid_access_code",
   "forbidden_origin",
   "daily_limit",
+  "global_daily_limit",
   "limit_unavailable",
   "misconfigured",
   "upstream_quota",

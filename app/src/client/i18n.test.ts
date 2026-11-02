@@ -36,7 +36,7 @@ describe("錯誤訊息", () => {
   it("worker/README.md 錯誤類型表中的每一種都有訊息", () => {
     const table = workerReadme.slice(workerReadme.indexOf("### 錯誤類型"), workerReadme.indexOf("### log"));
     const types = [...table.matchAll(/^\| `([a-z_]+)` \|/gm)].map((m) => m[1]);
-    expect(types).toHaveLength(15);
+    expect(types).toHaveLength(16);
     for (const s of Object.values(TRANSLATIONS)) expect(Object.keys(s.errors)).toEqual(expect.arrayContaining(types));
   });
 

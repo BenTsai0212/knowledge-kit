@@ -249,6 +249,7 @@
     "forbidden_origin": "Questions can't be asked from this address.",
     "invalid_access_code": "The access code is incorrect. Please enter it again.",
     "daily_limit": "You've reached today's question limit. Please try again tomorrow.",
+    "global_daily_limit": "Today's online trial quota has been used up (shared by all users). Please try again tomorrow (after 00:00 UTC), or run it locally.",
     "invalid_request": "The request was invalid. Please reload the page and try again.",
     "unknown_model": "The model setting is invalid. Please contact the administrator.",
     "prompt_too_long": "The question and sources are too long. Please shorten the question and try again.",

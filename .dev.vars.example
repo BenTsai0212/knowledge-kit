@@ -10,6 +10,8 @@ ACCESS_CODES=demo:EXAMPLE1
 DISABLED_GROUPS=
 # 每個邀請碼每日次數上限（UTC 換日），預設 30
 DAILY_LIMIT=30
+# 全站（所有邀請碼合計）每日次數上限（UTC 換日）；空值＝不限制
+GLOBAL_DAILY_LIMIT=
 # system 與 messages 的字元總數上限，預設 20000
 MAX_PROMPT_CHARS=20000
 # 同站以外允許的 Origin（逗號分隔）；以 npm run dev（Vite）開發時設為 Vite 的網址

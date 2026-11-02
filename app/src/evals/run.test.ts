@@ -96,7 +96,7 @@ describe("runEvals", () => {
     expect(summarize(sample, run.sets[0].results.map((r) => r.score), evals.thresholds).complete).toBe(false);
   });
 
-  it.each(["invalid_access_code", "network", "upstream_quota"])("%s 也停止", async (error) => {
+  it.each(["invalid_access_code", "global_daily_limit", "network", "upstream_quota"])("%s 也停止", async (error) => {
     const { ctx } = context(sample, () => [{ type: "error", error }]);
     expect(await runEvals(ctx, { sets: [DEFAULT], mode: "keyPoints" })).toMatchObject({ status: "stopped", stopReason: error });
   });

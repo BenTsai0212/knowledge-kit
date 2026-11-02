@@ -3,6 +3,7 @@ export type ErrorType =
   | "forbidden_origin"
   | "invalid_access_code"
   | "daily_limit"
+  | "global_daily_limit"
   | "invalid_request"
   | "unknown_model"
   | "prompt_too_long"
