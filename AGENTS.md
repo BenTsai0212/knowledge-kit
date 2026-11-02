@@ -9,6 +9,7 @@
 - 啟用模組：核心、高風險、自動化（見 `docs/workflow/modules.md`；自動化見 ADR 0003）
 - 憲法版本：v0.8（`docs/workflow/constitution.md`）
 - 決定者：@BenTsai0212（停止回報與 `plan-first` 時 @ 此帳號）
+- fork 後要改的地方：`docs/workflow/fork.md`
 
 ## 1. 必讀
 
@@ -64,7 +65,7 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 | `docs/workflow/` | 憲法與 workflow 手冊 |
 | `docs/rfcs/`、`docs/adr/` | 專案章程與決策紀錄 |
 | `docs/playbook/` | 方法與文件套件（需求確認清單、資料盤點表、資料安全說明、評測題庫建立步驟、驗收指標、落地新客戶步驟 `new-client-setup.md`）；入口是 [docs/playbook/README.md](docs/playbook/README.md)，英文版在 `docs/playbook/en/`，兩份一起改 |
-| `tools/workflow/` | workflow 工具（Node，自帶 `package.json`）；`hooks/confirm-main.mjs` 是合併與 push 到 main 前的確認 hook；`check-pr-body.mjs` 檢查 PR 描述有 `Closes`／`Refs #N`（`fast-lane` 除外）；`runner/` 是自動化模組的 runner（ADR 0003，指令見第 2 節）；`bootstrap-github.mjs`、`config.json` 不適用（見第 2 節） |
+| `tools/workflow/` | workflow 工具（Node，自帶 `package.json`）；`hooks/confirm-main.mjs` 是合併與 push 到 main 前的確認 hook；`check-pr-body.mjs` 檢查 PR 描述有 `Closes`／`Refs #N`（`fast-lane` 除外）；`personal-paths.test.mjs` 檢查開發流程工具的檔案沒有 `/Users/<名稱>`、`/home/<名稱>` 形式的個人路徑（#96，fork 後要改的地方見 `docs/workflow/fork.md`）；`runner/` 是自動化模組的 runner（ADR 0003，指令見第 2 節）；`bootstrap-github.mjs`、`config.json` 不適用（見第 2 節） |
 | `.claude/settings.json` | Claude Code 設定：在 `PreToolUse`（Bash）註冊確認 hook |
 | `templates/` | Claude Project 範本與預設不啟用的模組檔案 |
 | `.github/` | Issue／PR 範本、標籤定義、CI（`workflows/ci.yml`：`checks` 與 `clients` job；`workflows/pr-body.yml`：PR 描述檢查；`workflows/sensitive.yml`：敏感資料檢查；`workflows/e2e.yml`：Playwright，參考情境與每個客戶各一格）；沒有部署 workflow |
