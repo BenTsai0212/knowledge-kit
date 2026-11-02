@@ -11,7 +11,14 @@
 | `sensitive-names` | 個人 email、禁用名稱（客戶、合作夥伴等） | `scripts/check-sensitive.mjs`（自寫，不用套件） |
 | `gitleaks` | 金鑰、token | gitleaks（固定版本＋SHA-256） |
 
-repo 預計公開，CI 紀錄也會公開，所以兩者的輸出都**不包含命中的內容本身**：腳本只輸出檔案、行號與清單第幾項，gitleaks 以 `--redact` 遮蔽金鑰。
+repo 預計公開，CI 紀錄也會公開，所以兩者的輸出都**不包含命中的內容本身**：腳本只輸出檔案、行號（整段歷史模式是 commit 短 SHA）與清單第幾項，gitleaks 以 `--redact` 遮蔽金鑰。
+
+兩種模式（#99）：
+
+| 模式 | 範圍 | 什麼時候執行 |
+| --- | --- | --- |
+| 目前的檔案 | 腳本：`git ls-files` 列出的檔案；gitleaks：PR 或 push 新增的 commit | 每個 PR 與 push 到 `main`（自動） |
+| 整段歷史 | 所有 ref 的每個 commit：腳本掃描新增的行、commit 訊息與作者名稱，gitleaks 掃描每個 commit 的變更 | 手動；**公開 repo 前本機與 CI 各跑一次** |
 
 ### `scripts/check-sensitive.mjs`
 
@@ -27,6 +34,25 @@ repo 預計公開，CI 紀錄也會公開，所以兩者的輸出都**不包含�
   頂級網域不是英文字母的不算 email（例如 `pkg@1.2.3` 這類套件版本）。文件或範例需要 email 時，使用 `example.com` 等保留網域。
 - **禁用名稱**：清單一行一項，`#` 開頭的行是註解。檔案的每一行與清單的每一項都先做 NFKC、轉小寫、去掉所有空白，再比對子字串，所以全形、大小寫不同、中間夾空白的寫法也會被擋。「第幾項」只算有效的項目（不含註解與空行）。
 
+### 整段歷史模式
+
+本機執行：`npm run check:sensitive -- --history`（名單與比對規則和目前的模式相同）。
+
+- 範圍是 `git log --all` 的每個 commit，所以只含本機有的 ref；遠端分支先 `git fetch`。後來刪掉的檔案、改掉的行也會掃到。
+  - **新增的行**：每個 commit 與第一個 parent 的差異中 `+` 開頭的行（第一個 commit 與空白比較，合併 commit 與第一個 parent 比較）。二進位檔沒有內容，略過。
+  - **commit 訊息**與**作者、提交者名稱**：比對 email 與禁用名稱。
+  - **作者、提交者的 email**：不在放行清單內的不逐筆列出，只依地址分組統計 commit 數量（「第 1 個地址，N 個 commit」，不輸出地址本身）。帳號的主要 email 屬於這一類，由改寫歷史處理（Epic #93 第 9 項）。
+- 輸出：`<短 SHA> <檔案路徑、「commit 訊息」或「作者名稱」> 命中禁用名稱清單第 N 項`（或「有不在放行清單內的 email」），同一個 commit 的同一處每一項只列一次，不輸出行號與命中的文字。最後一行列出掃描的 commit 數。
+- 有任何命中、作者 email 或錯誤時結束碼為 1。
+- 只掃 git 的內容，不掃 Issue 與 PR 的文字。
+
+**CI**：Actions → Sensitive data → Run workflow，`full_history` 勾選（預設），或 `gh workflow run sensitive.yml -f full_history=true`。
+
+- 兩個 job 都先以 `fetch-depth: 0` 取得所有分支與 tag，再 `git fetch` 所有 PR 的 head（`refs/pull/*/head`，分支刪除後仍在 GitHub 上，公開後看得到）。
+- `sensitive-names` 以 secret `SENSITIVE_NAMES` 執行 `--history`；`gitleaks` 執行 `gitleaks git --redact`，不帶 `--log-opts`，掃描所有 ref。
+- 手動觸發但不勾 `full_history` 時，腳本掃描目前的檔案，gitleaks 掃描所選分支的整段歷史。
+- `workflow_dispatch` 只對預設分支上已有的 workflow 有效，所以這個模式在 #99 合併到 `main` 後才能執行。
+
 ### 禁用名稱清單的設定
 
 清單內容由人設定，agent 不讀取、不建立、不猜測內容。
@@ -39,9 +65,9 @@ repo 預計公開，CI 紀錄也會公開，所以兩者的輸出都**不包含�
 ### gitleaks
 
 - 版本與 SHA-256 寫在 `sensitive.yml` 的 `GITLEAKS_VERSION`、`GITLEAKS_SHA256`。升級時依 ADR 0004 重新查證版本、檢查碼與 CVE，同時修改兩者與 ADR。
-- 掃描範圍：PR 是 `base..head` 之間新增的 commit，push 到 `main` 是 `before..after`。不加自訂規則檔，也不加 allowlist。
+- 掃描範圍：PR 是 `base..head` 之間新增的 commit，push 到 `main` 是 `before..after`；手動觸發整段歷史模式時是所有 ref（見上方「整段歷史模式」）。不加自訂規則檔，也不加 allowlist。
 - 每次執行前，先在 `$RUNNER_TEMP` 產生假的 GitHub token 與 AWS access key，確認 `gitleaks dir` 會擋下（反向驗證）；沒擋下時 job 失敗。假金鑰不寫進 repo。
-- 整段 git 歷史的掃描由人在本機執行（安裝 gitleaks 是人的決定，見 AGENTS.md 第 6 節）：`gitleaks git --redact --exit-code 1`，在 repo 根目錄執行；結果記錄在 #66。
+- 整段 git 歷史的掃描：CI 的手動觸發（見上方）。在本機執行時由人執行（安裝 gitleaks 是人的決定，見 AGENTS.md 第 6 節）：`gitleaks git --redact --exit-code 1`，在 repo 根目錄執行；第一次的結果記錄在 #66。
 
 ## Playwright
 
