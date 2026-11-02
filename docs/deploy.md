@@ -31,24 +31,40 @@
 
 ## 部署步驟
 
+指令區塊內不加 `#` 註解（macOS 的 zsh 預設不把互動輸入的 `#` 當註解，照著複製會出錯），說明一律寫在區塊外。
+
 在乾淨的 `main`（與 `origin/main` 一致、沒有未 commit 的變更）上執行：
 
 ```bash
 git switch main && git pull
 npm ci
-npm run check:client && npm test          # 與 CI 相同的檢查（選用，CI 已在 main 上跑過）
-
-# 1. build：只用 client/，所以清掉 KK_CLIENT
-env -u KK_CLIENT VITE_ONLINE_DEMO=1 VITE_PUBLIC_ACCESS_CODE=<公開碼> npm run build
-
-# 2. 登入並部署（第一次會建立 Worker 與 Durable Object）
-npx wrangler login
-npx wrangler deploy --env demo
-
-# 3. secret（第一次，或要更換時）；由人輸入，不寫進指令列或檔案
-npx wrangler secret put ANTHROPIC_API_KEY --env demo
-npx wrangler secret put ACCESS_CODES --env demo    # 例：public:<公開碼>;invited:<碼>,<碼>
 ```
+
+選用：執行與 CI 相同的檢查（CI 已在 main 上跑過）。
+
+```bash
+npm run check:client && npm test
+```
+
+1. build：只用 `client/`，所以清掉 `KK_CLIENT`。
+
+   ```bash
+   env -u KK_CLIENT VITE_ONLINE_DEMO=1 VITE_PUBLIC_ACCESS_CODE=<公開碼> npm run build
+   ```
+
+2. 登入並部署（第一次會建立 Worker 與 Durable Object）。
+
+   ```bash
+   npx wrangler login
+   npx wrangler deploy --env demo
+   ```
+
+3. secret（第一次，或要更換時）：值由人在提示中輸入，不寫進指令列或檔案。`ACCESS_CODES` 的格式例如 `public:<公開碼>;invited:<碼>,<碼>`。
+
+   ```bash
+   npx wrangler secret put ANTHROPIC_API_KEY --env demo
+   npx wrangler secret put ACCESS_CODES --env demo
+   ```
 
 - 第一次部署到設定 secret 之間，`/api/ask` 回 500 `misconfigured`，不會呼叫上游。
 - `wrangler secret put` 會立即產生新版本，不需要再 deploy。

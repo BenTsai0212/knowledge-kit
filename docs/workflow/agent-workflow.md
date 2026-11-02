@@ -59,9 +59,11 @@ gh issue view N --json title,body,comments,labels
 
 ## 3. 開分支
 
+分支名稱例如 `feat/12-login-form`：
+
 ```bash
 git switch main && git pull
-git switch -c <type>/<N>-<short-topic>   # 例如 feat/12-login-form
+git switch -c <type>/<N>-<short-topic>
 ```
 
 ## 4. 實作與反覆驗證

@@ -6,11 +6,11 @@
 
 ## 用法
 
-```bash
-npm run check:clients <名稱>                 # 設定檢查、target 測試、build（不需要環境變數）
-npm run check:client -- clients/<名稱>/      # 只做設定檢查
-KK_CLIENT=<名稱> npm run dev                 # 以該客戶啟動開發伺服器（由人執行）
-KK_CLIENT=<名稱> npm run build               # 以該客戶 build 到 dist/（由人執行）
-```
+| 指令 | 用途 |
+| --- | --- |
+| `npm run check:clients <名稱>` | 設定檢查、target 測試、build（不需要環境變數） |
+| `npm run check:client -- clients/<名稱>/` | 只做設定檢查 |
+| `KK_CLIENT=<名稱> npm run dev` | 以該客戶啟動開發伺服器（由人執行） |
+| `KK_CLIENT=<名稱> npm run build` | 以該客戶 build 到 `dist/`（由人執行） |
 
 說明見 [docs/client-config.md](../docs/client-config.md)「多客戶與切換」。

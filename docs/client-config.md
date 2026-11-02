@@ -289,10 +289,8 @@ JSON Schema 無法參照另一個檔的值，以下由 `scripts/check-client.mjs
 
 ### 客戶檢查
 
-```bash
-npm run check:clients            # clients/ 底下的每個客戶；沒有客戶時印出「略過」並以 0 結束
-npm run check:clients <名稱>      # 只檢查 clients/<名稱>/
-```
+- `npm run check:clients`：`clients/` 底下的每個客戶；沒有客戶時印出「略過」並以 0 結束。
+- `npm run check:clients <名稱>`：只檢查 `clients/<名稱>/`。
 
 `scripts/check-clients.mjs` 替每個客戶依序執行下列步驟，子程序的 `KK_CLIENT` 由腳本設定；任一步失敗時該客戶失敗，最後列出失敗的客戶並以非 0 結束。
 
