@@ -187,7 +187,8 @@ export const manifests: ManifestEntry[] = [
 const uiStrings = {
   loading: "required", loadFailed: "required", fictionalData: "required", demoPermissions: "required",
   identity: "required", language: "required", accessCodeTitle: "required", accessCodeLabel: "required",
-  accessCodeHint: "required", accessCodeSubmit: "required", changeAccessCode: "required",
+  accessCodeHint: "required", demoAccessCodeHint: "required", demoQaNotice: "required",
+  demoUploadNotice: "required", accessCodeSubmit: "required", changeAccessCode: "required",
   presetQuestions: "required", scenarioRole: "required", questionLabel: "required",
   questionPlaceholder: "required", askButton: "required", answering: "required", emptyAnswer: "required",
   openSource: "required", sourceTitle: "required", closeSource: "required", views: "required", tabQa: "required",

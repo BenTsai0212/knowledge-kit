@@ -1,5 +1,5 @@
 // 主畫面：PGlite 在瀏覽器中載入並匯入資料集；身分與語言切換；問答（需要邀請碼）、圖譜、時間軸、上傳（後三者不呼叫模型）四個頁籤，
-// canReview 的身分另有待審與評測台（需要邀請碼）；引用跳回原文。
+// canReview 的身分另有待審與評測台（需要邀請碼；線上 demo 不顯示評測台）；引用跳回原文。
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clientConfig } from "./client/load";
 import { planConflicts, runConflicts, shouldDetectConflicts, type ConflictState } from "./conflicts/run";
@@ -23,6 +23,7 @@ import { QuestionPanel } from "./ui/QuestionPanel";
 import { ReviewPage } from "./ui/ReviewPage";
 import { pendingCount } from "./ui/review-helpers";
 import { createExtractionRunner } from "./ui/extraction-runner";
+import { onlineDemo, visibleViews, type View } from "./ui/online-demo";
 import { createRequestGate } from "./ui/requests";
 import { SourcePanel } from "./ui/SourcePanel";
 import { strings } from "./client/i18n";
@@ -32,9 +33,6 @@ import { Toolbar } from "./ui/Toolbar";
 
 const { client, access } = clientConfig;
 
-type View = "qa" | "graph" | "timeline" | "upload" | "review" | "evals";
-// 只有 canReview 的身分看得到的頁籤
-const REVIEWER_VIEWS: View[] = ["review", "evals"];
 
 export function App() {
   const [view, setView] = useState<View>("qa");
@@ -74,6 +72,14 @@ export function App() {
   // 評測台最近一次的結果（#62）：只在記憶體，切換頁籤後仍可查看與下載
   const [evalRun, setEvalRun] = useState<EvalRun | null>(null);
   const s = strings(language);
+  const tabLabels: Record<View, string> = {
+    qa: s.tabQa,
+    graph: s.tabGraph,
+    timeline: s.tabTimeline,
+    upload: s.tabUpload,
+    review: s.tabReview,
+    evals: s.tabEvals,
+  };
 
   useEffect(() => {
     // StrictMode 在開發時會執行兩次；先結束的那次關閉自己開的資料庫
@@ -209,7 +215,7 @@ export function App() {
           discard();
           setIdentity(id);
           // 沒有 canReview 的身分看不到待審與評測台頁籤（離開評測台時停止評測、關閉評測專用資料庫）
-          if (REVIEWER_VIEWS.includes(view) && !access.roles.find((r) => r.id === id)?.canReview) setView("qa");
+          if (!visibleViews(access.roles.find((r) => r.id === id)?.canReview ?? false, onlineDemo).includes(view)) setView("qa");
         }}
         onLanguage={(code) => (discard(), setLanguage(code))}
         onChangeAccessCode={
@@ -225,17 +231,9 @@ export function App() {
       />
       {/* 第一層：底線式的導覽列（#48） */}
       <nav className="primary-tabs" aria-label={s.views}>
-        {(
-          [
-            ["qa", s.tabQa],
-            ["graph", s.tabGraph],
-            ["timeline", s.tabTimeline],
-            ["upload", s.tabUpload],
-            ...(canReview ? ([["review", s.tabReview], ["evals", s.tabEvals]] as const) : []),
-          ] as const
-        ).map(([id, label]) => (
+        {visibleViews(canReview, onlineDemo).map((id) => (
           <button key={id} type="button" aria-current={view === id ? "page" : undefined} onClick={() => setView(id)}>
-            {label}
+            {tabLabels[id]}
             {id === "review" && pending?.identity === identity && <span className="tab-count">{pending.count}</span>}
           </button>
         ))}
@@ -332,6 +330,8 @@ export function App() {
       ) : (
         <main>
           {db === null && <p className="card muted">{s.loading}</p>}
+          {/* 線上 demo：提問會傳給模型供應商（#100 計畫第 8 項） */}
+          {onlineDemo.enabled && <p className="badge warning">{s.demoQaNotice}</p>}
           <QuestionPanel language={language} disabled={retriever === null} onAsk={onAsk} />
           <AnswerView language={language} state={answer} onOpenSource={onOpenSource} />
           {source !== null && <SourcePanel language={language} source={source} onOpenSource={onOpenSource} onClose={() => (sources.current.cancel(), setSource(null))} />}

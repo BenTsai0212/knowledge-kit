@@ -95,6 +95,7 @@ repo 預計公開，CI 紀錄也會公開，所以兩者的輸出都**不包含�
 | `smoke.spec.ts` | 冒煙：問答附出處、圖譜、時間軸、上傳與待審、評測台能打開並完成基本操作 |
 | `access.spec.ts` | 越權：打開原文後切換身分，原文面板與時間軸不殘留看不到的段落；串流回答中切換身分；待審與評測台只給 `canReview` 的身分；在評測台切換成沒有 `canReview` 的身分 |
 | `interactions.spec.ts` | 互動邊角：上傳寫入中按 Esc；評測執行中離開頁籤再回來顯示「已停止」；深色模式（`emulateMedia`） |
+| `demo.spec.ts` | 線上 demo 的設定（#100，只在 `VITE_ONLINE_DEMO=1` 的 build 執行，見下方「線上 demo」）：公開試用碼預先填入並以它提問、問答與上傳頁的提醒、評測台隱藏而待審保留、上傳後萃取的實體出現在待審 |
 
 - **看不到的段落**以 `app/src/evals/oracle.ts` 的 `expectedVisible()` 從選定客戶的 `data/` 算出（`e2e/support/dataset.ts`），不以畫面或資料庫的結果為準；畫面文字以每段開頭 20 個字元比對（空白先合併）。切換前先確認畫面上確實有看不到的段落，比對本身才有效。
 - **串流中的回答**：`route.fulfill` 一次送出整個 body，做不出串流到一半的狀態，所以 `holdAskStream()` 在頁面內替換 `fetch`，由測試以 `pushAskStream()` 逐段送出。
@@ -110,11 +111,23 @@ npm run test:e2e                  # 即 npx playwright test
 
 已有在 port 4173 執行中的預覽頁時直接使用（CI 中一律自己啟動）。修改 `app/` 或 `client/` 後要重新 `npm run build`。對客戶執行時，build 與測試都加上同一個 `KK_CLIENT=<名稱>`（由人執行）。
 
+### 線上 demo
+
+`playwright.config.ts` 依 `VITE_ONLINE_DEMO` 決定範圍：`1` 時只執行 `demo.spec.ts`，其他情況不執行它（一般 build 沒有 demo 的畫面，demo build 沒有評測台）。build 與測試要用同一組環境變數，`VITE_PUBLIC_ACCESS_CODE` 用任意虛構字串（沒有設定時 `demo.spec.ts` 直接失敗）：
+
+```bash
+VITE_ONLINE_DEMO=1 VITE_PUBLIC_ACCESS_CODE=e2e-public-code npm run build
+VITE_ONLINE_DEMO=1 VITE_PUBLIC_ACCESS_CODE=e2e-public-code npm run test:e2e
+```
+
+測試後要跑一般的 e2e 時，先不帶這兩個變數重新 `npm run build`。只用參考情境 `client/`（線上 demo 不放客戶）。
+
 ### CI
 
 `.github/workflows/e2e.yml` 只在 push 到 `main` 後執行，不在 PR 執行（ADR 0004）。要對分支執行時，用 `workflow_dispatch`：Actions → E2E → Run workflow，或 `gh workflow run e2e.yml --ref <分支>`。`workflow_dispatch` 只對預設分支上已有的 workflow 有效，所以 `e2e.yml` 合併到 `main` 之前無法手動執行。
 
 - `list` job 列出參考情境（`""`）與 `clients/` 底下的客戶（`scripts/check-clients.mjs` 的 `listClients()`），`playwright` job 以 matrix 對每一個各執行一格（`KK_CLIENT` 設為該名稱，build 後執行測試；`fail-fast: false`）。
+- `demo` job 以線上 demo 的設定（`VITE_ONLINE_DEMO=1`、虛構的 `VITE_PUBLIC_ACCESS_CODE`）build 參考情境，執行 `demo.spec.ts`；失敗時的 artifact 是 `playwright-online-demo`。
 - 權限只有 `contents: read`，不使用任何 secret。
 - main 上失敗時由決策中心另開修正 Issue（workflow 不會自動開 Issue）。
 

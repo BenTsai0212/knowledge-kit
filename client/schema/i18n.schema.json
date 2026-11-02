@@ -10,7 +10,7 @@
   "additionalProperties": false,
   "required": [
     "loading", "loadFailed", "fictionalData", "demoPermissions", "identity", "language", "accessCodeTitle",
-    "accessCodeLabel", "accessCodeHint", "accessCodeSubmit", "changeAccessCode", "presetQuestions", "scenarioRole",
+    "accessCodeLabel", "accessCodeHint", "demoAccessCodeHint", "demoQaNotice", "demoUploadNotice", "accessCodeSubmit", "changeAccessCode", "presetQuestions", "scenarioRole",
     "questionLabel", "questionPlaceholder", "askButton", "answering", "emptyAnswer", "openSource", "sourceTitle",
     "closeSource", "views", "tabQa", "tabGraph", "legend", "graphEmpty", "selectEntity", "relatedEntities",
     "entitySources", "tabTimeline", "pathTitle", "pathFrom", "pathTo", "pathChoose", "pathNotFound",
@@ -55,6 +55,9 @@
     "accessCodeTitle": { "$ref": "#/definitions/Text" },
     "accessCodeLabel": { "$ref": "#/definitions/Text" },
     "accessCodeHint": { "$ref": "#/definitions/Text" },
+    "demoAccessCodeHint": { "$ref": "#/definitions/Text" },
+    "demoQaNotice": { "$ref": "#/definitions/Text" },
+    "demoUploadNotice": { "$ref": "#/definitions/Text" },
     "accessCodeSubmit": { "$ref": "#/definitions/Text" },
     "changeAccessCode": { "$ref": "#/definitions/Text" },
     "presetQuestions": { "$ref": "#/definitions/Text" },
