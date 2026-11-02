@@ -10,7 +10,7 @@
 
 ## 決定
 
-啟用自動化模組，使用 template 內建的 `tools/workflow/runner/`，以 launchd 排程在 Benjamin 的 Mac 上執行。
+啟用自動化模組，使用 template 內建的 `tools/workflow/runner/`，以 launchd 排程在作者的 Mac 上執行。
 
 **觸發**：
 - `agent:ready`：由人加，或決策中心經人確認後加。
