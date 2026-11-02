@@ -80,12 +80,12 @@ cp tools/workflow/runner/config.example.json tools/workflow/runner/config.local.
 
 ## 指令
 
-```bash
-node tools/workflow/runner/agent-runner.mjs --dry-run   # 試跑：只顯示會挑哪一件，不改 GitHub、不動 worktree
-node tools/workflow/runner/agent-runner.mjs --now       # 手動執行一件（不受執行時段與最晚開始時間限制）
-node tools/workflow/runner/agent-runner.mjs             # 排程用：只在執行時段內執行，可連續處理
-node tools/workflow/runner/usage-report.mjs [--since 2026-10-13]   # 使用量報表
-```
+| 指令 | 用途 |
+| --- | --- |
+| `node tools/workflow/runner/agent-runner.mjs --dry-run` | 試跑：只顯示會挑哪一件，不改 GitHub、不動 worktree |
+| `node tools/workflow/runner/agent-runner.mjs --now` | 手動執行一件（不受執行時段與最晚開始時間限制） |
+| `node tools/workflow/runner/agent-runner.mjs` | 排程用：只在執行時段內執行，可連續處理 |
+| `node tools/workflow/runner/usage-report.mjs [--since 2026-10-13]` | 使用量報表 |
 
 紀錄在 `logs/`：`<時間>.log` 是 runner 的紀錄，`<時間>-claude-<Issue>.log` 是 agent 的即時輸出（stream-json）。
 
@@ -104,17 +104,24 @@ node tools/workflow/runner/usage-report.mjs [--since 2026-10-13]   # 使用量�
 
 repo 內的範本是 `agent-runner.plist.example`。安裝前替換檔內的四個欄位：`__ACCOUNT__`（GitHub 帳號）、`__REPO__`（repo 名稱）、`__REPO_DIR__`（repo 絕對路徑）、`__PATH__`（`which node claude gh git` 結果所在的資料夾，以 `:` 分隔）。排程名稱 `com.<帳號>.agent-runner.<repo>` 包含 repo 名稱，同一台電腦有多個專案時不會撞名。
 
-```bash
-cd <repo 絕對路徑>
-which node claude gh git                       # 確認這些資料夾都在 __PATH__ 裡
-PLIST=~/Library/LaunchAgents/com.<帳號>.agent-runner.<repo>.plist
-cp tools/workflow/runner/agent-runner.plist.example "$PLIST"
-# 用編輯器替換 $PLIST 中的 __ACCOUNT__、__REPO__、__REPO_DIR__、__PATH__
-plutil -lint "$PLIST"
-mkdir -p tools/workflow/runner/logs
-launchctl bootstrap gui/$(id -u) "$PLIST"
-launchctl kickstart gui/$(id -u)/com.<帳號>.agent-runner.<repo>   # 立刻跑一次（不在執行時段會直接結束）
-```
+1. 確認 `which` 列出的資料夾都在 `__PATH__` 裡，再複製範本：
+
+   ```bash
+   cd <repo 絕對路徑>
+   which node claude gh git
+   PLIST=~/Library/LaunchAgents/com.<帳號>.agent-runner.<repo>.plist
+   cp tools/workflow/runner/agent-runner.plist.example "$PLIST"
+   ```
+
+2. 用編輯器替換 `$PLIST` 中的 `__ACCOUNT__`、`__REPO__`、`__REPO_DIR__`、`__PATH__`。
+3. 檢查並載入排程；最後一行立刻跑一次（不在執行時段會直接結束）：
+
+   ```bash
+   plutil -lint "$PLIST"
+   mkdir -p tools/workflow/runner/logs
+   launchctl bootstrap gui/$(id -u) "$PLIST"
+   launchctl kickstart gui/$(id -u)/com.<帳號>.agent-runner.<repo>
+   ```
 
 **移除**：`launchctl bootout gui/$(id -u)/com.<帳號>.agent-runner.<repo>`，再刪除 `~/Library/LaunchAgents/` 中的 plist。
 

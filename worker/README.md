@@ -7,7 +7,7 @@ Cloudflare Worker（TypeScript）。提供 `dist/` 的靜態檔與以下 API：
 | `GET /api/health` | `{ "ok": true }` |
 | `POST /api/ask` | 轉發到 Claude Messages API，以 SSE 串流回傳 |
 
-`wrangler.jsonc` 只供本機開發，不含部署設定（routes、account_id、自訂網域）；部署方式另開 Issue 決定。
+`wrangler.jsonc` 的頂層供本機開發；`env.demo` 是線上 demo 的設定，部署由人執行（[docs/deploy.md](../docs/deploy.md)）。不含 `account_id`、routes 與自訂網域。
 
 ## `POST /api/ask`
 
@@ -114,7 +114,10 @@ Opus 5.5 的 thinking 無法關閉，thinking 的 token 也算在 `max_tokens` �
 
 ### 正式部署
 
-- 以 `npx wrangler secret put ANTHROPIC_API_KEY`、`npx wrangler secret put ACCESS_CODES` 設定 secret，由人輸入。
+線上 demo 的步驟、驗收清單、回退與費用估算見 [docs/deploy.md](../docs/deploy.md)。
+
+- 以 `npx wrangler secret put ANTHROPIC_API_KEY --env demo`、`npx wrangler secret put ACCESS_CODES --env demo` 設定 secret，由人輸入。
+- 非機密的變數寫在 `wrangler.jsonc` 的 `env.demo.vars`，部署時以 repo 的值為準。
 - `ACCESS_CODES` 必須設定真實的邀請碼，不得沿用 `.dev.vars.example` 的 `demo:EXAMPLE1`。
 - `ALLOWED_ORIGINS` 應為空值。`localhost` 只供本機開發。
 

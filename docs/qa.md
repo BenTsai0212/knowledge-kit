@@ -217,7 +217,7 @@ Rules:
 - **提醒**：問答頁顯示 `demoQaNotice`（問題會傳給模型供應商）；上傳頁以 `demoUploadNotice`（內容會傳給模型供應商、文件只存在瀏覽器）取代 `uploadEphemeral`。「虛構資料」「展示用權限」的標示與一般 build 相同。
 - 開關屬於部署設定，不放進 `client/`：客戶的 fork 不繼承 demo 的限制。
 
-驗證：`online-demo.test.ts`（預設關閉、頁籤）；`e2e/demo.spec.ts` 以 demo 設定 build 後執行（[docs/testing.md](testing.md)「線上 demo」）。部署文件由 #100 的後續 PR 加入。
+驗證：`online-demo.test.ts`（預設關閉、頁籤）；`e2e/demo.spec.ts` 以 demo 設定 build 後執行（[docs/testing.md](testing.md)「線上 demo」）。部署步驟與費用上限見 [docs/deploy.md](deploy.md)。
 
 ## 測試
 

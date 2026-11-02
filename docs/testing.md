@@ -103,10 +103,12 @@ repo 預計公開，CI 紀錄也會公開，所以兩者的輸出都**不包含�
 
 ### 本機執行
 
+第一次執行前先安裝 Chromium（macOS 不加 `--with-deps`），之後 build 再執行測試（`npm run test:e2e` 即 `npx playwright test`）：
+
 ```bash
-npx playwright install chromium   # 第一次執行前；macOS 不加 --with-deps
+npx playwright install chromium
 npm run build
-npm run test:e2e                  # 即 npx playwright test
+npm run test:e2e
 ```
 
 已有在 port 4173 執行中的預覽頁時直接使用（CI 中一律自己啟動）。修改 `app/` 或 `client/` 後要重新 `npm run build`。對客戶執行時，build 與測試都加上同一個 `KK_CLIENT=<名稱>`（由人執行）。
