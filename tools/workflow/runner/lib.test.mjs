@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   advanceAwake, agentNote, buildSettings, canStartNew, countOpenPrs, hasDecision, inHours, latestStart,
-  linkedIssue, lockIsActive, needsWipSave, orderWork, pickWork, shouldContinue, staleWorking, stopReportBody,
-  validateConfig, wipBranchName,
+  isRunTmpDir, linkedIssue, lockIsActive, needsWipSave, orderWork, pickWork, RUN_TMP_DIR, runTmpDir, runTmpEnv,
+  shouldContinue, staleWorking, stopReportBody, validateConfig, wipBranchName,
 } from './lib.mjs';
 
 const ME = 'me';
@@ -359,6 +359,61 @@ test('agentNote：推送寫法只有一種；不啟動瀏覽器；時間上限�
   assert.match(note, /人工待辦/);
   assert.match(note, /用 Bash 工具的 timeout 參數設定上限；不要在背景執行可能卡住的指令；不需要在 PR 回報/);
   assert.doesNotMatch(note, /perl|alarm/);
+});
+
+test('權限比對：先檢查再以同一個檔案貼出的寫法都允許（#104 決定 4）', () => {
+  const file = '/work/repo-runner/.runner-tmp/20261102T100000-104/pr.md';
+  const check = `node tools/workflow/check-post-body.mjs --issue 104 --kind pr ${file}`;
+  const post = `gh pr create --base main --title "fix: x" --body-file ${file}`;
+  for (const cmd of [
+    check, post, `gh issue comment 104 --body-file ${file}`, `gh pr comment 3 --body-file ${file}`,
+    `gh pr edit 3 --body-file ${file}`,
+  ]) {
+    assert.equal(allowed(cmd), true, `應允許：${cmd}`);
+  }
+  // Claude Code 把 && 連接的指令分開比對
+  assert.ok(`${check} && ${post}`.split(' && ').every(allowed));
+});
+
+test('sandbox：暫存資料夾在 worktree 內，不放寬可寫入的路徑（#104 決定 2）', () => {
+  assert.deepEqual(base.sandbox.filesystem.allowWrite, ['~/.npm', '~/.cache']);
+  assert.doesNotMatch(JSON.stringify(settings.sandbox.filesystem.allowWrite), /tmp/);
+  const gitignore = readFileSync(new URL('../../../.gitignore', import.meta.url), 'utf8').split('\n');
+  assert.ok(gitignore.includes(`${RUN_TMP_DIR}/`), '.gitignore 要包含 .runner-tmp/');
+});
+
+test('runTmpDir：在 worktree 的 .runner-tmp/ 底下，含時間與 Issue；不同次執行不重複', () => {
+  const a = runTmpDir('/w/repo-runner', 104, new Date(2026, 10, 2, 9, 5, 7));
+  assert.equal(a, '/w/repo-runner/.runner-tmp/20261102T090507-104');
+  assert.equal(runTmpDir('/w/repo-runner/', 104, new Date(2026, 10, 2, 9, 5, 7)), a);
+  assert.notEqual(runTmpDir('/w/repo-runner', 104, new Date(2026, 10, 2, 9, 5, 8)), a);
+  assert.notEqual(runTmpDir('/w/repo-runner', 105, new Date(2026, 10, 2, 9, 5, 7)), a);
+});
+
+test('isRunTmpDir：只接受本次執行的資料夾，不刪除其他東西（#104 決定 5）', () => {
+  const wt = '/w/repo-runner';
+  assert.equal(isRunTmpDir(wt, runTmpDir(wt, 104, new Date())), true);
+  for (const dir of [
+    `${wt}/.runner-tmp`, `${wt}/.runner-tmp/`, `${wt}/.runner-tmp/x`, `${wt}/.runner-tmp/20261102T090507-104/sub`,
+    `${wt}/.runner-tmp/../20261102T090507-104`, `${wt}`, '/tmp/claude-501', '/tmp/claude-501/body.md',
+    '/other/.runner-tmp/20261102T090507-104', undefined,
+  ]) {
+    assert.equal(isRunTmpDir(wt, dir), false, String(dir));
+  }
+});
+
+test('runTmpEnv：KK_RUN_TMP、KK_RUN_STARTED 與 TMPDIR', () => {
+  const at = new Date('2026-11-02T10:00:00Z');
+  assert.deepEqual(runTmpEnv('/w/t', at), { KK_RUN_TMP: '/w/t', KK_RUN_STARTED: '2026-11-02T10:00:00.000Z', TMPDIR: '/w/t' });
+});
+
+test('agentNote：有暫存資料夾時說明寫入位置、寫入失敗不貼出、檢查後以同一個路徑貼出', () => {
+  const note = agentNote({}, { runTmp: '/w/repo-runner/.runner-tmp/20261102T090507-104' });
+  assert.match(note, /\/w\/repo-runner\/\.runner-tmp\/20261102T090507-104\//);
+  assert.match(note, /寫入失敗時不執行 gh/);
+  assert.match(note, /check-post-body\.mjs/);
+  assert.match(note, /同一個路徑/);
+  assert.doesNotMatch(agentNote({}), /KK_RUN_TMP/);
 });
 
 test('權限比對：perl -e alarm 不在允許清單（後面可接任何指令）', () => {

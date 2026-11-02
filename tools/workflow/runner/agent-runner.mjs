@@ -6,15 +6,16 @@
 //   node tools/workflow/runner/agent-runner.mjs --now       不受執行時段與最晚開始時間限制，實際執行一件
 //   node tools/workflow/runner/agent-runner.mjs             排程用：只在執行時段內執行，可連續處理
 import { execFileSync, spawn } from 'node:child_process';
-import { appendFileSync, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import {
   BASE_SETTINGS_FILE, CONFIG_FILE, GENERATED_SETTINGS_FILE, GLOBAL_DIR, GLOBAL_LOCK, GLOBAL_PAUSE,
   PROJECT_PAUSE, readConfig, repoRoot, resolvePaths,
 } from './config.mjs';
 import {
-  advanceAwake, agentNote, buildSettings, canStartNew, countOpenPrs, inHours, lockIsActive, needsWipSave,
-  orderWork, pickWork, shouldContinue, staleWorking, stopReportBody, TICK_MS, validateConfig, wipBranchName,
+  advanceAwake, agentNote, buildSettings, canStartNew, countOpenPrs, inHours, isRunTmpDir, lockIsActive, needsWipSave,
+  orderWork, pickWork, runTmpDir, runTmpEnv, shouldContinue, staleWorking, stopReportBody, TICK_MS, validateConfig,
+  wipBranchName,
 } from './lib.mjs';
 import { notify } from './platform.mjs';
 
@@ -170,20 +171,32 @@ async function main() {
       : `進度已保存到本機分支 \`${branch}\`（推送失敗，只在 runner 的 worktree）`;
   }
 
+  /** 刪除本次執行的暫存資料夾；只刪 runTmpDir 產生的路徑，不碰其他檔案（#104）。 */
+  function removeRunTmp(dir) {
+    if (!isRunTmpDir(WORKTREE, dir)) throw new Error(`不是本次執行的暫存資料夾，不刪除：${dir}`);
+    rmSync(dir, { recursive: true, force: true });
+  }
+
   async function runClaude(issue) {
     let env;
+    const startedAt = new Date();
+    const runTmp = runTmpDir(WORKTREE, issue, startedAt);
     try {
       env = agentEnv();
+      removeRunTmp(runTmp);
+      mkdirSync(runTmp, { recursive: true });
+      Object.assign(env, runTmpEnv(runTmp, startedAt));
     } catch (error) {
       return { code: null, killedFor: `無法啟動 claude：${firstLine(error)}` };
     }
+    log('本次的暫存資料夾：', relative(ROOT, runTmp));
     return new Promise((done) => {
       const out = join(LOG_DIR, `${stamp}-claude-${issue}.log`);
       writeFileSync(out, '');
       log('執行：claude -p "/work-on-issue', issue, '"，即時紀錄：', relative(ROOT, out));
       const child = spawn('claude', ['-p', `/work-on-issue ${issue}`, '--settings', GENERATED_SETTINGS_FILE,
         '--permission-mode', 'acceptEdits', '--output-format', 'stream-json', '--verbose',
-        '--append-system-prompt', agentNote(config)],
+        '--append-system-prompt', agentNote(config, { runTmp })],
       { cwd: WORKTREE, stdio: ['ignore', 'pipe', 'pipe'], env });
       let killedFor = null;
       let checkedAuth = false;
@@ -224,6 +237,11 @@ async function main() {
         if (finished) return;
         finished = true;
         clearInterval(timer);
+        try {
+          removeRunTmp(runTmp);
+        } catch (error) {
+          log('無法刪除暫存資料夾：', firstLine(error));
+        }
         done({ code, killedFor });
       };
       child.on('error', (e) => { killedFor ??= `無法啟動 claude：${e.message}`; finish(null); });
