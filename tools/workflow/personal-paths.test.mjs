@@ -16,7 +16,10 @@ export function findPersonalPaths(text) {
 }
 
 test('比對 /Users/<名稱> 與 /home/<名稱>，不比對佔位符與其他路徑', () => {
-  assert.deepEqual(findPersonalPaths('cd /Users/someone/x && ls /home/a.b'), ['/Users/someone', '/home/a.b']);
+  // 以 join 組出範例路徑，避免本檔被下一個測試抓到
+  const users = ['', 'Users', 'someone'].join('/');
+  const home = ['', 'home', 'a.b'].join('/');
+  assert.deepEqual(findPersonalPaths(`cd ${users}/x && ls ${home}`), [users, home]);
   assert.deepEqual(findPersonalPaths('/Users/<名稱>、~/Projects、/opt/homebrew/bin/gh、/usr/local'), []);
 });
 
