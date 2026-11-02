@@ -198,7 +198,26 @@ Rules:
   - 新的提問開始時，前一個提問同樣被捨棄。
 - **原文**（`app/src/sources/source.ts`）：`readSource(db, identityId, passageId)` 經 `withIdentity()` 讀取段落所屬的文件，以及其中該身分看得到的段落（依順序）；看不到時回 `null`。文件中看不到的段落直接省略，不標示「有段落被隱藏」。`app/tests/sources/source.test.ts` 以 `oracle.ts` 對每個身分 × 每段段落測試。
 - **介面文字**：都在翻譯檔 `client/i18n/<語言>.json`，只透過 `app/src/client/i18n.ts` 讀取（[docs/client-config.md](client-config.md)「翻譯檔」）；角色、情境、公司名稱來自 `client/`；語言名稱以 `Intl.DisplayNames` 用該語言自己的名稱顯示。
+- **線上 demo**（#100）：見下方「線上 demo」。
 - 畫面沒有自動測試（DOM 測試套件未核准；Playwright 在 Epic 第 12 項）。可以抽出的邏輯（邀請碼的保存、提問的捨棄、引用的切割、原文的權限）以 Vitest 測試。
+
+### 線上 demo
+
+以參考情境 `client/` 運作、不用安裝就能試用的線上版本（#100，RFC 0002 提案 5）。由兩個 build 時的環境變數控制，Vite 在 build 時代入，執行時不能更改；讀取只在 `app/src/ui/online-demo.ts`。
+
+| 環境變數 | 內容 |
+| --- | --- |
+| `VITE_ONLINE_DEMO` | 營運開關，**預設關閉**；只有 `1` 時開啟，其他值都算關閉 |
+| `VITE_PUBLIC_ACCESS_CODE` | 公開試用碼（Worker `ACCESS_CODES` 中 `public` 組的碼）；只在開關開啟時使用。刻意公開，不是 secret；不寫進 repo，由人在 build 時設定。換碼＝改 Worker secret＋重新 build 與部署 |
+
+開關開啟時：
+
+- **邀請碼表單**預先填入公開試用碼，並說明所有訪客共用每日次數；訪客只要按送出。碼被拒（`invalid_access_code`，例如公開碼已更換）後回到表單時不再填入。給潛在客戶與夥伴的邀請碼（`invited` 組）照常手動輸入。
+- **隱藏評測台頁籤**：一次會呼叫大量問答（#100 決定 4）。問答、圖譜、時間軸、上傳與待審照常開放；上傳後的萃取與比對同樣受每個碼的 `DAILY_LIMIT` 與全站的 `GLOBAL_DAILY_LIMIT` 限制（[worker/README.md](../worker/README.md)）。
+- **提醒**：問答頁顯示 `demoQaNotice`（問題會傳給模型供應商）；上傳頁以 `demoUploadNotice`（內容會傳給模型供應商、文件只存在瀏覽器）取代 `uploadEphemeral`。「虛構資料」「展示用權限」的標示與一般 build 相同。
+- 開關屬於部署設定，不放進 `client/`：客戶的 fork 不繼承 demo 的限制。
+
+驗證：`online-demo.test.ts`（預設關閉、頁籤）；`e2e/demo.spec.ts` 以 demo 設定 build 後執行（[docs/testing.md](testing.md)「線上 demo」）。部署文件由 #100 的後續 PR 加入。
 
 ## 測試
 

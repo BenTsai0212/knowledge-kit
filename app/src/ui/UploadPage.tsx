@@ -13,6 +13,7 @@ import { LevelBadge, ProjectBadge } from "./AccessBadges";
 import { ConflictStatus } from "./ConflictStatus";
 import { ExtractionStatus } from "./ExtractionStatus";
 import { Notice } from "./Notice";
+import { onlineDemo } from "./online-demo";
 import { createRequestGate } from "./requests";
 import { fill, strings } from "../client/i18n";
 import type { UploadFailure } from "../client/types";
@@ -185,7 +186,8 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
 
   return (
     <section className="card upload">
-      <p className="badge warning">{s.uploadEphemeral}</p>
+      {/* 線上 demo：另外說明上傳內容會傳給模型供應商（#100 決定 4） */}
+      <p className="badge warning">{onlineDemo.enabled ? s.demoUploadNotice : s.uploadEphemeral}</p>
       {extractions.map((job) => (
         <div key={job.state.documentId} className="card">
           <p>{job.title}</p>

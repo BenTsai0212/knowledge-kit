@@ -1,7 +1,7 @@
 // 端對端測試共用的操作（#66）。畫面文字一律從選定客戶的 i18n 讀取，測試中不寫死；只用預設語言（client.json 的 defaultLanguage）。
 import { expect, type Locator, type Page } from "@playwright/test";
 import { access, language, s, scenarios } from "./client";
-import { routeFakeAsk } from "./fake-ask";
+import { FAKE_ENTITY_NAME, routeFakeAsk } from "./fake-ask";
 
 export { language, s };
 
@@ -40,3 +40,25 @@ export async function openTab(page: Page, label: string): Promise<void> {
 }
 
 export const sourcePanel = (page: Page) => page.getByRole("complementary", { name: s.sourceTitle });
+
+// 以目前的身分上傳 fixtures/upload-note.md，等萃取的實體出現在待審（目前的身分要能上傳也能審查）
+export async function uploadAndReview(page: Page): Promise<void> {
+  await openTab(page, s.tabUpload);
+  await page.getByLabel(s.uploadFile).setInputFiles("e2e/fixtures/upload-note.md");
+  await page.getByRole("button", { name: s.uploadPreview }).click();
+
+  const dialog = page.getByRole("dialog", { name: s.uploadConfirmTitle });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: s.uploadSubmit, exact: true }).click();
+  await expect(dialog.getByText(s.uploadDone)).toBeVisible();
+  await dialog.getByRole("button", { name: s.uploadAnother }).click();
+  await expect(dialog).toBeHidden();
+
+  // 萃取在背景執行；結束前打開待審頁時看不到，按重新整理再讀一次
+  await openTab(page, s.tabReview);
+  const item = page.getByRole("checkbox", { name: FAKE_ENTITY_NAME });
+  await expect(async () => {
+    await page.getByRole("button", { name: s.reviewRefresh }).first().click();
+    await expect(item).toBeVisible({ timeout: 2_000 });
+  }).toPass();
+}

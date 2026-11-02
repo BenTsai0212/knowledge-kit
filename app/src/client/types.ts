@@ -245,6 +245,10 @@ export interface UiStrings {
   accessCodeTitle: string;
   accessCodeLabel: string;
   accessCodeHint: string;
+  // 線上 demo（#100）：公開試用碼的說明、問答頁與上傳頁的提醒
+  demoAccessCodeHint: string;
+  demoQaNotice: string;
+  demoUploadNotice: string;
   accessCodeSubmit: string;
   changeAccessCode: string;
   presetQuestions: string;
