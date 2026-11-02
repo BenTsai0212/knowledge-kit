@@ -1,6 +1,7 @@
 // 敏感資料檢查：掃描 git ls-files 列出的檔案，找出個人 email 與禁用名稱（#66，見 docs/testing.md）。
-// 用法：node scripts/check-sensitive.mjs [repo 根目錄，預設目前目錄]
-// 輸出只有檔案、行號與清單第幾項，不輸出命中的名稱、email 或該行內容（CI 紀錄會公開）。
+// 用法：node scripts/check-sensitive.mjs [--history] [repo 根目錄，預設目前目錄]
+// --history 改為掃描所有 ref 的每個 commit：新增的行、commit 訊息與作者名稱（#99）。
+// 輸出只有檔案、行號（或 commit 短 SHA）與清單第幾項，不輸出命中的名稱、email 或該行內容（CI 紀錄會公開）。
 import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { join, resolve } from "node:path";
@@ -107,6 +108,9 @@ export function scanText(text, names) {
   return findings;
 }
 
+const describe = (where, f) =>
+  f.kind === "email" ? `${where} 有不在放行清單內的 email` : `${where} 命中禁用名稱清單第 ${f.index} 項`;
+
 // 回傳 { errors: string[], warnings: string[], findings: string[] }；findings 只含檔案、行號與清單第幾項。
 export function checkSensitive(root = process.cwd(), env = process.env) {
   const loaded = loadNames(root, env);
@@ -117,25 +121,121 @@ export function checkSensitive(root = process.cwd(), env = process.env) {
   for (const file of trackedFiles(root)) {
     const text = readText(join(root, file));
     if (text === null) continue;
-    for (const f of scanText(text, names)) {
-      findings.push(
-        f.kind === "email"
-          ? `${file}:${f.line} 有不在放行清單內的 email`
-          : `${file}:${f.line} 命中禁用名稱清單第 ${f.index} 項`,
-      );
-    }
+    for (const f of scanText(text, names)) findings.push(describe(`${file}:${f.line}`, f));
   }
   return { errors, warnings, findings };
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const { errors, warnings, findings } = checkSensitive(resolve(process.argv[2] ?? "."));
+// ---- 整段歷史模式（#99） ----
+
+// git log 輸出的分隔字元：commit 開頭、欄位之間、commit 訊息結尾
+const COMMIT = "\x01";
+const FIELD = "\x02";
+const HEADER_END = "\x03";
+
+// 所有 ref 的每個 commit 與它新增的內容（第一個 commit 與空白比較）。合併 commit 與第一個 parent 比較，合併時才加入的內容也會掃到；
+// 固定路徑前綴、不轉換內容、不加顏色，不受使用者的 git 設定影響。二進位檔只有一行說明，沒有內容。
+function gitLogAll(root) {
+  const format = [`${COMMIT}%H`, "%h", "%an", "%ae", "%cn", "%ce", `%B${HEADER_END}`].join(FIELD);
+  const args = ["-C", root, "-c", "core.quotePath=false", "log", "--all", "--root", "-p", "--diff-merges=first-parent"];
+  args.push("--no-color", "--no-ext-diff", "--no-textconv", "--src-prefix=a/", "--dst-prefix=b/", `--format=${format}`);
+  return execFileSync("git", args, { encoding: "utf8", maxBuffer: 1 << 30 });
+}
+
+// 解析一個 commit 的 diff，回傳 [{ path, text }]：每個檔案新增的行（以換行連接）。
+// 依 hunk 標頭的行數判斷哪些行屬於 hunk，內容以 "++" 開頭的新增行才不會被當成檔名。
+export function addedLines(diff) {
+  const files = new Map();
+  let path = null;
+  let oldLeft = 0;
+  let newLeft = 0;
+  for (const line of diff.split("\n")) {
+    if (oldLeft > 0 || newLeft > 0) {
+      if (line.startsWith("+")) {
+        newLeft -= 1;
+        if (path !== null) files.set(path, [...(files.get(path) ?? []), line.slice(1)]);
+      } else if (line.startsWith("-")) {
+        oldLeft -= 1;
+      } else if (line.startsWith(" ") || line === "") {
+        oldLeft -= 1;
+        newLeft -= 1;
+      }
+      // 「\ No newline at end of file」不計入行數
+      continue;
+    }
+    if (line.startsWith("+++ ")) {
+      const target = line.slice(4).replace(/\t$/, "");
+      path = target.startsWith("b/") ? target.slice(2) : null; // /dev/null：刪除的檔案
+      continue;
+    }
+    const hunk = /^@@ -\d+(?:,(\d+))? \+\d+(?:,(\d+))? @@/.exec(line);
+    if (hunk) {
+      oldLeft = hunk[1] === undefined ? 1 : Number(hunk[1]);
+      newLeft = hunk[2] === undefined ? 1 : Number(hunk[2]);
+    }
+  }
+  return [...files].map(([file, lines]) => ({ path: file, text: lines.join("\n") }));
+}
+
+// 同一個 commit 的同一處只回報一次：email 一筆、清單每一項各一筆，依清單順序
+function distinct(findings) {
+  const seen = new Map();
+  for (const f of findings) seen.set(f.kind === "email" ? 0 : f.index, f);
+  return [...seen].sort(([a], [b]) => a - b).map(([, f]) => f);
+}
+
+// 回傳 { errors, warnings, findings, commits, authorEmails }。
+// findings 只含 commit 短 SHA、檔案路徑（或「commit 訊息」、「作者名稱」）與清單第幾項；
+// commit 作者與提交者的 email 不逐筆列出：authorEmails 是每個不在放行清單內的地址各有幾個 commit，不含地址本身。
+export function checkHistory(root = process.cwd(), env = process.env) {
+  const loaded = loadNames(root, env);
+  const errors = loaded.error ? [loaded.error] : [];
+  const warnings = loaded.warning ? [loaded.warning] : [];
+  const names = loaded.names ?? null;
+  const findings = [];
+  const emailCommits = new Map();
+  let commits = 0;
+  for (const chunk of gitLogAll(root).split(COMMIT).slice(1)) {
+    commits += 1;
+    const end = chunk.indexOf(HEADER_END);
+    const [sha, short, authorName, authorEmail, committerName, committerEmail, message] = chunk.slice(0, end).split(FIELD);
+    for (const f of distinct(scanText(message, names))) findings.push(describe(`${short} commit 訊息`, f));
+    for (const f of distinct(scanText(`${authorName}\n${committerName}`, names))) findings.push(describe(`${short} 作者名稱`, f));
+    for (const address of new Set([authorEmail, committerEmail])) {
+      if (!address.includes("@") || isAllowedEmail(address)) continue;
+      emailCommits.set(address, (emailCommits.get(address) ?? new Set()).add(sha));
+    }
+    for (const { path, text } of addedLines(chunk.slice(end + 1))) {
+      for (const f of distinct(scanText(text, names))) findings.push(describe(`${short} ${path}`, f));
+    }
+  }
+  const authorEmails = [...emailCommits.values()].map((shas) => shas.size);
+  return { errors, warnings, findings, commits, authorEmails };
+}
+
+function main(args) {
+  const history = args.includes("--history");
+  const root = resolve(args.find((arg) => arg !== "--history") ?? ".");
+  const result = history ? checkHistory(root) : checkSensitive(root);
+  const { errors, warnings, findings } = result;
+  const authorEmails = result.authorEmails ?? [];
   for (const w of warnings) console.warn(`警告：${w}`);
   for (const e of errors) console.error(`錯誤：${e}`);
   for (const f of findings) console.error(f);
-  if (errors.length > 0 || findings.length > 0) {
-    console.error(`敏感資料檢查失敗：${findings.length} 處命中${errors.length > 0 ? `，${errors.length} 個錯誤` : ""}`);
+  authorEmails.forEach((count, i) => {
+    console.error(`commit 作者或提交者的 email 不在放行清單內：第 ${i + 1} 個地址，${count} 個 commit`);
+  });
+  const scope = history ? `（整段歷史，${result.commits} 個 commit）` : "";
+  if (errors.length > 0 || findings.length > 0 || authorEmails.length > 0) {
+    const parts = [`${findings.length} 處命中`];
+    if (authorEmails.length > 0) parts.push(`${authorEmails.length} 個作者 email 地址`);
+    if (errors.length > 0) parts.push(`${errors.length} 個錯誤`);
+    console.error(`敏感資料檢查${scope}失敗：${parts.join("，")}`);
     process.exit(1);
   }
-  console.log("敏感資料檢查通過");
+  console.log(`敏感資料檢查${scope}通過`);
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main(process.argv.slice(2));
 }
