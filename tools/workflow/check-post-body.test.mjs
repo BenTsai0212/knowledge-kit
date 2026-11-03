@@ -5,7 +5,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { checkContent, checkPostBody, checkSource, KINDS, MANUAL_MAX_AGE_MS } from './check-post-body.mjs';
+import * as sensitive from '../../scripts/check-sensitive.mjs';
+import { checkContent, checkPostBody, checkSensitiveContent, checkSource, KINDS, MANUAL_MAX_AGE_MS } from './check-post-body.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SCRIPT = join(HERE, 'check-post-body.mjs');
@@ -63,6 +64,49 @@ test('checkPostBody：參數錯誤時列出原因', () => {
   assert.deepEqual(KINDS, ['pr', 'plan', 'stop', 'fix', 'todo']);
 });
 
+// 測試資料以字串組合產生，本檔不寫出真實格式的 email 與個人路徑（#124）
+const userPath = ['', 'Users', 'someone', 'Projects', 'kit'].join('/');
+const homePath = ['', 'home', 'someone', 'kit'].join('/');
+const email = ['someone', 'mail.com'].join('@');
+
+test('checkSensitiveContent：個人路徑與 email 拒絕，只列行號與種類', () => {
+  const body = `## 為什麼\n\n路徑是 ${userPath}\n聯絡 ${email}\n${homePath}/x 與 ${email}\n`;
+  const errors = checkSensitiveContent(body);
+  assert.deepEqual(errors, ['第 3 行：個人路徑', '第 4 行：email', '第 5 行：email', '第 5 行：個人路徑']);
+  for (const e of errors) {
+    for (const hit of [userPath, homePath, email, 'someone']) assert.ok(!e.includes(hit), `輸出含命中文字：${e}`);
+  }
+});
+
+test('checkSensitiveContent：程式碼區塊、行內程式碼與 HTML 註解也檢查', () => {
+  assert.deepEqual(checkSensitiveContent(`說明\n\n\`\`\`bash\ncd ${userPath}\n\`\`\`\n`), ['第 4 行：個人路徑']);
+  assert.deepEqual(checkSensitiveContent(`見 \`${email}\``), ['第 1 行：email']);
+  assert.deepEqual(checkSensitiveContent(`<!-- ${homePath} -->`), ['第 1 行：個人路徑']);
+});
+
+test('checkSensitiveContent：/home/runner、保留網域、noreply 與佔位寫法通過', () => {
+  const body = [
+    'CI 的路徑 /home/runner/work/kit/kit',
+    '`/Users/<名稱>/Projects`、/home/<名稱>、~/Projects、/opt/homebrew/bin/gh',
+    'user@example.com、a@b.test、someone@x.tld',
+    'Co-Authored-By: Claude <noreply@anthropic.com>',
+    '12345+someone@users.noreply.github.com',
+    'npm i pkg@1.2.3',
+  ].join('\n');
+  assert.deepEqual(checkSensitiveContent(body), []);
+});
+
+test('checkSensitiveContent：與 scripts/check-sensitive.mjs 的規則一致', () => {
+  const samples = [userPath, homePath, '/home/runner/work', ['', 'home', 'runner2'].join('/'), '/Users/<名稱>',
+    email, 'user@example.com', 'noreply@anthropic.com', 'a@b.test', 'pkg@1.2.3', `${email} ${userPath}`];
+  for (const text of samples) {
+    const expected = [];
+    if (sensitive.scanText(text, null).length) expected.push('第 1 行：email');
+    if (sensitive.scanPost(text, null).some((f) => f.kind === 'path')) expected.push('第 1 行：個人路徑');
+    assert.deepEqual(checkSensitiveContent(text), expected, text);
+  }
+});
+
 // 重現 #104：另一個專案在共用的暫存資料夾留下同名檔案，本次的寫入失敗，agent 沿用了舊檔
 test('重現：其他專案留下的同名暫存檔不會通過檢查', (t) => {
   const root = mkdtempSync(join(tmpdir(), 'kk-check-post-body-'));
@@ -110,6 +154,15 @@ test('重現：其他專案留下的同名暫存檔不會通過檢查', (t) => {
   r = run(['--issue', '104', '--kind', 'pr', fresh]);
   assert.equal(r.status, 0, r.stderr);
   assert.equal(readFileSync(fresh, 'utf8'), content);
+
+  // 內容有個人路徑或 email 時拒絕，輸出不含命中的文字（#124）
+  const leaky = join(runTmp, 'pr-124.md');
+  writeFileSync(leaky, `## 為什麼\n\nCloses #104\n\n\`\`\`\n${userPath}\n${email}\n\`\`\`\n`);
+  r = run(['--issue', '104', '--kind', 'pr', leaky]);
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /第 6 行：個人路徑/);
+  assert.match(r.stderr, /第 7 行：email/);
+  for (const hit of [userPath, email]) assert.ok(!`${r.stdout}${r.stderr}`.includes(hit));
 
   // 手動執行（沒有 KK_RUN_TMP）：標準輸入可用，舊檔仍拒絕
   assert.equal(run(['--issue', '104', '--kind', 'pr', '-'], {}, 'Closes #104\n').status, 0);

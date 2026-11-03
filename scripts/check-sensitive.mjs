@@ -236,9 +236,9 @@ export function checkHistory(root = process.cwd(), env = process.env, { boundary
 
 // ---- GitHub 模式（#111） ----
 
-// 個人路徑：與 tools/workflow/personal-paths.test.mjs 相同的規則（/Users/<名稱>、/home/<名稱>；
-// GitHub Actions 的執行環境 /home/runner 不算，#113）
-const PERSONAL_PATH = /\/(?:Users\/|home\/(?!runner(?![\w.-])))[\w.-]+/;
+// 個人路徑：/Users/<名稱>、/home/<名稱>；GitHub Actions 的執行環境 /home/runner 不算（#113）。
+// tools/workflow/personal-paths.test.mjs 與 check-post-body.mjs（#124）匯入同一條規則
+export const PERSONAL_PATH = /\/(?:Users\/|home\/(?!runner(?![\w.-])))[\w.-]+/;
 
 // 讀取的連線：別名 → GraphQL 欄位、每頁幾筆、節點的欄位與底下的連線。
 // 有下層連線的節點都帶 id 與 __typename，下一頁以 node(id) 讀取。

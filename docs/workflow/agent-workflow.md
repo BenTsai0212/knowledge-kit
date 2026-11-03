@@ -207,7 +207,14 @@ gh issue edit N --add-label needs-human
    | `fix` | 修正模式的回報 | 開頭是 `## 修正回報`，內容提到 `#N` |
    | `todo` | 第 8 步的人工待辦 | 開頭是 `## 合併後待辦`，內容提到 `#N` |
 
-   另外檢查檔案不是舊檔：有 `KK_RUN_TMP` 時，檔案必須在該資料夾底下、修改時間不早於本次執行開始（`KK_RUN_STARTED`）；手動執行時不能超過 30 分鐘。不通過（以非 0 結束）時**不貼出**，修正內容後重新寫入。
+   另外檢查：
+
+   - **檔案不是舊檔**：有 `KK_RUN_TMP` 時，檔案必須在該資料夾底下、修改時間不早於本次執行開始（`KK_RUN_STARTED`）；手動執行時不能超過 30 分鐘。
+   - **email**：不在放行規則內的 email（規則與 `npm run check:sensitive` 相同：`noreply`、保留網域與 `.test`、`.tld` 等，見 `docs/testing.md`）。
+   - **個人路徑**：`/Users/<名稱>`、`/home/<名稱>` 形式的路徑（`/home/runner` 不算）。
+   - email 與個人路徑在程式碼區塊與行內程式碼中也檢查（貼出後一樣公開）；命中時只輸出行號與種類（例如「第 12 行：個人路徑」），不輸出命中的文字。禁用名稱清單不在此檢查，以 CI 與 `npm run check:sensitive -- --github` 為準。（#124）
+
+   PR 描述與留言中舉例時，一律用佔位寫法：路徑寫 `/Users/<名稱>/…`、`~/…` 或 `<KK_RUN_TMP>/…`，email 寫 `user@example.com`，名稱寫 `<名稱>`。不通過（以非 0 結束）時**不貼出**，修正內容後重新寫入。
 3. **貼出**：以**同一個路徑**執行 `gh … --body-file <檔案>`，檢查與貼出之間不修改檔案。
 
 手動執行時，也可以用 `--body-file -` 加 `<<'EOF'` heredoc 直接貼出，不經過檔案；runner 執行時不用這個寫法，檢查工具在 runner 下也不接受標準輸入。
@@ -215,5 +222,5 @@ gh issue edit N --add-label needs-human
 ## Agent 不做的事
 
 - 不合併 PR，不手動關閉 Issue。
-- 不 push 到 `main`。
+- 不 push 到 `main`。main 有分支保護（ruleset），只能經 PR 合併，必要檢查是 `checks`、`clients`、`sensitive-names`、`gitleaks`、`pr-body`；E2E 只在 push 到 main 後執行，不在必要檢查中。
 - 不處理 Issue 範圍以外的工作；發現其他問題時列在回報中。

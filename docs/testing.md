@@ -65,7 +65,7 @@ repo 預計公開，CI 紀錄也會公開，所以兩者的輸出都**不包含�
 - 以 `gh api graphql` 讀取**所有** Issue 與 PR（含已關閉），每一層都讀完全部分頁：
   - 標題、描述、留言，PR 的 review 內文與 review comment
   - 以上每一段的**編輯紀錄**（`userContentEdits`；已刪除的版本沒有內容，不掃描）與改名前的標題
-- 比對：禁用名稱、email 與目前的模式相同；另外檢查個人路徑（`/Users/<名稱>`、`/home/<名稱>`，與 `tools/workflow/personal-paths.test.mjs` 相同的規則）。GitHub Actions 的執行環境 `/home/runner` 不算個人路徑（#113），`/home/runner2` 等其他名稱與 `/Users/runner` 照常命中。
+- 比對：禁用名稱、email 與目前的模式相同；另外檢查個人路徑（`/Users/<名稱>`、`/home/<名稱>`；規則 `PERSONAL_PATH` 由 `tools/workflow/personal-paths.test.mjs` 與貼出前的檢查 `tools/workflow/check-post-body.mjs` 匯入共用，#124）。GitHub Actions 的執行環境 `/home/runner` 不算個人路徑（#113），`/home/runner2` 等其他名稱與 `/Users/runner` 照常命中。
 - 輸出：`<Issue 或 PR #編號> <標題、描述、留言 <網址>、review <網址> 或 review comment <網址>>`，命中編輯紀錄時加上「編輯紀錄第 N 版（時間）」（第 1 版最舊），再接清單第幾項、「有不在放行清單內的 email」或「有個人路徑」；不輸出命中的文字。最後一行列出讀取的 Issue、PR 與文字段數。
 - 有任何命中或錯誤時結束碼為 1。遇到 API 速率限制時等待 60 秒後重試，重試 3 次仍受限時停止並說明，以 `gh api rate_limit` 查看重置時間後重新執行。
 - 不加進 CI，不修改 GitHub 上的任何內容。

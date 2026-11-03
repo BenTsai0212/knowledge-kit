@@ -6,11 +6,12 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PERSONAL_PATH as RULE } from '../../scripts/check-sensitive.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SCOPE = ['tools/workflow', '.claude', 'docs/workflow', 'AGENTS.md', 'CLAUDE.md', '.github', 'templates'];
-// GitHub Actions 的執行環境 /home/runner 不算個人路徑（#113）；與 scripts/check-sensitive.mjs 的規則一致
-const PERSONAL_PATH = /\/(?:Users\/|home\/(?!runner(?![\w.-])))[\w.-]+/g;
+// 規則只維護一份，在 scripts/check-sensitive.mjs（GitHub Actions 的 /home/runner 不算，#113；共用見 #124）
+const PERSONAL_PATH = new RegExp(RULE.source, 'g');
 
 export function findPersonalPaths(text) {
   return text.match(PERSONAL_PATH) ?? [];
@@ -30,13 +31,6 @@ test('GitHub Actions 的 /home/runner 不算個人路徑，其他以 runner 開�
   assert.deepEqual(findPersonalPaths(others.join(' ')), others);
   const macRunner = ['', 'Users', 'runner'].join('/');
   assert.deepEqual(findPersonalPaths(macRunner), [macRunner]);
-});
-
-test('與 scripts/check-sensitive.mjs 的個人路徑規則一致', () => {
-  const script = readFileSync(join(ROOT, 'scripts', 'check-sensitive.mjs'), 'utf8');
-  const rule = /^const PERSONAL_PATH = \/(.+)\/;$/m.exec(script);
-  assert.ok(rule, 'scripts/check-sensitive.mjs 找不到 PERSONAL_PATH');
-  assert.equal(rule[1], PERSONAL_PATH.source);
 });
 
 test('開發流程工具的檔案沒有個人路徑', () => {
