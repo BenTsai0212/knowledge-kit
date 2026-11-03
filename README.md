@@ -20,6 +20,18 @@ The demo is a prototype for demonstration, not a production system.
 - **Multilingual interface and retrieval**: interface text comes from translation files, and retrieval handles each language's script ([docs/client-config.md](docs/client-config.md), [docs/retrieval.md](docs/retrieval.md)).
 - **Theme colors and dark mode**: colors come from the settings, with a dark palette for `prefers-color-scheme: dark` ([docs/client-config.md](docs/client-config.md)).
 
+An answer to a preset question, with its citation and the source passage opened:
+
+![Q&A answer with a citation and the source passage panel open](docs/images/qa-en.png)
+
+The knowledge graph with an entity panel, seen as a manager:
+
+![Knowledge graph with the entity panel for a selected entity, as a manager](docs/images/graph-en.png)
+
+The first screen of the timeline, seen as a manager:
+
+![Timeline listing visible documents and passages by date, as a manager](docs/images/timeline-en.png)
+
 ## Online demo
 
 **Try it:** <https://knowledge-kit-demo.bentsai0212.workers.dev>
