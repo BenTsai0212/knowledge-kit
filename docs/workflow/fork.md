@@ -34,6 +34,7 @@
 - 標籤：依 `.github/labels.yml` 建立（`bootstrap-github.mjs` 或手動）。
 - 看板：開啟 auto-add（Workflows 設定，複製看板時不會帶過來）。
 - repo 設定：開啟合併後自動刪除分支（Settings → General → Automatically delete head branches）。
+- main 的分支保護：fork 不會帶過來，自行建立 ruleset（Settings → Rules → Rulesets）：需要 PR、必要檢查（`checks`、`clients`、`sensitive-names`、`gitleaks`、`pr-body`）、禁止強制推送與刪除。E2E 只在 push 到 main 後執行，不要列為必要檢查。
 
 ## 檢查
 

@@ -32,7 +32,8 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 - 本機 Worker：`npm run build` 後 `npx wrangler dev`（提供 `dist/` 與 `/api/*`；使用 `wrangler.jsonc` 的頂層設定）。secret 與變數放在不進版本控制的 `.dev.vars`（`cp .dev.vars.example .dev.vars`，金鑰由人填入）；與 `npm run dev` 併用時，Vite 把 `/api/*` 轉給 `wrangler dev`（見 `worker/README.md`）
 - workflow 工具測試：`npm test --prefix tools/workflow`（Node 內建 `node --test`，無相依套件）
 - PR 描述檢查：`PR_BODY='Closes #1' PR_LABELS='[]' node tools/workflow/check-pr-body.mjs`（CI 的 `PR body` workflow 在 PR 開啟、編輯、更新與標籤變更時執行）
-- 貼出前的檢查：`node tools/workflow/check-post-body.mjs --issue N --kind pr|plan|stop|fix|todo <檔案>`（PR 描述與留言用 `gh … --body-file` 貼出前執行，通過後以同一個檔案貼出；見 `docs/workflow/agent-workflow.md`「貼出 PR 描述與留言」）
+- 貼出前的檢查：`node tools/workflow/check-post-body.mjs --issue N --kind pr|plan|stop|fix|todo <檔案>`（PR 描述與留言用 `gh … --body-file` 貼出前執行，通過後以同一個檔案貼出；也擋下 email 與個人路徑，規則與 `scripts/check-sensitive.mjs` 共用，舉例時用 `user@example.com`、`<名稱>` 等佔位寫法；見 `docs/workflow/agent-workflow.md`「貼出 PR 描述與留言」）
+- main 分支保護（ruleset）：只能經 PR 合併，禁止強制推送與刪除；必要檢查是 `checks`、`clients`、`sensitive-names`、`gitleaks`、`pr-body`。E2E 只在 push 到 main 後執行，不在必要檢查中。
 - CI 的 `checks` job 依序執行 `npm ci` → `npm run check:client` → `npm run typecheck` → `npm test` → `npm run build` → workflow 工具測試；`clients` job 執行 `npm run check:clients`。
 - CI 的 `E2E` workflow（`workflows/e2e.yml`）：對參考情境與 `clients/` 底下的每個客戶各跑一格（matrix），另以線上 demo 的設定（`VITE_ONLINE_DEMO=1`）跑參考情境一格（`demo` job，只執行 `e2e/demo.spec.ts`），只在 push 到 main 後執行，另可 `gh workflow run e2e.yml --ref <分支>` 手動執行（`e2e.yml` 已在 main 上時才有效）；失敗時上傳 trace 與截圖為 artifact `playwright-<客戶>`（`docs/testing.md`）。
 - CI 的 `Sensitive data` workflow（PR 與 push 到 main）：`sensitive-names` job 以 repo secret `SENSITIVE_NAMES` 執行 `node scripts/check-sensitive.mjs`（讀不到 secret 時失敗）；`gitleaks` job 以固定版本＋SHA-256 的 gitleaks 掃描新增的 commit（ADR 0004、`docs/testing.md`）。手動觸發（`workflow_dispatch`，輸入 `full_history`）時兩個 job 都掃描整段 git 歷史（#99）。

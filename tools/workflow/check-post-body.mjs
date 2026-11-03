@@ -4,9 +4,11 @@
 // 用法：node tools/workflow/check-post-body.mjs --issue N --kind pr|plan|stop|fix|todo <檔案或 ->
 // 通過時以 0 結束；不通過時以 1 結束，agent 不貼出。
 // runner 執行時（有 KK_RUN_TMP）：檔案必須在 KK_RUN_TMP 底下、修改時間不早於 KK_RUN_STARTED，不接受標準輸入。
+// 內容不能有 email 與個人路徑（#124）：規則與 scripts/check-sensitive.mjs 共用，輸出只列行號與種類，不輸出命中的文字。
 import { readFileSync, statSync } from 'node:fs';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { findEmails, isAllowedEmail, PERSONAL_PATH } from '../../scripts/check-sensitive.mjs';
 
 // 各種貼出內容的開頭標題；pr 是 PR 描述，改為檢查 Closes／Refs
 export const HEADINGS = {
@@ -43,6 +45,20 @@ export function checkContent(body, { issue, kind }) {
   const heading = HEADINGS[kind];
   if (!body.trimStart().startsWith(heading)) errors.push(`開頭不是「${heading}」`);
   if (!new RegExp(`#${issue}(?!\\d)`).test(text)) errors.push(`內容沒有提到 #${issue}`);
+  return errors;
+}
+
+/**
+ * 敏感資料檢查：不在放行規則內的 email 與個人路徑（#124）。程式碼區塊與行內程式碼貼出後一樣公開，也要檢查；
+ * 不比對禁用名稱清單（runner 沒有清單，名稱以 CI 與 check:sensitive --github 為準）。
+ * 回傳問題清單，只含行號與種類。
+ */
+export function checkSensitiveContent(body) {
+  const errors = [];
+  (body ?? '').split(/\r?\n/).forEach((line, i) => {
+    if (findEmails(line).some((address) => !isAllowedEmail(address))) errors.push(`第 ${i + 1} 行：email`);
+    if (PERSONAL_PATH.test(line)) errors.push(`第 ${i + 1} 行：個人路徑`);
+  });
   return errors;
 }
 
@@ -101,6 +117,7 @@ export function checkPostBody(argv, env = process.env, now = Date.now()) {
   const all = [
     ...checkSource({ file, runTmp, startedMs, mtimeMs, nowMs: now }),
     ...checkContent(body, { issue, kind }),
+    ...checkSensitiveContent(body),
   ];
   return { ok: all.length === 0, errors: all };
 }
@@ -112,6 +129,9 @@ function main() {
     return;
   }
   console.error(`不要貼出：\n${errors.map((e) => `- ${e}`).join('\n')}`);
+  if (errors.some((e) => /：(?:email|個人路徑)$/.test(e))) {
+    console.error('email 與個人路徑改用 user@example.com、/Users/<名稱> 這類佔位寫法（docs/workflow/agent-workflow.md「貼出 PR 描述與留言」）。');
+  }
   process.exitCode = 1;
 }
 
