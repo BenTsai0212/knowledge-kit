@@ -29,7 +29,7 @@ repo 預計公開，CI 紀錄也會公開，所以兩者的輸出都**不包含�
 - **email**：以下放行，其他一律失敗。
   1. 帳號是 `noreply` 的地址，以及 `noreply.github.com` 與其子網域（GitHub 的 noreply 地址）。
   2. `example.com`、`example.org`、`example.net` 與其子網域（RFC 2606）。
-  3. 頂級網域 `.test`、`.example`、`.invalid`、`.localhost`（RFC 2606／6761）。
+  3. 頂級網域 `.test`、`.example`、`.invalid`、`.localhost`（RFC 2606／6761），以及文件說明格式時常用的 `.tld`（例如 `local@domain.tld`；不是實際存在的頂級網域，#113）。目前的檔案、整段歷史與 GitHub 三種模式都適用。
   4. 資料集使用的虛構網域：腳本中的 `FICTIONAL_DOMAINS`，目前是空的。資料集加入虛構網域的 email 時一起修改。
 
   頂級網域不是英文字母的不算 email（例如 `pkg@1.2.3` 這類套件版本）。文件或範例需要 email 時，使用 `example.com` 等保留網域。
@@ -42,9 +42,10 @@ repo 預計公開，CI 紀錄也會公開，所以兩者的輸出都**不包含�
 - 範圍是 `git log --all` 的每個 commit，所以只含本機有的 ref；遠端分支先 `git fetch`。後來刪掉的檔案、改掉的行也會掃到。
   - **新增的行**：每個 commit 與第一個 parent 的差異中 `+` 開頭的行（第一個 commit 與空白比較，合併 commit 與第一個 parent 比較）。二進位檔沒有內容，略過。
   - **commit 訊息**與**作者、提交者名稱**：比對 email 與禁用名稱。
-  - **作者、提交者的 email**：不在放行清單內的不逐筆列出，只依地址分組統計 commit 數量（「第 1 個地址，N 個 commit」，不輸出地址本身）。帳號的主要 email 屬於這一類；依 RFC 0002 待決問題 1 的決定（A1），歷史中的這些 email 保留、不改寫歷史，所以這一項會列出（新的 commit 不應再增加）。
+  - **作者、提交者的 email**：不在放行清單內的不逐筆列出，只依地址分組統計 commit 數量（「第 1 個地址，N 個 commit」，不輸出地址本身）。帳號的主要 email 屬於這一類。
+  - **已知保留**：依 RFC 0002 待決問題 1 的決定（A1，Epic #93 的 `## 決定`），歷史中的這些 email 保留、不改寫歷史。PR #94 的合併 commit（`19a2cbc`，腳本中的 `KNOWN_EMAIL_BOUNDARY`）之前（它的祖先，不含它本身）的 commit，作者與提交者 email 另外列出數量（「已知保留的作者或提交者 email……：N 個地址，M 個 commit」），不算失敗；這個 commit 本身與之後的照常算失敗（#113）。repo 中沒有這個 commit 時（例如 fork 後重新開始的歷史）沒有已知保留。
 - 輸出：`<短 SHA> <檔案路徑、「commit 訊息」或「作者名稱」> 命中禁用名稱清單第 N 項`（或「有不在放行清單內的 email」），同一個 commit 的同一處每一項只列一次，不輸出行號與命中的文字。最後一行列出掃描的 commit 數。
-- 有任何命中、作者 email 或錯誤時結束碼為 1。
+- 有任何命中、分界之後的作者 email 或錯誤時結束碼為 1；只有已知保留的 email 時結束碼為 0。
 - 只掃 git 的內容，不掃 Issue 與 PR 的文字（見下方「GitHub 模式」）。
 
 **CI**：Actions → Sensitive data → Run workflow，`full_history` 勾選（預設），或 `gh workflow run sensitive.yml -f full_history=true`。
@@ -64,7 +65,7 @@ repo 預計公開，CI 紀錄也會公開，所以兩者的輸出都**不包含�
 - 以 `gh api graphql` 讀取**所有** Issue 與 PR（含已關閉），每一層都讀完全部分頁：
   - 標題、描述、留言，PR 的 review 內文與 review comment
   - 以上每一段的**編輯紀錄**（`userContentEdits`；已刪除的版本沒有內容，不掃描）與改名前的標題
-- 比對：禁用名稱、email 與目前的模式相同；另外檢查個人路徑（`/Users/<名稱>`、`/home/<名稱>`，與 `tools/workflow/personal-paths.test.mjs` 相同的規則）。
+- 比對：禁用名稱、email 與目前的模式相同；另外檢查個人路徑（`/Users/<名稱>`、`/home/<名稱>`，與 `tools/workflow/personal-paths.test.mjs` 相同的規則）。GitHub Actions 的執行環境 `/home/runner` 不算個人路徑（#113），`/home/runner2` 等其他名稱與 `/Users/runner` 照常命中。
 - 輸出：`<Issue 或 PR #編號> <標題、描述、留言 <網址>、review <網址> 或 review comment <網址>>`，命中編輯紀錄時加上「編輯紀錄第 N 版（時間）」（第 1 版最舊），再接清單第幾項、「有不在放行清單內的 email」或「有個人路徑」；不輸出命中的文字。最後一行列出讀取的 Issue、PR 與文字段數。
 - 有任何命中或錯誤時結束碼為 1。遇到 API 速率限制時等待 60 秒後重試，重試 3 次仍受限時停止並說明，以 `gh api rate_limit` 查看重置時間後重新執行。
 - 不加進 CI，不修改 GitHub 上的任何內容。

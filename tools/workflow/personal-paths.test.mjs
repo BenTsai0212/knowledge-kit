@@ -9,7 +9,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SCOPE = ['tools/workflow', '.claude', 'docs/workflow', 'AGENTS.md', 'CLAUDE.md', '.github', 'templates'];
-const PERSONAL_PATH = /\/(?:Users|home)\/[\w.-]+/g;
+// GitHub Actions 的執行環境 /home/runner 不算個人路徑（#113）；與 scripts/check-sensitive.mjs 的規則一致
+const PERSONAL_PATH = /\/(?:Users\/|home\/(?!runner(?![\w.-])))[\w.-]+/g;
 
 export function findPersonalPaths(text) {
   return text.match(PERSONAL_PATH) ?? [];
@@ -21,6 +22,21 @@ test('比對 /Users/<名稱> 與 /home/<名稱>，不比對佔位符與其他路
   const home = ['', 'home', 'a.b'].join('/');
   assert.deepEqual(findPersonalPaths(`cd ${users}/x && ls ${home}`), [users, home]);
   assert.deepEqual(findPersonalPaths('/Users/<名稱>、~/Projects、/opt/homebrew/bin/gh、/usr/local'), []);
+});
+
+test('GitHub Actions 的 /home/runner 不算個人路徑，其他以 runner 開頭的名稱照常比對', () => {
+  const others = ['runner2', 'runner.x', 'runners'].map((name) => ['', 'home', name].join('/'));
+  assert.deepEqual(findPersonalPaths('/home/runner/work/kit/kit、/home/runner'), []);
+  assert.deepEqual(findPersonalPaths(others.join(' ')), others);
+  const macRunner = ['', 'Users', 'runner'].join('/');
+  assert.deepEqual(findPersonalPaths(macRunner), [macRunner]);
+});
+
+test('與 scripts/check-sensitive.mjs 的個人路徑規則一致', () => {
+  const script = readFileSync(join(ROOT, 'scripts', 'check-sensitive.mjs'), 'utf8');
+  const rule = /^const PERSONAL_PATH = \/(.+)\/;$/m.exec(script);
+  assert.ok(rule, 'scripts/check-sensitive.mjs 找不到 PERSONAL_PATH');
+  assert.equal(rule[1], PERSONAL_PATH.source);
 });
 
 test('開發流程工具的檔案沒有個人路徑', () => {

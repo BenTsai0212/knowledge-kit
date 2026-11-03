@@ -15,8 +15,8 @@ export const NAMES_ENV = "SENSITIVE_NAMES";
 
 // 放行的網域：RFC 2606／6761 保留的網域，比對本身與子網域
 const RESERVED_DOMAINS = ["example.com", "example.org", "example.net"];
-// 放行的頂級網域：RFC 2606／6761 保留
-const RESERVED_TLDS = ["test", "example", "invalid", "localhost"];
+// 放行的頂級網域：RFC 2606／6761 保留，加上文件說明格式時常用的 .tld（不是實際存在的頂級網域，#113）
+const RESERVED_TLDS = ["test", "example", "invalid", "localhost", "tld"];
 // 資料集使用的虛構網域，比對本身與子網域；資料集加入虛構網域時一起修改（目前沒有）
 export const FICTIONAL_DOMAINS = [];
 
@@ -185,16 +185,36 @@ function distinct(findings) {
   return [...seen].sort(([a], [b]) => a - b).map(([, f]) => f);
 }
 
-// 回傳 { errors, warnings, findings, commits, authorEmails }。
+// 已知保留 email 的分界：PR #94 的合併 commit。依 RFC 0002 待決問題 1 的決定（A1，Epic #93 的 `## 決定`）不改寫歷史，
+// 這個 commit 之前（它的祖先，不含它本身）的作者與提交者 email 只列出數量、不算失敗；之後的照常算失敗（#113）。
+export const KNOWN_EMAIL_BOUNDARY = "19a2cbc962a999438fe4359a72d4d018d53d79c9";
+
+// 分界之前的 commit（完整 SHA）；repo 中沒有分界 commit 時（例如 fork 後的新歷史）是空的
+function commitsBefore(root, boundary) {
+  const found = spawnSync("git", ["-C", root, "rev-parse", "--verify", "--quiet", `${boundary}^{commit}`], { encoding: "utf8" });
+  if (found.status !== 0) return new Set();
+  const shas = execFileSync("git", ["-C", root, "rev-list", found.stdout.trim()], { encoding: "utf8", maxBuffer: 1 << 30 });
+  const before = new Set(shas.split("\n").filter(Boolean));
+  before.delete(found.stdout.trim());
+  return before;
+}
+
+// 每個地址各有幾個 commit，不含地址本身
+const commitCounts = (byAddress) => [...byAddress.values()].map((shas) => shas.size);
+
+// 回傳 { errors, warnings, findings, commits, authorEmails, knownEmails }。
 // findings 只含 commit 短 SHA、檔案路徑（或「commit 訊息」、「作者名稱」）與清單第幾項；
-// commit 作者與提交者的 email 不逐筆列出：authorEmails 是每個不在放行清單內的地址各有幾個 commit，不含地址本身。
-export function checkHistory(root = process.cwd(), env = process.env) {
+// commit 作者與提交者的 email 不逐筆列出：authorEmails 是分界之後每個不在放行清單內的地址各有幾個 commit，
+// knownEmails 是分界之前（已知保留）的，都不含地址本身。
+export function checkHistory(root = process.cwd(), env = process.env, { boundary = KNOWN_EMAIL_BOUNDARY } = {}) {
   const loaded = loadNames(root, env);
   const errors = loaded.error ? [loaded.error] : [];
   const warnings = loaded.warning ? [loaded.warning] : [];
   const names = loaded.names ?? null;
   const findings = [];
+  const before = commitsBefore(root, boundary);
   const emailCommits = new Map();
+  const knownCommits = new Map();
   let commits = 0;
   for (const chunk of gitLogAll(root).split(COMMIT).slice(1)) {
     commits += 1;
@@ -204,20 +224,21 @@ export function checkHistory(root = process.cwd(), env = process.env) {
     for (const f of distinct(scanText(`${authorName}\n${committerName}`, names))) findings.push(describe(`${short} 作者名稱`, f));
     for (const address of new Set([authorEmail, committerEmail])) {
       if (!address.includes("@") || isAllowedEmail(address)) continue;
-      emailCommits.set(address, (emailCommits.get(address) ?? new Set()).add(sha));
+      const counts = before.has(sha) ? knownCommits : emailCommits;
+      counts.set(address, (counts.get(address) ?? new Set()).add(sha));
     }
     for (const { path, text } of addedLines(chunk.slice(end + 1))) {
       for (const f of distinct(scanText(text, names))) findings.push(describe(`${short} ${path}`, f));
     }
   }
-  const authorEmails = [...emailCommits.values()].map((shas) => shas.size);
-  return { errors, warnings, findings, commits, authorEmails };
+  return { errors, warnings, findings, commits, authorEmails: commitCounts(emailCommits), knownEmails: commitCounts(knownCommits) };
 }
 
 // ---- GitHub 模式（#111） ----
 
-// 個人路徑：與 tools/workflow/personal-paths.test.mjs 相同的規則（/Users/<名稱>、/home/<名稱>）
-const PERSONAL_PATH = /\/(?:Users|home)\/[\w.-]+/;
+// 個人路徑：與 tools/workflow/personal-paths.test.mjs 相同的規則（/Users/<名稱>、/home/<名稱>；
+// GitHub Actions 的執行環境 /home/runner 不算，#113）
+const PERSONAL_PATH = /\/(?:Users\/|home\/(?!runner(?![\w.-])))[\w.-]+/;
 
 // 讀取的連線：別名 → GraphQL 欄位、每頁幾筆、節點的欄位與底下的連線。
 // 有下層連線的節點都帶 id 與 __typename，下一頁以 node(id) 讀取。
@@ -368,32 +389,47 @@ export function checkGitHub(root = process.cwd(), env = process.env, { graphql =
   return { errors, warnings, findings, ...counts };
 }
 
-function main(args) {
-  const history = args.includes("--history");
-  const github = args.includes("--github");
-  const root = resolve(args.find((arg) => !arg.startsWith("--")) ?? ".");
-  const result = github ? checkGitHub(root) : history ? checkHistory(root) : checkSensitive(root);
+// 檢查結果的輸出與結束碼。mode 是 "files"、"history" 或 "github"；回傳 { out, warn, err, status }（每一行一個字串）
+export function report(mode, result) {
   const { errors, warnings, findings } = result;
   const authorEmails = result.authorEmails ?? [];
-  for (const w of warnings) console.warn(`警告：${w}`);
-  for (const e of errors) console.error(`錯誤：${e}`);
-  for (const f of findings) console.error(f);
+  const knownEmails = result.knownEmails ?? [];
+  const out = [];
+  const warn = warnings.map((w) => `警告：${w}`);
+  const err = [...errors.map((e) => `錯誤：${e}`), ...findings];
   authorEmails.forEach((count, i) => {
-    console.error(`commit 作者或提交者的 email 不在放行清單內：第 ${i + 1} 個地址，${count} 個 commit`);
+    err.push(`commit 作者或提交者的 email 不在放行清單內：第 ${i + 1} 個地址，${count} 個 commit`);
   });
-  const scope = github
-    ? `（GitHub，${result.issues} 個 Issue、${result.pullRequests} 個 PR、${result.texts} 段文字）`
-    : history
-      ? `（整段歷史，${result.commits} 個 commit）`
-      : "";
+  if (knownEmails.length > 0) {
+    const commits = knownEmails.reduce((sum, count) => sum + count, 0);
+    out.push(`已知保留的作者或提交者 email（PR #94 之前的 commit，RFC 0002 待決問題 1 的決定 A1）：${knownEmails.length} 個地址，${commits} 個 commit`);
+  }
+  const scope =
+    mode === "github"
+      ? `（GitHub，${result.issues} 個 Issue、${result.pullRequests} 個 PR、${result.texts} 段文字）`
+      : mode === "history"
+        ? `（整段歷史，${result.commits} 個 commit）`
+        : "";
   if (errors.length > 0 || findings.length > 0 || authorEmails.length > 0) {
     const parts = [`${findings.length} 處命中`];
     if (authorEmails.length > 0) parts.push(`${authorEmails.length} 個作者 email 地址`);
     if (errors.length > 0) parts.push(`${errors.length} 個錯誤`);
-    console.error(`敏感資料檢查${scope}失敗：${parts.join("，")}`);
-    process.exit(1);
+    err.push(`敏感資料檢查${scope}失敗：${parts.join("，")}`);
+    return { out, warn, err, status: 1 };
   }
-  console.log(`敏感資料檢查${scope}通過`);
+  out.push(`敏感資料檢查${scope}通過`);
+  return { out, warn, err, status: 0 };
+}
+
+function main(args) {
+  const mode = args.includes("--github") ? "github" : args.includes("--history") ? "history" : "files";
+  const root = resolve(args.find((arg) => !arg.startsWith("--")) ?? ".");
+  const check = { github: checkGitHub, history: checkHistory, files: checkSensitive }[mode];
+  const { out, warn, err, status } = report(mode, check(root));
+  for (const line of warn) console.warn(line);
+  for (const line of err) console.error(line);
+  for (const line of out) console.log(line);
+  process.exitCode = status;
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
