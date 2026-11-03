@@ -4,6 +4,8 @@
 
 以虛構資料為一個組織快速建立「第二大腦」知識平台 demo 的 template。換組織時只改設定（`client/` 或 `clients/<名稱>/`），不改程式。
 
+**線上 demo：**<https://knowledge-kit-demo.bentsai0212.workers.dev>（見[線上 demo](#線上-demo)）
+
 demo 是展示用的原型，不是正式系統。
 
 ## 功能
@@ -20,7 +22,7 @@ demo 是展示用的原型，不是正式系統。
 
 ## 線上 demo
 
-<!-- DEMO_URL：線上 demo 部署後補上網址 -->
+**試用：**<https://knowledge-kit-demo.bentsai0212.workers.dev>
 
 - 已預先填入公開的試用碼，直接送出即可。所有訪客共用每日的提問次數，當天的額度可能用完。
 - 評測台隱藏，因為執行一次會呼叫很多次模型。
