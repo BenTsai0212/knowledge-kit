@@ -4,6 +4,8 @@ English | [繁體中文](README.zh-TW.md)
 
 A template for quickly building a "second brain" knowledge platform demo for an organization, using fictional data. To switch to another organization, you change only its settings (`client/` or `clients/<name>/`), not the code.
 
+**Online demo:** <https://knowledge-kit-demo.bentsai0212.workers.dev> (see [Online demo](#online-demo))
+
 The demo is a prototype for demonstration, not a production system.
 
 ## Features
@@ -20,7 +22,7 @@ The demo is a prototype for demonstration, not a production system.
 
 ## Online demo
 
-<!-- DEMO_URL: the URL is added after the online demo is deployed -->
+**Try it:** <https://knowledge-kit-demo.bentsai0212.workers.dev>
 
 - A public trial code is already filled in; just submit it. All visitors share its daily question limit, so the quota may run out for the day.
 - The evaluation page is hidden, because one run makes many model calls.
