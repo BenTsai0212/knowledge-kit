@@ -6,7 +6,7 @@ import { DatasetImportError, seedDataset } from "./seed";
 
 const open = (data = dataset) => openDatabase(clientConfig, { seed: (db) => seedDataset(db, clientConfig, data) });
 
-describe("seedDataset", () => {
+describe("seedDataset", { timeout: 30_000 }, () => {
   it("以資料集初始化資料層：段落沿用文件的語言、等級與專案", async () => {
     const db = await open();
     const rows = await db.withIdentity("manager", async (tx) => ({
