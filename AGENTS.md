@@ -32,6 +32,7 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 - 本機 Worker：`npm run build` 後 `npx wrangler dev`（提供 `dist/` 與 `/api/*`；使用 `wrangler.jsonc` 的頂層設定）。secret 與變數放在不進版本控制的 `.dev.vars`（`cp .dev.vars.example .dev.vars`，金鑰由人填入）；與 `npm run dev` 併用時，Vite 把 `/api/*` 轉給 `wrangler dev`（見 `worker/README.md`）
 - workflow 工具測試：`npm test --prefix tools/workflow`（Node 內建 `node --test`，無相依套件）
 - PR 描述檢查：`PR_BODY='Closes #1' PR_LABELS='[]' node tools/workflow/check-pr-body.mjs`（CI 的 `PR body` workflow 在 PR 開啟、編輯、更新與標籤變更時執行）
+- 貼出前的檢查：`node tools/workflow/check-post-body.mjs --issue N --kind pr|plan|stop|fix|todo <檔案>`（PR 描述與留言用 `gh … --body-file` 貼出前執行，通過後以同一個檔案貼出；見 `docs/workflow/agent-workflow.md`「貼出 PR 描述與留言」）
 - CI 的 `checks` job 依序執行 `npm ci` → `npm run check:client` → `npm run typecheck` → `npm test` → `npm run build` → workflow 工具測試；`clients` job 執行 `npm run check:clients`。
 - CI 的 `E2E` workflow（`workflows/e2e.yml`）：對參考情境與 `clients/` 底下的每個客戶各跑一格（matrix），另以線上 demo 的設定（`VITE_ONLINE_DEMO=1`）跑參考情境一格（`demo` job，只執行 `e2e/demo.spec.ts`），只在 push 到 main 後執行，另可 `gh workflow run e2e.yml --ref <分支>` 手動執行（`e2e.yml` 已在 main 上時才有效）；失敗時上傳 trace 與截圖為 artifact `playwright-<客戶>`（`docs/testing.md`）。
 - CI 的 `Sensitive data` workflow（PR 與 push 到 main）：`sensitive-names` job 以 repo secret `SENSITIVE_NAMES` 執行 `node scripts/check-sensitive.mjs`（讀不到 secret 時失敗）；`gitleaks` job 以固定版本＋SHA-256 的 gitleaks 掃描新增的 commit（ADR 0004、`docs/testing.md`）。手動觸發（`workflow_dispatch`，輸入 `full_history`）時兩個 job 都掃描整段 git 歷史（#99）。
@@ -67,7 +68,7 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 | `docs/workflow/` | 憲法與 workflow 手冊 |
 | `docs/rfcs/`、`docs/adr/` | 專案章程與決策紀錄 |
 | `docs/playbook/` | 方法與文件套件（需求確認清單、資料盤點表、資料安全說明、評測題庫建立步驟、驗收指標、落地新客戶步驟 `new-client-setup.md`）；入口是 [docs/playbook/README.md](docs/playbook/README.md)，英文版在 `docs/playbook/en/`，兩份一起改 |
-| `tools/workflow/` | workflow 工具（Node，自帶 `package.json`）；`hooks/confirm-main.mjs` 是合併與 push 到 main 前的確認 hook；`check-pr-body.mjs` 檢查 PR 描述有 `Closes`／`Refs #N`（`fast-lane` 除外）；`personal-paths.test.mjs` 檢查開發流程工具的檔案沒有 `/Users/<名稱>`、`/home/<名稱>` 形式的個人路徑（#96，fork 後要改的地方見 `docs/workflow/fork.md`）；`runner/` 是自動化模組的 runner（ADR 0003，指令見第 2 節）；`bootstrap-github.mjs`、`config.json` 不適用（見第 2 節） |
+| `tools/workflow/` | workflow 工具（Node，自帶 `package.json`）；`hooks/confirm-main.mjs` 是合併與 push 到 main 前的確認 hook；`check-pr-body.mjs` 檢查 PR 描述有 `Closes`／`Refs #N`（`fast-lane` 除外）；`check-post-body.mjs` 是 agent 貼出 PR 描述與留言前的檢查（#104）；`personal-paths.test.mjs` 檢查開發流程工具的檔案沒有 `/Users/<名稱>`、`/home/<名稱>` 形式的個人路徑（#96，fork 後要改的地方見 `docs/workflow/fork.md`）；`runner/` 是自動化模組的 runner（ADR 0003，指令見第 2 節）；`bootstrap-github.mjs`、`config.json` 不適用（見第 2 節） |
 | `.claude/settings.json` | Claude Code 設定：在 `PreToolUse`（Bash）註冊確認 hook |
 | `templates/` | Claude Project 範本與預設不啟用的模組檔案 |
 | `.github/` | Issue／PR 範本、標籤定義、CI（`workflows/ci.yml`：`checks` 與 `clients` job；`workflows/pr-body.yml`：PR 描述檢查；`workflows/sensitive.yml`：敏感資料檢查；`workflows/e2e.yml`：Playwright，參考情境與每個客戶各一格）；沒有部署 workflow |
@@ -118,6 +119,8 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 
 - Vitest 的 `fsModuleCache`（預設開啟）會沿用舊的 `import.meta.glob` 結果：新增 `app/src/db/migrations/*.sql` 後，本機測試不會載入新檔，可能誤判通過。`vitest.config.ts` 已設 `fsModuleCache: false`，不要移除。〔#6 PR 2 以暫時的 migration 驗證滲漏測試時發現｜Vitest 修正快取失效後〕
 - Vitest 預設把 CSS 檔換成空字串，連 `?raw` 也一樣，檢查 CSS 的測試會因為讀到空字串而誤判通過。`vitest.config.ts` 的 `css.include` 已加入 `app/src/ui/app.css`，不要移除；要檢查其他 CSS 檔時加進去。〔#58 PR 2 的主題結構測試發現｜Vitest 的 `?raw` 不再受 `css` 設定影響後〕
+
+- `$TMPDIR` 可能是同一台電腦上所有專案共用的資料夾（Claude Code 的 sandbox 是 `/tmp/claude-<uid>`），有其他專案留下的同名檔案；Write 工具對已存在、未讀過的檔案會寫入失敗，沿用舊檔就會把其他專案的內容貼出。PR 描述與留言依 `docs/workflow/agent-workflow.md`「貼出 PR 描述與留言」寫成新檔、以 `check-post-body.mjs` 檢查後貼出；runner 執行時寫在 `KK_RUN_TMP`。〔#104：PR #98 的描述與 #100 的計畫留言貼出了其他專案的檔案｜sandbox 改為每個專案各自的暫存資料夾後〕
 
 ## 8. 維護本文件
 

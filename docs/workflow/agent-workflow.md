@@ -52,7 +52,7 @@ gh issue view N --json title,body,comments,labels
 
 **Issue 帶 `plan-first` 時**：
 
-- 還沒有同意計畫的 `## 決定` → 把計畫留言到 Issue（標題 `## 計畫`），加上 `blocked`，@ 決定者，停止。
+- 還沒有同意計畫的 `## 決定` → 把計畫留言到 Issue（標題 `## 計畫（#N）`，依[貼出 PR 描述與留言](#貼出-pr-描述與留言)，`--kind plan`），加上 `blocked`，@ 決定者，停止。
 - 已有 `## 決定` → 依決定調整計畫後繼續，不再重提計畫。
 
 沒有 `plan-first` 時，計畫只是給人看的說明，不必等待確認。
@@ -92,9 +92,12 @@ git switch -c <type>/<N>-<short-topic>
 - 依 [PR 範本](../../.github/pull_request_template.md) 填寫；驗證結果寫實際執行的指令與結果，未執行的寫明原因。
 - 有合併後待辦或只完成一部分驗收條件時，寫 `Refs #N`；否則寫 `Closes #N`。
 
+- PR 描述依[貼出 PR 描述與留言](#貼出-pr-描述與留言)寫成新檔，檢查通過後以同一個檔案貼出。
+
 ```bash
 git push -u origin HEAD
-gh pr create --base main --title "<prefix>: <title>" --body-file <填好的範本>
+node tools/workflow/check-post-body.mjs --issue N --kind pr <檔案>
+gh pr create --base main --title "<prefix>: <title>" --body-file <檔案>
 ```
 
 ## 7. 等待 CI
@@ -110,11 +113,12 @@ CI 失敗時回到第 4 步修正並 push，直到通過。
 沒有合併後待辦時略過。有的話：
 
 ```bash
-gh issue comment N --body-file <待辦清單>
+node tools/workflow/check-post-body.mjs --issue N --kind todo <檔案>
+gh issue comment N --body-file <檔案>
 gh issue edit N --add-label needs-human
 ```
 
-留言以核取方塊（`- [ ]`）逐項列出合併後待辦，附 PR 連結，@ 決定者。人完成全部待辦後移除標籤並關閉 Issue。
+留言以 `## 合併後待辦（#N）` 開頭，以核取方塊（`- [ ]`）逐項列出合併後待辦，附 PR 連結，@ 決定者。人完成全部待辦後移除標籤並關閉 Issue。
 
 ## 9. 回報
 
@@ -132,10 +136,17 @@ gh issue edit N --add-label needs-human
 2. **加上 `blocked`**，並在留言 @ 決定者（AGENTS.md 第 0 節）。修正模式停止時，`changes-requested` 與 `blocked` 同時保留。
 3. **本機對話**只回覆一句摘要與留言連結。
 4. 人以 `## 決定` 留言回覆；agent 重新開始時依第 0 步讀取決定，依決定繼續並移除 `blocked`。
+5. 留言依[貼出 PR 描述與留言](#貼出-pr-描述與留言)寫成新檔，檢查通過後貼出（在 PR 留言時用 `gh pr comment <PR>`）：
+
+   ```bash
+   node tools/workflow/check-post-body.mjs --issue N --kind stop <檔案>
+   gh issue comment N --body-file <檔案>
+   ```
 
 ```markdown
 ## agent 停止：<一句話原因>
 
+- **Issue**：#N
 - **停在哪一步**：<例如 第 0 步／修正模式第 3 步>
 - **原因**：<為什麼不能繼續>
 - **已確認的事實**：<資料、指令輸出摘要>
@@ -173,10 +184,33 @@ gh issue edit N --add-label needs-human
 3. 逐項修正，依第 4、5 步驗證與自我審查。
 4. push 到同一分支，不開新 PR。
 5. 等 CI 通過。
-6. 在 PR 留言逐項回報（✅ 已完成／❌ 未完成＋原因），附 commit。
+6. 在 PR 留言逐項回報（✅ 已完成／❌ 未完成＋原因），附 commit。留言以 `## 修正回報（#N）` 開頭，依[貼出 PR 描述與留言](#貼出-pr-描述與留言)以 `--kind fix` 檢查後用 `gh pr comment <PR> --body-file <檔案>` 貼出。
 7. 全部完成時移除 `changes-requested`；有未完成項目時保留並停止回報。
 
 修正要求超出原 Issue 範圍時，不實作該項，在回報中建議開新 Issue。
+
+## 貼出 PR 描述與留言
+
+`$TMPDIR` 可能是同一台電腦上所有專案共用的資料夾（Claude Code 的 sandbox 是 `/tmp/claude-<uid>`），裡面會有其他專案留下的同名檔案。檔案已存在時寫入可能失敗，沿用舊檔就會把其他專案的內容貼到本 repo（#104）。PR 描述、計畫、停止回報、修正回報與人工待辦一律依下列方式貼出：
+
+1. **寫入新檔**：
+   - runner 執行時：寫在環境變數 `KK_RUN_TMP` 的資料夾底下（runner 給 agent 的說明列出絕對路徑），例如 `<KK_RUN_TMP>/pr.md`。這個資料夾每次執行時新建，結束時刪除。
+   - 手動執行時：用含 repo、Issue 編號與時間的新檔名，例如 `$TMPDIR/<repo>-<N>-pr-<時間>.md`。
+   - **寫入失敗時不執行 `gh`**：換一個新檔名重新寫入，不沿用已存在的檔案。
+2. **檢查**：`node tools/workflow/check-post-body.mjs --issue N --kind <種類> <檔案>`。種類與要求：
+
+   | 種類 | 用於 | 要求 |
+   | --- | --- | --- |
+   | `pr` | PR 描述 | `Closes #N` 或 `Refs #N` |
+   | `plan` | 第 2 步的計畫 | 開頭是 `## 計畫`，內容提到 `#N` |
+   | `stop` | 停止時的回報 | 開頭是 `## agent 停止`，內容提到 `#N` |
+   | `fix` | 修正模式的回報 | 開頭是 `## 修正回報`，內容提到 `#N` |
+   | `todo` | 第 8 步的人工待辦 | 開頭是 `## 合併後待辦`，內容提到 `#N` |
+
+   另外檢查檔案不是舊檔：有 `KK_RUN_TMP` 時，檔案必須在該資料夾底下、修改時間不早於本次執行開始（`KK_RUN_STARTED`）；手動執行時不能超過 30 分鐘。不通過（以非 0 結束）時**不貼出**，修正內容後重新寫入。
+3. **貼出**：以**同一個路徑**執行 `gh … --body-file <檔案>`，檢查與貼出之間不修改檔案。
+
+手動執行時，也可以用 `--body-file -` 加 `<<'EOF'` heredoc 直接貼出，不經過檔案；runner 執行時不用這個寫法，檢查工具在 runner 下也不接受標準輸入。
 
 ## Agent 不做的事
 

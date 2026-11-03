@@ -42,6 +42,15 @@ claude 非正常結束後，若 runner 的 worktree 有未提交的修改或未�
 
 不推到 agent 原本的分支（可能已開 PR），也不刪除任何東西。接手時從 `wip/` 分支取回需要的修改；用完的 `wip/` 分支由人刪除。
 
+### 本次執行的暫存資料夾
+
+sandbox 給 agent 的 `$TMPDIR`（`/tmp/claude-<uid>`）是同一台電腦上所有專案共用的；檔案已存在時 Write 工具會寫入失敗，agent 沿用舊檔就會把其他專案的內容貼到本 repo（#104）。因此 runner 每次啟動 claude 前：
+
+1. 建立 `<worktree>/.runner-tmp/<YYYYMMDDTHHmmss>-<Issue>/`（`.runner-tmp/` 在 `.gitignore`；worktree 本來就能寫入，不放寬 sandbox）。
+2. 以環境變數 `KK_RUN_TMP`（資料夾）、`KK_RUN_STARTED`（開始時間）傳給 agent，`TMPDIR` 也指到同一個資料夾（sandbox 可能改掉 `TMPDIR`，不依賴它）；給 agent 的說明列出這個資料夾的絕對路徑。
+3. agent 把 PR 描述與留言寫在這個資料夾，以 `tools/workflow/check-post-body.mjs` 檢查後用同一個路徑貼出（`docs/workflow/agent-workflow.md`「貼出 PR 描述與留言」）。
+4. claude 結束後刪除這個資料夾。只刪除符合上述格式的本次資料夾（`lib.mjs` 的 `isRunTmpDir()`），不刪除 `/tmp/claude-*` 或其他任何檔案。
+
 ## 設定
 
 ```bash

@@ -11,3 +11,4 @@ dist/
 .sensitive-names.local
 test-results/
 playwright-report/
+.runner-tmp/

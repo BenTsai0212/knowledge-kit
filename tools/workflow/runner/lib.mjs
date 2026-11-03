@@ -175,6 +175,28 @@ export function wipBranchName(issue, date) {
   return `wip/${issue}-${d}-${pad(date.getHours())}${pad(date.getMinutes())}`;
 }
 
+// 每次執行專屬的暫存資料夾放在 worktree 內（已在 .gitignore），sandbox 本來就能寫入（#104）
+export const RUN_TMP_DIR = '.runner-tmp';
+const RUN_TMP_NAME = /^\d{8}T\d{6}-\d+$/;
+
+/** 本次執行的暫存資料夾：<worktree>/.runner-tmp/<YYYYMMDDTHHmmss>-<Issue>（本機時間）。 */
+export function runTmpDir(worktree, issue, date) {
+  const d = `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}`;
+  const t = `${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+  return `${worktree.replace(/\/+$/, '')}/${RUN_TMP_DIR}/${d}T${t}-${issue}`;
+}
+
+/** 刪除前的確認：只接受 runTmpDir 產生的路徑（<worktree>/.runner-tmp/ 底下一層、名稱符合格式）。 */
+export function isRunTmpDir(worktree, dir) {
+  const prefix = `${worktree.replace(/\/+$/, '')}/${RUN_TMP_DIR}/`;
+  return typeof dir === 'string' && dir.startsWith(prefix) && RUN_TMP_NAME.test(dir.slice(prefix.length));
+}
+
+/** 傳給 agent 的環境變數：check-post-body.mjs 依 KK_RUN_TMP、KK_RUN_STARTED 檢查；TMPDIR 也指過去，但不依賴它生效。 */
+export function runTmpEnv(dir, startedAt) {
+  return { KK_RUN_TMP: dir, KK_RUN_STARTED: startedAt.toISOString(), TMPDIR: dir };
+}
+
 /** agent:working 超過 staleHours 沒有更新的 Issue。 */
 export function staleWorking(issues, now, staleHours) {
   return issues.filter((i) => now - Date.parse(i.updatedAt) > staleHours * 3600e3);
@@ -268,7 +290,7 @@ export function buildSettings(base, { repoRoot, config }) {
 }
 
 /** 給 agent 的補充說明（--append-system-prompt），只在 runner 執行時附加。 */
-export function agentNote(config) {
+export function agentNote(config, { runTmp } = {}) {
   return [
     '你正在 runner 專用的 git worktree 中無人值守執行。',
     '- main 分支可能被主資料夾佔用：不要 git switch main，直接從 origin/main 開分支，例如 git fetch origin && git switch -c <分支> origin/main。',
@@ -278,6 +300,10 @@ export function agentNote(config) {
     '- 修正模式：用 runner 專屬的本地分支，git fetch origin <分支> && git switch -c runner/<分支> origin/<分支>；推送方式同上，rebase 後用 git push --force-with-lease origin HEAD:<分支>。runner 開始前已清除舊的 runner/* 本地分支，不需要也不能使用 git reset --hard。',
     '- 不自行啟動瀏覽器（Chrome、Playwright 等）或架設效能測量環境；需要的項目列在 PR 的人工待辦。',
     '- 可能長時間執行的指令，用 Bash 工具的 timeout 參數設定上限；不要在背景執行可能卡住的指令；不需要在 PR 回報。',
+    ...(runTmp ? [
+      `- PR 描述與留言的檔案一律用 Write 工具寫在本次執行的暫存資料夾 ${runTmp}/ 底下（環境變數 KK_RUN_TMP；不要用 $TMPDIR 或 /tmp，那裡有其他專案的同名檔案）。`
+        + '寫入失敗時不執行 gh；先以 node tools/workflow/check-post-body.mjs 檢查，通過後用同一個路徑 --body-file 貼出（docs/workflow/agent-workflow.md「貼出 PR 描述與留言」）。',
+    ] : []),
     ...(config.agentNotes ?? []).map((n) => `- ${n}`),
   ].join('\n');
 }
