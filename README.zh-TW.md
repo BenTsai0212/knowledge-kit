@@ -20,6 +20,18 @@ demo 是展示用的原型，不是正式系統。
 - **多語言介面與檢索**：介面文字來自翻譯檔，檢索依各語言的文字處理（[docs/client-config.md](docs/client-config.md)、[docs/retrieval.md](docs/retrieval.md)）。
 - **主題色與深色模式**：顏色來自設定，`prefers-color-scheme: dark` 時改用深色配色（[docs/client-config.md](docs/client-config.md)）。
 
+預設問題的回答，附引用並打開原文面板：
+
+![附引用的問答回答，旁邊打開原文面板](docs/images/qa-zh-TW.png)
+
+知識圖譜與實體面板（主管身分）：
+
+![知識圖譜與選取實體的實體面板（主管身分）](docs/images/graph-zh-TW.png)
+
+時間軸的第一個畫面（主管身分）：
+
+![依日期列出看得到的文件與段落的時間軸（主管身分）](docs/images/timeline-zh-TW.png)
+
 ## 線上 demo
 
 **試用：**<https://knowledge-kit-demo.bentsai0212.workers.dev>
