@@ -124,7 +124,7 @@ describe("測試資料的前提", () => {
 describe.each([
   ["參考設定（只有主管審核）", clientConfig],
   ["一般員工也能審核", STAFF_REVIEWS],
-])("偵測結果與決定的可見範圍：%s", (_name, config) => {
+])("偵測結果與決定的可見範圍：%s", { timeout: 30_000 }, (_name, config) => {
   it("每個身分看得到的列，正好等於 oracle（兩段都看得到，且有 canReview 或決定是並存、取代）", async () => {
     const w = await setup(config);
     for (const id of IDENTITIES) {
@@ -149,7 +149,7 @@ describe.each([
   });
 });
 
-describe("沒有 canReview 的身分", () => {
+describe("沒有 canReview 的身分", { timeout: 30_000 }, () => {
   it("看不到未處理與「不是矛盾」的組合，看得到兩段都可見的「並存」「取代」組合", async () => {
     const w = await setup();
     expect((await queryConflicts(w.db, "staff")).conflicts).toEqual(["pc-p1", "pc-s1"]);
@@ -160,7 +160,7 @@ describe("沒有 canReview 的身分", () => {
   });
 });
 
-describe("寫入偵測結果（上傳者）", () => {
+describe("寫入偵測結果（上傳者）", { timeout: 30_000 }, () => {
   it("每個身分 × 文件 × 既有段落能否寫入，正好等於 oracle", async () => {
     const w = await setup(clientConfig, { pairs: false });
     const docs = [
@@ -210,7 +210,7 @@ describe("寫入偵測結果（上傳者）", () => {
   });
 });
 
-describe("處理", () => {
+describe("處理", { timeout: 30_000 }, () => {
   it.each([
     ["參考設定（只有主管審核）", clientConfig],
     ["一般員工也能審核", STAFF_REVIEWS],

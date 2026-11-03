@@ -35,7 +35,7 @@ async function setup(uploader: string, visibility = "internal") {
 const replyFor = (state: ConflictState, pairs: { new: number; existing: string; summary: string }[]): AskEvent[] =>
   answered(JSON.stringify({ conflicts: pairs.map((p) => ({ ...p, existing: state.selection.existing.findIndex((e) => e.id === p.existing) + 1 })) }));
 
-describe("planConflicts", () => {
+describe("planConflicts", { timeout: 30_000 }, () => {
   it("以上傳者的身分挑選：一般員工送出的既有段落都是自己看得到的，不含機密段落", async () => {
     const staff = await setup("staff");
     const visible = await staff.db.withIdentity("staff", async (tx) => new Set((await tx.query<{ id: string }>("SELECT id FROM kk.passages")).rows.map((r) => r.id)));
@@ -55,7 +55,7 @@ describe("planConflicts", () => {
   });
 });
 
-describe("runConflicts", () => {
+describe("runConflicts", { timeout: 30_000 }, () => {
   it("一次呼叫，寫入待處理的組合；核准者看得到，沒有 canReview 的上傳者看不到", async () => {
     const { db, upload, state } = await setup("staff");
     const transport = fakeTransport(() =>

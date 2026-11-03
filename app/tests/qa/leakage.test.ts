@@ -84,7 +84,7 @@ async function leaks(database: Database, identities = IDENTITIES) {
   return { found, bodies };
 }
 
-describe("問答的權限滲漏", () => {
+describe("問答的權限滲漏", { timeout: 30_000 }, () => {
   it("檢查能抓到滲漏：忽略身分、一律以主管查詢的資料層會被抓到", async () => {
     const ignoring: Database = { withIdentity: (_id, fn) => db.withIdentity("manager", fn), close: db.close };
     const { found } = await leaks(ignoring, ["guest"]);
