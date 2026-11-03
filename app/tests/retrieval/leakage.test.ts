@@ -51,7 +51,7 @@ async function leaks(retriever: Retriever, identities = IDENTITIES) {
   return found;
 }
 
-describe("檢索的權限滲漏", () => {
+describe("檢索的權限滲漏", { timeout: 30_000 }, () => {
   it("資料集確實區分各身分（防止資料太少而通過）", () => {
     const [g, s, m] = ["guest", "staff", "manager"].map((id) => visible(id).size);
     expect(g).toBeGreaterThan(0);

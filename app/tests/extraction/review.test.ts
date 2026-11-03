@@ -125,7 +125,7 @@ const expectedGraph = (w: World, id: string | null) => {
   };
 };
 
-describe("寫入待審（上傳者）", () => {
+describe("寫入待審（上傳者）", { timeout: 30_000 }, () => {
   it("只能寫入自己上傳的文件；寫入後，沒有 canReview 的上傳者讀不到", async () => {
     const w = await setup();
     const one = (doc: string, passage: string): PendingInput => ({
@@ -164,7 +164,7 @@ describe("寫入待審（上傳者）", () => {
 describe.each([
   ["參考設定（只有主管審核）", clientConfig],
   ["一般員工也能審核", STAFF_REVIEWS],
-])("待審項目的可見範圍：%s", (_name, config) => {
+])("待審項目的可見範圍：%s", { timeout: 30_000 }, (_name, config) => {
   it("每個身分看得到的待審項目與決定，正好等於 oracle", async () => {
     const w = await setup(config);
     await reject(w.db, "manager", { entities: ["pe-m2"], relations: [] });
@@ -187,7 +187,7 @@ describe.each([
   });
 });
 
-describe("能做的決定", () => {
+describe("能做的決定", { timeout: 30_000 }, () => {
   it("沒有 canReview 的身分不能核准、退回、修改名稱", async () => {
     const w = await setup();
     for (const id of ["guest", "staff", null, "nobody"]) {

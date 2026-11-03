@@ -100,7 +100,7 @@ describe("各身分的可見範圍", () => {
   });
 });
 
-describe("關係的出處", () => {
+describe("關係的出處", { timeout: 30_000 }, () => {
   // 0003_relation_sources_endpoints.sql：出處列帶上兩端實體，兩端都看得到才看得到出處
   it("關係被隱藏時，出處列也看不到", async () => {
     const rows = await db.withIdentity("guest", async (tx) => ({

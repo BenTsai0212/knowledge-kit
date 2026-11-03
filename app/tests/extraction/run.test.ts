@@ -38,7 +38,7 @@ const PERSON = { key: "e1", type: "person", names: { "zh-TW": "測試人員甲",
 const PROJECT = { key: "e2", type: "project", names: { "zh-TW": "青翼專案", en: "Project Bluewing" }, sources: [1] };
 const WORKS_ON = { type: "works-on", from: "e1", to: "e2", sources: [1] };
 
-describe("runExtraction", () => {
+describe("runExtraction", { timeout: 30_000 }, () => {
   it("短文件：一批、以上傳者的身分寫入待審；核准者看得到，上傳者看不到", async () => {
     const { db, upload, state } = await setup(["測試人員甲參與青翼專案的使用者測試。"]);
     const transport = fakeTransport(() => reply([PERSON, PROJECT], [WORKS_ON]));

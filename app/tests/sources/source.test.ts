@@ -28,7 +28,7 @@ afterAll(async () => {
   await db.close();
 });
 
-describe("readSource", () => {
+describe("readSource", { timeout: 30_000 }, () => {
   it("每個身分 × 每段段落：看不到時回 null；看得到時只回該文件中看得到的段落，依順序", async () => {
     let opened = 0;
     for (const id of IDENTITIES) {

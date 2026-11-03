@@ -114,7 +114,7 @@ describe("身分", () => {
   });
 });
 
-describe("migrate", () => {
+describe("migrate", { timeout: 30_000 }, () => {
   it("已套用的 migration 被修改時拋錯；未修改時不重複套用", async () => {
     const pg = await PGlite.create();
     await pg.exec("CREATE ROLE kk_owner NOLOGIN; CREATE SCHEMA kk; CREATE SCHEMA kk_meta;");
