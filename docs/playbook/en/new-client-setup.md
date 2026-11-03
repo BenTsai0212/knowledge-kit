@@ -113,6 +113,8 @@ Ask a person to confirm that the content fits this client and the questions are 
 
 - **`theme.json`**: switch to brand colors only when the client agrees; otherwise keep the neutral defaults. Both light and dark must pass the `check:client` contrast check; if a brand color lacks contrast, adjust its lightness rather than turning the check off.
 - **`i18n/`**: usually unchanged. Change it only when the client has its own wording (for example "colleagues" instead of "employees"); keys and parameters must match in every language.
+  - The translation of the `global_daily_limit` error mentions the "online trial" and "running it locally"; adjust it to the client's situation.
+  - The three keys `demoAccessCodeHint`, `demoQaNotice`, and `demoUploadNotice` are required and are shown only in the online demo (`VITE_ONLINE_DEMO=1`; see "線上 demo" in [docs/qa.md](../../qa.md)).
 
 **Acceptance**: `npm run check:clients <name>` passes.
 

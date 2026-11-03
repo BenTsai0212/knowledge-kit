@@ -1,33 +1,108 @@
 # knowledge-kit
 
-以虛構資料為新客戶快速建立知識平台（第二大腦）demo 的 template。換客戶時只修改客戶設定，不改程式。
-方向與範圍見 [RFC 0001 專案章程](docs/rfcs/0001-project-charter.md)，技術選型見 [ADR 0001](docs/adr/0001-tech-stack.md)。
+English | [繁體中文](README.zh-TW.md)
 
-本 repo 由 dev-workflow-template 建立，workflow 規則見 [`docs/workflow/`](docs/workflow/)；coding agent 的規則見 [AGENTS.md](AGENTS.md)。
+A template for quickly building a "second brain" knowledge platform demo for an organization, using fictional data. To switch to another organization, you change only its settings (`client/` or `clients/<name>/`), not the code.
 
-## 快速開始
+The demo is a prototype for demonstration, not a production system.
 
-需要 Node 22 以上。
+## Features
+
+- **Q&A with citations and refusals**: answers cite the passages they are based on, and the app refuses when the visible documents don't contain the answer ([docs/qa.md](docs/qa.md)).
+- **Visibility levels and project permissions**: each role sees only the documents allowed by its level and projects, enforced by row-level security in PGlite ([docs/data-model.md](docs/data-model.md)).
+- **Knowledge graph and paths**: entities and relations from the documents, and the shortest path between two entities ([docs/graph.md](docs/graph.md)).
+- **Timeline**: visible documents and passages by date ([docs/graph.md](docs/graph.md)).
+- **Upload and extraction**: uploaded documents are split into passages, and extracted entities and relations are written only after review ([docs/upload.md](docs/upload.md), [docs/extraction.md](docs/extraction.md)).
+- **Conflicting information**: detects when an uploaded document says something different from existing passages ([docs/conflicts.md](docs/conflicts.md)).
+- **Evaluation page**: runs a question bank and scores citations, key points, refusals, and leaks ([docs/evals.md](docs/evals.md)).
+- **Multilingual interface and retrieval**: interface text comes from translation files, and retrieval handles each language's script ([docs/client-config.md](docs/client-config.md), [docs/retrieval.md](docs/retrieval.md)).
+- **Theme colors and dark mode**: colors come from the settings, with a dark palette for `prefers-color-scheme: dark` ([docs/client-config.md](docs/client-config.md)).
+
+## Online demo
+
+<!-- DEMO_URL: the URL is added after the online demo is deployed -->
+
+- A public trial code is already filled in; just submit it. All visitors share its daily question limit, so the quota may run out for the day.
+- The evaluation page is hidden, because one run makes many model calls.
+- Questions and uploaded content are sent to the model provider. **Don't enter or upload personal or confidential information.**
+- Uploaded documents exist only in your browser and disappear when you reload the page.
+- To request your own access code, open an Issue in this repo with the "Access code request" template. The code is never posted in the public Issue.
+
+## Quick start
+
+You need Node 22 or later.
 
 ```bash
 npm install
 npm run dev
 ```
 
-- `npm run dev`：開發伺服器（Vite）
-- `npm run typecheck`：型別檢查
-- `npm test`：單元測試（Vitest）
-- `npm run check:client`：驗證 `client/` 的客戶設定（見 [docs/client-config.md](docs/client-config.md)）
-- `npm run build`：build 到 `dist/`
-- `npx wrangler dev`：以 Worker 在本機提供 `dist/` 與 `/api/*`（先執行 `npm run build`）
+This starts the reference scenario (`client/`) with the Vite dev server. Browsing the graph, timeline, and documents works without a key. To ask questions, run the Worker locally with your own Anthropic API key:
 
-## 內容
+```bash
+cp .dev.vars.example .dev.vars
+npm run build
+npx wrangler dev
+```
 
-| 路徑 | 內容 |
+Fill in `ANTHROPIC_API_KEY` and your own `ACCESS_CODES` in `.dev.vars` before running `npx wrangler dev`. `.dev.vars` is not committed. Details, including using `npm run dev` together with the Worker, are in [worker/README.md](worker/README.md).
+
+Other commands (type check, tests, client settings check, Playwright) are listed in [AGENTS.md](AGENTS.md) section 2.
+
+## Make it your own
+
+- **After forking**: change the accounts and settings listed in [docs/workflow/fork.md](docs/workflow/fork.md).
+- **A new organization**: follow the playbook ([English](docs/playbook/en/README.md), [繁體中文](docs/playbook/README.md)) for the interview, data inventory, data security, question bank, and setup steps. The settings are described in [docs/client-config.md](docs/client-config.md), and each organization goes in its own folder ([clients/README.md](clients/README.md)).
+- **Deploying an online demo**: [docs/deploy.md](docs/deploy.md).
+
+## Architecture
+
+```text
+Browser                                   Cloudflare Worker
++-------------------------------+         +------------------------------+
+| Vite + React + TypeScript     |  POST   | /api/ask                     |
+| PGlite (Postgres in browser)  | ------> |  access code, daily limits,  | ---> Claude Messages API
+|  documents, RLS, graph,       |  SSE    |  same-site check,            |
+|  retrieval, review queue      | <------ |  model allowlist             |
++-------------------------------+         | static files from dist/      |
+                                          +------------------------------+
+```
+
+| Part | Contents |
 | --- | --- |
-| `app/` | 前端（Vite＋React＋TypeScript） |
-| `client/` | 客戶設定與 JSON Schema |
-| `worker/` | Cloudflare Worker（TypeScript）：提供 `dist/` 靜態檔與 `/api/*` |
-| `docs/rfcs/`、`docs/adr/` | 專案章程與決策紀錄 |
-| `docs/workflow/` | 憲法與 workflow 手冊 |
-| `tools/workflow/` | workflow 工具 |
+| `app/` | Front end: Vite, React, and TypeScript. All data lives in an in-memory PGlite database in the browser, rebuilt from the migrations and the dataset on load. |
+| `worker/` | Cloudflare Worker: forwards `/api/ask` to the Claude Messages API and serves `dist/`. Checks the access code, daily limits, and origin ([worker/README.md](worker/README.md)). |
+| `client/` | Settings, translation files, fictional dataset, and question bank of the reference scenario. |
+| `clients/` | One folder per organization, with the same structure as `client/`. |
+
+Technology choices are recorded in [ADR 0001](docs/adr/0001-tech-stack.md), and the other decisions in [docs/adr/README.md](docs/adr/README.md).
+
+## How this repo is developed
+
+This repo is developed by coding agents working from GitHub Issues, and the workflow is published along with the code:
+
+- [AGENTS.md](AGENTS.md): rules and commands for coding agents.
+- [docs/workflow/](docs/workflow/): the constitution and workflow handbook.
+- [tools/workflow/runner/](tools/workflow/runner/README.md): a runner that picks Issues and hands them to an agent.
+
+You are welcome to use them as a reference. They are written for this repo, so after forking, adjust them as described in [docs/workflow/fork.md](docs/workflow/fork.md).
+
+## Documentation language
+
+Most documents in `docs/`, as well as `AGENTS.md` and the code comments, are in Traditional Chinese. The playbook has an English version in [docs/playbook/en/](docs/playbook/en/README.md), and this README and [SECURITY.md](SECURITY.md) are in English.
+
+## Data and security
+
+- All data in this repo and in the online demo is fictional.
+- The permissions are for demonstration: all data is in the browser, so they are not real access control. See [data security](docs/playbook/en/data-security.md).
+- The API key is stored only as a Worker secret, never in the repo or the browser.
+- To report a vulnerability, see [SECURITY.md](SECURITY.md).
+
+## Status and roadmap
+
+- **v1**: the features above (phase 1 of [RFC 0001](docs/rfcs/0001-project-charter.md)) and the online demo.
+- **v2 (planned)**: testing multiple languages with a fictional multilingual scenario, including cross-language retrieval and languages written without spaces between words ([RFC 0002](docs/rfcs/0002-public-release.md)).
+
+## License
+
+[MIT](LICENSE)

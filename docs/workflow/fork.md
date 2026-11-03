@@ -6,6 +6,11 @@
 
 - `AGENTS.md` 第 0 節：Repo（`owner/name`）、看板（GitHub Project 編號與網址）、決定者（停止回報與 `plan-first` 時 @ 的帳號）。
 - `LICENSE`：MIT 要求保留原著作權聲明；另加一行自己的著作權聲明，不刪除原本的。
+- `README.md`、`README.zh-TW.md`、`SECURITY.md`、`.github/ISSUE_TEMPLATE/access-code-request.md`：線上 demo 的網址、@ 的帳號與回報方式。
+
+## 新的組織
+
+- `clients/<名稱>/i18n/` 的每種語言都要有 `demoAccessCodeHint`、`demoQaNotice`、`demoUploadNotice` 三個鍵（只在線上 demo 顯示，見 `docs/qa.md`「線上 demo」）；`global_daily_limit` 的文字提到「線上試用」「本機執行」，依情境修改。步驟見 `docs/playbook/new-client-setup.md`。
 
 ## 啟用自動化模組（runner）時
 
