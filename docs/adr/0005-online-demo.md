@@ -1,6 +1,6 @@
 # ADR 0005：線上 demo 的部署方式與費用上限
 
-- 狀態：Proposed
+- 狀態：Accepted（2026-11-03）
 - 日期：2026-11-02
 - 決定者：@BenTsai0212
 - 相關：#100（計畫與 `## 決定`）、RFC 0002 提案 5、Epic #93 第 7 項、ADR 0001（Cloudflare Worker）
