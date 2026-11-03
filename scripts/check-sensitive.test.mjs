@@ -6,15 +6,19 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   LOCAL_NAMES_FILE,
+  KNOWN_EMAIL_BOUNDARY,
   NAMES_ENV,
   addedLines,
   checkGitHub,
+  checkHistory,
   findEmails,
   ghGraphql,
   githubRepo,
   isAllowedEmail,
   normalize,
   parseNames,
+  report,
+  scanPost,
 } from "./check-sensitive.mjs";
 
 const SCRIPT = fileURLToPath(new URL("./check-sensitive.mjs", import.meta.url));
@@ -72,10 +76,19 @@ describe("check-sensitive", () => {
       at("ops", "demo.example"),
       at("ops", "x.invalid"),
       at("ops", "dev.localhost"),
+      at("local", "domain.tld"),
+      at("me", "MAIL.TLD"),
     ]) {
       expect(isAllowedEmail(address), address).toBe(true);
     }
-    for (const address of [PERSONAL, at("ops", "notexample.com"), at("ops", "example.com.tw"), at("no-reply", "corp-mail.com")]) {
+    for (const address of [
+      PERSONAL,
+      at("ops", "notexample.com"),
+      at("ops", "example.com.tw"),
+      at("no-reply", "corp-mail.com"),
+      at("ops", "tld.com"),
+      at("ops", "mail.tlds"),
+    ]) {
       expect(isAllowedEmail(address), address).toBe(false);
     }
     expect(findEmails(`"vite": "${at("npm:vite", "8.3.5")}"`)).toEqual([]);
@@ -208,6 +221,49 @@ describe("check-sensitive --history", () => {
     for (const secret of [NAME_A, NAME_B, "Zephyr", "corp-mail", PERSONAL]) {
       expect(output.toLowerCase()).not.toContain(secret.toLowerCase());
     }
+  });
+
+  it("範例格式的 .tld email 在檔案、commit 訊息與作者 email 都不算命中", () => {
+    const sample = at("local", "domain.tld");
+    const root = repo({});
+    commit(root, { "a.md": `格式：${sample}\n` }, { message: `說明 ${sample}`, email: sample });
+    expect(run(root, LIST).status).toBe(0);
+    const { status, output } = runHistory(root, LIST);
+    expect(output).toContain("敏感資料檢查（整段歷史，1 個 commit）通過");
+    expect(status).toBe(0);
+  });
+
+  it("分界之前的作者與提交者 email 只列為已知保留，之後的照常失敗", () => {
+    const root = repo({});
+    commit(root, { "a.md": "a\n" }, { email: PERSONAL });
+    commit(root, { "a.md": "b\n" }, { email: PERSONAL });
+    commit(root, { "a.md": "c\n" });
+    const boundary = execFileSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+
+    const known = checkHistory(root, LIST, { boundary });
+    expect(known).toMatchObject({ findings: [], authorEmails: [], knownEmails: [2], commits: 3 });
+    const passed = report("history", known);
+    expect(passed.status).toBe(0);
+    expect(passed.out).toEqual([
+      "已知保留的作者或提交者 email（PR #94 之前的 commit，RFC 0002 待決問題 1 的決定 A1）：1 個地址，2 個 commit",
+      "敏感資料檢查（整段歷史，3 個 commit）通過",
+    ]);
+
+    // 分界 commit 本身與之後的 commit 照常算失敗
+    commit(root, { "a.md": "d\n" }, { email: PERSONAL });
+    const after = checkHistory(root, LIST, { boundary });
+    expect(after).toMatchObject({ authorEmails: [1], knownEmails: [2] });
+    const failed = report("history", after);
+    expect(failed.status).toBe(1);
+    expect(failed.err).toContain("commit 作者或提交者的 email 不在放行清單內：第 1 個地址，1 個 commit");
+    expect(failed.err.at(-1)).toBe("敏感資料檢查（整段歷史，4 個 commit）失敗：0 處命中，1 個作者 email 地址");
+    const onBoundary = checkHistory(root, LIST, { boundary: execFileSync("git", ["-C", root, "rev-parse", "HEAD~2"], { encoding: "utf8" }).trim() });
+    expect(onBoundary).toMatchObject({ authorEmails: [2], knownEmails: [1] });
+
+    // 分界 commit 不在 repo 中時沒有已知保留；預設的分界是 PR #94 的合併 commit
+    expect(checkHistory(root, LIST)).toMatchObject({ authorEmails: [3], knownEmails: [] });
+    expect(KNOWN_EMAIL_BOUNDARY).toMatch(/^19a2cbc[0-9a-f]{33}$/);
+    for (const line of [...passed.out, ...failed.err]) expect(line.toLowerCase()).not.toContain("corp-mail");
   });
 
   it("沒有命中時通過；沒有清單檔時只檢查 email", () => {
@@ -349,6 +405,13 @@ describe("check-sensitive --github", () => {
     ]);
     const output = JSON.stringify(result.findings);
     for (const secret of [NAME_B, PERSONAL, "someone", "corp-mail"]) expect(output).not.toContain(secret);
+  });
+
+  it("GitHub Actions 的 /home/runner 與範例格式的 .tld email 不算命中，/home/<其他名稱> 照常命中", () => {
+    expect(scanPost(`CI 的路徑是 /home/runner/work/kit/kit，格式 ${at("local", "domain.tld")}`, null)).toEqual([]);
+    for (const name of ["someone", "runner2", "runners"]) {
+      expect(scanPost(`見 ${["", "home", name, "kit"].join("/")}`, null), name).toEqual([{ kind: "path" }]);
+    }
   });
 
   it("每一層都讀完全部分頁", () => {
