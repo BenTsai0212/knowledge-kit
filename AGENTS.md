@@ -27,7 +27,7 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 - 切換客戶：環境變數 `KK_CLIENT=<名稱>` 讓 `dev`、`build`、`check:client` 改用 `clients/<名稱>/`（不存在時失敗）；`npm test` 與 `typecheck` 永遠用 `client/`（`docs/client-config.md`「多客戶與切換」）
 - 客戶檢查：`npm run check:clients [名稱]`（不給名稱時檢查 `clients/` 底下每個客戶，沒有時略過；每個客戶依序執行設定檢查、`vitest.clients.config.ts` 的 `*.target.test.ts`、build 到暫存資料夾）。以參數指定客戶，不在指令前加 `KK_CLIENT`；只檢查設定時用 `npm run check:client -- clients/<名稱>/`（`docs/client-config.md`「客戶檢查」）
 - Playwright：`npx playwright install chromium`（第一次）→ `npm run build` → `npm run test:e2e`（`e2e/`，只用 Chromium；`/api/ask` 一律是 `page.route` 的假回應；對客戶執行時 build 與測試用同一個 `KK_CLIENT`，參考情境不得有略過的測試；見 `docs/testing.md`）。runner 不在本機啟動瀏覽器，結果以 CI 的 `E2E` workflow 為準。
-- 敏感資料檢查：`npm run check:sensitive`（`git ls-files` 中的個人 email 與禁用名稱；本機清單是不進版本控制的 `.sensitive-names.local`，沒有時只檢查 email。清單內容由人設定，agent 不讀取、不建立；見 `docs/testing.md`）。`npm run check:sensitive -- --history` 改為掃描所有 ref 的每個 commit（新增的行、commit 訊息與作者名稱；#99）
+- 敏感資料檢查：`npm run check:sensitive`（`git ls-files` 中的個人 email 與禁用名稱；本機清單是不進版本控制的 `.sensitive-names.local`，沒有時只檢查 email。清單內容由人設定，agent 不讀取、不建立；見 `docs/testing.md`）。`npm run check:sensitive -- --history` 改為掃描所有 ref 的每個 commit（新增的行、commit 訊息與作者名稱；#99）。`npm run check:sensitive -- --github` 改為以 `gh api graphql` 掃描所有 Issue 與 PR 的文字與編輯紀錄（#111；由人在公開前執行，不在 CI 執行，agent 以單元測試驗證）
 - build：`npm run build`（輸出到 `dist/`）
 - 本機 Worker：`npm run build` 後 `npx wrangler dev`（提供 `dist/` 與 `/api/*`；使用 `wrangler.jsonc` 的頂層設定）。secret 與變數放在不進版本控制的 `.dev.vars`（`cp .dev.vars.example .dev.vars`，金鑰由人填入）；與 `npm run dev` 併用時，Vite 把 `/api/*` 轉給 `wrangler dev`（見 `worker/README.md`）
 - workflow 工具測試：`npm test --prefix tools/workflow`（Node 內建 `node --test`，無相依套件）

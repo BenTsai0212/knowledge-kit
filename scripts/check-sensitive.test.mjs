@@ -4,7 +4,18 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { LOCAL_NAMES_FILE, NAMES_ENV, addedLines, findEmails, isAllowedEmail, normalize, parseNames } from "./check-sensitive.mjs";
+import {
+  LOCAL_NAMES_FILE,
+  NAMES_ENV,
+  addedLines,
+  checkGitHub,
+  findEmails,
+  ghGraphql,
+  githubRepo,
+  isAllowedEmail,
+  normalize,
+  parseNames,
+} from "./check-sensitive.mjs";
 
 const SCRIPT = fileURLToPath(new URL("./check-sensitive.mjs", import.meta.url));
 // email 與名稱以字串組合產生，這份測試檔本身才不會被檢查擋下
@@ -236,5 +247,175 @@ describe("check-sensitive --history", () => {
       { path: "x.md", text: "++ 新的一行" },
       { path: "new file.md", text: "新檔" },
     ]);
+  });
+});
+
+describe("check-sensitive --github", () => {
+  const LIST = { CI: "true", [NAMES_ENV]: `${NAME_A}\n${NAME_B}\n` };
+  // 以 join 組出個人路徑，避免本檔被 personal-paths 的檢查抓到
+  const HOME_PATH = ["", "Users", "someone", "Projects"].join("/");
+  const PAGE = 2;
+  const TYPES = {
+    issues: "Issue",
+    pullRequests: "PullRequest",
+    comments: "IssueComment",
+    reviews: "PullRequestReview",
+    reviewComments: "PullRequestReviewComment",
+  };
+
+  // 假的 GitHub GraphQL：tree 中的陣列是連線，每頁固定 PAGE 筆（不看 first），下一頁以 node(id) 讀取
+  function fakeGitHub(tree) {
+    const byId = new Map();
+    const register = (node, typename) => {
+      for (const [key, value] of Object.entries(node)) {
+        if (Array.isArray(value) && TYPES[key]) value.forEach((child) => register(child, TYPES[key]));
+      }
+      Object.assign(node, { id: `node-${byId.size + 1}`, __typename: typename });
+      byId.set(node.id, node);
+    };
+    register(tree, "Repository");
+    const serve = (node, key, cursor) => {
+      const start = cursor === null ? 0 : Number(cursor);
+      const end = start + PAGE;
+      const hasNextPage = end < node[key].length;
+      return {
+        pageInfo: { hasNextPage, endCursor: hasNextPage ? String(end) : null },
+        nodes: node[key].slice(start, end).map(shape),
+      };
+    };
+    const shape = (node) =>
+      Object.fromEntries(Object.entries(node).map(([k, v]) => [k, Array.isArray(v) ? serve(node, k, null) : v]));
+    const calls = [];
+    const graphql = (query, variables) => {
+      calls.push(query);
+      const cursor = variables.cursor ?? null;
+      if (variables.owner) {
+        const key = query.includes("pullRequests(") ? "pullRequests" : "issues";
+        return { repository: { [key]: serve(tree, key, cursor) } };
+      }
+      const key = /\.\.\. on \w+ \{ (\w+):/.exec(query)[1];
+      return { node: { [key]: serve(byId.get(variables.id), key, cursor) } };
+    };
+    return { graphql, calls };
+  }
+
+  const post = (number, fields = {}) => ({ number, title: `標題 ${number}`, body: "內容", edits: [], renames: [], comments: [], ...fields });
+  const comment = (url, body, edits = []) => ({ url, body, edits });
+  const edit = (editedAt, diff) => ({ editedAt, diff });
+
+  function check(tree, env = LIST) {
+    const { graphql, calls } = fakeGitHub(tree);
+    return { ...checkGitHub(process.cwd(), env, { graphql, repo: "owner/repo" }), calls };
+  }
+
+  it("現在的內容沒有、只在編輯紀錄中出現的禁用名稱抓得到，並指出第幾版；輸出不含命中的文字", () => {
+    const pr = post(98, {
+      body: "已改正的內容",
+      edits: [
+        edit("2026-11-02T00:00:00Z", "已改正的內容"),
+        edit("2026-11-01T00:00:00Z", `誤貼的 ${NAME_A} 內容`),
+        edit("2026-11-01T01:00:00Z", null),
+      ],
+      reviews: [],
+    });
+    const result = check({ issues: [], pullRequests: [pr] });
+    expect(result.errors).toEqual([]);
+    expect(result.findings).toEqual(["PR #98 描述，編輯紀錄第 1 版（2026-11-01T00:00:00Z） 命中禁用名稱清單第 1 項"]);
+    const output = JSON.stringify(result.findings).toLowerCase();
+    for (const secret of [NAME_A, normalize(NAME_A), "Zephyr", "誤貼"]) expect(output).not.toContain(secret.toLowerCase());
+  });
+
+  it("review comment 中的個人路徑、留言的 email 與改名前的標題都抓得到", () => {
+    const pr = post(5, {
+      reviews: [
+        {
+          url: "https://github.test/pr/5#review-1",
+          body: "",
+          edits: [],
+          reviewComments: [comment("https://github.test/pr/5#r2", `見 ${HOME_PATH}/kit`)],
+        },
+      ],
+    });
+    const issue = post(7, {
+      title: "新標題",
+      renames: [{ createdAt: "2026-10-01T00:00:00Z", previousTitle: `${NAME_B} 的需求` }],
+      comments: [comment("https://github.test/issues/7#c1", `聯絡 ${PERSONAL}`)],
+    });
+    const result = check({ issues: [issue], pullRequests: [pr] });
+    expect(result.findings).toEqual([
+      "Issue #7 標題，改名前的標題（2026-10-01T00:00:00Z） 命中禁用名稱清單第 2 項",
+      "Issue #7 留言 https://github.test/issues/7#c1 有不在放行清單內的 email",
+      "PR #5 review comment https://github.test/pr/5#r2 有個人路徑（/Users/<名稱> 或 /home/<名稱>）",
+    ]);
+    const output = JSON.stringify(result.findings);
+    for (const secret of [NAME_B, PERSONAL, "someone", "corp-mail"]) expect(output).not.toContain(secret);
+  });
+
+  it("每一層都讀完全部分頁", () => {
+    const filler = (n) => Array.from({ length: n }, (_, i) => comment(`https://github.test/c${i}`, "沒問題"));
+    const edits = [
+      ...Array.from({ length: 4 }, (_, i) => edit(`2026-01-0${i + 1}T00:00:00Z`, "沒問題")),
+      edit("2026-01-09T00:00:00Z", NAME_B),
+    ];
+    const review = () => ({ url: "https://github.test/r", body: "", edits: [], reviewComments: [] });
+    const issues = [
+      ...Array.from({ length: 4 }, (_, i) => post(i + 1)),
+      post(9, { comments: [...filler(3), comment("https://github.test/last", NAME_A)] }),
+    ];
+    const last = { ...review(), reviewComments: [...filler(3), comment("https://github.test/rc", "", edits)] };
+    const prs = [post(10, { reviews: [review(), review(), last] })];
+    const result = check({ issues, pullRequests: prs });
+    expect(result.findings).toEqual([
+      "Issue #9 留言 https://github.test/last 命中禁用名稱清單第 1 項",
+      "PR #10 review comment https://github.test/rc，編輯紀錄第 5 版（2026-01-09T00:00:00Z） 命中禁用名稱清單第 2 項",
+    ]);
+    expect([result.issues, result.pullRequests]).toEqual([5, 1]);
+    expect(result.calls.length).toBeGreaterThan(5);
+  });
+
+  it("沒有命中時通過；讀取失敗時列為錯誤", () => {
+    expect(check({ issues: [post(1)], pullRequests: [post(2, { reviews: [] })] })).toMatchObject({
+      errors: [],
+      findings: [],
+      texts: 4,
+    });
+    const failing = checkGitHub(process.cwd(), LIST, {
+      repo: "owner/repo",
+      graphql: () => {
+        throw new Error("gh api graphql 失敗：HTTP 502");
+      },
+    });
+    expect(failing.errors).toEqual(["gh api graphql 失敗：HTTP 502"]);
+  });
+
+  it("速率限制時等待後重試，超過次數時停止並說明", () => {
+    const ok = { status: 0, stdout: JSON.stringify({ data: { ok: true } }), stderr: "" };
+    const limited = { status: 1, stdout: "", stderr: "API rate limit exceeded for user ID 1." };
+    const replies = [limited, limited, ok];
+    const args = [];
+    const waits = [];
+    const run = (a) => {
+      args.push(a);
+      return replies.shift();
+    };
+    const data = ghGraphql("query { ok }", { owner: "o", cursor: null }, { run, sleep: (ms) => waits.push(ms), waitMs: 10 });
+    expect(data).toEqual({ ok: true });
+    expect(waits).toEqual([10, 10]);
+    expect(args[0]).toEqual(["api", "graphql", "-f", "query=query { ok }", "-f", "owner=o"]);
+    expect(() => ghGraphql("query { ok }", {}, { run: () => limited, sleep: () => {}, attempts: 2 })).toThrow(/速率限制：重試 2 次/);
+    const denied = () => ({ status: 1, stdout: "", stderr: "HTTP 401" });
+    expect(() => ghGraphql("query { ok }", {}, { run: denied, sleep: () => {} })).toThrow(/HTTP 401/);
+  });
+
+  it("gh 沒有登入時清楚停止", () => {
+    const calls = [];
+    const notLoggedIn = (a) => {
+      calls.push(a);
+      return { status: 1, stdout: "", stderr: "not logged in" };
+    };
+    expect(githubRepo(process.cwd(), notLoggedIn).error).toMatch(/gh auth login/);
+    expect(calls).toEqual([["auth", "status"]]);
+    const loggedIn = () => ({ status: 0, stdout: "owner/repo\n", stderr: "" });
+    expect(githubRepo(process.cwd(), loggedIn)).toEqual({ repo: "owner/repo" });
   });
 });

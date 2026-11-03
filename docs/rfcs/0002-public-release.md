@@ -1,6 +1,6 @@
 # RFC 0002：公開發表與授權
 
-- 狀態：Accepted（2026-11-01；待決問題 1 於公開前決定）
+- 狀態：Accepted（2026-11-01）；待決問題 1 已決定（2026-11-03，A1：公開現有 repo，不改寫 git 歷史）
 - 日期：2026-11-01
 - 決定者：@BenTsai0212
 - 相關：RFC 0001（本 RFC 修訂其第 2 階段的內容與順序）、Epic #3（第 1 階段完成）
@@ -39,8 +39,8 @@ knowledge-kit 定位為**通用的第二大腦 demo template**，作為個人作
 處理：
 
 1. **立即**：在 GitHub 帳號設定開啟「Keep my email addresses private」（與「Block command line pushes that expose my email」），之後網頁與 API 的合併改用 noreply。由人在 GitHub 設定中操作。
-2. **改寫歷史**：以 `git filter-repo` 的 mailmap 把個人 email 換成 noreply，全部分支一起改寫後強制推送。屬於高風險操作，由人執行；執行前先做完整的鏡像備份（`git clone --mirror`），並清空 runner 的 worktree。
-3. **已知限制**：GitHub 會保留每個 PR 的 `refs/pull/<編號>/head`，改寫後舊 commit 仍可從 PR 取得，個人 email 也就仍可見。所以公開方式要二選一（見「待決問題」1）。
+2. **改寫歷史（不採用）**：原本提案以 `git filter-repo` 的 mailmap 把個人 email 換成 noreply，全部分支一起改寫後強制推送。依待決問題 1 的決定（A1），**不改寫歷史**，接受舊 commit（62 個）中的作者 email 可見；PR #94 起的 commit 已是 noreply。
+3. **已知限制**：GitHub 會保留每個 PR 的 `refs/pull/<編號>/head`，即使改寫，舊 commit 仍可從 PR 取得，個人 email 也就仍可見。這是不採用改寫的原因之一（見「待決問題」1）。
 
 ### 3. 內容與歷史的稽核
 
@@ -50,7 +50,7 @@ knowledge-kit 定位為**通用的第二大腦 demo template**，作為個人作
 - 金鑰：gitleaks 已掃過整段歷史（#66），公開前再跑一次。
 - 個人路徑與帳號資訊：例如 `/Users/<名稱>`、本機資料夾名稱、個人 email。
 - 設計語言：確認介面使用的設計語言可以公開（若參考了合作夥伴的設計，取得同意）。
-- 若公開現有 repo（待決問題 1 的 A），Issue 與 PR 的文字也要稽核：決策紀錄中不得有客戶與夥伴名稱。
+- Issue 與 PR 的文字：依待決問題 1 的決定（A1）公開現有 repo，所以所有 Issue 與 PR（含已關閉）的標題、描述、留言、review 與它們的**編輯紀錄**也要稽核，不得有客戶與夥伴名稱、個人路徑與個人 email。GitHub 會保留編輯紀錄，只改現在的內容不夠，命中的版本要刪除。以 `npm run check:sensitive -- --github` 由人在本機執行（#111，見 `docs/testing.md`「GitHub 模式」）；已知 PR #98 的描述與 #100 的計畫留言的第一版誤貼了其他專案的內容（#104）。
 
 ### 4. 公開用的說明文件
 
@@ -87,8 +87,8 @@ knowledge-kit 定位為**通用的第二大腦 demo template**，作為個人作
 **v1 發表**（第 2 階段前半）的門檻：
 
 1. `LICENSE`（MIT）與公開用 `README.md`、`README.zh-TW.md`、`SECURITY.md` 已合併
-2. 新的 commit 不再出現個人 email；依待決問題 1 的決定，處理完歷史中的個人 email
-3. 稽核通過：整段歷史的敏感名稱掃描與 gitleaks 都是 0；流程工具中沒有個人路徑與帳號資訊
+2. 新的 commit 不再出現個人 email；歷史中的 email 依待決問題 1 的決定（A1）保留
+3. 稽核通過：整段歷史的敏感名稱掃描與 gitleaks 都是 0；流程工具中沒有個人路徑與帳號資訊；Issue／PR 的文字與編輯紀錄的掃描是 0
 4. 設計語言可公開使用（已確認）
 5. 線上 demo 可以使用，且有模型費用上限
 6. CI 通過
@@ -99,6 +99,14 @@ knowledge-kit 定位為**通用的第二大腦 demo template**，作為個人作
 
 ## 待決問題
 
-1. **公開方式**（因為 PR 的 ref 會保留舊 commit）：
-   - **A. 公開現有 repo**：保留所有 Issue 與 PR，完整呈現決策過程；但舊 commit 中的個人 email 仍可從 PR 的 ref 看到，要請 GitHub Support 清除快取的 ref（不保證）或接受曝光。Issue 與 PR 的文字也要稽核。
-   - **B. 另開公開 repo**：把改寫後的歷史推到新的公開 repo，現有 repo 保持私人，繼續當開發用；個人 email 不會出現。代價是公開版看不到 Issue 與 PR 的決策紀錄，之後要定期把私人 repo 同步到公開 repo。
+1. **公開方式**（因為 PR 的 ref 會保留舊 commit）：**已決定（2026-11-03，見 Epic #93 的 `## 決定`）：採 A1，公開現有 repo，不改寫 git 歷史。**
+   - 選項：
+     - **A1. 公開現有 repo，不改寫歷史**：保留所有 Issue 與 PR；舊 commit 中的個人 email 可見。
+     - **A2. 公開現有 repo，改寫歷史**：以 `git filter-repo` 改寫後強制推送，再公開現有 repo。
+     - **B. 另開公開 repo**：把改寫後的歷史推到新的公開 repo，現有 repo 保持私人，繼續當開發用。
+   - 採用 A1 的理由：
+     - 保留所有 Issue 與 PR，決策紀錄完整呈現；文件中的 `#編號` 連結維持有效。
+     - 舊 commit（62 個）中的作者 email 可見，接受這個曝光；PR #94 起的 commit 已是 noreply。
+     - 代價：Issue 與 PR 的文字與編輯紀錄也要稽核（見提案 3，#111）。
+   - 不採用 A2：GitHub 保留 PR 的 ref，改寫後舊 commit 仍可能可見，達不到目的；而且所有 commit 編號改變、需要強制推送。
+   - 不採用 B：公開版看不到 Issue 與 PR 的決策紀錄，文件中的 `#編號` 在新 repo 對不上；還要定期把私人 repo 同步到公開 repo。

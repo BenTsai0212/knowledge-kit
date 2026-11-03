@@ -1,9 +1,10 @@
 // 敏感資料檢查：掃描 git ls-files 列出的檔案，找出個人 email 與禁用名稱（#66，見 docs/testing.md）。
 // 用法：node scripts/check-sensitive.mjs [--history] [repo 根目錄，預設目前目錄]
 // --history 改為掃描所有 ref 的每個 commit：新增的行、commit 訊息與作者名稱（#99）。
-// 輸出只有檔案、行號（或 commit 短 SHA）與清單第幾項，不輸出命中的名稱、email 或該行內容（CI 紀錄會公開）。
+// --github 改為以 gh api graphql 掃描本 repo 所有 Issue 與 PR 的文字與編輯紀錄（#111）。
+// 輸出只有檔案、行號（或 commit 短 SHA、Issue／PR 的位置）與清單第幾項，不輸出命中的名稱、email 或該行內容（CI 紀錄會公開）。
 import { readFileSync } from "node:fs";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -213,10 +214,165 @@ export function checkHistory(root = process.cwd(), env = process.env) {
   return { errors, warnings, findings, commits, authorEmails };
 }
 
+// ---- GitHub 模式（#111） ----
+
+// 個人路徑：與 tools/workflow/personal-paths.test.mjs 相同的規則（/Users/<名稱>、/home/<名稱>）
+const PERSONAL_PATH = /\/(?:Users|home)\/[\w.-]+/;
+
+// 讀取的連線：別名 → GraphQL 欄位、每頁幾筆、節點的欄位與底下的連線。
+// 有下層連線的節點都帶 id 與 __typename，下一頁以 node(id) 讀取。
+// 每頁筆數兼顧 GraphQL 的節點上限（50 萬）與速率限制的點數。
+const CONNECTIONS = {
+  issues: { field: "issues", first: 20, nodes: "number title body", children: ["edits", "renames", "comments"] },
+  pullRequests: { field: "pullRequests", first: 20, nodes: "number title body", children: ["edits", "renames", "comments", "reviews"] },
+  edits: { field: "userContentEdits", first: 10, nodes: "editedAt diff" },
+  renames: { field: "timelineItems", args: "itemTypes: [RENAMED_TITLE_EVENT]", first: 10, nodes: "... on RenamedTitleEvent { createdAt previousTitle }" },
+  comments: { field: "comments", first: 50, nodes: "url body", children: ["edits"] },
+  reviews: { field: "reviews", first: 10, nodes: "url body", children: ["edits", "reviewComments"] },
+  reviewComments: { field: "comments", first: 20, nodes: "url body", children: ["edits"] },
+};
+const ORDER = "orderBy: { field: CREATED_AT, direction: ASC }";
+
+function connectionField(key, { after = false } = {}) {
+  const c = CONNECTIONS[key];
+  const top = key === "issues" || key === "pullRequests";
+  const args = [`first: ${c.first}`, c.args, top && ORDER, after && "after: $cursor"].filter(Boolean).join(", ");
+  const children = c.children ? `id __typename ${c.children.map((k) => connectionField(k)).join(" ")}` : "";
+  return `${key}: ${c.field}(${args}) { pageInfo { hasNextPage endCursor } nodes { ${c.nodes} ${children} } }`;
+}
+
+export const topQuery = (key) =>
+  `query($owner: String!, $name: String!, $cursor: String) { repository(owner: $owner, name: $name) { ${connectionField(key, { after: true })} } }`;
+export const moreQuery = (typename, key) =>
+  `query($id: ID!, $cursor: String) { node(id: $id) { ... on ${typename} { ${connectionField(key, { after: true })} } } }`;
+
+// 讀完 node（屬於連線 parentKey）底下每個連線的其餘分頁（就地補進 nodes），再往下層補
+function complete(graphql, node, parentKey) {
+  for (const key of CONNECTIONS[parentKey].children ?? []) {
+    const conn = node[key];
+    while (conn.pageInfo.hasNextPage) {
+      const next = graphql(moreQuery(node.__typename, key), { id: node.id, cursor: conn.pageInfo.endCursor }).node[key];
+      conn.nodes.push(...next.nodes);
+      conn.pageInfo = next.pageInfo;
+    }
+    for (const child of conn.nodes) complete(graphql, child, key);
+  }
+}
+
+// 讀取本 repo 所有 Issue 或 PR（含已關閉），每一層都讀完全部分頁
+function fetchAll(graphql, repo, key) {
+  const [owner, name] = repo.split("/");
+  const items = [];
+  let cursor = null;
+  do {
+    const conn = graphql(topQuery(key), { owner, name, cursor }).repository[key];
+    items.push(...conn.nodes);
+    cursor = conn.pageInfo.hasNextPage ? conn.pageInfo.endCursor : null;
+  } while (cursor !== null);
+  for (const item of items) complete(graphql, item, key);
+  return items;
+}
+
+// 一段文字與它的編輯紀錄：編輯紀錄依時間由舊到新編號（第 1 版最舊）；已刪除的版本沒有 diff，只佔編號
+function* withEdits(where, body, edits) {
+  yield [where, body];
+  const versions = [...edits.nodes].sort((a, b) => a.editedAt.localeCompare(b.editedAt));
+  for (const [i, edit] of versions.entries()) {
+    if (edit.diff) yield [`${where}，編輯紀錄第 ${i + 1} 版（${edit.editedAt}）`, edit.diff];
+  }
+}
+
+// 一個 Issue 或 PR 的每一段文字：[位置, 文字]
+export function* postTexts(label, item) {
+  const where = `${label} #${item.number}`;
+  yield [`${where} 標題`, item.title];
+  for (const r of item.renames.nodes) {
+    if (r.previousTitle) yield [`${where} 標題，改名前的標題（${r.createdAt}）`, r.previousTitle];
+  }
+  yield* withEdits(`${where} 描述`, item.body, item.edits);
+  for (const c of item.comments.nodes) yield* withEdits(`${where} 留言 ${c.url}`, c.body, c.edits);
+  for (const r of item.reviews?.nodes ?? []) {
+    yield* withEdits(`${where} review ${r.url}`, r.body, r.edits);
+    for (const c of r.reviewComments.nodes) yield* withEdits(`${where} review comment ${c.url}`, c.body, c.edits);
+  }
+}
+
+// 一段文字的命中：個人路徑一筆、email 一筆、清單每一項各一筆
+export function scanPost(text, names) {
+  const findings = distinct(scanText(text ?? "", names));
+  return PERSONAL_PATH.test(text ?? "") ? [{ kind: "path" }, ...findings] : findings;
+}
+
+const describePost = (where, f) => (f.kind === "path" ? `${where} 有個人路徑（/Users/<名稱> 或 /home/<名稱>）` : describe(where, f));
+
+const sleepSync = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+
+function runGh(args, cwd) {
+  const result = spawnSync("gh", args, { cwd, encoding: "utf8", maxBuffer: 1 << 30 });
+  if (result.error) throw result.error;
+  return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+}
+
+// 以 gh api graphql 執行一個查詢。遇到速率限制時等待後重試，超過次數時以說明停止。
+export function ghGraphql(query, variables, { run = runGh, sleep = sleepSync, attempts = 3, waitMs = 60_000 } = {}) {
+  const args = ["api", "graphql", "-f", `query=${query}`];
+  for (const [k, v] of Object.entries(variables)) if (v !== null && v !== undefined) args.push("-f", `${k}=${v}`);
+  for (let attempt = 1; ; attempt += 1) {
+    const { status, stdout, stderr } = run(args);
+    if (status === 0) return JSON.parse(stdout).data;
+    if (!/rate limit/i.test(`${stdout}${stderr}`)) {
+      throw new Error(`gh api graphql 失敗：${stderr.trim() || `結束碼 ${status}`}`);
+    }
+    if (attempt >= attempts) {
+      throw new Error(`GitHub API 速率限制：重試 ${attempts} 次仍未解除，停止。以 gh api rate_limit 查看重置時間後重新執行`);
+    }
+    console.warn(`警告：GitHub API 速率限制，${waitMs / 1000} 秒後重試（第 ${attempt} 次）`);
+    sleep(waitMs);
+  }
+}
+
+// 確認 gh 已登入，取得目前的 repo（owner/name）。回傳 { repo } 或 { error }。
+export function githubRepo(root, run = runGh) {
+  if (run(["auth", "status"], root).status !== 0) {
+    return { error: "gh 沒有登入：先由人在本機執行 gh auth login，再重新執行" };
+  }
+  const { status, stdout, stderr } = run(["repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"], root);
+  if (status !== 0) return { error: `找不到 GitHub repo：${stderr.trim()}` };
+  return { repo: stdout.trim() };
+}
+
+// 回傳 { errors, warnings, findings, issues, pullRequests, texts }；findings 只含位置與清單第幾項。
+export function checkGitHub(root = process.cwd(), env = process.env, { graphql = ghGraphql, repo } = {}) {
+  const loaded = loadNames(root, env);
+  const errors = loaded.error ? [loaded.error] : [];
+  const warnings = loaded.warning ? [loaded.warning] : [];
+  const names = loaded.names ?? null;
+  const findings = [];
+  const counts = { issues: 0, pullRequests: 0, texts: 0 };
+  const target = repo ? { repo } : githubRepo(root);
+  if (target.error) return { errors: [...errors, target.error], warnings, findings, ...counts };
+  try {
+    for (const [key, label] of [["issues", "Issue"], ["pullRequests", "PR"]]) {
+      const items = fetchAll(graphql, target.repo, key);
+      counts[key] = items.length;
+      for (const item of items) {
+        for (const [where, text] of postTexts(label, item)) {
+          counts.texts += 1;
+          for (const f of scanPost(text, names)) findings.push(describePost(where, f));
+        }
+      }
+    }
+  } catch (e) {
+    errors.push(e.message);
+  }
+  return { errors, warnings, findings, ...counts };
+}
+
 function main(args) {
   const history = args.includes("--history");
-  const root = resolve(args.find((arg) => arg !== "--history") ?? ".");
-  const result = history ? checkHistory(root) : checkSensitive(root);
+  const github = args.includes("--github");
+  const root = resolve(args.find((arg) => !arg.startsWith("--")) ?? ".");
+  const result = github ? checkGitHub(root) : history ? checkHistory(root) : checkSensitive(root);
   const { errors, warnings, findings } = result;
   const authorEmails = result.authorEmails ?? [];
   for (const w of warnings) console.warn(`警告：${w}`);
@@ -225,7 +381,11 @@ function main(args) {
   authorEmails.forEach((count, i) => {
     console.error(`commit 作者或提交者的 email 不在放行清單內：第 ${i + 1} 個地址，${count} 個 commit`);
   });
-  const scope = history ? `（整段歷史，${result.commits} 個 commit）` : "";
+  const scope = github
+    ? `（GitHub，${result.issues} 個 Issue、${result.pullRequests} 個 PR、${result.texts} 段文字）`
+    : history
+      ? `（整段歷史，${result.commits} 個 commit）`
+      : "";
   if (errors.length > 0 || findings.length > 0 || authorEmails.length > 0) {
     const parts = [`${findings.length} 處命中`];
     if (authorEmails.length > 0) parts.push(`${authorEmails.length} 個作者 email 地址`);
