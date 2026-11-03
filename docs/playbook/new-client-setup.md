@@ -113,6 +113,8 @@
 
 - **`theme.json`**：客戶同意使用品牌色時才換成品牌色，否則保留中立的預設值。淺色與深色都要通過 `check:client` 的對比檢查；品牌色對比不足時調整明暗，不關閉檢查。
 - **`i18n/`**：通常不用改。客戶有慣用說法（例如稱「同仁」而非「員工」）時才修改，每種語言的鍵與參數都要一致。
+  - `global_daily_limit` 錯誤的翻譯文字提到「線上試用」「本機執行」，依客戶的情境修改。
+  - `demoAccessCodeHint`、`demoQaNotice`、`demoUploadNotice` 三個鍵是必填，只在線上 demo（`VITE_ONLINE_DEMO=1`）顯示（[docs/qa.md](../qa.md)「線上 demo」）。
 
 **驗收**：`npm run check:clients <名稱>` 通過。
 
