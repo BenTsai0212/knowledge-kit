@@ -16,10 +16,20 @@ export const onlineDemo: OnlineDemo = readOnlineDemo(import.meta.env);
 
 export type View = "qa" | "graph" | "timeline" | "upload" | "review" | "evals";
 
-// 頁籤：待審與評測台只給 canReview 的身分；線上 demo 隱藏評測台（一次會呼叫大量問答，#100 決定 4）
-export function visibleViews(canReview: boolean, demo: Pick<OnlineDemo, "enabled">): View[] {
+// 客戶展示模式（#129，docs/qa.md「展示模式」）：網址的 mode 參數是 "presentation"（區分大小寫）時開啟，其他值或沒有參數時關閉。
+// 只在載入時讀一次，不存進任何瀏覽器儲存。只是隱藏頁籤，不是權限防線：權限仍由 RLS 執行。
+export function readPresentationMode(search: string): boolean {
+  return new URLSearchParams(search).get("mode") === "presentation";
+}
+
+// 測試環境（Node）沒有 location，所以是關閉的
+export const presentationMode: boolean = readPresentationMode(globalThis.location?.search ?? "");
+
+// 頁籤：待審與評測台只給 canReview 的身分；線上 demo 隱藏評測台（一次會呼叫大量問答，#100 決定 4）；
+// 展示模式只留問答與圖譜，所有身分相同（#129）。兩者同時開啟時取交集
+export function visibleViews(canReview: boolean, demo: Pick<OnlineDemo, "enabled">, presentation: boolean): View[] {
   const views: View[] = ["qa", "graph", "timeline", "upload"];
   if (canReview) views.push("review");
   if (canReview && !demo.enabled) views.push("evals");
-  return views;
+  return presentation ? views.filter((v) => v === "qa" || v === "graph") : views;
 }

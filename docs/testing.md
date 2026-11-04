@@ -114,6 +114,7 @@ repo 預計公開，CI 紀錄也會公開，所以兩者的輸出都**不包含�
 | `smoke.spec.ts` | 冒煙：問答附出處、圖譜、時間軸、上傳與待審、評測台能打開並完成基本操作 |
 | `access.spec.ts` | 越權：打開原文後切換身分，原文面板與時間軸不殘留看不到的段落；串流回答中切換身分；待審與評測台只給 `canReview` 的身分；在評測台切換成沒有 `canReview` 的身分 |
 | `interactions.spec.ts` | 互動邊角：上傳寫入中按 Esc；評測執行中離開頁籤再回來顯示「已停止」；深色模式（`emulateMedia`） |
+| `presentation.spec.ts` | 客戶展示模式（#129，`/?mode=presentation`）：每個身分都只有問答與圖譜兩個頁籤；問答附出處並打開原文、圖譜畫出畫布 |
 | `demo.spec.ts` | 線上 demo 的設定（#100，只在 `VITE_ONLINE_DEMO=1` 的 build 執行，見下方「線上 demo」）：公開試用碼預先填入並以它提問、問答與上傳頁的提醒、評測台隱藏而待審保留、上傳後萃取的實體出現在待審 |
 
 - **看不到的段落**以 `app/src/evals/oracle.ts` 的 `expectedVisible()` 從選定客戶的 `data/` 算出（`e2e/support/dataset.ts`），不以畫面或資料庫的結果為準；畫面文字以每段開頭 20 個字元比對（空白先合併）。切換前先確認畫面上確實有看不到的段落，比對本身才有效。

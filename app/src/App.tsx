@@ -1,5 +1,5 @@
 // 主畫面：PGlite 在瀏覽器中載入並匯入資料集；身分與語言切換；問答（需要邀請碼）、圖譜、時間軸、上傳（後三者不呼叫模型）四個頁籤，
-// canReview 的身分另有待審與評測台（需要邀請碼；線上 demo 不顯示評測台）；引用跳回原文。
+// canReview 的身分另有待審與評測台（需要邀請碼；線上 demo 不顯示評測台）；展示模式（?mode=presentation）只顯示問答與圖譜；引用跳回原文。
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clientConfig } from "./client/load";
 import { planConflicts, runConflicts, shouldDetectConflicts, type ConflictState } from "./conflicts/run";
@@ -23,7 +23,7 @@ import { QuestionPanel } from "./ui/QuestionPanel";
 import { ReviewPage } from "./ui/ReviewPage";
 import { pendingCount } from "./ui/review-helpers";
 import { createExtractionRunner } from "./ui/extraction-runner";
-import { onlineDemo, visibleViews, type View } from "./ui/online-demo";
+import { onlineDemo, presentationMode, visibleViews, type View } from "./ui/online-demo";
 import { createRequestGate } from "./ui/requests";
 import { SourcePanel } from "./ui/SourcePanel";
 import { strings } from "./client/i18n";
@@ -32,6 +32,9 @@ import { UploadPage } from "./ui/UploadPage";
 import { Toolbar } from "./ui/Toolbar";
 
 const { client, access } = clientConfig;
+
+// 頁籤：導覽列與切換身分時的判斷用同一份結果（線上 demo、展示模式都在載入時決定）
+const views = (canReview: boolean) => visibleViews(canReview, onlineDemo, presentationMode);
 
 
 export function App() {
@@ -214,8 +217,8 @@ export function App() {
         onIdentity={(id) => {
           discard();
           setIdentity(id);
-          // 沒有 canReview 的身分看不到待審與評測台頁籤（離開評測台時停止評測、關閉評測專用資料庫）
-          if (!visibleViews(access.roles.find((r) => r.id === id)?.canReview ?? false, onlineDemo).includes(view)) setView("qa");
+          // 沒有 canReview 的身分看不到待審與評測台頁籤（離開評測台時停止評測、關閉評測專用資料庫）；展示模式只有問答與圖譜
+          if (!views(access.roles.find((r) => r.id === id)?.canReview ?? false).includes(view)) setView("qa");
         }}
         onLanguage={(code) => (discard(), setLanguage(code))}
         onChangeAccessCode={
@@ -231,7 +234,7 @@ export function App() {
       />
       {/* 第一層：底線式的導覽列（#48） */}
       <nav className="primary-tabs" aria-label={s.views}>
-        {visibleViews(canReview, onlineDemo).map((id) => (
+        {views(canReview).map((id) => (
           <button key={id} type="button" aria-current={view === id ? "page" : undefined} onClick={() => setView(id)}>
             {tabLabels[id]}
             {id === "review" && pending?.identity === identity && <span className="tab-count">{pending.count}</span>}
