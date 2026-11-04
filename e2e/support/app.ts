@@ -13,10 +13,10 @@ export type RoleId = string;
 // 預設問題（scenarios.json）；資料庫載入完成前停用
 export const presetQuestions = scenarios.scenarios.flatMap((x) => x.questions.map((q) => ({ role: x.role as RoleId, text: q.text[language] })));
 
-// 打開首頁、輸入邀請碼，等資料庫載入完成（預設問題的按鈕可以按）
-export async function openApp(page: Page): Promise<void> {
+// 打開首頁（path 可帶網址參數，例如展示模式的 /?mode=presentation）、輸入邀請碼，等資料庫載入完成（預設問題的按鈕可以按）
+export async function openApp(page: Page, path = "/"): Promise<void> {
   await routeFakeAsk(page);
-  await page.goto("/");
+  await page.goto(path);
   await page.getByLabel(s.accessCodeLabel).fill(ACCESS_CODE);
   await page.getByRole("button", { name: s.accessCodeSubmit }).click();
   await expect(page.getByRole("button", { name: presetQuestions[0].text, exact: true })).toBeEnabled();

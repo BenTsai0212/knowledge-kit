@@ -199,6 +199,7 @@ Rules:
 - **原文**（`app/src/sources/source.ts`）：`readSource(db, identityId, passageId)` 經 `withIdentity()` 讀取段落所屬的文件，以及其中該身分看得到的段落（依順序）；看不到時回 `null`。文件中看不到的段落直接省略，不標示「有段落被隱藏」。`app/tests/sources/source.test.ts` 以 `oracle.ts` 對每個身分 × 每段段落測試。
 - **介面文字**：都在翻譯檔 `client/i18n/<語言>.json`，只透過 `app/src/client/i18n.ts` 讀取（[docs/client-config.md](client-config.md)「翻譯檔」）；角色、情境、公司名稱來自 `client/`；語言名稱以 `Intl.DisplayNames` 用該語言自己的名稱顯示。
 - **線上 demo**（#100）：見下方「線上 demo」。
+- **展示模式**（#129）：見下方「展示模式」。
 - 畫面沒有自動測試（DOM 測試套件未核准；Playwright 在 Epic 第 12 項）。可以抽出的邏輯（邀請碼的保存、提問的捨棄、引用的切割、原文的權限）以 Vitest 測試。
 
 ### 線上 demo
@@ -218,6 +219,19 @@ Rules:
 - 開關屬於部署設定，不放進 `client/`：客戶的 fork 不繼承 demo 的限制。
 
 驗證：`online-demo.test.ts`（預設關閉、頁籤）；`e2e/demo.spec.ts` 以 demo 設定 build 後執行（[docs/testing.md](testing.md)「線上 demo」）。部署步驟與費用上限見 [docs/deploy.md](deploy.md)。
+
+### 展示模式
+
+向客戶展示時，只留下問答與圖譜兩個頁籤（#129）。上傳、待審、評測台與時間軸是建置與評估用的工具，展示時隱藏。
+
+- **開啟方式**：網址加上 `?mode=presentation`（例如 `/?mode=presentation`）。只有值完全是 `presentation`（區分大小寫）時開啟；沒有參數或值不同時關閉，行為與一般相同。
+- **只在載入時讀一次**（`app/src/ui/online-demo.ts` 的 `presentationMode`），不寫入 `localStorage` 或 `sessionStorage`；要關閉時打開不帶參數的網址。畫面上沒有切換按鈕。
+- **隱藏的頁籤**：時間軸、上傳、待審與評測台；所有身分相同，`canReview` 的身分也只有問答與圖譜。身分與語言切換照常顯示，問答與圖譜頁本身不變。
+- **與線上 demo 併用**：可同時開啟，頁籤取兩者的交集（`visibleViews()`）。導覽列與切換身分時「目前頁籤看不到就回到問答」用同一份結果。
+- **背景工作不受影響**：上傳後的萃取與說法不同的比對照常在背景執行，展示模式只隱藏頁籤。
+- **展示模式不是權限防線**：只是不顯示頁籤，任何人都能去掉網址參數看到所有頁籤。看得到哪些資料仍由 RLS 依身分執行（[docs/data-model.md](data-model.md)）。
+
+驗證：`online-demo.test.ts`（參數的各種值、各身分的頁籤、與線上 demo 的組合）；`e2e/presentation.spec.ts`（每個身分只有兩個頁籤、問答與圖譜可用）。
 
 ## 測試
 
