@@ -84,3 +84,4 @@
 - **外部 API**：新增 secret 與相依套件要先問人（AGENTS.md 第 6 節）；機密段落能否送到供應商，要由客戶確認。
 - **跨語言題**：換成語意向量後，題庫才放跨語言題，並在[驗收指標](acceptance-metrics.md)中另列。
 - 選用的模型、版本與量測結果記錄在 ADR；本文件不列廠商與價格，因為會隨時間改變。
+- 2026-11 的評估（#126）：[評估報告](../evals/semantic-retrieval-2026-11.md)、[ADR 0006](../adr/0006-semantic-retrieval.md)（Proposed）。
