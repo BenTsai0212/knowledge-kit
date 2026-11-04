@@ -17,7 +17,7 @@ jobs:
     outputs:
       clients: ${{ steps.list.outputs.clients }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: list
         name: 列出客戶
         # "" 是參考情境；其餘是 clients/ 底下的資料夾（與 scripts/check-clients.mjs 的 listClients() 相同）
@@ -37,8 +37,8 @@ jobs:
     env:
       KK_CLIENT: ${{ matrix.client }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -52,7 +52,7 @@ jobs:
         run: npx playwright test
       - name: 上傳 trace 與截圖
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-${{ matrix.client || 'client' }}
           path: |
@@ -70,8 +70,8 @@ jobs:
       VITE_ONLINE_DEMO: "1"
       VITE_PUBLIC_ACCESS_CODE: e2e-public-code
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -85,7 +85,7 @@ jobs:
         run: npx playwright test
       - name: 上傳 trace 與截圖
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-online-demo
           path: |
