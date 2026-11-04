@@ -19,6 +19,18 @@ export function linkedIssue(body) {
 const labelNames = (x) => (x.labels ?? []).map((l) => (typeof l === 'string' ? l : l.name));
 const startsWith = (comment, heading) => (comment.body ?? '').trimStart().startsWith(heading);
 
+/** 作者是否為可信身分；缺少 authorAssociation 時不算。 */
+export const isTrusted = (item) => TRUSTED_ASSOCIATIONS.includes(item?.authorAssociation);
+
+/**
+ * 只保留可信身分的項目（留言、審查、review comment）；skipped 只是筆數，不保留內容（#127）。
+ * 非可信身分的文字不進入 agent 的上下文，避免藉留言影響 agent（prompt injection）。
+ */
+export function trustedOnly(items = []) {
+  const trusted = items.filter(isTrusted);
+  return { trusted, skipped: items.length - trusted.length };
+}
+
 /**
  * agent 停下之後是否已有人的「## 決定」：最後一則決定晚於最後一則停止回報或計畫。
  * plan-first 的計畫（## 計畫）也是一種停止。
@@ -28,7 +40,7 @@ export function hasDecision(comments = []) {
   const latest = (pred) =>
     Math.max(-1, ...comments.filter(pred).map((c) => Date.parse(c.createdAt)));
   const stop = latest((c) => STOP_HEADINGS.some((h) => startsWith(c, h)));
-  const decision = latest((c) => startsWith(c, DECISION_HEADING) && TRUSTED_ASSOCIATIONS.includes(c.authorAssociation));
+  const decision = latest((c) => startsWith(c, DECISION_HEADING) && isTrusted(c));
   return stop >= 0 && decision > stop;
 }
 
@@ -39,6 +51,7 @@ const skippedBranch = (pr, prefixes) => prefixes.some((p) => pr.headRefName?.sta
  * 1. 修正模式：自己 PR 上的 changes-requested（PR 也帶 blocked 時須已有決定）
  * 2. 依決定繼續：帶 blocked 且已有決定的 Issue，或自己的 PR
  * 3. 新工作：agent:ready（沒有 agent:working／blocked），最舊的先做
+ * 2、3 的 Issue 須由可信身分開立（authorAssociation，缺少時不派工）。
  * agent:working 一律加在 Issue，所以 PR 都換成描述中 Closes／Refs 的 Issue；找不到時略過。
  * exclude：本次喚醒已處理過的 Issue（連續處理時不重複處理同一件）。
  */
@@ -67,8 +80,14 @@ export function orderWork(sources, { account, skipBranchPrefixes = [], exclude =
     if (labelNames(pr).includes('blocked') && !hasDecision(pr.comments)) continue;
     fromPr(pr, '修正模式');
   }
+  // Issue 本文等於給 agent 的指示：作者不是可信身分時不派工（#127；外部 Issue 由決策中心另開）
+  const trustedIssue = (i) => {
+    if (isTrusted(i)) return true;
+    skipped.push(`Issue #${i.number}：作者不是可信身分（${i.authorAssociation ?? '不明'}），不派工`);
+    return false;
+  };
   for (const it of blockedIssues) {
-    if (hasDecision(it.comments)) {
+    if (hasDecision(it.comments) && trustedIssue(it)) {
       add({ kind: '依決定繼續', issue: it.number, ref: `#${it.number}`, title: it.title, isNew: false });
     }
   }
@@ -77,6 +96,7 @@ export function orderWork(sources, { account, skipBranchPrefixes = [], exclude =
   }
   const ready = readyIssues
     .filter((i) => !labelNames(i).some((n) => n === 'agent:working' || n === 'blocked'))
+    .filter(trustedIssue)
     .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
   for (const i of ready) {
     add({ kind: '新工作', issue: i.number, ref: `#${i.number}`, title: i.title, isNew: true });

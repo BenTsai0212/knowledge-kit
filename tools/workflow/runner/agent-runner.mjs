@@ -293,11 +293,22 @@ async function main() {
   /** 重新查詢 GitHub 挑下一件（標籤可能已改變），排除本次已處理的 Issue；沒有可做的工作時回傳 null。 */
   function nextWork() {
     const prFields = 'number,title,body,headRefName,labels,comments,author';
+    // gh issue list 沒有 Issue 本身的 authorAssociation，改由 REST API 取得（#127）
+    const associations = new Map(
+      gh('api', '--paginate', `repos/${REPO}/issues?state=open&per_page=100`,
+        '--jq', '.[] | select(.pull_request | not) | "\\(.number) \\(.author_association)"')
+        .split('\n').filter(Boolean).map((line) => {
+          const [n, a] = line.split(' ');
+          return [Number(n), a];
+        }));
+    const withAssociation = (issues) => issues.map((i) => ({ ...i, authorAssociation: associations.get(i.number) }));
     const { candidates, skipped } = orderWork({
       fixPrs: ghJson('pr', 'list', '-R', REPO, '--state', 'open', '--label', 'changes-requested', '--author', ME, '--json', prFields),
-      blockedIssues: ghJson('issue', 'list', '-R', REPO, '--state', 'open', '--label', 'blocked', '--json', 'number,title,comments,labels'),
+      blockedIssues: withAssociation(
+        ghJson('issue', 'list', '-R', REPO, '--state', 'open', '--label', 'blocked', '--json', 'number,title,comments,labels')),
       blockedPrs: ghJson('pr', 'list', '-R', REPO, '--state', 'open', '--label', 'blocked', '--author', ME, '--json', prFields),
-      readyIssues: ghJson('issue', 'list', '-R', REPO, '--state', 'open', '--label', 'agent:ready', '--json', 'number,title,labels,createdAt'),
+      readyIssues: withAssociation(
+        ghJson('issue', 'list', '-R', REPO, '--state', 'open', '--label', 'agent:ready', '--json', 'number,title,labels,createdAt')),
     }, { ...config, exclude: done });
     for (const s of skipped) log('略過：', s);
     if (!candidates.length) {
