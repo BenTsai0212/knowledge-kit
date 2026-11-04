@@ -1,0 +1,17 @@
+<!doctype html>
+<!-- #126 瀏覽器量測頁（verify 分支專用，不合併）。npm run dev 後開 /verify-semantic.html；build 不包含本頁。 -->
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <title>#126 semantic retrieval measurement</title>
+  </head>
+  <body>
+    <p>
+      <label>model <select id="model"><option>A1</option><option>A2</option></select></label>
+      <label>device <select id="device"><option>wasm</option><option>webgpu</option></select></label>
+      <button id="run">run</button>
+    </p>
+    <pre id="out"></pre>
+    <script type="module" src="./verify-semantic.ts"></script>
+  </body>
+</html>
