@@ -12,3 +12,6 @@ dist/
 test-results/
 playwright-report/
 .runner-tmp/
+
+# #126 verify 分支：候選模型檔（不提交）
+.verify-models/
