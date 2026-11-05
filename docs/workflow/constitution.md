@@ -1,7 +1,7 @@
 # 個人開發 Workflow 憲法
 
 - 版本：v0.14（2026-11-04）；各版內容見文末「版本紀錄」
-- 正本：作者的 workflow template（未公開）的 `docs/workflow/constitution.md`；本檔是從該 template 複製的副本，版本見上一行
+- 正本：建立本專案的 template repo 中的同名檔案（`docs/workflow/constitution.md`）
 - 從 template 建立的專案保留一份副本。副本只能從 template 升級，不在專案內直接修改；值得改的規則回到 template 修憲（第 10 節）。
 
 本憲法定義我所有程式專案共用的工作方式：**Claude Project 做決策、coding agent 做實作、GitHub 記錄一切。** 內容來自實際專案（2026-10-11～12）的運作。規則標示「已驗證」（實際跑過）或「試驗中」（尚未驗證）。

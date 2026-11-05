@@ -149,17 +149,17 @@ ADR 以 PR 提交（`docs:` 前綴，不能走快速通道），合併後更新 
 
    - 預算：子 Issue 3／5、第 2／7 天
    - 本次做了什麼（① 先做後列）：
-     - 建立 dev-workflow-template#31 並加 `agent:ready`
-     - 建立 dev-workflow-template#32（清單外新增：<理由>），依賴 PR dev-workflow-template#29，合併後再派
-     - 對 PR dev-workflow-template#29 送修正要求（第 1／2 輪）
-   - 等人處理：@<決定者> 合併摘要見下／dev-workflow-template#30 等 `## 決定`
+     - 建立 #<子 Issue> 並加 `agent:ready`
+     - 建立 #<子 Issue>（清單外新增：<理由>），依賴 PR #<PR>，合併後再派
+     - 對 PR #<PR> 送修正要求（第 1／2 輪）
+   - 等人處理：@<決定者> 合併摘要見下／#<子 Issue> 等 `## 決定`
    - 下一步：<一句話>
    ```
 
 4. **合併摘要**：寫在進度留言裡，只列已審好、符合合併前確認（第 4 節）的 PR。請人到本專案的決策中心對話（Claude Project）列出編號授權。喚醒的 session 一律不合併：即使人在該 session 回覆授權，也請人改到決策中心對話。授權後照 [github-writes.md](github-writes.md#2-合併依風險分兩種授權試驗中) 合併。
 
    ```markdown
-   ### 可合併（請到決策中心對話列出編號授權，例如「合併 dev-workflow-template#29 dev-workflow-template#30」）
+   ### 可合併（請到決策中心對話列出編號授權，例如「合併 #<PR> #<PR>」）
 
    | PR | Issue | 一句話 | 風險 | CI | 修正輪數 |
    | --- | --- | --- | --- | --- | --- |

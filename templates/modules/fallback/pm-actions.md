@@ -26,7 +26,7 @@
 
 - 類型：issue.comment
 - 等級：auto
-- 目標：dev-workflow-template#37
+- 目標：#<編號>
 - 原因：<為什麼要做，一句話>
 
 ```text
@@ -100,11 +100,11 @@ repo、分支、檔案的刪除（標籤、看板項目、檢視的刪除依 `do
 
 | # | 類型 | 目標 | 結果 | 連結／說明 |
 | --- | --- | --- | --- | --- |
-| 1 | issue.comment | dev-workflow-template#37 | ✅ 完成 | <留言網址> |
-| 2 | pr.merge | dev-workflow-template#45 | ⏸ 未確認 | 使用者暫不合併 |
-| 3 | issue.create | — | ⚠️ 已存在 | 同標題 Issue dev-workflow-template#50，未重複建立 |
-| 4 | pr.approve | dev-workflow-template#51 | ↪ 改以留言記錄 | PR 作者即執行帳號 |
-| 5 | pr.merge | dev-workflow-template#51 | ⏭ 因依賴未完成而略過 | 依賴 dev-workflow-template#4 |
+| 1 | issue.comment | #<編號> | ✅ 完成 | <留言網址> |
+| 2 | pr.merge | #<PR> | ⏸ 未確認 | 使用者暫不合併 |
+| 3 | issue.create | — | ⚠️ 已存在 | 同標題 Issue #<編號>，未重複建立 |
+| 4 | pr.approve | #<PR> | ↪ 改以留言記錄 | PR 作者即執行帳號 |
+| 5 | pr.merge | #<PR> | ⏭ 因依賴未完成而略過 | 依賴 #<編號> |
 
 ## 需要人處理
 - …

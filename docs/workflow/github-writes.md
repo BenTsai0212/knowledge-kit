@@ -31,7 +31,7 @@
 
 只在人於對話中明確授權後執行。〔來源：每個 PR 都要人說一次「合併」，只改說明文件的 PR 與改權限的 PR 確認的重量一樣，人必須一直在場（憲法原則 10）（dev-workflow-template#51）｜可升級條件：發生一次低風險授權的 PR 事後需要回退，就取消分級，回到全部逐項授權；發生未經授權的合併，就移除 `merge_pull_request`〕
 
-- **低風險 PR**：同時符合以下全部條件時，人可在對話中**列出 PR 編號**一次授權多個（例如「合併 dev-workflow-template#12、dev-workflow-template#13、dev-workflow-template#15」）；只說「全部合併」不算授權：列出符合條件的 PR，請人以編號授權。
+- **低風險 PR**：同時符合以下全部條件時，人可在對話中**列出 PR 編號**一次授權多個（例如「合併 #<PR>、#<PR>、#<PR>」）；只說「全部合併」不算授權：列出符合條件的 PR，請人以編號授權。
   - 變更的檔案只有 `README*` 與 `docs/` 底下的檔案，且不含 `docs/workflow/`、`docs/adr/`、`docs/rfcs/`；
   - 不改 `AGENTS.md`、`CLAUDE.md`、`.github/`、`.claude/`、`tools/`、任何程式或設定檔；
   - 非 Draft、`mergeable_state` 為 `clean`、CI 全部通過、沒有 `needs-setup`。
