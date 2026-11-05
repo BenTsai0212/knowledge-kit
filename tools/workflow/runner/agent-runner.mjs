@@ -7,15 +7,16 @@
 //   node tools/workflow/runner/agent-runner.mjs             排程用：只在執行時段內執行，可連續處理
 import { execFileSync, spawn } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import {
   BASE_SETTINGS_FILE, CONFIG_FILE, GENERATED_SETTINGS_FILE, GLOBAL_DIR, GLOBAL_LOCK, GLOBAL_PAUSE,
   PROJECT_PAUSE, readConfig, repoRoot, resolvePaths,
 } from './config.mjs';
 import {
-  advanceAwake, agentNote, buildSettings, canStartNew, countOpenPrs, inHours, isRunTmpDir, lockIsActive, needsWipSave,
-  orderWork, pickWork, runTmpDir, runTmpEnv, shouldContinue, staleWorking, stopReportBody, TICK_MS, validateConfig,
-  wipBranchName,
+  advanceAwake, agentNote, buildSettings, canStartNew, countOpenPrs, GH_RETRY_MS, inHours, isRunTmpDir, isTransientGhError,
+  lockIsActive, needsWipSave, orderWork, pickWork, recordRunnerError, remainingLabels, runnerReminder, runTmpDir,
+  runTmpEnv, shouldContinue, staleWorking, stopReportBody, TICK_MS, validateConfig, wipBranchName,
 } from './lib.mjs';
 import { notify } from './platform.mjs';
 
@@ -32,11 +33,29 @@ function log(...m) {
 }
 
 const firstLine = (error) => error.message.split('\n')[0];
+const sleepSync = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 
-/** runner 自身的錯誤：只寫紀錄並發本機通知，不在 GitHub 留言、不改標籤（GitHub 上的停止回報只用於需要人決定的問題）。 */
-function runnerError(what, error) {
+// 重複錯誤的狀態檔（每個 repo 的 logs/ 底下，不進版本控制）；試跑時不設定，不寫狀態檔、不留言（dev-workflow-template#45）
+let errorTracking = null;
+
+/**
+ * runner 自身的錯誤：寫紀錄並發本機通知，不改標籤（GitHub 上的停止回報只用於需要人決定的問題）。
+ * 同一個錯誤連續 REMIND_AFTER 次且與 Issue 有關時，在該 Issue 留一次 `## runner 提醒`（lib.mjs 的 recordRunnerError）。
+ */
+function runnerError(what, error, { stage = what, issue = null } = {}) {
   log('runner 錯誤：', what, error.message);
   notify(`${what}：${firstLine(error)}（詳見 logs）`);
+  if (!errorTracking) return;
+  const { file, remind: postReminder } = errorTracking;
+  try {
+    const prev = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : null;
+    const { state, remind } = recordRunnerError(prev, { stage, message: error.message, issue });
+    writeFileSync(file, JSON.stringify(state, null, 2) + '\n');
+    log(`同一個錯誤連續 ${state.count} 次（狀態檔：${file}）`);
+    if (remind && postReminder(issue, state)) log(`已在 #${issue} 留 runner 提醒`);
+  } catch (e) {
+    log('記錄重複錯誤或留 runner 提醒失敗：', firstLine(e));
+  }
 }
 
 async function main() {
@@ -54,6 +73,7 @@ async function main() {
     return;
   }
 
+  const labelNames = (x) => (x?.labels ?? []).map((l) => l.name);
   const ROOT = repoRoot();
   const { worktree: WORKTREE, logDir: LOG_DIR } = resolvePaths(config, ROOT);
   const REPO = config.repo;
@@ -62,16 +82,63 @@ async function main() {
   logFile = join(LOG_DIR, `${stamp}${DRY ? '-dry' : ''}.log`);
   const relLog = relative(ROOT, logFile);
 
-  const gh = (...a) => execFileSync('gh', a, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  /** gh：暫時性錯誤（連線中斷、unexpected EOF、HTTP 5xx、逾時）時等待後重試一次，其他錯誤直接丟出（dev-workflow-template#45）。 */
+  const ghOnce = (a) => execFileSync('gh', a, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 120e3 });
+  const gh = (...a) => {
+    try {
+      return ghOnce(a);
+    } catch (error) {
+      if (!isTransientGhError(`${error.code ?? ''}\n${error.message}\n${error.stderr ?? ''}`)) throw error;
+      log(`gh 暫時性錯誤，${GH_RETRY_MS / 1e3} 秒後重試一次：gh ${a.slice(0, 2).join(' ')}：${firstLine(error)}`);
+      sleepSync(GH_RETRY_MS);
+      return ghOnce(a);
+    }
+  };
   const ghJson = (...a) => JSON.parse(gh(...a) || 'null');
+  if (!DRY) {
+    errorTracking = {
+      file: join(LOG_DIR, 'runner-errors.json'),
+      /** 遮蔽本機路徑後仍有 email 或個人路徑時不貼出，只寫紀錄與通知；有貼出時回傳 true。 */
+      remind: (issue, state) => {
+        const { body, errors } = runnerReminder({ ...state, logPath: relLog },
+          { worktree: WORKTREE, repoRoot: ROOT, home: homedir() });
+        if (!body) {
+          log(`#${issue} 的 runner 提醒含敏感內容，未貼出（${errors.join('、')}）`);
+          notify(`#${issue} 的 runner 提醒含敏感內容，未貼出（詳見 logs）`);
+          return false;
+        }
+        gh('issue', 'comment', String(issue), '-R', REPO, '--body', body);
+        return true;
+      },
+    };
+  }
+  /** 處理成功一次後，重複錯誤的計數歸零。 */
+  function clearErrorState() {
+    if (errorTracking && existsSync(errorTracking.file)) {
+      unlinkSync(errorTracking.file);
+      log('處理成功，重複錯誤的計數歸零');
+    }
+  }
   const git = (cwd, ...a) => execFileSync('git', a, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
-  const labelNames = (x) => (x.labels ?? []).map((l) => l.name);
 
-  /** 加／移除標籤；移除不存在的標籤時不視為錯誤。 */
+  /**
+   * 加／移除標籤。移除後讀回確認：仍存在時重試一次，仍失敗就丟出錯誤（由呼叫端以 runnerError 處理）。
+   * 移除不存在的標籤時 gh 可能回報錯誤，以讀回的結果為準（dev-workflow-template#45）。
+   */
   function setLabels(issue, add = [], remove = []) {
     for (const l of add) gh('issue', 'edit', String(issue), '-R', REPO, '--add-label', l);
-    for (const l of remove) {
-      try { gh('issue', 'edit', String(issue), '-R', REPO, '--remove-label', l); } catch {}
+    if (!remove.length) return;
+    let left = remove;
+    let lastError = null;
+    for (let attempt = 0; attempt < 2 && left.length; attempt++) {
+      for (const l of left) {
+        try { gh('issue', 'edit', String(issue), '-R', REPO, '--remove-label', l); } catch (error) { lastError = error; }
+      }
+      left = remainingLabels(labelNames(ghJson('issue', 'view', String(issue), '-R', REPO, '--json', 'labels')), remove);
+      if (left.length && attempt === 0) log(`#${issue} 的標籤移除後仍存在：${left.join('、')}，重試一次`);
+    }
+    if (left.length) {
+      throw new Error(`無法移除 #${issue} 的標籤：${left.join('、')}${lastError ? `（${firstLine(lastError)}）` : ''}`);
     }
   }
 
@@ -255,7 +322,7 @@ async function main() {
       prepareWorktree();
       setLabels(pick.issue, ['agent:working'], ['agent:ready']);
     } catch (error) {
-      runnerError(`準備 #${pick.issue} 時失敗`, error);
+      runnerError(`準備 #${pick.issue} 時失敗`, error, { issue: pick.issue });
       return 'runner-error';
     }
     setBoardStatus(pick.issue, 'In progress');
@@ -272,7 +339,7 @@ async function main() {
       try {
         stopReport(pick.issue, '/work-on-issue 執行中', killedFor ?? `claude 以代碼 ${code} 結束`, `${saved}；詳見 runner 紀錄檔`);
       } catch (error) {
-        runnerError(`無法在 #${pick.issue} 留停止回報`, error);
+        runnerError(`無法在 #${pick.issue} 留停止回報`, error, { issue: pick.issue });
         return 'runner-error';
       }
       return 'aborted';
@@ -282,7 +349,7 @@ async function main() {
       const blocked = labelNames(ghJson('issue', 'view', String(pick.issue), '-R', REPO, '--json', 'labels')).includes('blocked');
       if (!blocked) setBoardStatus(pick.issue, 'Review');
     } catch (error) {
-      runnerError(`#${pick.issue} 結束後更新標籤失敗`, error);
+      runnerError(`#${pick.issue} 結束後更新標籤失敗`, error, { issue: pick.issue });
       return 'runner-error';
     }
     return 'ok';
@@ -367,7 +434,12 @@ async function main() {
     ghJson('issue', 'list', '-R', REPO, '--state', 'open', '--label', 'agent:working', '--json', 'number,title,updatedAt'),
     Date.now(), config.staleHours)) {
     log(`中斷的工作：#${s.number} ${s.title}（agent:working 超過 ${config.staleHours} 小時）`);
-    if (!DRY) stopReport(s.number, '執行中', 'runner 執行中斷（例如電腦睡眠或關機）', `agent:working 超過 ${config.staleHours} 小時沒有更新`);
+    if (DRY) continue;
+    try {
+      stopReport(s.number, '執行中', 'runner 執行中斷（例如電腦睡眠或關機）', `agent:working 超過 ${config.staleHours} 小時沒有更新`);
+    } catch (error) {
+      runnerError(`無法在中斷的 #${s.number} 留停止回報`, error, { issue: s.number });
+    }
   }
 
   let pick = nextWork();
@@ -387,6 +459,7 @@ async function main() {
   try {
     while (pick) {
       const lastResult = await processOne(pick);
+      if (lastResult !== 'runner-error') clearErrorState();
       done.add(pick.issue);
       const { go, reason } = shouldContinue({
         now: new Date(), config, processed: done.size, paused: paused(), nowMode: NOW, lastResult,
@@ -409,7 +482,6 @@ async function main() {
 }
 
 main().catch((e) => {
-  log('runner 失敗：', e.message);
-  notify(`runner 失敗：${e.message.split('\n')[0]}（詳見 logs）`);
+  runnerError('runner 失敗', e);
   process.exitCode = 1;
 });

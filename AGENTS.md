@@ -123,7 +123,7 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 - Vitest 的 `fsModuleCache`（預設開啟）會沿用舊的 `import.meta.glob` 結果：新增 `app/src/db/migrations/*.sql` 後，本機測試不會載入新檔，可能誤判通過。`vitest.config.ts` 已設 `fsModuleCache: false`，不要移除。〔#6 PR 2 以暫時的 migration 驗證滲漏測試時發現｜Vitest 修正快取失效後〕
 - Vitest 預設把 CSS 檔換成空字串，連 `?raw` 也一樣，檢查 CSS 的測試會因為讀到空字串而誤判通過。`vitest.config.ts` 的 `css.include` 已加入 `app/src/ui/app.css`，不要移除；要檢查其他 CSS 檔時加進去。〔#58 PR 2 的主題結構測試發現｜Vitest 的 `?raw` 不再受 `css` 設定影響後〕
 
-- `$TMPDIR` 可能是同一台電腦上所有專案共用的資料夾（Claude Code 的 sandbox 是 `/tmp/claude-<uid>`），有其他專案留下的同名檔案；Write 工具對已存在、未讀過的檔案會寫入失敗，沿用舊檔就會把其他專案的內容貼出。PR 描述與留言依 `docs/workflow/agent-workflow.md`「貼出 PR 描述與留言」寫成新檔、以 `check-post-body.mjs` 檢查後貼出；runner 執行時寫在 `KK_RUN_TMP`。〔#104：PR #98 的描述與 #100 的計畫留言貼出了其他專案的檔案｜sandbox 改為每個專案各自的暫存資料夾後〕
+- `$TMPDIR` 可能是同一台電腦上所有專案共用的資料夾（Claude Code 的 sandbox 是 `/tmp/claude-<uid>`），有其他專案留下的同名檔案；Write 工具對已存在、未讀過的檔案會寫入失敗，沿用舊檔就會把其他專案的內容貼出。PR 描述與留言依 `docs/workflow/agent-workflow.md`「貼出 PR 描述與留言」寫成新檔、以 `check-post-body.mjs` 檢查後貼出；runner 執行時寫在 `RUNNER_RUN_TMP`。〔#104：PR #98 的描述與 #100 的計畫留言貼出了其他專案的檔案｜sandbox 改為每個專案各自的暫存資料夾後〕
 
 ## 8. 維護本文件
 

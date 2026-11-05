@@ -37,7 +37,7 @@ test('checkContent：留言的開頭標題與 Issue 編號', () => {
   ng('', 104, 'stop');
 });
 
-test('checkSource：runner 執行時檔案必須在 KK_RUN_TMP 底下、不是舊檔，不接受標準輸入', () => {
+test('checkSource：runner 執行時檔案必須在 RUNNER_RUN_TMP 底下、不是舊檔，不接受標準輸入', () => {
   const runTmp = join(tmpdir(), 'kk', '.runner-tmp', '20261102-104');
   const started = Date.parse('2026-11-02T10:00:00Z');
   const base = { runTmp, startedMs: started, mtimeMs: started + 5e3, nowMs: started + 10e3 };
@@ -117,7 +117,7 @@ test('重現：其他專案留下的同名暫存檔不會通過檢查', (t) => {
   mkdirSync(runTmp, { recursive: true });
   const started = new Date(Date.now() - 60e3);
   const old = new Date(started.getTime() - 3600e3);
-  const env = { KK_RUN_TMP: runTmp, KK_RUN_STARTED: started.toISOString() };
+  const env = { RUNNER_RUN_TMP: runTmp, RUNNER_RUN_STARTED: started.toISOString() };
   const run = (args, e = env, input) =>
     spawnSync(process.execPath, [SCRIPT, ...args], { env: { PATH: process.env.PATH, ...e }, encoding: 'utf8', input });
 
@@ -128,7 +128,7 @@ test('重現：其他專案留下的同名暫存檔不會通過檢查', (t) => {
   let r = run(['--issue', '104', '--kind', 'pr', other]);
   assert.equal(r.status, 1);
   assert.match(r.stderr, /不要貼出/);
-  assert.match(r.stderr, /KK_RUN_TMP/);
+  assert.match(r.stderr, /RUNNER_RUN_TMP/);
 
   // 內容剛好正確的舊檔也拒絕
   const lookalike = join(shared, 'plan.md');
@@ -147,7 +147,7 @@ test('重現：其他專案留下的同名暫存檔不會通過檢查', (t) => {
   // runner 執行時不接受標準輸入
   assert.equal(run(['--issue', '104', '--kind', 'pr', '-'], env, 'Closes #104\n').status, 1);
 
-  // 本次寫入 KK_RUN_TMP 的新檔通過；通過的檔案就是 gh --body-file 要貼出的同一個路徑
+  // 本次寫入 RUNNER_RUN_TMP 的新檔通過；通過的檔案就是 gh --body-file 要貼出的同一個路徑
   const fresh = join(runTmp, 'pr-104.md');
   const content = '## 為什麼\n\n本次的內容\n\nCloses #104\n';
   writeFileSync(fresh, content);
@@ -164,7 +164,7 @@ test('重現：其他專案留下的同名暫存檔不會通過檢查', (t) => {
   assert.match(r.stderr, /第 7 行：email/);
   for (const hit of [userPath, email]) assert.ok(!`${r.stdout}${r.stderr}`.includes(hit));
 
-  // 手動執行（沒有 KK_RUN_TMP）：標準輸入可用，舊檔仍拒絕
+  // 手動執行（沒有 RUNNER_RUN_TMP）：標準輸入可用，舊檔仍拒絕
   assert.equal(run(['--issue', '104', '--kind', 'pr', '-'], {}, 'Closes #104\n').status, 0);
   assert.equal(run(['--issue', '104', '--kind', 'pr', other], {}).status, 1);
 });
