@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // 從 template 建立新 repo 後，一個指令完成標籤建立、範本看板複製與連結（憲法第 9 節 B 段第 2 步）。
-// 用法：node tools/workflow/bootstrap-github.mjs --repo <owner/name> [--modules core,online,collab,automation] [--dry-run]
+// 用法：node tools/workflow/bootstrap-github.mjs --repo <owner/name> [--modules core,online,collab,automation,goal] [--dry-run]
 // --modules 預設只有 core；--dry-run 只列出將執行的 gh 指令（仍會讀取現有標籤與看板，不做任何寫入）。
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
