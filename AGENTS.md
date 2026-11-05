@@ -7,7 +7,7 @@
 - Repo：`BenTsai0212/knowledge-kit`
 - 看板：GitHub Project #9（https://github.com/users/BenTsai0212/projects/9）
 - 啟用模組：核心、高風險、自動化（見 `docs/workflow/modules.md`；自動化見 ADR 0003）
-- 憲法版本：v0.8（`docs/workflow/constitution.md`）
+- 憲法版本：v0.14（`docs/workflow/constitution.md`）
 - 決定者：@BenTsai0212（停止回報與 `plan-first` 時 @ 此帳號）
 - fork 後要改的地方：`docs/workflow/fork.md`
 
@@ -79,7 +79,7 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 
 - 實作一張 Issue：`/work-on-issue <編號>`，依 `docs/workflow/agent-workflow.md`。
 - 建立新客戶的 demo：`/new-client <Issue 編號>`（Issue 用「新客戶 demo」範本建立），依 `docs/playbook/new-client-setup.md` 在 `clients/<名稱>/` 建立，三個 ⏸ 檢查點停下等 `## 決定`。
-- 執行 GitHub 操作清單：`/pm-apply`，依 `docs/workflow/pm-actions.md`；`confirm` 等級須經人同意。
+- 執行 GitHub 操作清單（`/pm-apply`）：選用的備援模組，本專案不啟用；檔案在 `templates/modules/fallback/`（見 `docs/workflow/modules.md`「備援」）。
 - 一張 Issue 一條分支（`feat/`、`fix/`、`docs/`、`chore/`、`ci/`），一個 PR，目標 400 行內。
 - 完成且無合併後待辦寫 `Closes #N`，否則寫 `Refs #N`；依 PR 範本填寫。
 - 審查修正以 PR 留言＋`changes-requested` 提出，用同一個 `/work-on-issue <Issue 編號>` 處理。

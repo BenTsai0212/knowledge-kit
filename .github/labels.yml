@@ -1,6 +1,6 @@
 # 標籤定義：bootstrap 腳本依此建立。新增標籤時同步更新本檔與 docs/workflow/constitution.md 第 7 節。
-# 群組對應模組（docs/workflow/modules.md）：core＝核心、online＝上線、collab＝協作、automation＝自動化；只建立已啟用模組的群組。
-# phase:* 與 area:* 由各專案的 RFC 0001 決定，初始化時由決策 agent 建立（MCP 不能用時以 /pm-apply 建立）。
+# 群組對應模組（docs/workflow/modules.md）：core＝核心、online＝上線、collab＝協作、automation＝自動化、goal＝目標模式；只建立已啟用模組的群組。
+# phase:* 與 area:* 由各專案的 RFC 0001 決定，初始化時由決策 agent 建立（MCP 不能用時見 modules.md 的備援模組）。
 
 core:
   - { name: "type:feat", color: "1d76db", description: "新功能" }
@@ -24,3 +24,6 @@ collab:
 automation:
   - { name: "agent:ready", color: "0e8a16", description: "可以交給 agent；由人加，或決策 agent 經人確認後加" }
   - { name: "agent:working", color: "1f883d", description: "runner 處理中；由 runner 加、由 runner 移除" }
+
+goal:
+  - { name: "goal-mode", color: "006b75", description: "目標模式：已核准的目標，決策 agent 在範圍內自動推進（試驗中）" }

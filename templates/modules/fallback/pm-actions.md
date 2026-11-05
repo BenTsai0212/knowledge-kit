@@ -1,11 +1,8 @@
-# GitHub 操作清單（PM actions）
+# GitHub 操作清單（PM actions，備援模組）
 
-本文件有兩個用途：
+備援模組（`docs/workflow/modules.md`「備援」）的檔案。啟用時複製到 `docs/workflow/pm-actions.md`，並把同資料夾的 `pm-apply.md` 複製到 `.claude/commands/pm-apply.md`。
 
-- **操作分類**：決策 agent（Claude Project）經 GitHub MCP 直接執行時，依下方「三級對照表」決定確認方式（憲法第 5 節）。
-- **備援清單**：決策 agent 無法直接執行時（MCP 不能用，或 MCP 沒有對應工具，例如建立 Milestone、複製看板），把操作寫成一份**操作清單**，交給 Claude Code 的 `/pm-apply` 依序執行並寫回結果。
-
-目的：人只需做決定與確認，不必手動搬運指令。
+何時使用 Claude in Chrome、何時寫操作清單，見 `docs/workflow/modules.md`「備援」。本文件只規定操作清單：決策 agent 把操作寫成一份**操作清單**，交給 Claude Code 的 `/pm-apply` 依序執行並寫回結果；人只需做決定與確認，不必手動搬運指令。
 
 ## 檔案位置
 
@@ -29,7 +26,7 @@
 
 - 類型：issue.comment
 - 等級：auto
-- 目標：#37
+- 目標：dev-workflow-template#37
 - 原因：<為什麼要做，一句話>
 
 ```text
@@ -43,25 +40,18 @@
 
 ## 操作類型與等級
 
-### 三級對照表（決策 agent 經 MCP 寫入時，試驗中）
+### 與三級確認的對應
 
-| 等級 | 決策 agent 的確認方式 | 操作類型 | `/pm-apply` 等級 |
-| --- | --- | --- | --- |
-| ① 先做後列 | 直接執行，在同一輪回覆列出做了什麼與連結 | `issue.comment`／`pr.comment`（一般留言：進度說明、測試結果）、`project.add`、`project.field`、`issue.parent`、`issue.assign`、`issue.labels`／`pr.labels`（分類標籤（`type:*`、`phase:*`、`area:*`）的加入與移除） | `auto` |
-| ② 整批同意 | 在對話列出內容（可整批），人同意後執行 | `issue.create`、`issue.body-append`（修改 Issue 內容）、修正要求（`pr.comment`＋`changes-requested`）、`issue.labels`／`pr.labels`（流程標籤（`blocked`、`changes-requested`、`plan-first`、`needs-human`、`agent:ready`、`agent:working`、`fast-lane`）的加入與移除（移除 `plan-first` 除外））、`milestone.create` | `auto` |
-| ③ 逐項確認 | 逐項列出完整內容，人明確同意後才執行 | `## 決定` 留言、`issue.labels`（移除 `plan-first`）、`pr.merge`、`issue.close`／`issue.reopen`、`label.create`、所有刪除、`pr.approve`、`pr.draft`／`pr.ready` | `confirm`（`## 決定` 留言與移除 `plan-first` 除外，見下） |
+各操作在三級確認中的等級見 `docs/workflow/github-writes.md`。寫進 `/pm-apply` 清單時：
 
-- **依內容升級**：任何寫入的內容碰到憲法第 5 節「人親自決定的範圍」，一律升為 ③。
-- ① 的留言不得以 `## 決定` 開頭，也不得包含修正要求的核取方塊（避免 agent 誤讀為指示）。
-- `## 決定` 先在對話討論選項，經人核准內容後才送出。寫進 `/pm-apply` 清單時類型仍是 `issue.comment`／`pr.comment`（`auto`），因為內容已在對話逐項核准；移除 `plan-first` 同理，在清單中仍是 `issue.labels`（`auto`）。
-- 流程標籤會直接改變 agent 或 runner 的行為，因此不歸 ①。
-- `/pm-apply` 的執行規則不變：下方 `auto`／`confirm` 兩表照舊；① ② 對應 `auto`，③ 對應 `confirm`。
+- ① ② 對應 `auto`，③ 對應 `confirm`；下方 `auto`／`confirm` 兩表照舊。
+- `## 決定` 先在對話討論選項，經人核准內容後才送出。寫進清單時類型仍是 `issue.comment`／`pr.comment`（`auto`），因為內容已在對話逐項核准；移除 `plan-first` 同理，在清單中仍是 `issue.labels`（`auto`）。
 
 ### auto：可整批確認（`/pm-apply` 直接執行）
 
 | 類型 | 說明 | 需要的欄位 |
 | --- | --- | --- |
-| `issue.create` | 建立 Issue | 標題、內容；可選標籤、Milestone、上層 Epic、加入看板 |
+| `issue.create` | 建立 Issue | 標題、內容；可選標籤、上層 Epic、加入看板 |
 | `issue.comment` | 在 Issue 留言 | 目標、內容 |
 | `issue.labels` | 新增／移除標籤 | 目標、新增、移除 |
 | `issue.assign` | 指派負責人 | 目標、負責人 |
@@ -71,7 +61,6 @@
 | `pr.labels` | 在 PR 新增／移除標籤 | 目標、新增、移除 |
 | `project.add` | 加入看板（AGENTS.md 第 0 節） | 目標 |
 | `project.field` | 更新看板欄位（Status、Phase、Area、Priority、Size、Start／Target date） | 目標、欄位、值 |
-| `milestone.create` | 建立 Milestone | 標題、描述、截止日 |
 
 ### confirm：執行前列出內容，等人確認
 
@@ -83,22 +72,9 @@
 | `issue.close` / `issue.reopen` | 關閉或重新開啟 Issue |
 | `label.create` | 建立新標籤（新標籤也要加進 `.github/labels.yml`） |
 
-### 審查修正的標準寫法
-
-1. `pr.comment`：以核取方塊（`- [ ]`）逐項列出修正要求。
-2. `pr.labels`：新增 `changes-requested`，**依賴第 1 項**。
-
-agent 之後以 `/work-on-issue <Issue 編號>` 進入修正模式。超出原 Issue 範圍的新需求改用 `issue.create` 另開 Issue。
-
-### 回覆 agent 停止回報或 `plan-first` 計畫的標準寫法
-
-- `pr.comment` 或 `issue.comment`（與停止回報或計畫同一處）：內容以 `## 決定` 開頭，逐項回應選項或計畫。
-
-不必另外移除 `blocked`：agent 重新開始時讀到 `## 決定` 會自行移除。
-
 ### 不放進清單（一律由人親自處理）
 
-repo、分支、檔案的刪除（標籤、看板項目、檢視的刪除依憲法第 5 節規則 3）、修改 repo 或分支保護設定、Secret 與環境變數、正式環境與資料庫操作、force push、修改他人分支的程式碼。
+repo、分支、檔案的刪除（標籤、看板項目、檢視的刪除依 `docs/workflow/github-writes.md` 第 3 節）、修改 repo 或分支保護設定、Secret 與環境變數、正式環境與資料庫操作、force push、修改他人分支的程式碼。
 
 ## 執行規則
 
@@ -124,11 +100,11 @@ repo、分支、檔案的刪除（標籤、看板項目、檢視的刪除依憲�
 
 | # | 類型 | 目標 | 結果 | 連結／說明 |
 | --- | --- | --- | --- | --- |
-| 1 | issue.comment | #37 | ✅ 完成 | <留言網址> |
-| 2 | pr.merge | #45 | ⏸ 未確認 | 使用者暫不合併 |
-| 3 | issue.create | — | ⚠️ 已存在 | 同標題 Issue #50，未重複建立 |
-| 4 | pr.approve | #51 | ↪ 改以留言記錄 | PR 作者即執行帳號 |
-| 5 | pr.merge | #51 | ⏭ 因依賴未完成而略過 | 依賴 #4 |
+| 1 | issue.comment | dev-workflow-template#37 | ✅ 完成 | <留言網址> |
+| 2 | pr.merge | dev-workflow-template#45 | ⏸ 未確認 | 使用者暫不合併 |
+| 3 | issue.create | — | ⚠️ 已存在 | 同標題 Issue dev-workflow-template#50，未重複建立 |
+| 4 | pr.approve | dev-workflow-template#51 | ↪ 改以留言記錄 | PR 作者即執行帳號 |
+| 5 | pr.merge | dev-workflow-template#51 | ⏭ 因依賴未完成而略過 | 依賴 dev-workflow-template#4 |
 
 ## 需要人處理
 - …

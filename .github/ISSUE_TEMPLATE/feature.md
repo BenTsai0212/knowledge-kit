@@ -21,7 +21,7 @@ labels: ["type:feat"]
 
 ## 依賴與相關
 
-- 階段（Milestone）：
+- 階段（Epic）：
 - RFC／ADR：
 - 依賴 Issue／PR：
 

@@ -9,7 +9,8 @@ const realLabels = readFileSync(LABELS_FILE, 'utf8');
 
 test('parseLabels：解析 repo 內的 labels.yml', () => {
   const groups = parseLabels(realLabels);
-  assert.deepEqual(Object.keys(groups), ['core', 'online', 'collab', 'automation']);
+  assert.deepEqual(Object.keys(groups), ['core', 'online', 'collab', 'automation', 'goal']);
+  assert.deepEqual(groups.goal, [{ name: 'goal-mode', color: '006b75', description: '目標模式：已核准的目標，決策 agent 在範圍內自動推進（試驗中）' }]);
   assert.equal(groups.core.length, 11);
   assert.deepEqual(groups.core[0], { name: 'type:feat', color: '1d76db', description: '新功能' });
   assert.ok(groups.core.some((l) => l.description.includes('## 決定')), '描述中的 # 不是註解');
