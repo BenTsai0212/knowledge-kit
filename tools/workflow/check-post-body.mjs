@@ -3,7 +3,7 @@
 // 共用的 $TMPDIR 中可能有其他專案留下的同名檔案；寫入失敗時沿用舊檔，會把其他專案的內容貼到本 repo。
 // 用法：node tools/workflow/check-post-body.mjs --issue N --kind pr|plan|stop|fix|todo <檔案或 ->
 // 通過時以 0 結束；不通過時以 1 結束，agent 不貼出。
-// runner 執行時（有 KK_RUN_TMP）：檔案必須在 KK_RUN_TMP 底下、修改時間不早於 KK_RUN_STARTED，不接受標準輸入。
+// runner 執行時（有 RUNNER_RUN_TMP）：檔案必須在 RUNNER_RUN_TMP 底下、修改時間不早於 RUNNER_RUN_STARTED，不接受標準輸入。
 // 內容不能有 email 與個人路徑（#124）：規則與 scripts/check-sensitive.mjs 共用，輸出只列行號與種類，不輸出命中的文字。
 import { readFileSync, statSync } from 'node:fs';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
@@ -18,7 +18,7 @@ export const HEADINGS = {
   todo: '## 合併後待辦',
 };
 export const KINDS = ['pr', ...Object.keys(HEADINGS)];
-// 手動執行（沒有 KK_RUN_STARTED）時，超過這個時間的檔案視為舊檔
+// 手動執行（沒有 RUNNER_RUN_STARTED）時，超過這個時間的檔案視為舊檔
 export const MANUAL_MAX_AGE_MS = 30 * 60e3;
 // 檔案系統的修改時間可能只精確到秒
 const MTIME_SLACK_MS = 1000;
@@ -64,17 +64,17 @@ export function checkSensitiveContent(body) {
 
 /**
  * 檔案檢查：來源（標準輸入或檔案）、位置與修改時間。回傳問題清單。
- * runTmp：KK_RUN_TMP；startedMs：KK_RUN_STARTED 換算的毫秒；mtimeMs：檔案的修改時間（標準輸入時不用）。
+ * runTmp：RUNNER_RUN_TMP；startedMs：RUNNER_RUN_STARTED 換算的毫秒；mtimeMs：檔案的修改時間（標準輸入時不用）。
  */
 export function checkSource({ file, runTmp, startedMs, mtimeMs, nowMs }) {
   if (file === '-') {
-    return runTmp ? ['runner 執行時不接受標準輸入：寫入 KK_RUN_TMP 底下的新檔，檢查後以同一個路徑貼出'] : [];
+    return runTmp ? ['runner 執行時不接受標準輸入：寫入 RUNNER_RUN_TMP 底下的新檔，檢查後以同一個路徑貼出'] : [];
   }
   const errors = [];
   if (runTmp) {
     const rel = relative(resolve(runTmp), resolve(file));
     if (!rel || rel.startsWith('..') || isAbsolute(rel) || rel.split(sep).includes('..')) {
-      errors.push(`檔案不在本次執行的暫存資料夾（KK_RUN_TMP）底下：${file}`);
+      errors.push(`檔案不在本次執行的暫存資料夾（RUNNER_RUN_TMP）底下：${file}`);
     }
   }
   if (Number.isFinite(startedMs)) {
@@ -104,8 +104,8 @@ export function parseArgs(argv) {
 export function checkPostBody(argv, env = process.env, now = Date.now()) {
   const { issue, kind, file, errors } = parseArgs(argv);
   if (errors.length) return { ok: false, errors };
-  const runTmp = env.KK_RUN_TMP || null;
-  const startedMs = env.KK_RUN_STARTED ? Date.parse(env.KK_RUN_STARTED) : NaN;
+  const runTmp = env.RUNNER_RUN_TMP || null;
+  const startedMs = env.RUNNER_RUN_STARTED ? Date.parse(env.RUNNER_RUN_STARTED) : NaN;
   let body;
   let mtimeMs = null;
   try {

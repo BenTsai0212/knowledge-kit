@@ -212,9 +212,9 @@ export function isRunTmpDir(worktree, dir) {
   return typeof dir === 'string' && dir.startsWith(prefix) && RUN_TMP_NAME.test(dir.slice(prefix.length));
 }
 
-/** 傳給 agent 的環境變數：check-post-body.mjs 依 KK_RUN_TMP、KK_RUN_STARTED 檢查；TMPDIR 也指過去，但不依賴它生效。 */
+/** 傳給 agent 的環境變數：check-post-body.mjs 依 RUNNER_RUN_TMP、RUNNER_RUN_STARTED 檢查；TMPDIR 也指過去，但不依賴它生效。 */
 export function runTmpEnv(dir, startedAt) {
-  return { KK_RUN_TMP: dir, KK_RUN_STARTED: startedAt.toISOString(), TMPDIR: dir };
+  return { RUNNER_RUN_TMP: dir, RUNNER_RUN_STARTED: startedAt.toISOString(), TMPDIR: dir };
 }
 
 /** agent:working 超過 staleHours 沒有更新的 Issue。 */
@@ -321,7 +321,7 @@ export function agentNote(config, { runTmp } = {}) {
     '- 不自行啟動瀏覽器（Chrome、Playwright 等）或架設效能測量環境；需要的項目列在 PR 的人工待辦。',
     '- 可能長時間執行的指令，用 Bash 工具的 timeout 參數設定上限；不要在背景執行可能卡住的指令；不需要在 PR 回報。',
     ...(runTmp ? [
-      `- PR 描述與留言的檔案一律用 Write 工具寫在本次執行的暫存資料夾 ${runTmp}/ 底下（環境變數 KK_RUN_TMP；不要用 $TMPDIR 或 /tmp，那裡有其他專案的同名檔案）。`
+      `- PR 描述與留言的檔案一律用 Write 工具寫在本次執行的暫存資料夾 ${runTmp}/ 底下（環境變數 RUNNER_RUN_TMP；不要用 $TMPDIR 或 /tmp，那裡有其他專案的同名檔案）。`
         + '寫入失敗時不執行 gh；先以 node tools/workflow/check-post-body.mjs 檢查，通過後用同一個路徑 --body-file 貼出（docs/workflow/agent-workflow.md「貼出 PR 描述與留言」）。',
     ] : []),
     ...(config.agentNotes ?? []).map((n) => `- ${n}`),
@@ -342,5 +342,71 @@ export function stopReportBody({ step, reason, facts, account, logPath }) {
     `- **需要誰決定**：@${account}`,
     '',
     `（由本機 agent runner 留言；紀錄檔：\`${logPath}\`）`,
+  ].join('\n');
+}
+
+// ---- 穩定性（dev-workflow-template#45）----
+
+// gh 暫時性錯誤：連線中斷、unexpected EOF、HTTP 5xx、逾時。權限、參數、404 等不重試。
+const TRANSIENT_GH = [
+  /unexpected EOF/i,
+  /connection (?:reset|refused|closed|aborted)/i,
+  /\b(?:ECONNRESET|ECONNREFUSED|ECONNABORTED|EPIPE|ETIMEDOUT|EAI_AGAIN)\b/,
+  /\bHTTP 5\d\d\b/i,
+  /\b5\d\d (?:Internal Server Error|Bad Gateway|Service Unavailable|Gateway Time-?out)\b/i,
+  /\b(?:i\/o timeout|TLS handshake timeout|context deadline exceeded|timed? ?out)\b/i,
+];
+// 錯誤訊息同時出現這些時，不視為暫時性（例如 404 的說明裡剛好有 timeout 字樣）
+const PERMANENT_GH = [/\bHTTP 4\d\d\b/i, /\b(?:401|403|404|422) (?:Unauthorized|Forbidden|Not Found|Unprocessable)/i];
+
+/** 等待後重試一次的間隔。 */
+export const GH_RETRY_MS = 10e3;
+
+/** gh 的錯誤是否為暫時性（值得等待後重試一次）。text 是錯誤訊息、stderr 與錯誤代碼合併的文字。 */
+export function isTransientGhError(text) {
+  const s = String(text ?? '');
+  if (PERMANENT_GH.some((r) => r.test(s))) return false;
+  return TRANSIENT_GH.some((r) => r.test(s));
+}
+
+/** 移除標籤後讀回：仍存在的標籤（current 是讀回的標籤名稱）。 */
+export function remainingLabels(current, removed) {
+  return removed.filter((l) => current.includes(l));
+}
+
+/** 同一錯誤連續幾次後在 Issue 留 `## runner 提醒`。 */
+export const REMIND_AFTER = 3;
+export const REMINDER_HEADING = '## runner 提醒';
+
+/**
+ * 記錄一次 runner 自身的錯誤。同一個錯誤 = 同一階段＋同一個訊息首行；不同錯誤從 1 重新計算。
+ * 回傳 { state, remind }：連續 REMIND_AFTER 次、與 Issue 有關、且這個錯誤尚未提醒過時 remind 為 true。
+ * state 由呼叫端存進狀態檔；成功一次後由呼叫端清除（null）。
+ */
+export function recordRunnerError(state, { stage, message, issue = null }, remindAfter = REMIND_AFTER) {
+  const first = String(message ?? '').split('\n')[0];
+  const same = state && state.stage === stage && state.message === first;
+  const next = {
+    stage, message: first, issue: issue ?? null,
+    count: same ? state.count + 1 : 1,
+    reminded: same ? Boolean(state.reminded) : false,
+  };
+  const remind = next.issue != null && next.count >= remindAfter && !next.reminded;
+  if (remind) next.reminded = true;
+  return { state: next, remind };
+}
+
+/** `## runner 提醒` 的內容：錯誤摘要、次數、紀錄檔位置、建議的處理；不加或移除標籤，不影響 `## 決定`。 */
+export function runnerReminderBody({ stage, message, count, logPath }) {
+  return [
+    `${REMINDER_HEADING}：同一個錯誤已連續 ${count} 次`,
+    '',
+    `- **階段**：${stage}`,
+    `- **錯誤**：${message}`,
+    `- **次數**：連續 ${count} 次`,
+    `- **紀錄檔**：\`${logPath}\``,
+    '- **建議的處理**：查看紀錄檔找出原因並排除（例如清理 runner worktree 中未提交的變更、確認 gh 登入狀態），runner 會在下次執行時再試；成功一次後計數歸零。',
+    '',
+    '（由本機 agent runner 留言；這則提醒不改標籤，也不影響 `## 決定` 的判斷。同一個錯誤不重複提醒。）',
   ].join('\n');
 }

@@ -7,15 +7,17 @@
 ## 會處理的工作（依優先順序，一次一件，可連續處理）
 
 1. 修正模式：自己帳號開的 PR 帶 `changes-requested`（PR 也帶 `blocked` 時，須已有 `## 決定`）
-2. 依決定繼續：帶 `blocked`、在最後一次 `## agent 停止` 或 `## 計畫` 之後已有 `## 決定` 的 Issue 或自己的 PR。`## 決定` 只採信 repo 的 OWNER、MEMBER、COLLABORATOR 寫的留言（GitHub 的 `authorAssociation`）；其他人寫的忽略，避免公開 repo 中任何人都能觸發無人值守的執行
+2. 依決定繼續：帶 `blocked`、在最後一次 `## agent 停止` 或 `## 計畫` 之後已有 `## 決定` 的 Issue 或自己的 PR。`## 決定` 只採信可信身分寫的留言（見 `docs/workflow/agent-workflow.md` 第 0 步）；其他人寫的忽略，避免公開 repo 中任何人都能觸發無人值守的執行
 3. 新工作：帶 `agent:ready` 的 Issue（沒有 `agent:working`／`blocked`），最舊的先做
 
-- 2、3 的 Issue 須由 OWNER、MEMBER、COLLABORATOR 開立（Issue 本身的 `authorAssociation`，以 `gh api` 取得；缺少時視為非可信）。其他人開的 Issue 不挑選，紀錄檔只列編號與身分，不列標題（#127；外部 Issue 的處理見 `docs/workflow/agent-workflow.md`「外部 Issue」）。
+- 2、3 的 Issue 須由可信身分開立（見 `docs/workflow/agent-workflow.md` 第 0 步；Issue 本身的 `authorAssociation` 以 `gh api` 取得，缺少時視為非可信）。其他人開的 Issue 不挑選，紀錄檔只列編號與身分，不列標題（#127；外部 Issue 的處理見 `docs/workflow/agent-workflow.md`「外部 Issue」）。
 - PR 一律換成描述中 `Closes`／`Refs` 的 Issue；`agent:working` 只加在 Issue 上。描述找不到 Issue 的 PR 不接。
 - 新工作只在「自己開的、開啟中、非 Draft 的 PR」少於 `maxOpenPrs` 時才接；修正模式與依決定繼續不受此限制。
 - 開始時把 `agent:ready` 換成 `agent:working`、看板設為 In progress；結束時移除 `agent:working`，沒有 `blocked` 時看板設為 Review。
 - claude 非正常結束（逾時、非 0 結束、計費保護終止、啟動失敗）：先保存進度（見下方「中斷時保存進度」），再由 runner 自己留 `## agent 停止` 並加 `blocked`。
-- runner 自身的錯誤（fetch、建立或清理 worktree、worktree 有未提交的變更、標籤操作失敗等）：只寫紀錄檔並發本機通知，**不在 GitHub 留言、不改標籤**，並停止本次的連續處理。GitHub 上的 `## agent 停止` 只用於需要人決定的問題，避免讓剛寫好的 `## 決定` 失效。
+- runner 自身的錯誤（fetch、建立或清理 worktree、worktree 有未提交的變更、標籤操作失敗等）：寫紀錄檔並發本機通知，**不改標籤**，並停止本次的連續處理。GitHub 上的 `## agent 停止` 只用於需要人決定的問題，避免讓剛寫好的 `## 決定` 失效。同一個錯誤連續 3 次且與某張 Issue 有關時，在該 Issue 留一則 `## runner 提醒`（見下方「重複錯誤提醒」）。
+- 移除標籤（例如結束時的 `agent:working`）後讀回確認；仍存在時重試一次，仍失敗就視為 runner 自身的錯誤，不會讓標籤悄悄留著。
+- `gh` 遇到暫時性錯誤（連線中斷、`unexpected EOF`、HTTP 5xx、逾時）時等 10 秒後重試一次；權限、參數、404 等錯誤不重試（判斷在 `lib.mjs` 的 `isTransientGhError()`）。
 - `agent:working` 超過 `staleHours` 沒有更新、且沒有 runner 在跑：視為中斷，留言並加 `blocked`。
 
 ### 連續處理
@@ -48,7 +50,7 @@ claude 非正常結束後，若 runner 的 worktree 有未提交的修改或未�
 sandbox 給 agent 的 `$TMPDIR`（`/tmp/claude-<uid>`）是同一台電腦上所有專案共用的；檔案已存在時 Write 工具會寫入失敗，agent 沿用舊檔就會把其他專案的內容貼到本 repo（#104）。因此 runner 每次啟動 claude 前：
 
 1. 建立 `<worktree>/.runner-tmp/<YYYYMMDDTHHmmss>-<Issue>/`（`.runner-tmp/` 在 `.gitignore`；worktree 本來就能寫入，不放寬 sandbox）。
-2. 以環境變數 `KK_RUN_TMP`（資料夾）、`KK_RUN_STARTED`（開始時間）傳給 agent，`TMPDIR` 也指到同一個資料夾（sandbox 可能改掉 `TMPDIR`，不依賴它）；給 agent 的說明列出這個資料夾的絕對路徑。
+2. 以環境變數 `RUNNER_RUN_TMP`（資料夾）、`RUNNER_RUN_STARTED`（開始時間）傳給 agent，`TMPDIR` 也指到同一個資料夾（sandbox 可能改掉 `TMPDIR`，不依賴它）；給 agent 的說明列出這個資料夾的絕對路徑。
 3. agent 把 PR 描述與留言寫在這個資料夾，以 `tools/workflow/check-post-body.mjs` 檢查後用同一個路徑貼出（`docs/workflow/agent-workflow.md`「貼出 PR 描述與留言」）。
 4. claude 結束後刪除這個資料夾。只刪除符合上述格式的本次資料夾（`lib.mjs` 的 `isRunTmpDir()`），不刪除 `/tmp/claude-*` 或其他任何檔案。
 
@@ -99,6 +101,8 @@ cp tools/workflow/runner/config.example.json tools/workflow/runner/config.local.
 
 紀錄在 `logs/`：`<時間>.log` 是 runner 的紀錄，`<時間>-claude-<Issue>.log` 是 agent 的即時輸出（stream-json）。
 
+runner 的程式從主資料夾執行（排程與手動執行都是），不是從 runner 的 worktree。改到 runner 的 PR 合併後，要在主資料夾更新 main（`git pull --ff-only`），新的程式才會生效。
+
 ## 暫停（兩層）
 
 | 範圍 | 暫停 | 恢復 |
@@ -114,22 +118,32 @@ cp tools/workflow/runner/config.example.json tools/workflow/runner/config.local.
 
 repo 內的範本是 `agent-runner.plist.example`。安裝前替換檔內的四個欄位：`__ACCOUNT__`（GitHub 帳號）、`__REPO__`（repo 名稱）、`__REPO_DIR__`（repo 絕對路徑）、`__PATH__`（`which node claude gh git` 結果所在的資料夾，以 `:` 分隔）。排程名稱 `com.<帳號>.agent-runner.<repo>` 包含 repo 名稱，同一台電腦有多個專案時不會撞名。
 
-1. 確認 `which` 列出的資料夾都在 `__PATH__` 裡，再複製範本：
+1. 確認 `node`、`claude`、`gh`、`git` 所在的資料夾都在 `__PATH__` 裡：
 
    ```bash
    cd <repo 絕對路徑>
    which node claude gh git
+   ```
+
+2. 複製範本：
+
+   ```bash
    PLIST=~/Library/LaunchAgents/com.<帳號>.agent-runner.<repo>.plist
    cp tools/workflow/runner/agent-runner.plist.example "$PLIST"
    ```
 
-2. 用編輯器替換 `$PLIST` 中的 `__ACCOUNT__`、`__REPO__`、`__REPO_DIR__`、`__PATH__`。
-3. 檢查並載入排程；最後一行立刻跑一次（不在執行時段會直接結束）：
+3. 用編輯器替換 `$PLIST` 中的 `__ACCOUNT__`、`__REPO__`、`__REPO_DIR__`、`__PATH__`。
+4. 檢查並安裝：
 
    ```bash
    plutil -lint "$PLIST"
    mkdir -p tools/workflow/runner/logs
    launchctl bootstrap gui/$(id -u) "$PLIST"
+   ```
+
+5. 立刻跑一次（不在執行時段會直接結束）：
+
+   ```bash
    launchctl kickstart gui/$(id -u)/com.<帳號>.agent-runner.<repo>
    ```
 
@@ -140,6 +154,19 @@ repo 內的範本是 `agent-runner.plist.example`。安裝前替換檔內的四�
 ### 本機通知
 
 runner 自身的錯誤（準備階段失敗、無法在 GitHub 留言、runner 本身失敗）會跳 macOS 通知，內容是錯誤的第一行，詳細內容在 `logs/`。通知等平台相關的部分集中在 `platform.mjs`；其他平台只寫紀錄、不通知。
+
+### 重複錯誤提醒
+
+排程執行時人不一定在電腦前，本機通知可能被錯過。因此 runner 把自身的錯誤記在 `logs/runner-errors.json`（`logDir` 底下，每個 repo 各自一份，不進版本控制）：
+
+- 同一個錯誤 = 同一階段＋同一個訊息首行；不同的錯誤從 1 重新計算。
+- 連續 3 次且錯誤與某張 Issue 有關時，在該 Issue 留一則以 `## runner 提醒` 開頭的留言（錯誤摘要、次數、紀錄檔位置、建議的處理），**不加或移除任何標籤**。
+- 同一個錯誤只提醒一次；處理成功一次後計數歸零（刪除狀態檔）。
+- 與 Issue 無關的錯誤（例如挑選工作時失敗）照舊只發本機通知。
+- `## runner 提醒` 不是停止回報，不影響 `## 決定` 的判斷（不在 `lib.mjs` 的 `STOP_HEADINGS`）。
+- `--dry-run` 不寫狀態檔、不留言。
+
+判斷邏輯在 `lib.mjs` 的 `recordRunnerError()`。
 
 ## macOS sandbox 的已知問題與處理
 
@@ -158,10 +185,13 @@ runner 自身的錯誤（準備階段失敗、無法在 GitHub 留言、runner �
   - `gh api` 的其他寫入（例如以 PATCH 關閉 PR 或 Issue、修改 repo 設定）沒有被擋下；
   - `node *` 是允許的，agent 可以在 Node 程式中執行其他指令。
   - 實際防線是 sandbox（檔案寫入與網路限制）、人的審查，以及合併由人決定。
-- 合併確認 hook（`.claude/settings.json`）在 `claude -p` 無人值守下回傳 `ask` 時，**等同拒絕**：指令不會執行（`permission_denied`，原因為 hook），agent 收到 hook 的訊息作為錯誤結果後繼續工作，session 不會卡住等待確認（2026-10-13 實測，#24）。
+- 合併確認 hook（`.claude/settings.json`）在 `claude -p` 無人值守下回傳 `ask` 時，**等同拒絕**：指令不會執行（`permission_denied`，原因為 hook），agent 收到 hook 的訊息作為錯誤結果後繼續工作，session 不會卡住等待確認（2026-10-13 實測，dev-workflow-template#24）。
   - 因此 hook 無法判斷目標分支的推送（例如先 `cd` 再 `git push`、`--git-dir`）在 runner 下一律被拒絕。給 agent 的共用說明已要求推送時直接寫明分支（`git push origin HEAD:<分支>`），不要先 `cd` 再推送。
   - 確定推到 main 的指令本來就在禁止清單中，不受影響。
 - 只支援 macOS（launchd、通知、sandbox）。
+- 待審 PR 上限（`maxOpenPrs`）只計算設定的 `account` 開的、開啟中、非 Draft 的 PR；人與 agent 共用帳號時，人開的 PR 也會佔用名額。需要暫時讓出名額時，把人開的 PR 轉為 Draft。
+- runner 下 agent 做不到的事：寫入 `.claude/`、刪除遠端分支、啟動瀏覽器。Issue 需要這些時，改成人工待辦（對照 `docs/workflow/decision-center.md` 第 3 節「不要求 agent 執行環境做不到的事」）。
+- PR 分支被 runner 的 worktree 佔用時，在主資料夾 `git switch <分支>` 會失敗；改用 `git switch --detach origin/<分支>`，測完 `git switch main`。
 
 ## 成本參考
 

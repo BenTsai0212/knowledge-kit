@@ -2,9 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
-  advanceAwake, agentNote, buildSettings, canStartNew, countOpenPrs, hasDecision, inHours, isTrusted, latestStart,
-  isRunTmpDir, linkedIssue, lockIsActive, needsWipSave, orderWork, pickWork, RUN_TMP_DIR, runTmpDir, runTmpEnv,
-  shouldContinue, staleWorking, stopReportBody, trustedOnly, validateConfig, wipBranchName,
+  advanceAwake, agentNote, buildSettings, canStartNew, countOpenPrs, hasDecision, inHours, isRunTmpDir, isTransientGhError,
+  isTrusted, latestStart, linkedIssue, lockIsActive, needsWipSave, orderWork, pickWork, recordRunnerError, remainingLabels,
+  REMIND_AFTER, REMINDER_HEADING, RUN_TMP_DIR, runnerReminderBody, runTmpDir, runTmpEnv, shouldContinue, staleWorking,
+  STOP_HEADINGS, stopReportBody, trustedOnly, validateConfig, wipBranchName,
 } from './lib.mjs';
 
 const ME = 'me';
@@ -437,9 +438,9 @@ test('isRunTmpDir：只接受本次執行的資料夾，不刪除其他東西（
   }
 });
 
-test('runTmpEnv：KK_RUN_TMP、KK_RUN_STARTED 與 TMPDIR', () => {
+test('runTmpEnv：RUNNER_RUN_TMP、RUNNER_RUN_STARTED 與 TMPDIR', () => {
   const at = new Date('2026-11-02T10:00:00Z');
-  assert.deepEqual(runTmpEnv('/w/t', at), { KK_RUN_TMP: '/w/t', KK_RUN_STARTED: '2026-11-02T10:00:00.000Z', TMPDIR: '/w/t' });
+  assert.deepEqual(runTmpEnv('/w/t', at), { RUNNER_RUN_TMP: '/w/t', RUNNER_RUN_STARTED: '2026-11-02T10:00:00.000Z', TMPDIR: '/w/t' });
 });
 
 test('agentNote：有暫存資料夾時說明寫入位置、寫入失敗不貼出、檢查後以同一個路徑貼出', () => {
@@ -448,7 +449,7 @@ test('agentNote：有暫存資料夾時說明寫入位置、寫入失敗不貼�
   assert.match(note, /寫入失敗時不執行 gh/);
   assert.match(note, /check-post-body\.mjs/);
   assert.match(note, /同一個路徑/);
-  assert.doesNotMatch(agentNote({}), /KK_RUN_TMP/);
+  assert.doesNotMatch(agentNote({}), /RUNNER_RUN_TMP/);
 });
 
 test('權限比對：perl -e alarm 不在允許清單（後面可接任何指令）', () => {
@@ -460,4 +461,111 @@ test('stopReportBody：符合停止回報格式', () => {
   assert.match(body, /^## agent 停止：逾時/);
   assert.match(body, /@me/);
   assert.match(body, /logs\/a\.log/);
+});
+
+// ---- 穩定性（dev-workflow-template#45）----
+
+test('isTransientGhError：連線中斷、unexpected EOF、HTTP 5xx、逾時才重試', () => {
+  for (const msg of [
+    'Post "https://api.github.com/graphql": unexpected EOF',
+    'read tcp 10.0.0.2:5000->140.82.112.6:443: read: connection reset by peer',
+    'dial tcp: lookup api.github.com: EAI_AGAIN',
+    'HTTP 502: Bad Gateway (https://api.github.com/repos/o/r/issues/1)',
+    'HTTP 503: Service Unavailable',
+    'non-200 OK status code: 504 Gateway Timeout body: ""',
+    'net/http: TLS handshake timeout',
+    'context deadline exceeded (Client.Timeout exceeded while awaiting headers)',
+    'ETIMEDOUT\nCommand failed: gh issue list',
+    'i/o timeout',
+  ]) {
+    assert.equal(isTransientGhError(msg), true, msg);
+  }
+});
+
+test('isTransientGhError：權限、參數、404 不重試', () => {
+  for (const msg of [
+    'HTTP 404: Not Found (https://api.github.com/repos/o/r/issues/999)',
+    'HTTP 403: Resource not accessible by integration',
+    'HTTP 401: Bad credentials',
+    'HTTP 422: Validation Failed',
+    "could not add label: 'agent:ready' not found",
+    'unknown flag: --nope',
+    'GraphQL: Could not resolve to an Issue with the number of 999. (repository.issue)',
+    'To get started with GitHub CLI, please run:  gh auth login',
+    'HTTP 404: Not Found; request timed out earlier',
+    '',
+    undefined,
+  ]) {
+    assert.equal(isTransientGhError(msg), false, String(msg));
+  }
+});
+
+test('remainingLabels：讀回後仍存在的標籤', () => {
+  assert.deepEqual(remainingLabels(['agent:working', 'type:fix'], ['agent:working']), ['agent:working']);
+  assert.deepEqual(remainingLabels(['type:fix'], ['agent:working', 'agent:ready']), []);
+  assert.deepEqual(remainingLabels([], []), []);
+});
+
+test('recordRunnerError：同一個錯誤連續 3 次且與 Issue 有關時提醒一次', () => {
+  const e = { stage: '準備 #7 時失敗', message: 'runner 資料夾有未提交的變更：/w\n詳細', issue: 7 };
+  let r = recordRunnerError(null, e);
+  assert.deepEqual([r.state.count, r.remind], [1, false]);
+  assert.equal(r.state.message, 'runner 資料夾有未提交的變更：/w', '只比對訊息首行');
+  r = recordRunnerError(r.state, e);
+  assert.deepEqual([r.state.count, r.remind], [2, false]);
+  r = recordRunnerError(r.state, e);
+  assert.deepEqual([r.state.count, r.remind], [REMIND_AFTER, true]);
+  r = recordRunnerError(r.state, e);
+  assert.deepEqual([r.state.count, r.remind], [4, false], '同一個錯誤不重複提醒');
+  r = recordRunnerError(r.state, { ...e, message: 'runner 資料夾有未提交的變更：/w\n其他細節' });
+  assert.equal(r.remind, false, '首行相同視為同一個錯誤');
+});
+
+test('recordRunnerError：不同階段或不同訊息從 1 重新計算；成功後（state 為 null）歸零', () => {
+  const e = { stage: 'A', message: 'm', issue: 1 };
+  let s = recordRunnerError(recordRunnerError(null, e).state, e).state;
+  assert.equal(recordRunnerError(s, { ...e, stage: 'B' }).state.count, 1);
+  assert.equal(recordRunnerError(s, { ...e, message: 'n' }).state.count, 1);
+  // 提醒過、成功一次歸零後，同一個錯誤再連續 3 次會再提醒
+  for (let i = 0; i < 3; i++) s = recordRunnerError(s, e).state;
+  assert.equal(s.reminded, true);
+  let r = { state: null };
+  for (let i = 0; i < 3; i++) r = recordRunnerError(r.state, e);
+  assert.equal(r.remind, true);
+});
+
+test('recordRunnerError：與 Issue 無關的錯誤不提醒（只發本機通知）', () => {
+  let r = { state: null };
+  for (let i = 0; i < 5; i++) {
+    r = recordRunnerError(r.state, { stage: '挑選下一件時失敗', message: 'm' });
+    assert.equal(r.remind, false);
+  }
+  assert.equal(r.state.count, 5);
+});
+
+test('runnerReminderBody：以 ## runner 提醒 開頭，含錯誤摘要、次數、紀錄檔與建議的處理', () => {
+  const body = runnerReminderBody({ stage: '準備 #7 時失敗', message: 'runner 資料夾有未提交的變更', count: 3, logPath: 'logs/x.log' });
+  assert.ok(body.startsWith(REMINDER_HEADING));
+  assert.match(body, /準備 #7 時失敗/);
+  assert.match(body, /runner 資料夾有未提交的變更/);
+  assert.match(body, /連續 3 次/);
+  assert.match(body, /logs\/x\.log/);
+  assert.match(body, /建議的處理/);
+  assert.doesNotMatch(body, /^## (?:agent 停止|計畫|決定)/m);
+});
+
+test('## runner 提醒 不影響 ## 決定 的判斷', () => {
+  assert.ok(!STOP_HEADINGS.some((h) => REMINDER_HEADING.startsWith(h)));
+  const reminder = c(runnerReminderBody({ stage: 's', message: 'm', count: 3, logPath: 'l' }), '2026-01-01T02:00Z');
+  // 決定之後的提醒不會讓決定失效
+  assert.equal(hasDecision([c('## agent 停止：x', '2026-01-01T00:00Z'), c('## 決定', '2026-01-01T01:00Z'), reminder]), true);
+  // 只有提醒時不算停止，之後的決定也不會被誤判為有效
+  assert.equal(hasDecision([reminder, c('## 決定', '2026-01-01T03:00Z')]), false);
+  // blocked 的 Issue：決定之後有提醒，仍會被挑為依決定繼續
+  const blocked = issue(5, {
+    labels: [{ name: 'blocked' }],
+    comments: [c('## agent 停止：x', '2026-01-01T00:00Z'), c('## 決定', '2026-01-01T01:00Z'), reminder],
+  });
+  const { candidates } = orderWork({ fixPrs: [], blockedIssues: [blocked], blockedPrs: [], readyIssues: [] }, opts);
+  assert.deepEqual(candidates.map((w) => w.issue), [5]);
 });

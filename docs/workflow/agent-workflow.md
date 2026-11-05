@@ -215,7 +215,7 @@ gh issue edit N --add-label needs-human
 `$TMPDIR` 可能是同一台電腦上所有專案共用的資料夾（Claude Code 的 sandbox 是 `/tmp/claude-<uid>`），裡面會有其他專案留下的同名檔案。檔案已存在時寫入可能失敗，沿用舊檔就會把其他專案的內容貼到本 repo（#104）。PR 描述、計畫、停止回報、修正回報與人工待辦一律依下列方式貼出：
 
 1. **寫入新檔**：
-   - runner 執行時：寫在環境變數 `KK_RUN_TMP` 的資料夾底下（runner 給 agent 的說明列出絕對路徑），例如 `<KK_RUN_TMP>/pr.md`。這個資料夾每次執行時新建，結束時刪除。
+   - runner 執行時：寫在環境變數 `RUNNER_RUN_TMP` 的資料夾底下（runner 給 agent 的說明列出絕對路徑），例如 `<RUNNER_RUN_TMP>/pr.md`。這個資料夾每次執行時新建，結束時刪除。
    - 手動執行時：用含 repo、Issue 編號與時間的新檔名，例如 `$TMPDIR/<repo>-<N>-pr-<時間>.md`。
    - **寫入失敗時不執行 `gh`**：換一個新檔名重新寫入，不沿用已存在的檔案。
 2. **檢查**：`node tools/workflow/check-post-body.mjs --issue N --kind <種類> <檔案>`。種類與要求：
@@ -230,12 +230,12 @@ gh issue edit N --add-label needs-human
 
    另外檢查：
 
-   - **檔案不是舊檔**：有 `KK_RUN_TMP` 時，檔案必須在該資料夾底下、修改時間不早於本次執行開始（`KK_RUN_STARTED`）；手動執行時不能超過 30 分鐘。
+   - **檔案不是舊檔**：有 `RUNNER_RUN_TMP` 時，檔案必須在該資料夾底下、修改時間不早於本次執行開始（`RUNNER_RUN_STARTED`）；手動執行時不能超過 30 分鐘。
    - **email**：不在放行規則內的 email（規則與 `npm run check:sensitive` 相同：`noreply`、保留網域與 `.test`、`.tld` 等，見 `docs/testing.md`）。
    - **個人路徑**：`/Users/<名稱>`、`/home/<名稱>` 形式的路徑（`/home/runner` 不算）。
    - email 與個人路徑在程式碼區塊與行內程式碼中也檢查（貼出後一樣公開）；命中時只輸出行號與種類（例如「第 12 行：個人路徑」），不輸出命中的文字。禁用名稱清單不在此檢查，以 CI 與 `npm run check:sensitive -- --github` 為準。（#124）
 
-   PR 描述與留言中舉例時，一律用佔位寫法：路徑寫 `/Users/<名稱>/…`、`~/…` 或 `<KK_RUN_TMP>/…`，email 寫 `user@example.com`，名稱寫 `<名稱>`。不通過（以非 0 結束）時**不貼出**，修正內容後重新寫入。
+   PR 描述與留言中舉例時，一律用佔位寫法：路徑寫 `/Users/<名稱>/…`、`~/…` 或 `<RUNNER_RUN_TMP>/…`，email 寫 `user@example.com`，名稱寫 `<名稱>`。不通過（以非 0 結束）時**不貼出**，修正內容後重新寫入。
 3. **貼出**：以**同一個路徑**執行 `gh … --body-file <檔案>`，檢查與貼出之間不修改檔案。
 
 手動執行時，也可以用 `--body-file -` 加 `<<'EOF'` heredoc 直接貼出，不經過檔案；runner 執行時不用這個寫法，檢查工具在 runner 下也不接受標準輸入。
