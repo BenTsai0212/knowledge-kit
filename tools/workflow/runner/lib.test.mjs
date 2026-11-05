@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   advanceAwake, agentNote, buildSettings, canStartNew, countOpenPrs, hasDecision, inHours, isRunTmpDir, isTransientGhError,
-  isTrusted, latestStart, linkedIssue, lockIsActive, needsWipSave, orderWork, pickWork, recordRunnerError, remainingLabels,
-  REMIND_AFTER, REMINDER_HEADING, RUN_TMP_DIR, runnerReminderBody, runTmpDir, runTmpEnv, shouldContinue, staleWorking,
+  isTrusted, latestStart, linkedIssue, lockIsActive, maskLocalPaths, needsWipSave, orderWork, pickWork, recordRunnerError,
+  remainingLabels, REMIND_AFTER, REMINDER_HEADING, RUN_TMP_DIR, runnerReminder, runnerReminderBody, runTmpDir, runTmpEnv, shouldContinue, staleWorking,
   STOP_HEADINGS, stopReportBody, trustedOnly, validateConfig, wipBranchName,
 } from './lib.mjs';
 
@@ -552,6 +552,51 @@ test('runnerReminderBody：以 ## runner 提醒 開頭，含錯誤摘要、次�
   assert.match(body, /logs\/x\.log/);
   assert.match(body, /建議的處理/);
   assert.doesNotMatch(body, /^## (?:agent 停止|計畫|決定)/m);
+});
+
+// 測試用的路徑與 email 以字串組合，避免本檔出現個人路徑與 email 的字面值（personal-paths.test.mjs、check:sensitive）
+const U = '/' + 'Users';
+const MAIL = ['someone', 'personal-mail.com'].join('@');
+const paths = { worktree: `${U}/alice/Projects/kk-runner`, repoRoot: `${U}/alice/Projects/kk`, home: `${U}/alice` };
+const reminderOf = (message, stage = '準備 #7 時失敗') => runnerReminder({ stage, message, count: 3, logPath: 'logs/x.log' }, paths);
+
+test('maskLocalPaths：worktree、repo、家目錄換成佔位寫法，其他使用者的路徑整段遮蔽', () => {
+  assert.equal(maskLocalPaths(`runner 資料夾有未提交的變更：${paths.worktree}`, paths), 'runner 資料夾有未提交的變更：<worktree>');
+  assert.equal(maskLocalPaths(`${paths.worktree}/app/x.ts 與 ${paths.repoRoot}/logs`, paths), '<worktree>/app/x.ts 與 <repo>/logs');
+  assert.equal(maskLocalPaths(`找不到 ${paths.home}/.claude/settings.json`, paths), '找不到 ~/.claude/settings.json');
+  // 前綴相同但不是同一個資料夾，不當成已知路徑
+  assert.equal(maskLocalPaths(`${paths.repoRoot}-old/x`, paths), '~/Projects/kk-old/x');
+  assert.equal(maskLocalPaths(`無法讀取 ${U}/bob/secret/a.txt（權限不足）`, paths), '無法讀取 <路徑>（權限不足）');
+  assert.equal(maskLocalPaths(`${['', 'home', 'bob'].join('/')}/work 失敗`, paths), '<路徑> 失敗');
+  // /home/runner 依現有規則不算個人路徑
+  assert.equal(maskLocalPaths('/home/runner/work/x', paths), '/home/runner/work/x');
+  assert.equal(maskLocalPaths(`${U}/carol/x`), '<路徑>');
+});
+
+test('runnerReminder：錯誤訊息與階段中的本機路徑不帶出原文', () => {
+  for (const message of [
+    `runner 資料夾有未提交的變更：${paths.worktree}`,
+    `git -C ${paths.repoRoot} fetch 失敗`,
+    `找不到 ${paths.home}/.config/gh/hosts.yml`,
+    `無法讀取 ${U}/bob/Projects/x`,
+  ]) {
+    const { body, errors } = reminderOf(message, `準備 #7 時失敗（${paths.worktree}）`);
+    assert.deepEqual(errors, []);
+    assert.ok(body.startsWith(REMINDER_HEADING));
+    assert.doesNotMatch(body, /alice|bob/);
+    assert.ok(!body.includes(`${U}/`));
+  }
+  assert.match(reminderOf(`有未提交的變更：${paths.worktree}`).body, /有未提交的變更：<worktree>/);
+});
+
+test('runnerReminder：遮蔽後仍有 email 時不貼出，問題只列行號與種類', () => {
+  const { body, errors } = reminderOf(`gh: 無法通知 ${MAIL}`);
+  assert.equal(body, null);
+  assert.ok(errors.length > 0);
+  assert.ok(errors.every((e) => /^第 \d+ 行：(?:email|個人路徑)$/.test(e)));
+  assert.ok(errors.every((e) => !e.includes('personal-mail')));
+  // 放行規則內的 email 不擋
+  assert.notEqual(reminderOf('寄給 user@example.com 失敗').body, null);
 });
 
 test('## runner 提醒 不影響 ## 決定 的判斷', () => {

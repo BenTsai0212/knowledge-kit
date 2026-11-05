@@ -7,6 +7,7 @@
 //   node tools/workflow/runner/agent-runner.mjs             排程用：只在執行時段內執行，可連續處理
 import { execFileSync, spawn } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import {
   BASE_SETTINGS_FILE, CONFIG_FILE, GENERATED_SETTINGS_FILE, GLOBAL_DIR, GLOBAL_LOCK, GLOBAL_PAUSE,
@@ -14,7 +15,7 @@ import {
 } from './config.mjs';
 import {
   advanceAwake, agentNote, buildSettings, canStartNew, countOpenPrs, GH_RETRY_MS, inHours, isRunTmpDir, isTransientGhError,
-  lockIsActive, needsWipSave, orderWork, pickWork, recordRunnerError, remainingLabels, runnerReminderBody, runTmpDir,
+  lockIsActive, needsWipSave, orderWork, pickWork, recordRunnerError, remainingLabels, runnerReminder, runTmpDir,
   runTmpEnv, shouldContinue, staleWorking, stopReportBody, TICK_MS, validateConfig, wipBranchName,
 } from './lib.mjs';
 import { notify } from './platform.mjs';
@@ -51,10 +52,7 @@ function runnerError(what, error, { stage = what, issue = null } = {}) {
     const { state, remind } = recordRunnerError(prev, { stage, message: error.message, issue });
     writeFileSync(file, JSON.stringify(state, null, 2) + '\n');
     log(`同一個錯誤連續 ${state.count} 次（狀態檔：${file}）`);
-    if (remind) {
-      postReminder(issue, state);
-      log(`已在 #${issue} 留 runner 提醒`);
-    }
+    if (remind && postReminder(issue, state)) log(`已在 #${issue} 留 runner 提醒`);
   } catch (e) {
     log('記錄重複錯誤或留 runner 提醒失敗：', firstLine(e));
   }
@@ -100,8 +98,18 @@ async function main() {
   if (!DRY) {
     errorTracking = {
       file: join(LOG_DIR, 'runner-errors.json'),
-      remind: (issue, state) => gh('issue', 'comment', String(issue), '-R', REPO, '--body',
-        runnerReminderBody({ ...state, logPath: relLog })),
+      /** 遮蔽本機路徑後仍有 email 或個人路徑時不貼出，只寫紀錄與通知；有貼出時回傳 true。 */
+      remind: (issue, state) => {
+        const { body, errors } = runnerReminder({ ...state, logPath: relLog },
+          { worktree: WORKTREE, repoRoot: ROOT, home: homedir() });
+        if (!body) {
+          log(`#${issue} 的 runner 提醒含敏感內容，未貼出（${errors.join('、')}）`);
+          notify(`#${issue} 的 runner 提醒含敏感內容，未貼出（詳見 logs）`);
+          return false;
+        }
+        gh('issue', 'comment', String(issue), '-R', REPO, '--body', body);
+        return true;
+      },
     };
   }
   /** 處理成功一次後，重複錯誤的計數歸零。 */

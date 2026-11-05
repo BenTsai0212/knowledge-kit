@@ -1,5 +1,7 @@
 // runner 的純邏輯：不呼叫 gh／git、不讀寫檔案，方便以 node:test 測試。
 // 規則來源：憲法第 6 節「自動化 runner」、docs/workflow/modules.md「自動化」。
+import { checkSensitiveContent } from '../check-post-body.mjs';
+import { PERSONAL_PATH } from '../../../scripts/check-sensitive.mjs';
 
 export const STOP_HEADINGS = ['## agent 停止', '## 計畫'];
 export const DECISION_HEADING = '## 決定';
@@ -409,4 +411,37 @@ export function runnerReminderBody({ stage, message, count, logPath }) {
     '',
     '（由本機 agent runner 留言；這則提醒不改標籤，也不影響 `## 決定` 的判斷。同一個錯誤不重複提醒。）',
   ].join('\n');
+}
+
+const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// 已知路徑之外的個人路徑：連同後面的路徑一起遮蔽（後面的資料夾名稱也可能是私人的）
+const OTHER_PERSONAL_PATH = new RegExp(`${PERSONAL_PATH.source}(?:/[^\\s'"\`，。、：；（）「」()]*)?`, 'g');
+
+/**
+ * 遮蔽文字中的本機絕對路徑：worktree → `<worktree>`、repo 根目錄 → `<repo>`、家目錄 → `~`；
+ * 其餘 /Users/<名稱>、/home/<名稱> 形式的路徑換成 `<路徑>`（/home/runner 依 PERSONAL_PATH 不算）。
+ * 已知路徑由長到短替換，worktree 在 repo 或家目錄底下時也遮蔽成 `<worktree>`。
+ */
+export function maskLocalPaths(text, { worktree, repoRoot, home } = {}) {
+  const known = [[worktree, '<worktree>'], [repoRoot, '<repo>'], [home, '~']]
+    .filter(([p]) => p && p !== '/')
+    .map(([p, label]) => [p.replace(/\/+$/, ''), label])
+    .sort((a, b) => b[0].length - a[0].length);
+  let out = String(text ?? '');
+  for (const [p, label] of known) {
+    out = out.replace(new RegExp(`${escapeRegExp(p)}(?![\\w.-])`, 'g'), label);
+  }
+  return out.replace(OTHER_PERSONAL_PATH, '<路徑>');
+}
+
+/**
+ * 要貼出的 `## runner 提醒`：階段與錯誤先遮蔽本機路徑，再以 check-post-body.mjs 的規則檢查。
+ * 仍有 email 或個人路徑時 body 為 null（不貼出，只寫紀錄與通知），errors 只含行號與種類。
+ */
+export function runnerReminder({ stage, message, count, logPath }, paths = {}) {
+  const body = runnerReminderBody({
+    stage: maskLocalPaths(stage, paths), message: maskLocalPaths(message, paths), count, logPath,
+  });
+  const errors = checkSensitiveContent(body);
+  return { body: errors.length ? null : body, errors };
 }
