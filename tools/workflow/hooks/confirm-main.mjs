@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Claude Code PreToolUse hook（matcher: Bash）：合併 PR、push 到 main、對 main 強制推送前跳出確認。
 // 憲法第 6 節「程式化防護」；AGENTS.md 第 5 節第 1 條硬規則。
-// 只輸出 ask，不輸出 deny：人同意後指令照常執行（/pm-apply 的合併仍可運作）。
+// 只輸出 ask，不輸出 deny：人同意後指令照常執行（備援模組的 /pm-apply 合併仍可運作）。
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';

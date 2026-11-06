@@ -151,6 +151,40 @@ describe("check-sensitive", () => {
   });
 });
 
+describe("check-sensitive --file", () => {
+  const USER_PATH = ["", "Users", "someone", "kit"].join("/");
+  const runFile = (args, env = {}) => {
+    const result = spawnSync(process.execPath, [SCRIPT, ...args], { encoding: "utf8", env: { PATH: process.env.PATH, ...env } });
+    return { status: result.status, output: `${result.stdout}${result.stderr}` };
+  };
+
+  it("檢查不在 git 中的檔案：email、個人路徑與禁用名稱依行號列出，不輸出命中的文字", () => {
+    const root = repo({}, { untracked: { "post.md": `## 決定\n${NAME_A}\n路徑 ${USER_PATH}/x，寄給 ${PERSONAL}\n` } });
+    const file = join(root, "post.md");
+    const { status, output } = runFile(["--file", file, root], { CI: "true", [NAMES_ENV]: NAME_A });
+    expect(status).toBe(1);
+    const lines = output.split("\n").filter((l) => l.startsWith(file));
+    expect(lines).toEqual([
+      `${file}:2 命中禁用名稱清單第 1 項`,
+      `${file}:3 有不在放行清單內的 email`,
+      `${file}:3 有個人路徑（/Users/<名稱> 或 /home/<名稱>）`,
+    ]);
+    expect(output).toContain("敏感資料檢查（單一檔案）失敗：3 處命中");
+    for (const secret of [NAME_A, "someone", PERSONAL]) expect(output).not.toContain(secret);
+  });
+
+  it("沒有命中時通過；/home/runner 與佔位寫法不算；缺少路徑或讀不到時失敗", () => {
+    const root = repo({}, { untracked: { "ok.md": `${["", "home", "runner", "work"].join("/")}\n/Users/<名稱>/…\n${at("user", "example.com")}\n` } });
+    const passed = runFile(["--file", join(root, "ok.md"), root]);
+    expect(passed.output).toContain("敏感資料檢查（單一檔案）通過");
+    expect(passed.status).toBe(0);
+    expect(runFile(["--file"]).status).toBe(2);
+    const missing = runFile(["--file", join(root, "missing.md"), root]);
+    expect(missing.status).toBe(1);
+    expect(missing.output).toContain("無法讀取文字檔");
+  });
+});
+
 describe("check-sensitive --history", () => {
   const ALLOWED = at("dev", "example.com");
   const LIST = { CI: "true", [NAMES_ENV]: `${NAME_A}\n${NAME_B}\n` };

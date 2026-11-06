@@ -61,7 +61,7 @@ test('checkPostBody：參數錯誤時列出原因', () => {
   const r = checkPostBody(['--kind', 'x'], {});
   assert.equal(r.ok, false);
   assert.equal(r.errors.length, 3);
-  assert.deepEqual(KINDS, ['pr', 'plan', 'stop', 'fix', 'todo']);
+  assert.deepEqual(KINDS, ['pr', 'plan', 'stop', 'fix', 'todo', 'decision', 'change-request']);
 });
 
 // 測試資料以字串組合產生，本檔不寫出真實格式的 email 與個人路徑（#124）
@@ -167,6 +167,54 @@ test('重現：其他專案留下的同名暫存檔不會通過檢查', (t) => {
   // 手動執行（沒有 RUNNER_RUN_TMP）：標準輸入可用，舊檔仍拒絕
   assert.equal(run(['--issue', '104', '--kind', 'pr', '-'], {}, 'Closes #104\n').status, 0);
   assert.equal(run(['--issue', '104', '--kind', 'pr', other], {}).status, 1);
+});
+
+// ---- 決策中心的貼文（dev-workflow-template#53）----
+
+test('checkContent decision：開頭必須是 ## 決定，可接括號說明', () => {
+  ok('## 決定\n\n- 採用選項 1', 53, 'decision');
+  ok('## 決定（補充）\n\n- 另外…', 53, 'decision');
+  ok('## 決定 (修改)\n\n- 改為…', 53, 'decision');
+  ok('\n## 決定\n- 不必提到 Issue 編號', 53, 'decision');
+  ng('## 補充決定\n\n- 另外…', 53, 'decision');
+  ng('## 決定補充\n\n- 另外…', 53, 'decision');
+  ng('## 決定：選項 1', 53, 'decision');
+  ng('決定\n\n- 選項 1', 53, 'decision');
+  ng('### 決定', 53, 'decision');
+  ng('', 53, 'decision');
+  assert.match(checkContent('## 補充決定', { issue: 53, kind: 'decision' })[0], /## 決定（補充）/);
+});
+
+test('checkContent change-request：開頭是 ## 修正要求，且至少一個未勾選的核取方塊', () => {
+  ok('## 修正要求\n\n- [ ] 改 A\n- [x] 已完成的 B', 53, 'change-request');
+  ok('## 修正要求（第二輪）\n\n* [ ] 改 A', 53, 'change-request');
+  ng('## 修正要求\n\n- 改 A', 53, 'change-request');
+  ng('## 修正要求\n\n- [x] 改 A', 53, 'change-request');
+  ng('## 修正要求\n\n```\n- [ ] 範例\n```', 53, 'change-request');
+  ng('請修正：\n\n- [ ] 改 A', 53, 'change-request');
+  assert.equal(checkContent('改 A', { issue: 53, kind: 'change-request' }).length, 2);
+});
+
+test('指令 decision／change-request：套用 email、個人路徑與舊檔檢查', (t) => {
+  const dir = mkdtempSync(join(tmpdir(), 'check-post-body-dc-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const write = (name, body) => {
+    const f = join(dir, name);
+    writeFileSync(f, body);
+    return f;
+  };
+  const run = (kind, file) => checkPostBody(['--issue', '53', '--kind', kind, file], {});
+  assert.equal(run('decision', write('d.md', '## 決定（補充）\n\n- 選項 2\n')).ok, true);
+  assert.equal(run('change-request', write('c.md', '## 修正要求\n\n- [ ] 改 A\n')).ok, true);
+  const leak = run('decision', write('d2.md', `## 決定\n\n- 路徑 ${userPath}/x\n`));
+  assert.equal(leak.ok, false);
+  assert.deepEqual(leak.errors, ['第 3 行：個人路徑']);
+  assert.equal(run('change-request', write('c2.md', `## 修正要求\n\n- [ ] 寄給 ${email}\n`)).ok, false);
+  // 本專案的手動執行也拒絕 30 分鐘以前的檔案（template 的版本不檢查）
+  const stale = write('d3.md', '## 決定\n\n- 選項 1\n');
+  const old = new Date(Date.now() - MANUAL_MAX_AGE_MS - 60e3);
+  utimesSync(stale, old, old);
+  assert.equal(run('decision', stale).ok, false);
 });
 
 // 流程說明：agent-workflow.md 中每個 gh … --body-file <路徑>，前面都有以同一個路徑執行的 check-post-body.mjs

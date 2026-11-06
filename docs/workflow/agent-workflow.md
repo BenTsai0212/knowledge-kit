@@ -227,6 +227,8 @@ gh issue edit N --add-label needs-human
    | `stop` | 停止時的回報 | 開頭是 `## agent 停止`，內容提到 `#N` |
    | `fix` | 修正模式的回報 | 開頭是 `## 修正回報`，內容提到 `#N` |
    | `todo` | 第 8 步的人工待辦 | 開頭是 `## 合併後待辦`，內容提到 `#N` |
+   | `decision` | 決策中心的 `## 決定`（decision-center 第 5 節） | 第一行是 `## 決定`，可接括號說明（例如 `## 決定（補充）`） |
+   | `change-request` | 決策中心的修正要求（decision-center 第 5 節） | 開頭是 `## 修正要求`，至少一個未勾選的核取方塊 |
 
    另外檢查：
 
