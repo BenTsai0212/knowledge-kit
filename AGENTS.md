@@ -33,6 +33,7 @@ Node 22 以上。先執行 `npm install`（CI 用 `npm ci`）。
 - workflow 工具測試：`npm test --prefix tools/workflow`（Node 內建 `node --test`，無相依套件）
 - PR 描述檢查：`PR_BODY='Closes #1' PR_LABELS='[]' node tools/workflow/check-pr-body.mjs`（CI 的 `PR body` workflow 在 PR 開啟、編輯、更新與標籤變更時執行）
 - 讀取 Issue 與 PR：`node tools/workflow/read-trusted.mjs --issue N`／`--pr N`（只輸出可信身分的本文、留言、審查與 review comment，非可信身分只輸出筆數；作者不是可信身分時不輸出標題與本文。agent 不以 `gh issue view`、`gh pr view` 讀本文與留言；#127，見 `docs/workflow/agent-workflow.md` 第 0 步）
+- harness 指標：`node tools/workflow/harness-retro.mjs --since <YYYY-MM-DD>`（只讀，解讀用 `/harness-retro`；見 `tools/workflow/README.md`）
 - 貼出前的檢查：`node tools/workflow/check-post-body.mjs --issue N --kind pr|plan|stop|fix|todo <檔案>`（決策中心另用 `decision`、`change-request`；PR 描述與留言用 `gh … --body-file` 貼出前執行，通過後以同一個檔案貼出；也擋下 email 與個人路徑，規則與 `scripts/check-sensitive.mjs` 共用，舉例時用 `user@example.com`、`<名稱>` 等佔位寫法；見 `docs/workflow/agent-workflow.md`「貼出 PR 描述與留言」）
 - main 分支保護（ruleset）：只能經 PR 合併，禁止強制推送與刪除；必要檢查是 `checks`、`clients`、`sensitive-names`、`gitleaks`、`pr-body`。E2E 只在 push 到 main 後執行，不在必要檢查中。
 - CI 的 `checks` job 依序執行 `npm ci` → `npm run check:client` → `npm run typecheck` → `npm test` → `npm run build` → workflow 工具測試；`clients` job 執行 `npm run check:clients`。
