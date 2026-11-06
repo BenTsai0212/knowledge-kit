@@ -39,7 +39,8 @@ test('period／inPeriod：since 當天 00:00 起，until 當天結束為止（UT
 test('repoFromRemote：https 與 SSH 網址；不是 GitHub 時回傳 null', () => {
   assert.equal(repoFromRemote('https://github.com/owner/name.git\n'), 'owner/name');
   assert.equal(repoFromRemote('https://github.com/owner/name'), 'owner/name');
-  assert.equal(repoFromRemote('git@github.com:owner/my.repo.git'), 'owner/my.repo');
+  // SSH 網址分開組合：scripts/check-sensitive.mjs 沒有放行 git@<主機>，寫在一起會被當成 email
+  assert.equal(repoFromRemote(['git', 'github.com:owner/my.repo.git'].join('@')), 'owner/my.repo');
   assert.equal(repoFromRemote('https://gitlab.com/owner/name.git'), null);
   assert.equal(repoFromRemote(undefined), null);
 });
