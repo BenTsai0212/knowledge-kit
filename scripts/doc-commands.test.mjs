@@ -7,7 +7,27 @@ import { describe, expect, it } from "vitest";
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const SHELL_LANGS = new Set(["", "bash", "sh", "zsh", "shell", "console"]);
 
-// 回傳 shell 區塊中含 # 註解的行（行首或空白後的 #）
+// 一行中是否有 # 註解：行首或空白後、不在引號內的 #；#! 開頭的行不算（判斷方式取自 template 的同名測試，#136）
+function hasComment(line) {
+  if (/^\s*#!/.test(line)) return false;
+  let quote = null;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (quote) {
+      if (c === "\\" && quote === '"') i++;
+      else if (c === quote) quote = null;
+    } else if (c === "\\") {
+      i++;
+    } else if (c === "'" || c === '"') {
+      quote = c;
+    } else if (c === "#" && (i === 0 || /\s/.test(line[i - 1]))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// 回傳 shell 區塊中含 # 註解的行
 function shellComments(text) {
   const found = [];
   let lang = null;
@@ -17,20 +37,34 @@ function shellComments(text) {
       lang = lang === null ? fence[1] : null;
       return;
     }
-    if (lang !== null && SHELL_LANGS.has(lang) && /(^|\s)#/.test(line)) found.push(`${i + 1}: ${line.trim()}`);
+    if (lang !== null && SHELL_LANGS.has(lang) && hasComment(line)) found.push(`${i + 1}: ${line.trim()}`);
   });
   return found;
 }
 
 describe("shellComments", () => {
   it("找出行尾與整行的註解", () => {
-    const text = ["```bash", "npm test   # 註解", "# 整行", "npm run build", "```"].join("\n");
-    expect(shellComments(text)).toEqual(["2: npm test   # 註解", "3: # 整行"]);
+    const text = ["```bash", "npm test   # 註解", "# 整行", "  # 縮排的整行", "npm run build", "```"].join("\n");
+    expect(shellComments(text)).toEqual(["2: npm test   # 註解", "3: # 整行", "4: # 縮排的整行"]);
   });
 
   it("不檢查區塊外的文字、其他語言的區塊與參數中的 #", () => {
     const text = ["# 標題", "```json", '{ "a": "# x" }', "```", "```bash", "gh issue view N --jq '.a#b'", "```"].join("\n");
     expect(shellComments(text)).toEqual([]);
+  });
+
+  it("#!、引號內與網址中的 # 不算；引號之後的照常算", () => {
+    const text = [
+      "```bash",
+      "#!/usr/bin/env bash",
+      "gh issue view N --jq '.a #b'",
+      "echo \"a # b\" 'c # d' \"e \\\" # f\"",
+      "curl https://example.com/page#section",
+      "echo ${#arr[@]} a#b \\#c",
+      "echo 'a' # 引號之後的註解",
+      "```",
+    ].join("\n");
+    expect(shellComments(text)).toEqual(["7: echo 'a' # 引號之後的註解"]);
   });
 });
 

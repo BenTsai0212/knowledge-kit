@@ -1,7 +1,8 @@
 // 敏感資料檢查：掃描 git ls-files 列出的檔案，找出個人 email 與禁用名稱（#66，見 docs/testing.md）。
-// 用法：node scripts/check-sensitive.mjs [--history] [repo 根目錄，預設目前目錄]
+// 用法：node scripts/check-sensitive.mjs [--history | --github | --file <路徑>] [repo 根目錄，預設目前目錄]
 // --history 改為掃描所有 ref 的每個 commit：新增的行、commit 訊息與作者名稱（#99）。
 // --github 改為以 gh api graphql 掃描本 repo 所有 Issue 與 PR 的文字與編輯紀錄（#111）。
+// --file <路徑> 改為只檢查一個檔案（不必在 git 中），另外檢查個人路徑：送出 Issue 或留言前的自我檢查（#136）。
 // 輸出只有檔案、行號（或 commit 短 SHA、Issue／PR 的位置）與清單第幾項，不輸出命中的名稱、email 或該行內容（CI 紀錄會公開）。
 import { readFileSync } from "node:fs";
 import { execFileSync, spawnSync } from "node:child_process";
@@ -389,7 +390,25 @@ export function checkGitHub(root = process.cwd(), env = process.env, { graphql =
   return { errors, warnings, findings, ...counts };
 }
 
-// 檢查結果的輸出與結束碼。mode 是 "files"、"history" 或 "github"；回傳 { out, warn, err, status }（每一行一個字串）
+// ---- 單一檔案模式 ----
+
+// 送出 Issue、留言之前的自我檢查（例如決策中心；dev-workflow-template#49）：檔案不必在 git 中。
+// file 以目前目錄為準，root 只用來讀取禁用名稱清單。比對禁用名稱、email 與個人路徑，依行號排列。回傳 { errors, warnings, findings }；findings 只含檔案、行號與清單第幾項。
+export function checkFile(file, root = process.cwd(), env = process.env) {
+  const loaded = loadNames(root, env);
+  const errors = loaded.error ? [loaded.error] : [];
+  const warnings = loaded.warning ? [loaded.warning] : [];
+  const text = readText(resolve(file));
+  if (text === null) return { errors: [...errors, `無法讀取文字檔：${file}`], warnings, findings: [] };
+  const hits = scanText(text, loaded.names ?? null).map((f) => ({ line: f.line, message: describe(`${file}:${f.line}`, f) }));
+  text.split(/\r?\n/).forEach((content, i) => {
+    if (PERSONAL_PATH.test(content)) hits.push({ line: i + 1, message: describePost(`${file}:${i + 1}`, { kind: "path" }) });
+  });
+  hits.sort((a, b) => a.line - b.line);
+  return { errors, warnings, findings: hits.map((h) => h.message) };
+}
+
+// 檢查結果的輸出與結束碼。mode 是 "files"、"file"、"history" 或 "github"；回傳 { out, warn, err, status }（每一行一個字串）
 export function report(mode, result) {
   const { errors, warnings, findings } = result;
   const authorEmails = result.authorEmails ?? [];
@@ -404,12 +423,11 @@ export function report(mode, result) {
     const commits = knownEmails.reduce((sum, count) => sum + count, 0);
     out.push(`已知保留的作者或提交者 email（PR #94 之前的 commit，RFC 0002 待決問題 1 的決定 A1）：${knownEmails.length} 個地址，${commits} 個 commit`);
   }
-  const scope =
-    mode === "github"
-      ? `（GitHub，${result.issues} 個 Issue、${result.pullRequests} 個 PR、${result.texts} 段文字）`
-      : mode === "history"
-        ? `（整段歷史，${result.commits} 個 commit）`
-        : "";
+  const scope = {
+    github: `（GitHub，${result.issues} 個 Issue、${result.pullRequests} 個 PR、${result.texts} 段文字）`,
+    history: `（整段歷史，${result.commits} 個 commit）`,
+    file: "（單一檔案）",
+  }[mode] ?? "";
   if (errors.length > 0 || findings.length > 0 || authorEmails.length > 0) {
     const parts = [`${findings.length} 處命中`];
     if (authorEmails.length > 0) parts.push(`${authorEmails.length} 個作者 email 地址`);
@@ -422,9 +440,17 @@ export function report(mode, result) {
 }
 
 function main(args) {
-  const mode = args.includes("--github") ? "github" : args.includes("--history") ? "history" : "files";
-  const root = resolve(args.find((arg) => !arg.startsWith("--")) ?? ".");
-  const check = { github: checkGitHub, history: checkHistory, files: checkSensitive }[mode];
+  const fileAt = args.indexOf("--file");
+  const file = fileAt >= 0 ? args[fileAt + 1] : undefined;
+  if (fileAt >= 0 && (!file || file.startsWith("--"))) {
+    console.error("用法：node scripts/check-sensitive.mjs --file <路徑>");
+    process.exitCode = 2;
+    return;
+  }
+  const mode = file ? "file" : args.includes("--github") ? "github" : args.includes("--history") ? "history" : "files";
+  const rest = args.filter((arg, i) => !arg.startsWith("--") && !(file && i === fileAt + 1));
+  const root = resolve(rest[0] ?? ".");
+  const check = { github: checkGitHub, history: checkHistory, files: checkSensitive, file: (r) => checkFile(file, r) }[mode];
   const { out, warn, err, status } = report(mode, check(root));
   for (const line of warn) console.warn(line);
   for (const line of err) console.error(line);
