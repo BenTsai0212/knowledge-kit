@@ -2,9 +2,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
-  advanceAwake, agentNote, buildSettings, canStartNew, countOpenPrs, DEFAULT_SLOTS, globalSlots, hasDecision, inHours, isRunTmpDir, isTransientGhError,
+  activeCooldown, advanceAwake, agentNote, buildSettings, canStartNew, countOpenPrs, DEFAULT_SLOTS, detectQuotaExhausted, globalSlots, hasDecision, inHours,
+  isRunTmpDir, isTransientGhError,
   issueAssociations, isTrusted, latestStart, linkedIssue, lockIsActive, maskLocalPaths, needsWipSave, orderWork, pickWork, recordRunnerError,
   remainingLabels, REMIND_AFTER, REMINDER_HEADING, RUN_TMP_DIR, runnerReminder, runnerReminderBody, runTmpDir, runTmpEnv, shouldContinue, slotTurn, staleWorking,
+  streamTracker,
   STOP_HEADINGS, stopReportBody, trustedOnly, validateConfig, wipBranchName, withAssociation,
 } from './lib.mjs';
 
@@ -660,4 +662,86 @@ test('validateConfig：slotWaitMinutes 必須是正數', () => {
   const base = JSON.parse(readFileSync(new URL('./config.example.json', import.meta.url), 'utf8'));
   assert.deepEqual(validateConfig({ ...base, slotWaitMinutes: 10 }), []);
   assert.ok(validateConfig({ ...base, slotWaitMinutes: 0 }).some((e) => e.startsWith('slotWaitMinutes')));
+});
+
+const NOW = new Date('2026-11-07T00:00:00Z');
+const rl = (status, resetsAt) => ({ type: 'rate_limit_event', rate_limit_info: { status, resetsAt, rateLimitType: 'five_hour' } });
+const inOneHour = NOW.getTime() / 1e3 + 3600;
+
+test('detectQuotaExhausted：非 0 結束＋rejected／rate_limited＋未來 7 天內的 resetsAt 才成立', () => {
+  const hit = detectQuotaExhausted({ code: 1, lastRateLimit: rl('rejected', inOneHour), now: NOW });
+  assert.deepEqual(hit, { until: new Date((inOneHour) * 1e3), status: 'rejected', rateLimitType: 'five_hour' });
+  assert.ok(detectQuotaExhausted({ code: 1, lastRateLimit: rl('rate_limited', inOneHour), now: NOW }), '舊版的值');
+  assert.ok(detectQuotaExhausted({ code: 0, resultIsError: true, lastRateLimit: rl('rejected', inOneHour), now: NOW }),
+    '代碼 0 但 result 為錯誤');
+  assert.equal(detectQuotaExhausted({ code: 1, lastRateLimit: rl('rejected', inOneHour * 1e3), now: NOW }).until.getTime(),
+    inOneHour * 1e3, '大於 1e12 時當作毫秒');
+});
+
+test('detectQuotaExhausted：任一條件不成立時回傳 null（維持現行的異常結束處理）', () => {
+  const cases = [
+    ['正常結束', { code: 0, lastRateLimit: rl('rejected', inOneHour) }],
+    ['runner 主動終止（逾時）', { code: null, killedFor: '超過時間上限', lastRateLimit: rl('rejected', inOneHour) }],
+    ['沒有 rate_limit_event', { code: 1 }],
+    ['allowed', { code: 1, lastRateLimit: rl('allowed', inOneHour) }],
+    ['allowed_warning', { code: 1, lastRateLimit: rl('allowed_warning', inOneHour) }],
+    ['未知的 status', { code: 1, lastRateLimit: rl('exhausted', inOneHour) }],
+    ['resetsAt 已過', { code: 1, lastRateLimit: rl('rejected', NOW.getTime() / 1e3 - 60) }],
+    ['resetsAt 超過 7 天', { code: 1, lastRateLimit: rl('rejected', NOW.getTime() / 1e3 + 8 * 86400) }],
+    ['resetsAt 不是數字', { code: 1, lastRateLimit: rl('rejected', 'soon') }],
+    ['格式不符', { code: 1, lastRateLimit: { type: 'rate_limit_event', status: 'rejected' } }],
+  ];
+  for (const [what, input] of cases) assert.equal(detectQuotaExhausted({ ...input, now: NOW }), null, what);
+});
+
+test('activeCooldown：恢復時間之前有效；已過或內容錯誤時為 null', () => {
+  const c = activeCooldown(JSON.stringify({ until: '2026-11-07T01:00:00Z', reason: 'x' }), NOW);
+  assert.equal(c.until.toISOString(), '2026-11-07T01:00:00.000Z');
+  assert.equal(c.reason, 'x');
+  assert.equal(activeCooldown(JSON.stringify({ until: '2026-11-06T23:00:00Z' }), NOW), null);
+  assert.equal(activeCooldown('garbage', NOW), null);
+  assert.equal(activeCooldown('{}', NOW), null);
+});
+
+test('shouldContinue：額度用完（quota）時停止連續處理', () => {
+  const r = shouldContinue({ now: NOW, config: { hours: [0, 24], timeoutMinutes: 1 }, processed: 1, lastResult: 'quota' });
+  assert.deepEqual(r, { go: false, reason: '訂閱額度用完，全機冷卻中' });
+});
+
+const initLine = (apiKeySource) => JSON.stringify({
+  type: 'system', subtype: 'init', cwd: '/w', tools: Array.from({ length: 50 }, (_, i) => `Tool${i}`), apiKeySource,
+});
+
+test('streamTracker：init 行被切成兩段時，半行不解析，收到完整的行才判斷計費方式（dev-workflow-template#70 修正要求）', () => {
+  const line = initLine('ANTHROPIC_API_KEY');
+  for (const cut of [1, 20, Math.floor(line.length / 2), line.length - 1]) {
+    const t = streamTracker();
+    assert.deepEqual(t.push(line.slice(0, cut)), [], `切在 ${cut}：前半段不判斷`);
+    assert.equal(t.state.checkedAuth, false);
+    assert.deepEqual(t.push(`${line.slice(cut)}\n`), [{ apiKeySource: 'ANTHROPIC_API_KEY' }]);
+    assert.deepEqual(t.push(`${initLine('none')}\n`), [], '只檢查第一個 init');
+  }
+  const sub = streamTracker();
+  assert.deepEqual(sub.push(`${initLine('none')}\n`), [{ apiKeySource: 'none' }]);
+  const bad = streamTracker();
+  assert.deepEqual(bad.push('{"subtype":"init", 壞掉\n'), [{ apiKeySource: null, error: true }]);
+});
+
+test('streamTracker：最後一行沒有換行時只在 end() 處理一次；記下最後一個 rate_limit_event 與 result', () => {
+  const ev = (status) => JSON.stringify({ type: 'rate_limit_event', rate_limit_info: { status, resetsAt: 1 } });
+  const second = ev('rejected');
+  const t = streamTracker();
+  t.push(`${ev('allowed')}\n${second.slice(0, 30)}`);
+  assert.equal(t.state.lastRateLimit.rate_limit_info.status, 'allowed', '半行不覆蓋');
+  t.push(`${second.slice(30)}\n`);
+  assert.equal(t.state.lastRateLimit.rate_limit_info.status, 'rejected');
+
+  const u = streamTracker();
+  u.push('{"type":"result","is_error":true}');
+  assert.equal(u.state.resultIsError, false, '沒有換行的 result 還不處理');
+  assert.deepEqual(u.end(), []);
+  assert.equal(u.state.resultIsError, true, 'end() 處理最後一行');
+  u.state.resultIsError = false;
+  u.end();
+  assert.equal(u.state.resultIsError, false, '再次 end() 不重複處理');
 });

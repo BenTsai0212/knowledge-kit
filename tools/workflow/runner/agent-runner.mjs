@@ -14,12 +14,15 @@ import {
   PROJECT_PAUSE, readConfig, repoRoot, resolvePaths,
 } from './config.mjs';
 import {
-  advanceAwake, agentNote, buildSettings, canStartNew, countOpenPrs, DEFAULT_SLOT_WAIT_MINUTES, GH_RETRY_MS, globalSlots, inHours, isRunTmpDir, isTransientGhError,
+  advanceAwake, agentNote, buildSettings, canStartNew, countOpenPrs, DEFAULT_SLOT_WAIT_MINUTES, detectQuotaExhausted,
+  GH_RETRY_MS, globalSlots, inHours, isRunTmpDir, isTransientGhError,
   issueAssociations, lockIsActive, needsWipSave, orderWork, pickWork, recordRunnerError, remainingLabels, runnerReminder,
-  runTmpDir, runTmpEnv, shouldContinue, SLOT_POLL_MS, staleWorking, stopReportBody, TICK_MS, validateConfig, wipBranchName, withAssociation,
+  runTmpDir, runTmpEnv, shouldContinue, SLOT_POLL_MS, staleWorking, streamTracker, stopReportBody, TICK_MS, validateConfig, wipBranchName, withAssociation,
 } from './lib.mjs';
 import { notify } from './platform.mjs';
-import { acquireProjectLock, readSlotStatus, waitForSlot } from './slots.mjs';
+import {
+  acquireProjectLock, cooldownFile, readCooldown, readSlotStatus, waitForSlot, writeCooldown,
+} from './slots.mjs';
 
 const args = new Set(process.argv.slice(2));
 const DRY = args.has('--dry-run');
@@ -267,26 +270,26 @@ async function main() {
         '--append-system-prompt', agentNote(config, { runTmp })],
       { cwd: WORKTREE, stdio: ['ignore', 'pipe', 'pipe'], env });
       let killedFor = null;
-      let checkedAuth = false;
-      let buffer = '';
-      child.stdout.on('data', (d) => {
-        appendFileSync(out, d);
-        if (checkedAuth) return;
-        buffer += d.toString();
-        const line = buffer.split('\n').find((l) => l.includes('"subtype":"init"'));
-        if (!line) return;
-        checkedAuth = true;
-        try {
-          const source = JSON.parse(line).apiKeySource;
-          if (source && source !== 'none') {
+      // 逐行解析 stream-json：計費方式（init）、額度判斷用的 rate_limit_event 與 result（lib.mjs 的 streamTracker）
+      const stream = streamTracker();
+      const checkAuth = (found) => {
+        for (const { apiKeySource: source, error } of found) {
+          if (error) log('無法讀取計費方式，繼續執行');
+          else if (source && source !== 'none') {
             log(`偵測到使用 API Key（${source}），會產生 API 費用，立即終止`);
             killedFor = `使用 API Key 計費（${source}）`;
             child.kill('SIGTERM');
           } else log('計費方式：使用登入的訂閱帳號');
-        } catch {
-          log('無法讀取計費方式，繼續執行');
         }
+      };
+      // 以字串接收：多位元組字元（中文等）被切在兩段之間時不會變成亂碼
+      child.stdout.setEncoding('utf8');
+      child.stdout.on('data', (d) => {
+        appendFileSync(out, d);
+        checkAuth(stream.push(d));
       });
+      // 最後一行沒有換行時，只在 stdout 結束時處理一次
+      child.stdout.on('end', () => checkAuth(stream.end()));
       child.stderr.on('data', (d) => appendFileSync(out, d));
       // 時間上限只算醒著的時間：筆電休眠的那段只算一次間隔
       let awake = { awakeMs: 0, lastTick: Date.now() };
@@ -310,14 +313,34 @@ async function main() {
         } catch (error) {
           log('無法刪除暫存資料夾：', firstLine(error));
         }
-        done({ code, killedFor });
+        done({ code, killedFor, lastRateLimit: stream.state.lastRateLimit, resultIsError: stream.state.resultIsError });
       };
       child.on('error', (e) => { killedFor ??= `無法啟動 claude：${e.message}`; finish(null); });
       child.on('close', (code) => finish(code));
     });
   }
 
-  /** 處理一件：回傳 'ok'、'aborted'（claude 非正常結束）或 'runner-error'（runner 自身的錯誤），供 shouldContinue 判斷。 */
+  /**
+   * 訂閱額度用完：寫入全機冷卻，不留 ## agent 停止、不加 blocked，標籤還原成開始前的狀態（下次重新挑選）。
+   * 進度已保存在 wip/ 分支；重新挑選時 agent 從 origin/main 重新開始（README「已知限制」）。
+   */
+  function quotaExhausted(pick, quota, saved) {
+    const cooldown = writeCooldown({
+      dir: GLOBAL_DIR, until: quota.until, reason: `訂閱額度用完（${quota.rateLimitType ?? quota.status}）`, repo: REPO, issue: pick.issue,
+    });
+    const until = cooldown.until.toLocaleString();
+    log(`訂閱額度用完（status ${quota.status}），全機冷卻到 ${until}（${cooldownFile(GLOBAL_DIR)}）；不留停止回報、不加 blocked`);
+    notify(`訂閱額度用完：所有 runner 暫停到 ${until}（#${pick.issue} 下次重新挑選；${saved}）`);
+    try {
+      setLabels(pick.issue, pick.isNew ? ['agent:ready'] : [], ['agent:working']);
+    } catch (error) {
+      runnerError(`額度用完後還原 #${pick.issue} 的標籤失敗`, error, { issue: pick.issue });
+      return 'runner-error';
+    }
+    return 'quota';
+  }
+
+  /** 處理一件：回傳 'ok'、'aborted'（claude 非正常結束）、'quota'（訂閱額度用完）或 'runner-error'（runner 自身的錯誤），供 shouldContinue 判斷。 */
   async function processOne(pick) {
     try {
       prepareWorktree();
@@ -327,9 +350,9 @@ async function main() {
       return 'runner-error';
     }
     setBoardStatus(pick.issue, 'In progress');
-    const { code, killedFor } = await runClaude(pick.issue);
+    const { code, killedFor, lastRateLimit, resultIsError } = await runClaude(pick.issue);
     log('claude 結束，代碼', code, killedFor ? `（${killedFor}）` : '');
-    if (code !== 0 || killedFor) {
+    const saveWipSafely = () => {
       let saved;
       try {
         saved = saveWip(pick.issue);
@@ -337,6 +360,14 @@ async function main() {
         saved = `保存進度失敗（${firstLine(error)}），worktree 保持原狀：${relative(ROOT, WORKTREE)}`;
       }
       log(saved);
+      return saved;
+    };
+    const quota = detectQuotaExhausted({ code, killedFor, resultIsError, lastRateLimit, now: new Date() });
+    if (quota) return quotaExhausted(pick, quota, saveWipSafely());
+    if (code !== 0 || killedFor) {
+      // 不符合額度用完的條件時維持現行處理，保留原文以便之後修正判斷（dev-workflow-template#66 決定）
+      if (lastRateLimit) log('最後一個 rate_limit_event（不符合額度用完的條件）：', JSON.stringify(lastRateLimit));
+      const saved = saveWipSafely();
       try {
         stopReport(pick.issue, '/work-on-issue 執行中', killedFor ?? `claude 以代碼 ${code} 結束`, `${saved}；詳見 runner 紀錄檔`);
       } catch (error) {
@@ -433,6 +464,12 @@ async function main() {
   log(`全機名額：${status.slots.filter((x) => !x.stale).length}/${slots} 使用中`
     + (status.slots.length ? `：${status.slots.map(describe).join('、')}` : '')
     + `；等候中 ${status.queue.filter((x) => !x.stale).length} 個`);
+  // 全機冷卻（訂閱額度用完）：恢復時間之前不啟動 claude，--now 也一樣
+  const cooldownMessage = (c) => `全機冷卻中（${c.reason ?? '訂閱額度用完'}），恢復時間 ${c.until.toLocaleString()}；`
+    + `要提早解除時刪除 ${cooldownFile(GLOBAL_DIR)}`;
+  const cooldown = readCooldown({ dir: GLOBAL_DIR, clean: !DRY });
+  if (cooldown && !DRY) return log(`${cooldownMessage(cooldown)}，本次不執行`);
+  log(cooldown ? `${cooldownMessage(cooldown)}（排程與 --now 都不會啟動 claude）` : '全機冷卻：無');
   // 專案鎖：同一專案同時只跑一件。中斷偵測（agent:working 長時間沒有更新）之前就取得，結束時（含提早結束）交還
   const projectHolder = status.projects.find((x) => x.repo === REPO && !x.stale);
   if (projectHolder) return log(`本專案的 runner 正在執行（pid ${projectHolder.pid}），本次不執行`);
@@ -474,7 +511,12 @@ async function main() {
     const slot = await waitForSlot({
       dir: GLOBAL_DIR, slots, repo: REPO, issue: pick.issue, pid: process.pid, isAlive, waitMs, intervalMs: SLOT_POLL_MS,
       sleep: (ms) => new Promise((r) => setTimeout(r, ms)), log,
-      abortReason: () => (paused() ? '偵測到 PAUSE' : !NOW && !canStartNew(new Date(), config) ? '已過最晚開始時間' : null),
+      abortReason: () => {
+        if (paused()) return '偵測到 PAUSE';
+        const c = readCooldown({ dir: GLOBAL_DIR });
+        if (c) return cooldownMessage(c);
+        return !NOW && !canStartNew(new Date(), config) ? '已過最晚開始時間' : null;
+      },
     });
     const waited = `${Math.round(slot.waitedMs / 1e3)} 秒`;
     if (!slot.ok) {
@@ -484,8 +526,8 @@ async function main() {
     log(`取得全機名額 ${slot.index}（等候 ${waited}）`);
     let lastResult;
     try {
-      // 等候期間標籤可能已改變：取得名額後重新挑選
-      if (slot.waitedMs > 0) pick = nextWork();
+      // 實際等候過時，等候期間標籤可能已改變：取得名額後重新挑選
+      if (slot.waited) pick = nextWork();
       if (!pick) break;
       lastResult = await processOne(pick);
     } catch (error) {

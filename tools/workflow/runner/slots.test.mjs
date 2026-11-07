@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { acquireProjectLock, FRESH_MS, readSlotStatus, waitForSlot } from './slots.mjs';
+import {
+  acquireProjectLock, cooldownFile, FRESH_MS, readCooldown, readSlotStatus, waitForSlot, writeCooldown,
+} from './slots.mjs';
 
 // 每個測試用自己的暫存資料夾；pid 是假的，以 alive 集合決定程序是否存在；時鐘與 sleep 也是假的，不實際等候
 function setup(t) {
@@ -34,6 +36,7 @@ test('名額：有空位時立即取得，交還後檔案刪除；號碼牌不�
   assert.equal(a.ok, true);
   assert.equal(a.index, 0);
   assert.equal(a.waitedMs, 0);
+  assert.equal(a.waited, false, '立即取得時不重新挑選工作');
   const b = await waitForSlot(opts(env, { pid: 2, repo: 'o/b' }));
   assert.equal(b.index, 1);
   assert.deepEqual(files(env, 'slots'), ['0.json', '1.json']);
@@ -79,6 +82,7 @@ test('等候後取得：占用者交還後取得，記錄等候時間與排隊�
   assert.equal(r.ok, true);
   assert.equal(r.index, 0);
   assert.equal(r.waitedMs, 60e3);
+  assert.equal(r.waited, true, '實際等候過時重新挑選工作');
   assert.deepEqual(env.sleeps, [30e3, 30e3]);
   assert.match(logs[0], /等候全機名額（名額 2、排第 1 位）；占用中：o\/x#9、o\/x#9/);
 });
@@ -139,4 +143,49 @@ test('readSlotStatus：列出名額、號碼牌與專案鎖，標出過期但不
   assert.deepEqual(s.projects.map((x) => x.repo), ['o/a']);
   assert.deepEqual(s.queue, []);
   assert.deepEqual(files(env, 'slots'), ['0.json', '1.json']);
+});
+
+test('waited：立即取得時即使時鐘已前進也是 false', async (t) => {
+  const env = setup(t);
+  const clock = () => { env.advance(5); return env.clock(); }; // 每次讀取時鐘都經過一點時間
+  const r = await waitForSlot(opts(env, { clock }));
+  assert.equal(r.ok, true);
+  assert.ok(r.waitedMs > 0);
+  assert.equal(r.waited, false);
+});
+
+test('冷卻檔：寫入後有效，恢復時間過後失效並可清除；已有較晚的恢復時間時保留', (t) => {
+  const env = setup(t);
+  const now = new Date('2026-11-07T00:00:00Z');
+  const until = new Date('2026-11-07T02:00:00Z');
+  writeCooldown({ dir: env.dir, until, reason: '訂閱額度用完', repo: 'o/a', issue: 5, now });
+  assert.equal(readCooldown({ dir: env.dir, now }).until.getTime(), until.getTime());
+  const kept = writeCooldown({ dir: env.dir, until: new Date('2026-11-07T01:00:00Z'), reason: 'y', repo: 'o/b', issue: 6, now });
+  assert.equal(kept.until.getTime(), until.getTime(), '保留較晚的恢復時間');
+  assert.equal(readCooldown({ dir: env.dir, now }).repo, 'o/a');
+  const later = new Date('2026-11-07T03:00:00Z');
+  assert.equal(readCooldown({ dir: env.dir, now: later }), null);
+  assert.ok(existsSync(cooldownFile(env.dir)), '只讀不刪');
+  readCooldown({ dir: env.dir, now: later, clean: true });
+  assert.equal(existsSync(cooldownFile(env.dir)), false);
+});
+
+test('冷卻中不啟動：有空的名額也不取得；等候期間開始冷卻時放棄', async (t) => {
+  const env = setup(t);
+  const coolingDown = () => (readCooldown({ dir: env.dir, now: new Date(env.clock()) }) ? '全機冷卻中' : null);
+  const cool = () => {
+    const now = new Date(env.clock());
+    writeCooldown({ dir: env.dir, until: new Date(now.getTime() + 3600e3), reason: '訂閱額度用完', repo: 'o/b', now });
+  };
+  cool();
+  const r = await waitForSlot(opts(env, { abortReason: coolingDown }));
+  assert.deepEqual([r.ok, r.reason, files(env, 'slots')], [false, '全機冷卻中', []], '名額空著也不取得');
+  readCooldown({ dir: env.dir, now: new Date(env.clock() + 7200e3), clean: true });
+
+  hold(env, 0, 3);
+  hold(env, 1, 4);
+  env.onSleep = cool; // 等候中別的 runner 偵測到額度用完
+  const w = await waitForSlot(opts(env, { abortReason: coolingDown }));
+  assert.deepEqual([w.ok, w.reason, w.waited], [false, '全機冷卻中', true]);
+  assert.deepEqual(files(env, 'queue'), []);
 });

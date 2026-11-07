@@ -1,6 +1,6 @@
 # 個人開發 Workflow 憲法
 
-- 版本：v0.16（2026-11-07）；各版內容見文末「版本紀錄」
+- 版本：v0.17（2026-11-07）；各版內容見文末「版本紀錄」
 - 正本：建立本專案的 template repo 中的同名檔案（`docs/workflow/constitution.md`）
 - 從 template 建立的專案保留一份副本。副本只能從 template 升級，不在專案內直接修改；值得改的規則回到 template 修憲（第 10 節）。
 
@@ -358,3 +358,4 @@ template 不假設技術棧。專案的技術棧在初始化對話中決定（C 
 | v0.14 | 2026-11-04 | 新增選用模組「目標模式」（試驗中）：人核准目標卡後，決策 agent 定時喚醒，在範圍內審查 PR、送修正要求、派子 Issue；範圍內「建立子 Issue＋`agent:ready`」與「修正要求」由 ② 降為 ①；合併、`## 決定`、移除 `plan-first` 不變 | dev-workflow-template#62 |
 | v0.15 | 2026-11-07 | agent 只讀可信身分的內容：新增 `tools/workflow/read-trusted.mjs`，agent 讀 Issue 與 PR 不再用 gh 的 `view` 子命令；作者不可信的「外部 Issue」不直接派工，由決策中心另開自己撰寫的 Issue；runner 不挑作者不可信的 Issue，允許清單移除 `gh … view`、禁止以 `gh api` 讀留言與審查 | dev-workflow-template#65 |
 | v0.16 | 2026-11-07 | 自動化 runner 改為全機名額制：整台電腦同時執行的件數以全機名額限制（預設 2），依號碼牌公平輪流、做完一件就交還；同一專案以專案鎖一次只做一件；沒有名額時等候（有上限），附來源與可刪條件 | dev-workflow-template#66 |
+| v0.17 | 2026-11-07 | 自動化 runner：訂閱額度用完時全機暫停到恢復時間（嚴格條件判斷 `rate_limit_event`，不成立時維持一般的異常結束處理）；這種情況不留 `## agent 停止`、不加 `blocked`，標籤還原、保存進度 | dev-workflow-template#66 |

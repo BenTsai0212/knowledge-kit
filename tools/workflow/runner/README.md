@@ -14,7 +14,7 @@
 - PR 一律換成描述中 `Closes`／`Refs` 的 Issue；`agent:working` 只加在 Issue 上。描述找不到 Issue 的 PR 不接。
 - 新工作只在「自己開的、開啟中、非 Draft 的 PR」少於 `maxOpenPrs` 時才接；修正模式與依決定繼續不受此限制。
 - 開始時把 `agent:ready` 換成 `agent:working`、看板設為 In progress；結束時移除 `agent:working`，沒有 `blocked` 時看板設為 Review。
-- claude 非正常結束（逾時、非 0 結束、計費保護終止、啟動失敗）：先保存進度（見下方「中斷時保存進度」），再由 runner 自己留 `## agent 停止` 並加 `blocked`。
+- claude 非正常結束（逾時、非 0 結束、計費保護終止、啟動失敗）：先保存進度（見下方「中斷時保存進度」），再由 runner 自己留 `## agent 停止` 並加 `blocked`。訂閱額度用完時例外，見「額度用完時全機暫停」。
 - runner 自身的錯誤（fetch、建立或清理 worktree、worktree 有未提交的變更、標籤操作失敗等）：寫紀錄檔並發本機通知，**不改標籤**，並停止本次的連續處理。GitHub 上的 `## agent 停止` 只用於需要人決定的問題，避免讓剛寫好的 `## 決定` 失效。同一個錯誤連續 3 次且與某張 Issue 有關時，在該 Issue 留一則 `## runner 提醒`（見下方「重複錯誤提醒」）。
 - 移除標籤（例如結束時的 `agent:working`）後讀回確認；仍存在時重試一次，仍失敗就視為 runner 自身的錯誤，不會讓標籤悄悄留著。
 - `gh` 遇到暫時性錯誤（連線中斷、`unexpected EOF`、HTTP 5xx、逾時）時等 10 秒後重試一次；權限、參數、404 等錯誤不重試（判斷在 `lib.mjs` 的 `isTransientGhError()`）。
@@ -125,13 +125,29 @@ runner 的程式從主資料夾執行（排程與手動執行都是），不是�
 | `slots/<編號>.json` | 一個檔案是一個使用中的名額（pid、repo、Issue、開始時間） |
 | `queue/<取號時間>-<pid>.json` | 等候名額的號碼牌 |
 | `projects/<owner>__<name>.lock` | 專案鎖：同一專案同時只跑一件，連續處理期間一直持有 |
+| `cooldown.json` | 全機冷卻（恢復時間、原因、repo、Issue），見「額度用完時全機暫停」 |
 
 - **公平輪流**：等候時依號碼牌的取號順序，只有排在前面、人數不超過空出名額數的可以取得。做完一件就交還名額，要做下一件時重新取號，排到其他等候者之後。
-- **等候**：每 30 秒檢查一次，最多等 `slotWaitMinutes`（預設 30 分鐘）；超過、偵測到 `PAUSE` 或已過最晚開始時間（`--now` 除外）就放棄，留給下一次排程。紀錄檔寫明排隊位置、占用中的 repo 與 Issue，以及等了多久。
-- **重新挑選**：等候後才取得名額時，先重新查詢 GitHub 挑選（等候期間標籤可能已改變）。
+- **等候**：每 30 秒檢查一次，最多等 `slotWaitMinutes`（預設 30 分鐘）；超過、偵測到 `PAUSE` 或全機冷卻、已過最晚開始時間（`--now` 除外）就放棄，留給下一次排程。紀錄檔寫明排隊位置、占用中的 repo 與 Issue，以及等了多久。
+- **重新挑選**：實際等候過（至少等過一次檢查間隔）才取得名額時，先重新查詢 GitHub 挑選（等候期間標籤可能已改變）；立即取得時不重新查詢。
 - **名額涵蓋的範圍**：處理一件的整段時間（準備 worktree、執行 claude、更新標籤）。
 - **過期清除**：pid 已不存在的名額、號碼牌與專案鎖視為過期並刪除；剛建立、尚未寫入內容（1 分鐘內）的不算過期。試跑只顯示，不刪除。
-- `--dry-run` 顯示名額使用狀況（每個名額的 repo、Issue、pid、是否過期）與等候中的號碼牌數。
+- `--dry-run` 顯示名額使用狀況（每個名額的 repo、Issue、pid、是否過期）、等候中的號碼牌數與全機冷卻狀態。
+
+### 額度用完時全機暫停（試驗中）
+
+訂閱額度是所有專案共用的：一個 runner 碰到額度用完，其他 runner 也一樣會失敗，所以整台電腦一起暫停到恢復時間。
+
+- **判斷（嚴格條件，全部成立才算）**：
+  - runner 沒有主動終止 claude（逾時、計費保護）；
+  - claude 非 0 結束，或 stream-json 的 `result` 為 `is_error: true`；
+  - 最後一個 `rate_limit_event` 的 `rate_limit_info.status` 是 `rejected` 或 `rate_limited`；
+  - `resetsAt` 在未來 7 天內（大於 1e12 時當作毫秒）。
+- **為什麼這麼嚴格**：`rate_limit_event` 沒有官方規格，`status` 的值曾經改變，template 的紀錄也沒有實際用完額度的樣本（dev-workflow-template#66 的查證）。任一條件不成立（包括未知的 `status`）時，維持一般的異常結束處理（停止回報＋`blocked`），並在紀錄檔保留最後一個 `rate_limit_event` 的原文，方便之後修正判斷（判斷在 `lib.mjs` 的 `detectQuotaExhausted()`）。
+- **成立時**：
+  - 保存進度（同「中斷時保存進度」），寫入 `~/.agent-runner/cooldown.json`（恢復時間取 `resetsAt`；已有較晚的恢復時間時保留較晚的），發本機通知。
+  - **不留** `## agent 停止`、**不加** `blocked`。標籤還原成開始前的狀態：新工作加回 `agent:ready`；修正模式與依決定繼續只移除 `agent:working`。看板狀態不變，下次排程重新挑選。
+- **冷卻中**：所有 runner 在開始時、等候名額時都不啟動 claude，`--now` 也一樣；紀錄檔寫明恢復時間。要提早解除時刪除 `~/.agent-runner/cooldown.json`。恢復時間過後，下次執行時自動刪除。
 
 ## 排程（launchd，由人親自安裝與移除）
 
@@ -210,6 +226,8 @@ runner 自身的錯誤（準備階段失敗、無法在 GitHub 留言、runner �
   - 因此 hook 無法判斷目標分支的推送（例如先 `cd` 再 `git push`、`--git-dir`）在 runner 下一律被拒絕。給 agent 的共用說明已要求推送時直接寫明分支（`git push origin HEAD:<分支>`），不要先 `cd` 再推送。
   - 確定推到 main 的指令本來就在禁止清單中，不受影響。
 - 只支援 macOS（launchd、通知、sandbox）。
+- 額度用完後重新挑選時，agent 從 `origin/main` 重新開始，**不會接續** `wip/` 分支上保存的進度，已做的部分要重做（多花額度與時間）。`wip/` 分支保留給人參考，不需要時由人刪除。
+- 額度用完的判斷依賴沒有官方規格的 `rate_limit_event`；claude 改變輸出時會退回一般的異常結束處理（停止回報＋`blocked`），不會誤判成冷卻。
 - 全機名額 2 以上時，不同專案的 agent 會同時執行：各自啟動的測試伺服器、資料庫等可能使用同一個 port 而失敗。專案的測試會啟動固定 port 的服務時，在 `agentNotes` 指定該專案使用的 port，或把名額設為 1。
 - 待審 PR 上限（`maxOpenPrs`）只計算設定的 `account` 開的、開啟中、非 Draft 的 PR；人與 agent 共用帳號時，人開的 PR 也會佔用名額。需要暫時讓出名額時，把人開的 PR 轉為 Draft。
 - runner 下 agent 做不到的事：寫入 `.claude/`、刪除遠端分支、啟動瀏覽器。Issue 需要這些時，改成人工待辦（對照 `docs/workflow/decision-center.md` 第 3 節「不要求 agent 執行環境做不到的事」）。
