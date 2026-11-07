@@ -50,9 +50,7 @@ test('備援模組：pm-actions.md 與 /pm-apply 只在 templates/modules/fallba
 // AGENTS.md 精簡（dev-workflow-template#55 PR C）：細節放在各工具的 README，AGENTS.md 只留指令與「路徑＋一句話」。
 // 上限依憲法第 6 節「核心 `AGENTS.md` 目標 40～50 行，加上專案內容後 60～80 行」：本測試隨 template 複製到新專案，
 // 新專案加上自己的指令與結構後可到 80 行，所以上限是 80，不是 template 本身的行數（dev-workflow-template#58 修正要求）。
-// 本專案：升級到 template v0.14 時（#136）AGENTS.md 已有 131 行，上限暫定為當時的行數，只許減少、不許增加；
-// 精簡到 80 行另開 Issue 處理，完成後改回 80。
-const AGENTS_MAX_LINES = 131;
+const AGENTS_MAX_LINES = 80;
 test(`AGENTS.md 不超過 ${AGENTS_MAX_LINES} 行`, () => {
   const lines = read('AGENTS.md').replace(/\n$/, '').split('\n').length;
   assert.ok(lines <= AGENTS_MAX_LINES, `AGENTS.md 有 ${lines} 行（上限 ${AGENTS_MAX_LINES}，見憲法第 6 節「規則要掙來」）`);

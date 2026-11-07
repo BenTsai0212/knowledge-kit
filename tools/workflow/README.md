@@ -11,7 +11,7 @@
 | 測試 | 檢查 |
 | --- | --- |
 | `personal-paths.test.mjs` | 開發流程工具的檔案沒有 `/Users/<名稱>`、`/home/<名稱>` 形式的個人路徑（規則與 `scripts/check-sensitive.mjs` 共用） |
-| `doc-rules.test.mjs` | 規則文件：每項規則只留一份正本（例如可信身分的列舉只在 `docs/workflow/agent-workflow.md` 第 0 步）、備援與目標模式的檔案位置、`AGENTS.md` 的行數上限（本專案暫定 131 行，見檔案內的說明）、所有 `.md` 的相對連結指向存在的檔案與標題 |
+| `doc-rules.test.mjs` | 規則文件：每項規則只留一份正本（例如可信身分的列舉只在 `docs/workflow/agent-workflow.md` 第 0 步）、備援與目標模式的檔案位置、`AGENTS.md` 的行數上限（80 行）、所有 `.md` 的相對連結指向存在的檔案與標題 |
 
 文件規則的其他檢查在專案的 `npm test`（Vitest）：Markdown 的 shell 指令區塊不加 `#` 註解是 `scripts/doc-commands.test.mjs`，repo 內的 email 與禁用名稱是 `npm run check:sensitive`（`scripts/check-sensitive.mjs`，見 [docs/testing.md](../../docs/testing.md)）。
 

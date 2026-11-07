@@ -1,6 +1,18 @@
 # 測試與 CI 的檢查
 
-單元測試、型別檢查與 build 的指令見 [AGENTS.md](../AGENTS.md) 第 2 節。本文件說明 #66 加入的敏感資料檢查與 Playwright；套件與執行檔的來源見 [ADR 0004](adr/0004-e2e-and-secret-scanning.md)。
+單元測試、型別檢查與 build 的指令見 [AGENTS.md](../AGENTS.md) 第 2 節。本文件說明 CI 的 job、#66 加入的敏感資料檢查與 Playwright；套件與執行檔的來源見 [ADR 0004](adr/0004-e2e-and-secret-scanning.md)。
+
+## CI 的 job
+
+| workflow | job | 內容 | 什麼時候執行 |
+| --- | --- | --- | --- |
+| `workflows/ci.yml` | `checks` | 依序執行 `npm ci` → `npm run check:client` → `npm run typecheck` → `npm test` → `npm run build` → workflow 工具測試（`npm test --prefix tools/workflow`） | 每個 PR 與 push 到 `main` |
+| `workflows/ci.yml` | `clients` | `npm run check:clients`（[docs/client-config.md](client-config.md)「客戶檢查」） | 每個 PR 與 push 到 `main` |
+| `workflows/pr-body.yml` | `pr-body` | PR 描述要連到 Issue（`tools/workflow/check-pr-body.mjs`，見 [tools/workflow/README.md](../tools/workflow/README.md)） | PR 開啟、編輯、更新與標籤變更 |
+| `workflows/sensitive.yml` | `sensitive-names`、`gitleaks` | 見下方[敏感資料檢查](#敏感資料檢查) | 每個 PR 與 push 到 `main`；手動觸發時掃描整段歷史 |
+| `workflows/e2e.yml` | `list`、`playwright`、`demo` | 見下方 [Playwright](#playwright) 的「CI」 | 只在 push 到 `main` 後，另可手動執行 |
+
+main 的分支保護（必要檢查）見 [agent-workflow.md](workflow/agent-workflow.md)「Agent 不做的事」。
 
 ## 敏感資料檢查
 
