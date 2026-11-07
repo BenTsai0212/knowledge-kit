@@ -445,6 +445,27 @@ export function agentNote(config, { runTmp } = {}) {
   ].join('\n');
 }
 
+export const SENSITIVE_REASON = '原因含敏感內容，已記錄在本機紀錄檔';
+export const SENSITIVE_FACTS = '含敏感內容，已記錄在本機紀錄檔';
+
+/**
+ * runner 自己留的停止回報要貼出的內容：原因、已確認的事實與紀錄檔路徑先遮蔽本機路徑，再以貼文檢查（與 runner 提醒同一套）。
+ * 遮蔽後仍命中時**仍要貼出**（否則人不會知道 runner 停了），但原因與事實換成不含原文的固定文字；
+ * sanitized 為 true，呼叫端另寫紀錄並發本機通知。
+ */
+export function stopReportPost({ step, reason, facts, account, logPath, paths }) {
+  const masked = {
+    step, account,
+    reason: maskLocalPaths(reason, paths), facts: maskLocalPaths(facts, paths), logPath: maskLocalPaths(logPath, paths),
+  };
+  const body = stopReportBody(masked);
+  const problems = checkSensitiveContent(body);
+  if (!problems.length) return { body, sanitized: false, problems };
+  const safe = { ...masked, reason: SENSITIVE_REASON, facts: SENSITIVE_FACTS };
+  if (checkSensitiveContent(stopReportBody(safe)).length) safe.logPath = '（本機紀錄檔）';
+  return { body: stopReportBody(safe), sanitized: true, problems };
+}
+
 /** runner 自己留的停止回報（格式同 docs/workflow/agent-workflow.md「停止時的回報」）。 */
 export function stopReportBody({ step, reason, facts, account, logPath }) {
   return [
@@ -513,6 +534,49 @@ export function recordRunnerError(state, { stage, message, issue = null }, remin
   return { state: next, remind };
 }
 
+// 個人路徑整段：與貼文檢查同一套規則（scripts/check-sensitive.mjs 的 PERSONAL_PATH，/home/runner 除外），
+// 到空白、引號、括號或全形標點為止（錯誤訊息多是中文）
+const LOCAL_PATH = new RegExp(`${PERSONAL_PATH.source}(?:/[^\\s\`'"()<>，。、：；（）「」]*)?`, 'g');
+
+/**
+ * 遮蔽文字中的本機路徑，用於貼到 GitHub 的內容：worktree → `<worktree>`、repo → `<repo>`、家目錄 → `~`，
+ * 其他個人路徑（/Users/<名稱>/…、/home/<名稱>/…）整段換成 `<本機路徑>`。較長（較深）的路徑先換。
+ */
+export function maskLocalPaths(text, { worktree, repoRoot, home } = {}) {
+  let out = String(text ?? '');
+  const known = [[worktree, '<worktree>'], [repoRoot, '<repo>'], [home, '~']]
+    .filter(([p]) => p && p !== '/')
+    .map(([p, label]) => [p.replace(/\/+$/, ''), label])
+    .sort((a, b) => b[0].length - a[0].length);
+  // 只換完整的路徑段：家目錄 `/Users/<名稱>` 不會換掉 `/Users/<名稱>x` 的開頭
+  const escape = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  for (const [p, label] of known) out = out.replace(new RegExp(`${escape(p)}(?![\\w.-])`, 'g'), label);
+  return out.replace(LOCAL_PATH, '<本機路徑>');
+}
+
+/**
+ * `## runner 提醒` 要貼出的內容：階段、錯誤訊息與紀錄檔路徑先遮蔽本機路徑，再以貼文檢查（check-post-body.mjs 的
+ * email 與個人路徑規則）檢查。仍命中時 ok 為 false，呼叫端不貼出，只寫紀錄與本機通知。
+ */
+export function runnerReminderPost(state, { logPath, paths }) {
+  const body = runnerReminderBody({
+    ...state,
+    stage: maskLocalPaths(state.stage, paths), message: maskLocalPaths(state.message, paths), logPath: maskLocalPaths(logPath, paths),
+  });
+  const problems = checkSensitiveContent(body);
+  return { ok: problems.length === 0, body, problems };
+}
+
+/**
+ * 主資料夾的 runner 程式是否落後 origin/main：behind 是 origin/main 上、主資料夾 HEAD 沒有、且改到 runner 的 commit 數。
+ * 落後時回傳警告訊息（只警告、不擋下），否則 null。
+ */
+export function runnerBehindWarning(behind, runnerDir = 'tools/workflow/runner') {
+  const n = Number(behind);
+  if (!Number.isInteger(n) || n <= 0) return null;
+  return `主資料夾的 runner 程式落後 origin/main ${n} 個 commit（${runnerDir}）：本次仍以舊版執行，請先在主資料夾 git pull`;
+}
+
 /** `## runner 提醒` 的內容：錯誤摘要、次數、紀錄檔位置、建議的處理；不加或移除標籤，不影響 `## 決定`。 */
 export function runnerReminderBody({ stage, message, count, logPath }) {
   return [
@@ -526,37 +590,4 @@ export function runnerReminderBody({ stage, message, count, logPath }) {
     '',
     '（由本機 agent runner 留言；這則提醒不改標籤，也不影響 `## 決定` 的判斷。同一個錯誤不重複提醒。）',
   ].join('\n');
-}
-
-const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-// 已知路徑之外的個人路徑：連同後面的路徑一起遮蔽（後面的資料夾名稱也可能是私人的）
-const OTHER_PERSONAL_PATH = new RegExp(`${PERSONAL_PATH.source}(?:/[^\\s'"\`，。、：；（）「」()]*)?`, 'g');
-
-/**
- * 遮蔽文字中的本機絕對路徑：worktree → `<worktree>`、repo 根目錄 → `<repo>`、家目錄 → `~`；
- * 其餘 /Users/<名稱>、/home/<名稱> 形式的路徑換成 `<路徑>`（/home/runner 依 PERSONAL_PATH 不算）。
- * 已知路徑由長到短替換，worktree 在 repo 或家目錄底下時也遮蔽成 `<worktree>`。
- */
-export function maskLocalPaths(text, { worktree, repoRoot, home } = {}) {
-  const known = [[worktree, '<worktree>'], [repoRoot, '<repo>'], [home, '~']]
-    .filter(([p]) => p && p !== '/')
-    .map(([p, label]) => [p.replace(/\/+$/, ''), label])
-    .sort((a, b) => b[0].length - a[0].length);
-  let out = String(text ?? '');
-  for (const [p, label] of known) {
-    out = out.replace(new RegExp(`${escapeRegExp(p)}(?![\\w.-])`, 'g'), label);
-  }
-  return out.replace(OTHER_PERSONAL_PATH, '<路徑>');
-}
-
-/**
- * 要貼出的 `## runner 提醒`：階段與錯誤先遮蔽本機路徑，再以 check-post-body.mjs 的規則檢查。
- * 仍有 email 或個人路徑時 body 為 null（不貼出，只寫紀錄與通知），errors 只含行號與種類。
- */
-export function runnerReminder({ stage, message, count, logPath }, paths = {}) {
-  const body = runnerReminderBody({
-    stage: maskLocalPaths(stage, paths), message: maskLocalPaths(message, paths), count, logPath,
-  });
-  const errors = checkSensitiveContent(body);
-  return { body: errors.length ? null : body, errors };
 }

@@ -15,6 +15,7 @@
 - 新工作只在「自己開的、開啟中、非 Draft 的 PR」少於 `maxOpenPrs` 時才接；修正模式與依決定繼續不受此限制。
 - 開始時把 `agent:ready` 換成 `agent:working`、看板設為 In progress；結束時移除 `agent:working`，沒有 `blocked` 時看板設為 Review。
 - claude 非正常結束（逾時、非 0 結束、計費保護終止、啟動失敗）：先保存進度（見下方「中斷時保存進度」），再由 runner 自己留 `## agent 停止` 並加 `blocked`。訂閱額度用完時例外，見「額度用完時全機暫停」。
+  - **停止回報也先遮蔽本機路徑**：原因、已確認的事實與紀錄檔路徑，依「重複錯誤提醒」的同一套規則遮蔽後再以貼文檢查。遮蔽後仍命中時**仍貼出並加 `blocked`**（否則人不會知道 runner 停了），但原因與事實換成「含敏感內容，已記錄在本機紀錄檔」，原文只寫在紀錄檔並發本機通知（`lib.mjs` 的 `stopReportPost()`）。〔來源：runner 貼的停止回報沒有經過貼文檢查，原因可能含本機絕對路徑｜不刪〕
 - runner 自身的錯誤（fetch、建立或清理 worktree、worktree 有未提交的變更、標籤操作失敗等）：寫紀錄檔並發本機通知，**不改標籤**，並停止本次的連續處理。GitHub 上的 `## agent 停止` 只用於需要人決定的問題，避免讓剛寫好的 `## 決定` 失效。同一個錯誤連續 3 次且與某張 Issue 有關時，在該 Issue 留一則 `## runner 提醒`（見下方「重複錯誤提醒」）。
 - 移除標籤（例如結束時的 `agent:working`）後讀回確認；仍存在時重試一次，仍失敗就視為 runner 自身的錯誤，不會讓標籤悄悄留著。
 - `gh` 遇到暫時性錯誤（連線中斷、`unexpected EOF`、HTTP 5xx、逾時）時等 10 秒後重試一次；權限、參數、404 等錯誤不重試（判斷在 `lib.mjs` 的 `isTransientGhError()`）。
@@ -196,13 +197,20 @@ runner 自身的錯誤（準備階段失敗、無法在 GitHub 留言、runner �
 
 - 同一個錯誤 = 同一階段＋同一個訊息首行；不同的錯誤從 1 重新計算。
 - 連續 3 次且錯誤與某張 Issue 有關時，在該 Issue 留一則以 `## runner 提醒` 開頭的留言（錯誤摘要、次數、紀錄檔位置、建議的處理），**不加或移除任何標籤**。
-- 提醒內容會遮蔽本機路徑（worktree → `<worktree>`、repo → `<repo>`、家目錄 → `~`，其他使用者的路徑 → `<路徑>`），再以 `check-post-body.mjs` 的規則檢查；仍有 email 或個人路徑時**不貼出**，只寫紀錄檔並發本機通知（`lib.mjs` 的 `maskLocalPaths()`、`runnerReminder()`）。
 - 同一個錯誤只提醒一次；處理成功一次後計數歸零（刪除狀態檔）。
 - 與 Issue 無關的錯誤（例如挑選工作時失敗）照舊只發本機通知。
 - `## runner 提醒` 不是停止回報，不影響 `## 決定` 的判斷（不在 `lib.mjs` 的 `STOP_HEADINGS`）。
 - `--dry-run` 不寫狀態檔、不留言。
+- **貼出前遮蔽本機路徑**：階段、錯誤訊息與紀錄檔路徑中的 worktree、repo、家目錄換成 `<worktree>`、`<repo>`、`~`，其他個人路徑（`/Users/<名稱>/…`、`/home/<名稱>/…`）整段換成 `<本機路徑>`。個人路徑的判斷與貼文檢查共用 `scripts/check-sensitive.mjs` 的 `PERSONAL_PATH`（`/home/runner` 不算），路徑到空白、引號、括號或全形標點為止。遮蔽後再以貼文檢查（`check-post-body.mjs` 的 email 與個人路徑規則）檢查，仍命中時不貼出，只寫紀錄檔並發本機通知。〔來源：提醒直接放入錯誤訊息與紀錄檔的絕對路徑，公開 repo 會貼出本機路徑（#138）｜不刪〕
 
-判斷邏輯在 `lib.mjs` 的 `recordRunnerError()`。
+判斷邏輯在 `lib.mjs` 的 `recordRunnerError()`；遮蔽與檢查在 `maskLocalPaths()`、`runnerReminderPost()`。
+
+### 主資料夾落後時提醒
+
+runner 從主資料夾（使用者平常的 repo 資料夾）執行，worktree 只用來給 agent 工作。改到 runner 的 PR 合併後，主資料夾沒有 pull 就會繼續用舊版。因此每次啟動時 `git fetch origin main`，`origin/main` 上有主資料夾 `HEAD` 沒有、且改到 `tools/workflow/runner/` 的 commit 時，在紀錄檔警告並發本機通知，提示先 pull（`git pull --ff-only`）。只警告、不擋下（主資料夾可能正在其他分支上工作）；fetch 失敗時只記錄。判斷在 `lib.mjs` 的 `runnerBehindWarning()`。
+
+- 在主資料夾的 git 寫入只有 fetch（更新 `origin/main` 與 `FETCH_HEAD`），不動工作目錄與目前分支。
+- 主資料夾在 main 以外的分支時，該分支沒有的 runner commit 也會算進去而警告；只是提醒，不影響執行。
 
 ## macOS sandbox 的已知問題與處理
 
@@ -230,7 +238,7 @@ runner 自身的錯誤（準備階段失敗、無法在 GitHub 留言、runner �
 - 額度用完的判斷依賴沒有官方規格的 `rate_limit_event`；claude 改變輸出時會退回一般的異常結束處理（停止回報＋`blocked`），不會誤判成冷卻。
 - 全機名額 2 以上時，不同專案的 agent 會同時執行：各自啟動的測試伺服器、資料庫等可能使用同一個 port 而失敗。專案的測試會啟動固定 port 的服務時，在 `agentNotes` 指定該專案使用的 port，或把名額設為 1。
 - 待審 PR 上限（`maxOpenPrs`）只計算設定的 `account` 開的、開啟中、非 Draft 的 PR；人與 agent 共用帳號時，人開的 PR 也會佔用名額。需要暫時讓出名額時，把人開的 PR 轉為 Draft。
-- runner 下 agent 做不到的事：寫入 `.claude/`、刪除遠端分支、啟動瀏覽器。Issue 需要這些時，改成人工待辦（對照 `docs/workflow/decision-center.md` 第 3 節「不要求 agent 執行環境做不到的事」）。
+- runner 下 agent 做不到的事：寫入 `.claude/`（命令檔 `.claude/commands/`、設定 `.claude/settings.json`）、刪除遠端分支、啟動瀏覽器。Issue 需要這些時，改成人工待辦（對照 `docs/workflow/decision-center.md` 第 3 節「`.claude/` 的變更是人工步驟」與「不要求 agent 執行環境做不到的事」）。
 - PR 分支被 runner 的 worktree 佔用時，在主資料夾 `git switch <分支>` 會失敗；改用 `git switch --detach origin/<分支>`，測完 `git switch main`。
 
 ## 成本參考

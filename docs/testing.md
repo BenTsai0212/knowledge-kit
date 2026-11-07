@@ -39,7 +39,7 @@ repo 預計公開，CI 紀錄也會公開，所以兩者的輸出都**不包含�
 
 - 只掃 `git ls-files` 列出的檔案（尚未 `git add` 的新檔不在範圍內），略過含 NUL 位元組的二進位檔。
 - **email**：以下放行，其他一律失敗。
-  1. 帳號是 `noreply` 的地址，以及 `noreply.github.com` 與其子網域（GitHub 的 noreply 地址）。
+  1. 帳號是 `noreply` 的地址，以及 `noreply.github.com` 與其子網域（GitHub 的 noreply 地址）。帳號是 `git` 的地址（`git@<主機>`，SSH 的 clone 網址，例如 `git@github.com:<owner>/<name>.git`；與 template 相同，#149）。
   2. `example.com`、`example.org`、`example.net` 與其子網域（RFC 2606）。
   3. 頂級網域 `.test`、`.example`、`.invalid`、`.localhost`（RFC 2606／6761），以及文件說明格式時常用的 `.tld`（例如 `local@domain.tld`；不是實際存在的頂級網域，#113）。目前的檔案、整段歷史與 GitHub 三種模式都適用。
   4. 資料集使用的虛構網域：腳本中的 `FICTIONAL_DOMAINS`，目前是空的。資料集加入虛構網域的 email 時一起修改。

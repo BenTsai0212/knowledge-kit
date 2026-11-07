@@ -11,13 +11,13 @@ import { homedir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import {
   BASE_SETTINGS_FILE, CONFIG_FILE, GENERATED_SETTINGS_FILE, GLOBAL_CONFIG, GLOBAL_DIR, GLOBAL_PAUSE, LEGACY_LOCK,
-  PROJECT_PAUSE, readConfig, repoRoot, resolvePaths,
+  PROJECT_PAUSE, readConfig, repoRoot, resolvePaths, RUNNER_DIR,
 } from './config.mjs';
 import {
   advanceAwake, agentNote, buildSettings, canStartNew, countOpenPrs, DEFAULT_SLOT_WAIT_MINUTES, detectQuotaExhausted,
   GH_RETRY_MS, globalSlots, inHours, isRunTmpDir, isTransientGhError,
-  issueAssociations, lockIsActive, needsWipSave, orderWork, pickWork, recordRunnerError, remainingLabels, runnerReminder,
-  runTmpDir, runTmpEnv, shouldContinue, SLOT_POLL_MS, staleWorking, streamTracker, stopReportBody, TICK_MS, validateConfig, wipBranchName, withAssociation,
+  issueAssociations, lockIsActive, needsWipSave, orderWork, pickWork, recordRunnerError, remainingLabels, runnerBehindWarning, runnerReminderPost,
+  runTmpDir, runTmpEnv, shouldContinue, SLOT_POLL_MS, staleWorking, streamTracker, stopReportPost, TICK_MS, validateConfig, wipBranchName, withAssociation,
 } from './lib.mjs';
 import { notify } from './platform.mjs';
 import {
@@ -102,16 +102,15 @@ async function main() {
   if (!DRY) {
     errorTracking = {
       file: join(LOG_DIR, 'runner-errors.json'),
-      /** 遮蔽本機路徑後仍有 email 或個人路徑時不貼出，只寫紀錄與通知；有貼出時回傳 true。 */
+      // 錯誤訊息與紀錄檔路徑先遮蔽本機路徑，再以貼文檢查；仍命中時不貼出，只寫紀錄與本機通知
       remind: (issue, state) => {
-        const { body, errors } = runnerReminder({ ...state, logPath: relLog },
-          { worktree: WORKTREE, repoRoot: ROOT, home: homedir() });
-        if (!body) {
-          log(`#${issue} 的 runner 提醒含敏感內容，未貼出（${errors.join('、')}）`);
+        const post = runnerReminderPost(state, { logPath: relLog, paths: { worktree: WORKTREE, repoRoot: ROOT, home: homedir() } });
+        if (!post.ok) {
+          log(`runner 提醒遮蔽後仍有敏感內容（${post.problems.join('、')}），不貼到 #${issue}`);
           notify(`#${issue} 的 runner 提醒含敏感內容，未貼出（詳見 logs）`);
           return false;
         }
-        gh('issue', 'comment', String(issue), '-R', REPO, '--body', body);
+        gh('issue', 'comment', String(issue), '-R', REPO, '--body', post.body);
         return true;
       },
     };
@@ -146,9 +145,19 @@ async function main() {
     }
   }
 
+  /**
+   * runner 自己留的停止回報：先遮蔽本機路徑再以貼文檢查（lib.mjs 的 stopReportPost）。
+   * 遮蔽後仍命中時仍貼出並加 blocked，但原因改為不含原文的固定文字，原文只寫在紀錄檔並發本機通知。
+   */
   function stopReport(issue, step, reason, facts) {
-    gh('issue', 'comment', String(issue), '-R', REPO, '--body',
-      stopReportBody({ step, reason, facts, account: ME, logPath: relLog }));
+    const post = stopReportPost({
+      step, reason, facts, account: ME, logPath: relLog, paths: { worktree: WORKTREE, repoRoot: ROOT, home: homedir() },
+    });
+    if (post.sanitized) {
+      log(`#${issue} 的停止回報遮蔽後仍有敏感內容（${post.problems.join('、')}），改用不含原文的原因貼出。原因：${reason}；事實：${facts}`);
+      notify(`#${issue} 的停止回報含敏感內容，已改用不含原文的原因（原文見 logs）`);
+    }
+    gh('issue', 'comment', String(issue), '-R', REPO, '--body', post.body);
     setLabels(issue, ['blocked'], ['agent:working']);
   }
 
@@ -477,6 +486,19 @@ async function main() {
     const project = acquireProjectLock({ dir: GLOBAL_DIR, repo: REPO, pid: process.pid, isAlive });
     if (!project.ok) return log(`本專案的 runner 剛開始執行（pid ${project.holder?.pid ?? '?'}），本次不執行`);
     process.on('exit', project.release);
+  }
+
+  // 主資料夾的 runner 程式落後 origin/main 時警告（只警告、不擋下）：runner 從主資料夾執行，改到 runner 的 PR 合併後要 pull
+  try {
+    git(ROOT, 'fetch', 'origin', 'main');
+    const dir = relative(ROOT, RUNNER_DIR);
+    const warning = runnerBehindWarning(git(ROOT, 'rev-list', '--count', 'HEAD..origin/main', '--', dir), dir);
+    if (warning) {
+      log(`警告：${warning}`);
+      notify(warning);
+    }
+  } catch (error) {
+    log('無法確認主資料夾的 runner 是否為最新：', firstLine(error));
   }
 
   // 計費保護：環境中有 API key 時不執行

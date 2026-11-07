@@ -1,13 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { checkSensitiveContent } from '../check-post-body.mjs';
 import {
   activeCooldown, advanceAwake, agentNote, buildSettings, canStartNew, countOpenPrs, DEFAULT_SLOTS, detectQuotaExhausted, globalSlots, hasDecision, inHours,
   isRunTmpDir, isTransientGhError,
   issueAssociations, isTrusted, latestStart, linkedIssue, lockIsActive, maskLocalPaths, needsWipSave, orderWork, pickWork, recordRunnerError,
-  remainingLabels, REMIND_AFTER, REMINDER_HEADING, RUN_TMP_DIR, runnerReminder, runnerReminderBody, runTmpDir, runTmpEnv, shouldContinue, slotTurn, staleWorking,
+  remainingLabels, REMIND_AFTER, REMINDER_HEADING, RUN_TMP_DIR, runnerBehindWarning, runnerReminderBody, runnerReminderPost, runTmpDir, runTmpEnv, shouldContinue, slotTurn, staleWorking,
   streamTracker,
-  STOP_HEADINGS, stopReportBody, trustedOnly, validateConfig, wipBranchName, withAssociation,
+  SENSITIVE_FACTS, SENSITIVE_REASON, STOP_HEADINGS, stopReportBody, stopReportPost, trustedOnly, validateConfig, wipBranchName, withAssociation,
 } from './lib.mjs';
 
 const ME = 'me';
@@ -580,51 +581,6 @@ test('runnerReminderBody：以 ## runner 提醒 開頭，含錯誤摘要、次�
   assert.doesNotMatch(body, /^## (?:agent 停止|計畫|決定)/m);
 });
 
-// 測試用的路徑與 email 以字串組合，避免本檔出現個人路徑與 email 的字面值（personal-paths.test.mjs、check:sensitive）
-const U = '/' + 'Users';
-const MAIL = ['someone', 'personal-mail.com'].join('@');
-const paths = { worktree: `${U}/alice/Projects/kk-runner`, repoRoot: `${U}/alice/Projects/kk`, home: `${U}/alice` };
-const reminderOf = (message, stage = '準備 #7 時失敗') => runnerReminder({ stage, message, count: 3, logPath: 'logs/x.log' }, paths);
-
-test('maskLocalPaths：worktree、repo、家目錄換成佔位寫法，其他使用者的路徑整段遮蔽', () => {
-  assert.equal(maskLocalPaths(`runner 資料夾有未提交的變更：${paths.worktree}`, paths), 'runner 資料夾有未提交的變更：<worktree>');
-  assert.equal(maskLocalPaths(`${paths.worktree}/app/x.ts 與 ${paths.repoRoot}/logs`, paths), '<worktree>/app/x.ts 與 <repo>/logs');
-  assert.equal(maskLocalPaths(`找不到 ${paths.home}/.claude/settings.json`, paths), '找不到 ~/.claude/settings.json');
-  // 前綴相同但不是同一個資料夾，不當成已知路徑
-  assert.equal(maskLocalPaths(`${paths.repoRoot}-old/x`, paths), '~/Projects/kk-old/x');
-  assert.equal(maskLocalPaths(`無法讀取 ${U}/bob/secret/a.txt（權限不足）`, paths), '無法讀取 <路徑>（權限不足）');
-  assert.equal(maskLocalPaths(`${['', 'home', 'bob'].join('/')}/work 失敗`, paths), '<路徑> 失敗');
-  // /home/runner 依現有規則不算個人路徑
-  assert.equal(maskLocalPaths('/home/runner/work/x', paths), '/home/runner/work/x');
-  assert.equal(maskLocalPaths(`${U}/carol/x`), '<路徑>');
-});
-
-test('runnerReminder：錯誤訊息與階段中的本機路徑不帶出原文', () => {
-  for (const message of [
-    `runner 資料夾有未提交的變更：${paths.worktree}`,
-    `git -C ${paths.repoRoot} fetch 失敗`,
-    `找不到 ${paths.home}/.config/gh/hosts.yml`,
-    `無法讀取 ${U}/bob/Projects/x`,
-  ]) {
-    const { body, errors } = reminderOf(message, `準備 #7 時失敗（${paths.worktree}）`);
-    assert.deepEqual(errors, []);
-    assert.ok(body.startsWith(REMINDER_HEADING));
-    assert.doesNotMatch(body, /alice|bob/);
-    assert.ok(!body.includes(`${U}/`));
-  }
-  assert.match(reminderOf(`有未提交的變更：${paths.worktree}`).body, /有未提交的變更：<worktree>/);
-});
-
-test('runnerReminder：遮蔽後仍有 email 時不貼出，問題只列行號與種類', () => {
-  const { body, errors } = reminderOf(`gh: 無法通知 ${MAIL}`);
-  assert.equal(body, null);
-  assert.ok(errors.length > 0);
-  assert.ok(errors.every((e) => /^第 \d+ 行：(?:email|個人路徑)$/.test(e)));
-  assert.ok(errors.every((e) => !e.includes('personal-mail')));
-  // 放行規則內的 email 不擋
-  assert.notEqual(reminderOf('寄給 user@example.com 失敗').body, null);
-});
-
 test('## runner 提醒 不影響 ## 決定 的判斷', () => {
   assert.ok(!STOP_HEADINGS.some((h) => REMINDER_HEADING.startsWith(h)));
   const reminder = c(runnerReminderBody({ stage: 's', message: 'm', count: 3, logPath: 'l' }), '2026-01-01T02:00Z');
@@ -744,4 +700,99 @@ test('streamTracker：最後一行沒有換行時只在 end() 處理一次；記
   u.state.resultIsError = false;
   u.end();
   assert.equal(u.state.resultIsError, false, '再次 end() 不重複處理');
+});
+
+// 測試用的本機路徑以字串組合，避免本檔被 check-sensitive 當成含個人路徑
+const U = ['', 'Users', 'someone'].join('/');
+const PATHS = { worktree: `${U}/dev/app-runner`, repoRoot: `${U}/dev/app`, home: U };
+
+test('maskLocalPaths：worktree、repo、家目錄換成佔位，其他個人路徑整段遮蔽', () => {
+  const msg = `git -C ${U}/dev/app-runner status 失敗：${U}/dev/app/tools/x.mjs:3；設定 ${U}/.config/gh/hosts.yml`;
+  assert.equal(maskLocalPaths(msg, PATHS), 'git -C <worktree> status 失敗：<repo>/tools/x.mjs:3；設定 ~/.config/gh/hosts.yml');
+  const other = ['', 'Users', 'another'].join('/');
+  const home2 = ['', 'home', 'dev1'].join('/');
+  assert.equal(maskLocalPaths(`開啟 '${other}/a b/c' 與 (${home2}/w/x.log)`, PATHS), "開啟 '<本機路徑> b/c' 與 (<本機路徑>)");
+  assert.equal(maskLocalPaths(`${U}x/y 與 ${U}`, PATHS), '<本機路徑> 與 ~', '只換完整的路徑段');
+  assert.equal(maskLocalPaths('/home/runner/work/x 與 /tmp/a', PATHS), '/home/runner/work/x 與 /tmp/a', 'CI 與系統路徑不換');
+  assert.equal(maskLocalPaths(`${U}/dev/app`, {}), '<本機路徑>', '沒有提供路徑時也整段遮蔽');
+  // 以下為本專案補充（#138）：前綴相同的資料夾、全形標點與角括號、與貼文檢查一致的個人路徑規則
+  assert.equal(maskLocalPaths(`${U}/dev/app-old/x`, PATHS), '~/dev/app-old/x', '前綴相同但不是同一個資料夾');
+  assert.equal(maskLocalPaths(`無法讀取：${other}/secret/a.txt（權限不足）`, PATHS), '無法讀取：<本機路徑>（權限不足）');
+  assert.equal(maskLocalPaths(`<${other}/a.log>`, PATHS), '<<本機路徑>>');
+  // macOS 上名稱是 runner 的家目錄仍是個人路徑（PERSONAL_PATH 只排除 /home/runner），遮蔽後才不會被貼文檢查擋下
+  const macRunner = ['', 'Users', 'runner'].join('/');
+  assert.equal(maskLocalPaths(`${macRunner}/x`, PATHS), '<本機路徑>');
+  assert.deepEqual(checkSensitiveContent(maskLocalPaths(`${macRunner}/x 與 ${other}/y`, PATHS)), []);
+});
+
+test('runnerReminderPost：錯誤訊息與紀錄檔路徑遮蔽後通過貼文檢查', () => {
+  const state = { stage: '準備 worktree', message: `fatal: ${U}/dev/app-runner 有未提交的變更`, count: 3 };
+  const post = runnerReminderPost(state, { logPath: `${U}/logs/runner.log`, paths: PATHS });
+  assert.equal(post.ok, true);
+  assert.deepEqual(post.problems, []);
+  assert.match(post.body, /fatal: <worktree> 有未提交的變更/);
+  assert.match(post.body, /`~\/logs\/runner\.log`/);
+  assert.ok(!post.body.includes(U));
+});
+
+test('runnerReminderPost：階段中的本機路徑也遮蔽（本專案補充）', () => {
+  const post = runnerReminderPost({ stage: `準備 #7 時失敗（${U}/dev/app-runner）`, message: 'm', count: 3 }, { logPath: 'logs/x.log', paths: PATHS });
+  assert.equal(post.ok, true);
+  assert.ok(post.body.startsWith(REMINDER_HEADING));
+  assert.match(post.body, /準備 #7 時失敗（<worktree>）/);
+  assert.ok(!post.body.includes(U));
+});
+
+test('runnerReminderPost：遮蔽後仍命中貼文檢查（例如 email）時不貼出', () => {
+  const email = ['someone', 'gmail.com'].join('@');
+  const post = runnerReminderPost({ stage: 'gh', message: `${email} 沒有權限`, count: 3 }, { logPath: 'logs/x.log', paths: PATHS });
+  assert.equal(post.ok, false);
+  assert.match(post.problems[0], /email/);
+  // 問題只列行號與種類，不含原文；放行規則內的 email 不擋（本專案補充）
+  assert.ok(post.problems.every((e) => /^第 \d+ 行：(?:email|個人路徑)$/.test(e)));
+  assert.equal(runnerReminderPost({ stage: 'gh', message: '寄給 user@example.com 失敗', count: 3 }, { logPath: 'l', paths: PATHS }).ok, true);
+});
+
+test('runnerBehindWarning：主資料夾落後時警告，沒有落後或無法判斷時不警告', () => {
+  assert.match(runnerBehindWarning('2'), /落後 origin\/main 2 個 commit（tools\/workflow\/runner）.*git pull/);
+  for (const n of ['0', '', 'x', -1]) assert.equal(runnerBehindWarning(n), null, String(n));
+});
+
+test('stopReportPost：原因、事實與紀錄檔路徑中的 worktree、家目錄、其他個人路徑被遮蔽，通過貼文檢查', () => {
+  const other = ['', 'Users', 'another'].join('/');
+  const post = stopReportPost({
+    step: '/work-on-issue 執行中',
+    reason: `無法啟動 claude：spawn ${U}/.local/bin/claude ENOENT（cwd ${U}/dev/app-runner）`,
+    facts: `保存進度失敗（${other}/tmp/x 無法寫入），worktree 保持原狀：${U}/dev/app-runner`,
+    account: 'me', logPath: `${U}/dev/app/tools/workflow/runner/logs/a.log`, paths: PATHS,
+  });
+  assert.equal(post.sanitized, false);
+  assert.match(post.body, /^## agent 停止：無法啟動 claude：spawn ~\/\.local\/bin\/claude ENOENT（cwd <worktree>）/);
+  assert.match(post.body, /保存進度失敗（<本機路徑> 無法寫入），worktree 保持原狀：<worktree>/);
+  assert.match(post.body, /紀錄檔：`<repo>\/tools\/workflow\/runner\/logs\/a\.log`/);
+  assert.ok(!post.body.includes(U) && !post.body.includes(other));
+  assert.deepEqual(checkSensitiveContent(post.body), []);
+});
+
+test('stopReportPost：遮蔽後仍命中時改用不含原文的原因與事實，仍會貼出（含停止回報的格式）', () => {
+  const email = ['someone', 'gmail.com'].join('@');
+  const post = stopReportPost({
+    step: '執行中', reason: `gh 以 ${email} 登入失敗`, facts: `token 屬於 ${email}`, account: 'me', logPath: 'logs/a.log', paths: PATHS,
+  });
+  assert.equal(post.sanitized, true);
+  assert.match(post.problems.join(), /email/);
+  assert.ok(!post.body.includes(email));
+  assert.ok(post.body.startsWith(`## agent 停止：${SENSITIVE_REASON}`), '仍是停止回報（runner 與 hasDecision 依開頭判斷）');
+  assert.match(post.body, new RegExp(`已確認的事實\\*\\*：${SENSITIVE_FACTS}`));
+  assert.match(post.body, /需要誰決定\*\*：@me/);
+  assert.deepEqual(checkSensitiveContent(post.body), []);
+  assert.equal(hasDecision([{ body: post.body, createdAt: '2026-01-01T00:00Z' }, c('## 決定', '2026-01-01T01:00Z')]), true);
+});
+
+test('stopReportPost：紀錄檔路徑遮蔽後仍命中時也換掉', () => {
+  const email = ['someone', 'gmail.com'].join('@');
+  const post = stopReportPost({ step: 's', reason: 'r', facts: 'f', account: 'me', logPath: `logs/${email}.log`, paths: PATHS });
+  assert.equal(post.sanitized, true);
+  assert.match(post.body, /紀錄檔：`（本機紀錄檔）`/);
+  assert.deepEqual(checkSensitiveContent(post.body), []);
 });

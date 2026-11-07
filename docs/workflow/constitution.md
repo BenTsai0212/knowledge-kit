@@ -1,6 +1,6 @@
 # 個人開發 Workflow 憲法
 
-- 版本：v0.18（2026-11-07）；各版內容見文末「版本紀錄」
+- 版本：v0.20（2026-11-07）；各版內容見文末「版本紀錄」
 - 正本：建立本專案的 template repo 中的同名檔案（`docs/workflow/constitution.md`）
 - 從 template 建立的專案保留一份副本。副本只能從 template 升級，不在專案內直接修改；值得改的規則回到 template 修憲（第 10 節）。
 
@@ -361,3 +361,5 @@ template 不假設技術棧。專案的技術棧在初始化對話中決定（C 
 | v0.16 | 2026-11-07 | 自動化 runner 改為全機名額制：整台電腦同時執行的件數以全機名額限制（預設 2），依號碼牌公平輪流、做完一件就交還；同一專案以專案鎖一次只做一件；沒有名額時等候（有上限），附來源與可刪條件 | dev-workflow-template#66 |
 | v0.17 | 2026-11-07 | 自動化 runner：訂閱額度用完時全機暫停到恢復時間（嚴格條件判斷 `rate_limit_event`，不成立時維持一般的異常結束處理）；這種情況不留 `## agent 停止`、不加 `blocked`，標籤還原、保存進度 | dev-workflow-template#66 |
 | v0.18 | 2026-11-07 | 新增 `docs/workflow/upgrade.md`：已建立的專案升級 template 的程序（以 blob SHA 找出建立時的版本、三份比對分成 A／B／C 三類、只以 `gh api` 讀 template、編號改寫、拆 PR 的順序與不疊分支、人工步驟、增量升級、升級 Issue 的範本）；第 8 節「規範升級」連到該文件 | dev-workflow-template#71 |
+| v0.19 | 2026-11-07 | runner 的 `## runner 提醒` 貼出前遮蔽本機路徑並以貼文檢查，仍命中就不貼出；主資料夾的 runner 落後 `origin/main` 時警告；決策中心：`.claude/` 的變更列為人工步驟、多個 PR 的 Issue 合併時加回 `agent:ready` 與合併授權同一批確認 | dev-workflow-template#72 |
+| v0.20 | 2026-11-07 | runner 自己留的 `## agent 停止` 貼出前遮蔽本機路徑並以貼文檢查；仍命中時仍貼出並加 `blocked`，原因改為不含原文的固定文字 | dev-workflow-template#75 |
