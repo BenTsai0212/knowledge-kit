@@ -1,6 +1,6 @@
 # 個人開發 Workflow 憲法
 
-- 版本：v0.17（2026-11-07）；各版內容見文末「版本紀錄」
+- 版本：v0.18（2026-11-07）；各版內容見文末「版本紀錄」
 - 正本：建立本專案的 template repo 中的同名檔案（`docs/workflow/constitution.md`）
 - 從 template 建立的專案保留一份副本。副本只能從 template 升級，不在專案內直接修改；值得改的規則回到 template 修憲（第 10 節）。
 
@@ -18,6 +18,7 @@
 | `AGENTS.md` | coding agent | 專案設定、指令、硬規則 |
 | `docs/workflow/agent-workflow.md` | coding agent | 實作一張 Issue 的步驟 |
 | `docs/workflow/github-writes.md` | Claude Project | 決策 agent 寫入 GitHub 的三級確認與合併授權（正本） |
+| `docs/workflow/upgrade.md` | 人、Claude Project、coding agent | 已建立的專案升級 template 的程序 |
 
 手冊不得與憲法衝突；發現衝突時以憲法為準，並開 Issue 修正手冊。
 
@@ -249,7 +250,7 @@ main 永遠可部署，所有變更經過 PR 與 CI。
 - **範圍**：每個 Claude Project 只寫自己的 repo；總部只在每週回顧或人點名時讀其他 repo。範圍不明時先問。〔來源：總部把「目前專案」誤解成另一個 repo｜不刪〕（試驗中）
 - **專案狀態**：積極開發／維護／暫停。暫停前在交接文件寫下「停在哪裡、下一步是什麼」。
 - **每週回顧（30 分鐘）**：在總部看各看板與等待人的工作，決定這週優先推進哪些專案。
-- **規範升級**：憲法或 template 更新後，各專案以 PR 升級，並更新 `AGENTS.md` 的憲法版本。
+- **規範升級**：憲法或 template 更新後，各專案以 PR 升級，並更新 `AGENTS.md` 的憲法版本。程序（找出建立時的版本、三份比對、拆 PR 的順序、升級 Issue 的範本）見 [upgrade.md](upgrade.md)。
 
 ## 9. 複製操作流程
 
@@ -359,3 +360,4 @@ template 不假設技術棧。專案的技術棧在初始化對話中決定（C 
 | v0.15 | 2026-11-07 | agent 只讀可信身分的內容：新增 `tools/workflow/read-trusted.mjs`，agent 讀 Issue 與 PR 不再用 gh 的 `view` 子命令；作者不可信的「外部 Issue」不直接派工，由決策中心另開自己撰寫的 Issue；runner 不挑作者不可信的 Issue，允許清單移除 `gh … view`、禁止以 `gh api` 讀留言與審查 | dev-workflow-template#65 |
 | v0.16 | 2026-11-07 | 自動化 runner 改為全機名額制：整台電腦同時執行的件數以全機名額限制（預設 2），依號碼牌公平輪流、做完一件就交還；同一專案以專案鎖一次只做一件；沒有名額時等候（有上限），附來源與可刪條件 | dev-workflow-template#66 |
 | v0.17 | 2026-11-07 | 自動化 runner：訂閱額度用完時全機暫停到恢復時間（嚴格條件判斷 `rate_limit_event`，不成立時維持一般的異常結束處理）；這種情況不留 `## agent 停止`、不加 `blocked`，標籤還原、保存進度 | dev-workflow-template#66 |
+| v0.18 | 2026-11-07 | 新增 `docs/workflow/upgrade.md`：已建立的專案升級 template 的程序（以 blob SHA 找出建立時的版本、三份比對分成 A／B／C 三類、只以 `gh api` 讀 template、編號改寫、拆 PR 的順序與不疊分支、人工步驟、增量升級、升級 Issue 的範本）；第 8 節「規範升級」連到該文件 | dev-workflow-template#71 |
