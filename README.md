@@ -40,6 +40,7 @@ The first screen of the timeline, seen as a manager:
 - The evaluation page is hidden, because one run makes many model calls.
 - Questions and uploaded content are sent to the model provider. **Don't enter or upload personal or confidential information.**
 - Uploaded documents exist only in your browser and disappear when you reload the page.
+- **Presentation mode**: add `?mode=presentation` to the URL to show only Q&A and the graph, which suits showing the demo to others ([docs/qa.md](docs/qa.md#展示模式)).
 - To request your own access code, open an Issue in this repo with the "Access code request" template. The code is never posted in the public Issue.
 
 ## Quick start
