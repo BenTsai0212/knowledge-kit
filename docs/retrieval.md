@@ -12,7 +12,7 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 
 1. 以 `db.withIdentity(identityId, …)` 執行 `SELECT … FROM kk.passages`。看得到哪些段落完全交給 RLS（[docs/data-model.md](data-model.md)），本模組不另外判斷權限。
    - 文件標題（問答以標題區分來源）以 JOIN `kk.documents` 在同一個查詢中取得。兩張表都受 RLS 篩選，但資料集規定段落不比所屬文件寬鬆（[docs/dataset.md](dataset.md)，匯入時檢查），所以看得到段落就看得到文件，JOIN 不會少掉段落。`app/tests/retrieval/leakage.test.ts` 的「不限名次時漏看 0」確認這一點。
-2. 以 `VectorProvider` 把問題與段落轉成向量，再算相似度。
+2. 以 `VectorProvider` 把問題（`embed([question], "query")`）與還不在快取中的段落（`embed(contents, "passage")`）分開轉成向量，再算相似度。
 3. 依分數排序，去掉低於 `minScore` 的段落，取前 `topK` 名。分數相同時依段落 id 排序。
 4. 為每段附上 `supersededBy`：主管標記「新說法取代舊說法」時，取代這段的新段落（id、文件標題與日期、語言、內容，以及取代新段落的段落 id）；沒有時為 `null`。在步驟 1 的同一個 `withIdentity()` 中讀取 `kk.conflict_decisions`，決定只在兩段都看得到時讀得到（RLS）。同一段被多段取代時取文件日期最新的，日期相同時依段落 id。新段落不計分、不佔名次。問答怎麼使用見 [docs/qa.md](qa.md)「新說法取代舊說法」。
 
@@ -29,6 +29,8 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 語言與文件的條件寫在 SQL 的 `WHERE`，仍在 RLS 篩選之內；可見範圍不變。
 
 `retrieve.ts` 只依賴 `VectorProvider` 接口。使用哪個實作，只在 `providers.ts` 依 `client.json` 的 `retrieval.provider` 決定（`providers.test.ts` 檢查）。
+
+實作可能要先下載模型才能使用，所以 `createProvider()` 回傳 Promise（未登記的值在呼叫時就拋錯）。`openRetriever()` 不等待，立即回傳 retriever；第一次 `retrieve()` 時才等實作準備好，準備失敗時由 `retrieve()` 拋出。
 
 ## 設定
 
@@ -132,9 +134,9 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 
 1. 新增實作，滿足 `types.ts` 的 `VectorProvider<V>`：
    - `id`：與 `client.json` 的 `retrieval.provider` 相同。
-   - `embed(texts)`：一次轉換多筆文字，可在其中批次呼叫外部 API。
-   - `similarity(a, b)`：回傳 0～1，越大越相關。
-2. 在 `providers.ts` 的 `PROVIDERS` 登記。
+   - `embed(texts, kind)`：一次轉換多筆同一種文字，可在其中批次呼叫外部 API 或模型。`kind` 是 `"query"`（問題）或 `"passage"`（段落），語意模型可依此加不同前綴（例如 e5 的 `query: `、`passage: `）；不區分兩者的實作（`keyword-hash`）忽略它。
+   - `similarity(a, b)`：回傳 0～1，越大越相關；cosine 為負時截到 0。`providers.test.ts` 對 `PROVIDERS` 中每個實作檢查範圍。
+2. 在 `providers.ts` 的 `PROVIDERS` 登記建立實作的函式（可以是非同步，例如先下載模型）。
 3. 在 `client/schema/client.schema.json` 的 `retrieval.provider` 列舉，以及 `app/src/client/types.ts` 的 `ProviderId`，加上同名的值。
 4. 改 `client.json` 的 `retrieval.provider`；分數分布不同時，一併調整 `minScore` 與 `topK`。
 

@@ -1,11 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { clientConfig } from "../client/load";
 import { dataset } from "../dataset/load";
+import { evalQuestions } from "../evals/load";
 import { seedDataset } from "../dataset/seed";
 import { openDatabase, type Database } from "../db/database";
-import { keywordHashProvider } from "./keyword-hash";
+import { cosine, embedText, keywordHashProvider } from "./keyword-hash";
 import { createRetriever, openRetriever } from "./retrieve";
-import type { VectorProvider } from "./types";
+import type { EmbedKind, VectorProvider } from "./types";
 
 let db: Database;
 
@@ -66,11 +67,11 @@ describe("retrieve", () => {
     expect(await retriever.retrieve("nobody", "年假")).toEqual([]);
   });
 
-  it("段落向量只計算一次，之後只轉換問題", async () => {
-    const batches: number[] = [];
+  it("問題以 query、段落以 passage 轉換；段落向量只計算一次，之後只轉換問題", async () => {
+    const calls: [EmbedKind, number][] = [];
     const counting: VectorProvider = {
       ...keywordHashProvider,
-      embed: (texts) => (batches.push(texts.length), keywordHashProvider.embed(texts)),
+      embed: (texts, kind) => (calls.push([kind, texts.length]), keywordHashProvider.embed(texts, kind)),
     };
     const retriever = createRetriever(db, counting, { topK: 5, minScore: 0 });
     const visible = async (id: string) => db.withIdentity(id, async (tx) => (await tx.query("SELECT id FROM kk.passages")).rows.length);
@@ -78,6 +79,35 @@ describe("retrieve", () => {
     await retriever.retrieve("guest", "部門");
     // 主管多看到的段落才需要計算
     await retriever.retrieve("manager", "年假");
-    expect(batches).toEqual([1 + (await visible("guest")), 1, 1 + (await visible("manager")) - (await visible("guest"))]);
+    expect(calls).toEqual([
+      ["query", 1],
+      ["passage", await visible("guest")],
+      ["query", 1],
+      ["query", 1],
+      ["passage", (await visible("manager")) - (await visible("guest"))],
+    ]);
+  });
+
+  it("provider 可以是 Promise：第一次檢索時才等待，準備失敗時由 retrieve() 拋出", async () => {
+    let resolve!: (p: VectorProvider) => void;
+    const retriever = createRetriever(db, new Promise<VectorProvider>((r) => (resolve = r)), { topK: 5, minScore: 0 });
+    const pending = retriever.retrieve("staff", "年假");
+    resolve(keywordHashProvider);
+    expect(await pending).toEqual(await createRetriever(db, keywordHashProvider, { topK: 5, minScore: 0 }).retrieve("staff", "年假"));
+
+    const failing = createRetriever(db, Promise.reject(new Error("模型下載失敗")), { topK: 5, minScore: 0 });
+    await expect(failing.retrieve("staff", "年假")).rejects.toThrow("模型下載失敗");
+  });
+
+  it("keyword-hash：每題的分數與排序和直接以 embedText、cosine 計分相同", async () => {
+    const passages = await db.withIdentity("manager", async (tx) => (await tx.query<{ id: string; content: string }>("SELECT id, content FROM kk.passages")).rows);
+    const retriever = createRetriever(db, keywordHashProvider, { topK: passages.length, minScore: 0 });
+    for (const { question } of evalQuestions.questions) {
+      const q = embedText(question);
+      const expected = passages
+        .map((p) => ({ id: p.id, score: cosine(q, embedText(p.content)) }))
+        .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));
+      expect((await retriever.retrieve("manager", question)).map(({ id, score }) => ({ id, score }))).toEqual(expected);
+    }
   });
 });
