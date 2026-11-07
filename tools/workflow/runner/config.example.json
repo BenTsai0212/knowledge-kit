@@ -9,6 +9,7 @@
   "staleHours": 2,
   "maxOpenPrs": 3,
   "maxPerRun": 5,
+  "slotWaitMinutes": 30,
   "env": {},
   "agentNotes": [],
   "skipBranchPrefixes": ["codex/"],

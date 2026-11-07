@@ -29,7 +29,7 @@
 - 上一件的 claude 正常結束（包含 agent 自行停止並加上 `blocked`）；claude 非正常結束或 runner 自身錯誤時，停止本次的連續處理；
 - 佇列還有工作。同一次喚醒不重複處理同一件。
 
-連續處理期間一直持有全機 lock。`--now` 只處理一件，且不受執行時段與最晚開始時間限制。
+連續處理期間一直持有專案鎖；全機名額每做完一件就交還，下一件重新排隊（見「全機名額」）。`--now` 只處理一件，且不受執行時段與最晚開始時間限制，但一樣要取得名額。
 
 **最晚開始時間**：過了 `lastStart` 不開始新工作，已在進行的會做完。未設定時為執行時段結束減去 `timeoutMinutes`（例如 `[9, 18]`、45 分鐘 → 17:15）。
 
@@ -73,6 +73,7 @@ cp tools/workflow/runner/config.example.json tools/workflow/runner/config.local.
 | `maxOpenPrs` | ✓ | 待審 PR 上限（只限制新工作） |
 | `lastStart` |  | 最晚開始時間 `[時, 分]`，例如 `[17, 0]`；不能晚於執行時段結束。省略時為執行時段結束減去 `timeoutMinutes` |
 | `maxPerRun` |  | 一次喚醒最多處理幾件（1 以上的整數），預設 5 |
+| `slotWaitMinutes` |  | 沒有空出的全機名額時最多等候幾分鐘（正數），預設 30；超過就留給下一次排程 |
 | `board` |  | 看板 `{ "owner": 帳號, "number": 編號 }`；`null` 或省略時不更新看板 |
 | `env` |  | 傳給 agent 的額外環境變數（例如測試資料庫的連線字串）；不能包含 `ANTHROPIC_API_KEY`／`ANTHROPIC_AUTH_TOKEN` |
 | `agentNotes` |  | 給 agent 的補充說明（字串陣列），接在 runner 的共用說明之後 |
@@ -110,9 +111,27 @@ runner 的程式從主資料夾執行（排程與手動執行都是），不是�
 | 只有這個專案 | `touch tools/workflow/runner/PAUSE` | 刪除該檔 |
 | 整台電腦（所有使用本程式的 runner） | `mkdir -p ~/.agent-runner && touch ~/.agent-runner/PAUSE` | 刪除該檔 |
 
-`~/.agent-runner/lock` 讓整台電腦同一時間只跑一個 runner（記錄 pid 與 repo；pid 不存在時視為過期並清除，試跑只記錄不清除）。全機 lock 與 `PAUSE` 是試驗中的設計。
+`PAUSE` 是試驗中的設計。
 
-**舊版 runner 不受全機 lock 與 `PAUSE` 管控**：同一台電腦上若有其他專案仍在使用舊版 runner（放在 repo 之外、各自有 lock 的版本），兩者可能同時執行。改用本程式前，先停掉舊版的排程，或確認兩者的執行時段不重疊。
+**舊版 runner 不受全機名額與 `PAUSE` 管控**：同一台電腦上若有其他專案仍在使用舊版 runner（放在 repo 之外、各自有 lock 的版本），兩者可能同時執行。改用本程式前，先停掉舊版的排程，或確認兩者的執行時段不重疊。本程式的前一版使用 `~/.agent-runner/lock`（整台電腦只跑一個）；這個檔案的程序仍存在時不執行，程序不在時清除。
+
+## 全機名額（試驗中）
+
+整台電腦同時執行 claude 的件數上限，所有使用本程式的專案共用。〔來源：只有一把全機 lock 且連續處理時一直持有，多個專案共用執行時段時，有專案可能整晚輪不到；真正共用的是訂閱額度，同時執行不增加總額度，只會用得更快｜可刪條件：改用雲端執行，或同一台電腦不再有多個專案共用訂閱額度時〕
+
+| 檔案（`~/.agent-runner/`，不進版本控制） | 內容 |
+| --- | --- |
+| `config.json` | `{ "slots": 2 }`：名額數，1 以上的整數；檔案不存在時為 2。設定錯誤時不執行 |
+| `slots/<編號>.json` | 一個檔案是一個使用中的名額（pid、repo、Issue、開始時間） |
+| `queue/<取號時間>-<pid>.json` | 等候名額的號碼牌 |
+| `projects/<owner>__<name>.lock` | 專案鎖：同一專案同時只跑一件，連續處理期間一直持有 |
+
+- **公平輪流**：等候時依號碼牌的取號順序，只有排在前面、人數不超過空出名額數的可以取得。做完一件就交還名額，要做下一件時重新取號，排到其他等候者之後。
+- **等候**：每 30 秒檢查一次，最多等 `slotWaitMinutes`（預設 30 分鐘）；超過、偵測到 `PAUSE` 或已過最晚開始時間（`--now` 除外）就放棄，留給下一次排程。紀錄檔寫明排隊位置、占用中的 repo 與 Issue，以及等了多久。
+- **重新挑選**：等候後才取得名額時，先重新查詢 GitHub 挑選（等候期間標籤可能已改變）。
+- **名額涵蓋的範圍**：處理一件的整段時間（準備 worktree、執行 claude、更新標籤）。
+- **過期清除**：pid 已不存在的名額、號碼牌與專案鎖視為過期並刪除；剛建立、尚未寫入內容（1 分鐘內）的不算過期。試跑只顯示，不刪除。
+- `--dry-run` 顯示名額使用狀況（每個名額的 repo、Issue、pid、是否過期）與等候中的號碼牌數。
 
 ## 排程（launchd，由人親自安裝與移除）
 
@@ -191,6 +210,7 @@ runner 自身的錯誤（準備階段失敗、無法在 GitHub 留言、runner �
   - 因此 hook 無法判斷目標分支的推送（例如先 `cd` 再 `git push`、`--git-dir`）在 runner 下一律被拒絕。給 agent 的共用說明已要求推送時直接寫明分支（`git push origin HEAD:<分支>`），不要先 `cd` 再推送。
   - 確定推到 main 的指令本來就在禁止清單中，不受影響。
 - 只支援 macOS（launchd、通知、sandbox）。
+- 全機名額 2 以上時，不同專案的 agent 會同時執行：各自啟動的測試伺服器、資料庫等可能使用同一個 port 而失敗。專案的測試會啟動固定 port 的服務時，在 `agentNotes` 指定該專案使用的 port，或把名額設為 1。
 - 待審 PR 上限（`maxOpenPrs`）只計算設定的 `account` 開的、開啟中、非 Draft 的 PR；人與 agent 共用帳號時，人開的 PR 也會佔用名額。需要暫時讓出名額時，把人開的 PR 轉為 Draft。
 - runner 下 agent 做不到的事：寫入 `.claude/`、刪除遠端分支、啟動瀏覽器。Issue 需要這些時，改成人工待辦（對照 `docs/workflow/decision-center.md` 第 3 節「不要求 agent 執行環境做不到的事」）。
 - PR 分支被 runner 的 worktree 佔用時，在主資料夾 `git switch <分支>` 會失敗；改用 `git switch --detach origin/<分支>`，測完 `git switch main`。

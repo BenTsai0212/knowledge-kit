@@ -2,9 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
-  advanceAwake, agentNote, buildSettings, canStartNew, countOpenPrs, hasDecision, inHours, isRunTmpDir, isTransientGhError,
+  advanceAwake, agentNote, buildSettings, canStartNew, countOpenPrs, DEFAULT_SLOTS, globalSlots, hasDecision, inHours, isRunTmpDir, isTransientGhError,
   issueAssociations, isTrusted, latestStart, linkedIssue, lockIsActive, maskLocalPaths, needsWipSave, orderWork, pickWork, recordRunnerError,
-  remainingLabels, REMIND_AFTER, REMINDER_HEADING, RUN_TMP_DIR, runnerReminder, runnerReminderBody, runTmpDir, runTmpEnv, shouldContinue, staleWorking,
+  remainingLabels, REMIND_AFTER, REMINDER_HEADING, RUN_TMP_DIR, runnerReminder, runnerReminderBody, runTmpDir, runTmpEnv, shouldContinue, slotTurn, staleWorking,
   STOP_HEADINGS, stopReportBody, trustedOnly, validateConfig, wipBranchName, withAssociation,
 } from './lib.mjs';
 
@@ -637,4 +637,27 @@ test('## runner 提醒 不影響 ## 決定 的判斷', () => {
   });
   const { candidates } = orderWork({ fixPrs: [], blockedIssues: [blocked], blockedPrs: [], readyIssues: [] }, opts);
   assert.deepEqual(candidates.map((w) => w.issue), [5]);
+});
+
+test('slotTurn：號碼牌依取號順序輪流，只有前 free 位可以取得；名額數調小時超出範圍的仍占用', () => {
+  const q = ['000000000000001-2.json', '000000000000002-1.json', '000000000000003-3.json'];
+  assert.deepEqual(slotTurn({ slots: 2, used: new Set(), queue: q, me: q[1] }), { canTake: true, position: 1, free: 2, index: 0 });
+  assert.deepEqual(slotTurn({ slots: 2, used: new Set([0]), queue: q, me: q[1] }), { canTake: false, position: 1, free: 1, index: null });
+  assert.equal(slotTurn({ slots: 2, used: new Set([0]), queue: q, me: q[0] }).index, 1);
+  assert.equal(slotTurn({ slots: 2, used: new Set([0]), queue: q, me: 'missing' }).canTake, false, '沒有號碼牌不能取得');
+  assert.equal(slotTurn({ slots: 1, used: new Set([1]), queue: q, me: q[0] }).canTake, false, '名額 1、編號 1 仍在用');
+});
+
+test('globalSlots：預設 2；必須是 1 以上的整數', () => {
+  assert.equal(DEFAULT_SLOTS, 2);
+  assert.deepEqual(globalSlots(null), { slots: 2, error: null });
+  assert.deepEqual(globalSlots({}), { slots: 2, error: null });
+  assert.deepEqual(globalSlots({ slots: 3 }), { slots: 3, error: null });
+  for (const slots of [0, 1.5, '2', -1]) assert.ok(globalSlots({ slots }).error, String(slots));
+});
+
+test('validateConfig：slotWaitMinutes 必須是正數', () => {
+  const base = JSON.parse(readFileSync(new URL('./config.example.json', import.meta.url), 'utf8'));
+  assert.deepEqual(validateConfig({ ...base, slotWaitMinutes: 10 }), []);
+  assert.ok(validateConfig({ ...base, slotWaitMinutes: 0 }).some((e) => e.startsWith('slotWaitMinutes')));
 });

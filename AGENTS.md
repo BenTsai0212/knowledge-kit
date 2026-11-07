@@ -6,7 +6,7 @@
 
 - Repo：`BenTsai0212/knowledge-kit`；看板：GitHub Project #9（https://github.com/users/BenTsai0212/projects/9）
 - 啟用模組：核心、高風險、自動化（見 `docs/workflow/modules.md`；自動化見 ADR 0003）
-- 憲法版本：v0.15（`docs/workflow/constitution.md`）
+- 憲法版本：v0.16（`docs/workflow/constitution.md`）
 - 決定者：@BenTsai0212（停止回報與 `plan-first` 時 @ 此帳號）
 - fork 後要改的地方：`docs/workflow/fork.md`
 

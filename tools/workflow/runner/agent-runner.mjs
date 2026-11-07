@@ -10,15 +10,16 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, unlinkSync
 import { homedir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import {
-  BASE_SETTINGS_FILE, CONFIG_FILE, GENERATED_SETTINGS_FILE, GLOBAL_DIR, GLOBAL_LOCK, GLOBAL_PAUSE,
+  BASE_SETTINGS_FILE, CONFIG_FILE, GENERATED_SETTINGS_FILE, GLOBAL_CONFIG, GLOBAL_DIR, GLOBAL_PAUSE, LEGACY_LOCK,
   PROJECT_PAUSE, readConfig, repoRoot, resolvePaths,
 } from './config.mjs';
 import {
-  advanceAwake, agentNote, buildSettings, canStartNew, countOpenPrs, GH_RETRY_MS, inHours, isRunTmpDir, isTransientGhError,
+  advanceAwake, agentNote, buildSettings, canStartNew, countOpenPrs, DEFAULT_SLOT_WAIT_MINUTES, GH_RETRY_MS, globalSlots, inHours, isRunTmpDir, isTransientGhError,
   issueAssociations, lockIsActive, needsWipSave, orderWork, pickWork, recordRunnerError, remainingLabels, runnerReminder,
-  runTmpDir, runTmpEnv, shouldContinue, staleWorking, stopReportBody, TICK_MS, validateConfig, wipBranchName, withAssociation,
+  runTmpDir, runTmpEnv, shouldContinue, SLOT_POLL_MS, staleWorking, stopReportBody, TICK_MS, validateConfig, wipBranchName, withAssociation,
 } from './lib.mjs';
 import { notify } from './platform.mjs';
+import { acquireProjectLock, readSlotStatus, waitForSlot } from './slots.mjs';
 
 const args = new Set(process.argv.slice(2));
 const DRY = args.has('--dry-run');
@@ -407,16 +408,38 @@ async function main() {
     log('已過最晚開始時間（排程執行時不會開始新工作）');
   }
 
-  // 全機 lock：同一時間整台電腦只跑一個 runner
+  // 舊版的全機 lock：仍有舊版 runner 在執行時不執行，避免新舊版同時跑；程序不在時清除
   const isAlive = (pid) => { try { process.kill(pid, 0); return true; } catch { return false; } };
-  if (existsSync(GLOBAL_LOCK)) {
-    const { active, lock } = lockIsActive(readFileSync(GLOBAL_LOCK, 'utf8'), isAlive);
-    if (active) return log(`另一個 runner 正在執行（${lock.repo ?? '?'}，pid ${lock.pid}），本次不執行`);
-    if (DRY) log('lock 存在但程序不在（試跑不清除）');
+  if (existsSync(LEGACY_LOCK)) {
+    const { active, lock } = lockIsActive(readFileSync(LEGACY_LOCK, 'utf8'), isAlive);
+    if (active) return log(`舊版 runner 正在執行（${lock.repo ?? '?'}，pid ${lock.pid}，${LEGACY_LOCK}），本次不執行`);
+    if (DRY) log('舊版的全機 lock 存在但程序不在（試跑不清除）');
     else {
-      log('清除過期的全機 lock');
-      unlinkSync(GLOBAL_LOCK);
+      log('清除舊版的全機 lock');
+      unlinkSync(LEGACY_LOCK);
     }
+  }
+  // 全機名額（~/.agent-runner/config.json 的 slots，預設 2）
+  let globalConfig = null;
+  try {
+    if (existsSync(GLOBAL_CONFIG)) globalConfig = JSON.parse(readFileSync(GLOBAL_CONFIG, 'utf8'));
+  } catch (error) {
+    return log(`全機設定 ${GLOBAL_CONFIG} 無法讀取（${firstLine(error)}），本次不執行`);
+  }
+  const { slots, error: slotsError } = globalSlots(globalConfig);
+  if (slotsError) return log(`全機設定 ${GLOBAL_CONFIG}：${slotsError}，本次不執行`);
+  const status = readSlotStatus({ dir: GLOBAL_DIR, isAlive });
+  const describe = (x) => `${x.repo ?? '?'}${x.issue ? ` #${x.issue}` : ''}（pid ${x.pid ?? '?'}${x.stale ? '，過期' : ''}）`;
+  log(`全機名額：${status.slots.filter((x) => !x.stale).length}/${slots} 使用中`
+    + (status.slots.length ? `：${status.slots.map(describe).join('、')}` : '')
+    + `；等候中 ${status.queue.filter((x) => !x.stale).length} 個`);
+  // 專案鎖：同一專案同時只跑一件。中斷偵測（agent:working 長時間沒有更新）之前就取得，結束時（含提早結束）交還
+  const projectHolder = status.projects.find((x) => x.repo === REPO && !x.stale);
+  if (projectHolder) return log(`本專案的 runner 正在執行（pid ${projectHolder.pid}），本次不執行`);
+  if (!DRY) {
+    const project = acquireProjectLock({ dir: GLOBAL_DIR, repo: REPO, pid: process.pid, isAlive });
+    if (!project.ok) return log(`本專案的 runner 剛開始執行（pid ${project.holder?.pid ?? '?'}），本次不執行`);
+    process.on('exit', project.release);
   }
 
   // 計費保護：環境中有 API key 時不執行
@@ -445,35 +468,48 @@ async function main() {
   log(`權限設定：${relative(ROOT, GENERATED_SETTINGS_FILE)}（允許 ${settings.permissions.allow.length} 條、禁止 ${settings.permissions.deny.length} 條）`);
   if (DRY) return log('試跑結束：沒有修改 GitHub、沒有建立或切換 worktree');
 
-  // 連續處理期間一直持有全機 lock
-  mkdirSync(GLOBAL_DIR, { recursive: true });
-  try {
-    writeFileSync(GLOBAL_LOCK, JSON.stringify({ pid: process.pid, repo: REPO, startedAt: new Date().toISOString() }), { flag: 'wx' });
-  } catch {
-    return log('另一個 runner 剛取得全機 lock，本次不執行');
-  }
-  try {
-    while (pick) {
-      const lastResult = await processOne(pick);
-      if (lastResult !== 'runner-error') clearErrorState();
-      done.add(pick.issue);
-      const { go, reason } = shouldContinue({
-        now: new Date(), config, processed: done.size, paused: paused(), nowMode: NOW, lastResult,
-      });
-      if (!go) {
-        log(`結束本次處理：${reason}`);
-        break;
-      }
-      log(`已處理 ${done.size} 件，繼續挑下一件`);
-      try {
-        pick = nextWork();
-      } catch (error) {
-        runnerError('挑選下一件時失敗', error);
-        break;
-      }
+  const waitMs = (config.slotWaitMinutes ?? DEFAULT_SLOT_WAIT_MINUTES) * 60e3;
+  while (pick) {
+    // 全機名額：每做完一件就交還，下一件重新排隊（公平輪流）
+    const slot = await waitForSlot({
+      dir: GLOBAL_DIR, slots, repo: REPO, issue: pick.issue, pid: process.pid, isAlive, waitMs, intervalMs: SLOT_POLL_MS,
+      sleep: (ms) => new Promise((r) => setTimeout(r, ms)), log,
+      abortReason: () => (paused() ? '偵測到 PAUSE' : !NOW && !canStartNew(new Date(), config) ? '已過最晚開始時間' : null),
+    });
+    const waited = `${Math.round(slot.waitedMs / 1e3)} 秒`;
+    if (!slot.ok) {
+      log(`沒有取得全機名額（${slot.reason}，等候 ${waited}），留給下一次排程`);
+      break;
     }
-  } finally {
-    if (existsSync(GLOBAL_LOCK)) unlinkSync(GLOBAL_LOCK);
+    log(`取得全機名額 ${slot.index}（等候 ${waited}）`);
+    let lastResult;
+    try {
+      // 等候期間標籤可能已改變：取得名額後重新挑選
+      if (slot.waitedMs > 0) pick = nextWork();
+      if (!pick) break;
+      lastResult = await processOne(pick);
+    } catch (error) {
+      runnerError('挑選工作時失敗', error);
+      break;
+    } finally {
+      slot.release();
+    }
+    if (lastResult !== 'runner-error') clearErrorState();
+    done.add(pick.issue);
+    const { go, reason } = shouldContinue({
+      now: new Date(), config, processed: done.size, paused: paused(), nowMode: NOW, lastResult,
+    });
+    if (!go) {
+      log(`結束本次處理：${reason}`);
+      break;
+    }
+    log(`已處理 ${done.size} 件，繼續挑下一件`);
+    try {
+      pick = nextWork();
+    } catch (error) {
+      runnerError('挑選下一件時失敗', error);
+      break;
+    }
   }
 }
 

@@ -11,7 +11,9 @@ export const BASE_SETTINGS_FILE = join(RUNNER_DIR, 'runner-settings.base.json');
 export const GENERATED_SETTINGS_FILE = join(RUNNER_DIR, '.generated', 'runner-settings.json');
 export const PROJECT_PAUSE = join(RUNNER_DIR, 'PAUSE');
 export const GLOBAL_DIR = join(homedir(), '.agent-runner');
-export const GLOBAL_LOCK = join(GLOBAL_DIR, 'lock');
+// 舊版的全機 lock（整台電腦只跑一個 runner）；名額制不再使用，只用來偵測仍在執行的舊版 runner
+export const LEGACY_LOCK = join(GLOBAL_DIR, 'lock');
+export const GLOBAL_CONFIG = join(GLOBAL_DIR, 'config.json');
 export const GLOBAL_PAUSE = join(GLOBAL_DIR, 'PAUSE');
 
 /** runner 所在 repo 的根目錄（使用者平常的資料夾，runner 只讀取、不切換分支）。 */
