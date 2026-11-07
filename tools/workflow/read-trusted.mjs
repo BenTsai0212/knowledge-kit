@@ -8,6 +8,8 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { isTrusted, trustedOnly } from './runner/lib.mjs';
 
+export const USAGE = '用法：node tools/workflow/read-trusted.mjs --issue N | --pr N [-R owner/name]';
+
 const labels = (x) => (x.labels ?? []).map((l) => (typeof l === 'string' ? l : l.name));
 
 /** REST 的留言、審查、review comment 換成與 gh --json 相同的欄位名稱。 */
@@ -81,37 +83,47 @@ export function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--issue' || a === '--pr') {
+      if (out.kind) return { error: '--issue 與 --pr 只能擇一' };
       out.kind = a.slice(2);
       out.number = Number(argv[++i]);
-    } else if (a === '-R' || a === '--repo') out.repo = argv[++i];
-    else return { error: `不明的參數：${a}` };
+    } else if (a === '-R' || a === '--repo') {
+      out.repo = argv[++i];
+      if (!out.repo) return { error: USAGE };
+    } else return { error: `不明的參數：${a}\n${USAGE}` };
   }
-  if (!out.kind || !Number.isInteger(out.number) || out.number <= 0) {
-    return { error: '用法：node tools/workflow/read-trusted.mjs --issue N | --pr N [-R owner/name]' };
-  }
+  if (!out.kind || !Number.isInteger(out.number) || out.number <= 0) return { error: USAGE };
   return out;
 }
 
-function ghApi(repo) {
-  const run = (...a) => execFileSync('gh', ['api', ...a], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+/** run(...args) 執行 gh api；清單類（/comments、/reviews）每頁 100 筆，--paginate --slurp 把各頁包成陣列後合併。 */
+export function pagedApi(run, repo) {
   return (path) => {
     const url = `repos/${repo}/${path}`;
-    if (!/\/comments$|\/reviews$/.test(path)) return JSON.parse(run(url));
-    // --slurp 把每一頁包成一個陣列
+    if (!/\/(comments|reviews)$/.test(path)) return JSON.parse(run(url));
     return JSON.parse(run('--paginate', '--slurp', `${url}?per_page=100`)).flat();
   };
 }
 
+// 結束碼：成功 0、讀取失敗 1、參數錯誤 2。讀取失敗只印首行，不印 stack。
 function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.error) {
     console.error(args.error);
-    process.exitCode = 1;
+    process.exitCode = 2;
     return;
   }
-  const api = ghApi(args.repo);
-  const view = args.kind === 'pr' ? readPr(args.number, api) : readIssue(args.number, api);
-  console.log(JSON.stringify(view, null, 2));
+  // 預設的 maxBuffer 是 1 MB，留言很多的 PR 會讀取失敗
+  const run = (...a) => execFileSync('gh', ['api', ...a], {
+    encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 * 1024 * 1024,
+  });
+  const api = pagedApi(run, args.repo);
+  try {
+    const view = args.kind === 'pr' ? readPr(args.number, api) : readIssue(args.number, api);
+    console.log(JSON.stringify(view, null, 2));
+  } catch (error) {
+    console.error(`讀取失敗：${String(error.stderr || error.message).trim().split('\n')[0]}`);
+    process.exitCode = 1;
+  }
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) main();

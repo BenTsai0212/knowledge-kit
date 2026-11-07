@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   advanceAwake, agentNote, buildSettings, canStartNew, countOpenPrs, hasDecision, inHours, isRunTmpDir, isTransientGhError,
-  isTrusted, latestStart, linkedIssue, lockIsActive, maskLocalPaths, needsWipSave, orderWork, pickWork, recordRunnerError,
+  issueAssociations, isTrusted, latestStart, linkedIssue, lockIsActive, maskLocalPaths, needsWipSave, orderWork, pickWork, recordRunnerError,
   remainingLabels, REMIND_AFTER, REMINDER_HEADING, RUN_TMP_DIR, runnerReminder, runnerReminderBody, runTmpDir, runTmpEnv, shouldContinue, staleWorking,
-  STOP_HEADINGS, stopReportBody, trustedOnly, validateConfig, wipBranchName,
+  STOP_HEADINGS, stopReportBody, trustedOnly, validateConfig, wipBranchName, withAssociation,
 } from './lib.mjs';
 
 const ME = 'me';
@@ -146,6 +146,20 @@ test('isTrusted／trustedOnly：只保留 OWNER／MEMBER／COLLABORATOR，其餘
   assert.deepEqual(trusted.map((x) => x.body), ['一般留言']);
   assert.equal(skipped, 2);
   assert.deepEqual(trustedOnly(), { trusted: [], skipped: 0 });
+});
+
+test('issueAssociations／withAssociation：REST 的 Issue 清單排除 PR，查不到身分時視為非可信', () => {
+  const rest = [
+    { number: 1, author_association: 'OWNER' },
+    { number: 2, author_association: 'NONE' },
+    { number: 3, author_association: 'OWNER', pull_request: { url: 'x' } },
+    { number: 4 },
+  ];
+  const m = issueAssociations(rest);
+  assert.deepEqual([...m.entries()], [[1, 'OWNER'], [2, 'NONE'], [4, null]]);
+  const merged = withAssociation([{ number: 1 }, { number: 3 }, { number: 5 }], m);
+  assert.deepEqual(merged.map((i) => i.authorAssociation), ['OWNER', null, null]);
+  assert.deepEqual(merged.map((i) => isTrusted(i)), [true, false, false]);
 });
 
 test('orderWork：同一張 Issue 只出現一次（保留較優先的）', () => {
@@ -372,10 +386,20 @@ test('權限比對：agent 正常工作需要的指令都允許', () => {
     'git push origin feat/15-runner', 'git push origin HEAD:feat/15-runner',
     'git push --force-with-lease origin HEAD:feat/15-runner', 'git switch -c runner/feat/15-x origin/feat/15-x',
     'git fetch origin feat/15-x', 'git rebase origin/main', 'gh pr create --title t --body-file b.md',
-    'gh issue edit 3 --remove-label blocked', 'gh api repos/o/r/issues/3/comments', 'npm test --prefix tools/workflow',
+    'gh issue edit 3 --remove-label blocked', 'gh api repos/o/r/pulls?state=open', 'npm test --prefix tools/workflow',
     'node tools/workflow/read-trusted.mjs --issue 3', 'node tools/workflow/read-trusted.mjs --pr 4',
   ]) {
     assert.equal(allowed(cmd), true, `應允許：${cmd}`);
+  }
+});
+
+test('權限比對：Issue／PR 的留言與審查只能經 read-trusted.mjs 讀取（dev-workflow-template#65）', () => {
+  for (const cmd of [
+    'gh issue view 3', 'gh issue view 3 --json labels', 'gh pr view 4 --json comments,reviews',
+    'gh api repos/o/r/issues/3/comments', 'gh api --paginate repos/o/r/pulls/4/comments?per_page=100',
+    'gh api repos/o/r/pulls/4/reviews',
+  ]) {
+    assert.equal(allowed(cmd), false, `不應允許：${cmd}`);
   }
 });
 

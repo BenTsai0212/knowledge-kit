@@ -1,6 +1,6 @@
 # 個人開發 Workflow 憲法
 
-- 版本：v0.14（2026-11-04）；各版內容見文末「版本紀錄」
+- 版本：v0.15（2026-11-07）；各版內容見文末「版本紀錄」
 - 正本：建立本專案的 template repo 中的同名檔案（`docs/workflow/constitution.md`）
 - 從 template 建立的專案保留一份副本。副本只能從 template 升級，不在專案內直接修改；值得改的規則回到 template 修憲（第 10 節）。
 
@@ -356,3 +356,4 @@ template 不假設技術棧。專案的技術棧在初始化對話中決定（C 
 | v0.12 | 2026-11-04 | 規則文件瘦身：三級確認與合併授權移到 `github-writes.md`、核心硬規則只留 `AGENTS.md`、可信身分與 `plan-first` 適用情況各留一份正本（PR A）；MCP 不能用時的備援（`/pm-apply` 操作清單、瀏覽器讀寫）改為選用模組「備援」（PR B）；`AGENTS.md` 精簡到 60 行內、`tools/workflow/README.md`、決策 agent 本機檔案的寫法、階段改以 Epic＋Phase 欄位表示（不用 Milestone）、命令表移除 `/harness-retro`、三級確認改為已驗證（PR C） | dev-workflow-template#55 |
 | v0.13 | 2026-11-04 | 新增 harness 指標工具 `tools/workflow/harness-retro.mjs` 與 `/harness-retro`；命令表加回 `/harness-retro`，第 10 節的「依據」改為連結 | dev-workflow-template#5 |
 | v0.14 | 2026-11-04 | 新增選用模組「目標模式」（試驗中）：人核准目標卡後，決策 agent 定時喚醒，在範圍內審查 PR、送修正要求、派子 Issue；範圍內「建立子 Issue＋`agent:ready`」與「修正要求」由 ② 降為 ①；合併、`## 決定`、移除 `plan-first` 不變 | dev-workflow-template#62 |
+| v0.15 | 2026-11-07 | agent 只讀可信身分的內容：新增 `tools/workflow/read-trusted.mjs`，agent 讀 Issue 與 PR 不再用 gh 的 `view` 子命令；作者不可信的「外部 Issue」不直接派工，由決策中心另開自己撰寫的 Issue；runner 不挑作者不可信的 Issue，允許清單移除 `gh … view`、禁止以 `gh api` 讀留言與審查 | dev-workflow-template#65 |

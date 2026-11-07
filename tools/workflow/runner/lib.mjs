@@ -34,6 +34,18 @@ export function trustedOnly(items = []) {
 }
 
 /**
+ * REST 的 Issue 清單（repos/<repo>/issues）→ Map<編號, authorAssociation>。
+ * gh issue list 沒有 Issue 本身的身分，所以由 REST 取得；REST 的清單含 PR（帶 pull_request），先排除。
+ */
+export function issueAssociations(restIssues = []) {
+  return new Map(restIssues.filter((i) => !i.pull_request).map((i) => [i.number, i.author_association ?? null]));
+}
+
+/** 把 issueAssociations() 的身分併入 gh issue list 的結果；查不到時是 null（視為非可信）。 */
+export const withAssociation = (issues = [], associations) =>
+  issues.map((i) => ({ ...i, authorAssociation: associations.get(i.number) ?? null }));
+
+/**
  * agent 停下之後是否已有人的「## 決定」：最後一則決定晚於最後一則停止回報或計畫。
  * plan-first 的計畫（## 計畫）也是一種停止。
  * 決定只採信 authorAssociation 為 OWNER／MEMBER／COLLABORATOR 的留言（缺少時不算）；停止回報不限制。
