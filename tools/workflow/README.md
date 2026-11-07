@@ -22,6 +22,7 @@
 | `check-pr-body.mjs` | PR 描述要連到 Issue（CI） |
 | `check-post-body.mjs` | agent 與決策中心貼出 PR 描述與留言前的檢查 |
 | `read-trusted.mjs` | 讀取 Issue 與 PR，只輸出可信身分的內容 |
+| `harness-retro.mjs` | harness 指標（只讀），解讀用 `/harness-retro` |
 | `hooks/confirm-main.mjs` | 合併與 push 到 main 前的確認 hook（`.claude/settings.json` 的 `PreToolUse` 註冊） |
 | `runner/` | 自動化模組的 agent runner，見 [runner/README.md](runner/README.md) |
 
@@ -71,3 +72,26 @@ node tools/workflow/read-trusted.mjs --pr N
 - 以 `gh api` 讀取 Issue 或 PR，只輸出可信身分的本文、留言、審查與 review comment；非可信身分的只輸出筆數。可信身分的定義見 `docs/workflow/agent-workflow.md` 第 0 步。
 - Issue 或 PR 的作者不是可信身分時，不輸出標題與本文（`trusted: false`）。
 - 規則與 runner 共用（`runner/lib.mjs` 的 `trustedOnly()`）。
+
+### harness-retro.mjs
+
+```bash
+node tools/workflow/harness-retro.mjs --since <YYYY-MM-DD> [--until <YYYY-MM-DD>] [--repo <owner/name>]
+```
+
+- 計算期間內的 harness 指標，輸出 Markdown 表格；每項指標附算法與限制。指標的用途見憲法第 10 節，解讀用 `/harness-retro`（`.claude/commands/harness-retro.md`）。
+- `--until` 預設是今天；期間以 UTC 計，包含 `--until` 當天。未指定 `--repo` 時用目前目錄的 origin。
+- 只以 `gh api` 讀取，不寫入 GitHub；遇到速率限制時等 60 秒重試，3 次仍失敗就說明原因並以 1 結束。參數錯誤時以 2 結束。
+- 指標：
+  - PR 數（已合併、開啟中、關閉未合併）。
+  - 曾被要求修正的 PR 與輪數（Issue events 的 `labeled: changes-requested`）。
+  - agent 停止的次數與原因。
+  - CI 首次通過率。
+  - 人的介入（`## 決定`、`## 修正要求`、`## 合併授權` 留言）。
+  - 等待人的工作。
+  - 規則文件（`AGENTS.md`、`docs/workflow/`）的修改次數。
+- 限制：
+  - agent 與人共用帳號時，只能依留言標題判斷誰寫的。
+  - 「等待人的工作」是執行當下的狀態，不是期間結束時。
+  - CI 的 run 依分支名稱與 PR 開啟期間對應到 PR；GitHub 對篩選後的 workflow run 清單最多回傳 1000 筆。
+- 計算邏輯是純函式，測試（`harness-retro.test.mjs`）只用假資料，不連網。
