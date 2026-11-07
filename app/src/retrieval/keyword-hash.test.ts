@@ -23,9 +23,10 @@ describe("雜湊向量", () => {
     expect(score("", "年假")).toBe(0);
   });
 
-  it("provider 以批次轉換，結果與逐筆相同", async () => {
+  it("provider 以批次轉換，結果與逐筆相同；問題與段落的轉法相同", async () => {
     const texts = ["年假", "annual leave"];
-    expect(await keywordHashProvider.embed(texts)).toEqual(texts.map(embedText));
+    expect(await keywordHashProvider.embed(texts, "query")).toEqual(texts.map(embedText));
+    expect(await keywordHashProvider.embed(texts, "passage")).toEqual(texts.map(embedText));
     expect(keywordHashProvider.id).toBe("keyword-hash");
   });
 });

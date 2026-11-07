@@ -45,6 +45,7 @@ export function cosine(a: SparseVector, b: SparseVector): number {
 
 export const keywordHashProvider: VectorProvider<SparseVector> = {
   id: "keyword-hash",
+  // 問題與段落轉法相同，不使用 kind
   embed: async (texts) => texts.map(embedText),
   similarity: cosine,
 };

@@ -52,11 +52,15 @@ interface PassageRow {
   content: string;
 }
 
+// provider 可以是還在準備的 Promise（例如要先下載模型）；建立 retriever 不等待，第一次檢索時才等它準備好
 export function createRetriever(
   db: Database,
-  provider: VectorProvider,
+  provider: VectorProvider | Promise<VectorProvider>,
   options: Pick<RetrievalConfig, "topK" | "minScore">,
 ): Retriever {
+  const ready = Promise.resolve(provider);
+  // 準備失敗時由 retrieve() 拋出；在那之前不當成未處理的 rejection
+  ready.catch(() => {});
   // 段落 id → 向量。段落內容在執行期間不變；之後會修改段落內容時，需在修改時清掉該段的快取
   const cache = new Map<string, unknown>();
 
@@ -89,9 +93,14 @@ export function createRetriever(
       }));
       if (rows.length === 0) return [];
 
+      const vp = await ready;
+      // 問題與段落分開轉換（語意模型對兩者的處理不同）；段落只算還沒在快取中的
+      const [questionVector] = await vp.embed([question], "query");
       const missing = rows.filter((r) => !cache.has(r.id));
-      const [questionVector, ...vectors] = await provider.embed([question, ...missing.map((r) => r.content)]);
-      missing.forEach((r, i) => cache.set(r.id, vectors[i]));
+      if (missing.length > 0) {
+        const vectors = await vp.embed(missing.map((r) => r.content), "passage");
+        missing.forEach((r, i) => cache.set(r.id, vectors[i]));
+      }
 
       const byOld = new Map(supersede.map((r) => [r.old_id, r]));
       const supersededBy = (id: string): SupersedingPassage | null => {
@@ -116,7 +125,7 @@ export function createRetriever(
           documentDate: r.document_date,
           language: r.language,
           content: r.content,
-          score: provider.similarity(questionVector, cache.get(r.id)),
+          score: vp.similarity(questionVector, cache.get(r.id)),
         }))
         .filter((p) => p.score >= minScore)
         .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id))

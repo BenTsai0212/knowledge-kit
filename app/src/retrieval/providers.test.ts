@@ -39,13 +39,29 @@ describe("VectorProvider", () => {
     expect(appSources.filter(([, text]) => selecting(text)).map(([path]) => path)).toEqual([SELECTOR]);
   });
 
-  it("PROVIDERS 的鍵與 Schema 的列舉一致，且與各實作的 id 相同", () => {
+  it("PROVIDERS 的鍵與 Schema 的列舉一致，且與各實作的 id 相同", async () => {
     expect(Object.keys(PROVIDERS).sort()).toEqual([...clientSchema.properties.retrieval.properties.provider.enum].sort());
-    for (const [key, provider] of Object.entries(PROVIDERS)) expect(provider.id).toBe(key);
+    for (const [key, factory] of Object.entries(PROVIDERS)) expect((await factory()).id).toBe(key);
   });
 
-  it("依 client.json 建立實作，未登記的值拋錯", () => {
-    expect(createProvider(clientConfig.client.retrieval).id).toBe("keyword-hash");
+  it("每個實作：一筆文字一個向量；相似度在 0～1（含無關與不同語言的文字）", async () => {
+    const texts = ["到職滿一年有幾天年假？", "Annual leave is 7 days after one year.", "青翼桌預計第三季上市。", "xyzzy", ""];
+    for (const factory of Object.values(PROVIDERS)) {
+      const provider = await factory();
+      const queries = await provider.embed(texts, "query");
+      const passages = await provider.embed(texts, "passage");
+      expect([queries.length, passages.length]).toEqual([texts.length, texts.length]);
+      for (const a of queries)
+        for (const b of passages) {
+          const score = provider.similarity(a, b);
+          expect(score).toBeGreaterThanOrEqual(0);
+          expect(score).toBeLessThanOrEqual(1);
+        }
+    }
+  });
+
+  it("依 client.json 建立實作，未登記的值在呼叫時就拋錯", async () => {
+    expect((await createProvider(clientConfig.client.retrieval)).id).toBe("keyword-hash");
     expect(() => createProvider({ provider: "pgvector" as never })).toThrow("未登記的 VectorProvider：pgvector");
     expect(() => createProvider({ provider: "toString" as never })).toThrow("未登記的 VectorProvider");
   });
