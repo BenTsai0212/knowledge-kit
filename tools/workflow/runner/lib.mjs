@@ -187,6 +187,7 @@ export function shouldContinue({ now, config, processed, paused, nowMode, lastRe
   const stop = (reason) => ({ go: false, reason });
   if (lastResult === 'runner-error') return stop('runner 自身發生錯誤');
   if (lastResult === 'aborted') return stop('claude 非正常結束');
+  if (lastResult === 'quota') return stop('訂閱額度用完，全機冷卻中');
   if (nowMode) return stop('--now 只處理一件');
   const max = config.maxPerRun ?? DEFAULT_MAX_PER_RUN;
   if (processed >= max) return stop(`本次已處理 ${processed} 件，達到 maxPerRun（${max}）`);
@@ -276,6 +277,82 @@ export function globalSlots(config) {
   if (config === null || config === undefined || config.slots === undefined) return { slots: DEFAULT_SLOTS, error: null };
   if (!Number.isInteger(config.slots) || config.slots < 1) return { slots: null, error: 'slots 必須是 1 以上的整數' };
   return { slots: config.slots, error: null };
+}
+
+/**
+ * claude 的 stream-json 輸出（逐段收到的資料）→ 逐行解析。只處理收到換行的完整行；
+ * 最後一段沒有換行的資料在 end()（stdout 結束）時處理一次。半行不會被當成一整行解析（dev-workflow-template#70 修正要求）。
+ * push()／end() 回傳新出現的計費方式檢查結果（第一個 init 行）：
+ *   { apiKeySource }（可解析，'none' 表示使用訂閱帳號）或 { apiKeySource: null, error: true }（無法解析）。
+ * state 保留額度判斷要用的最後一個 rate_limit_event 與 result 的 is_error（detectQuotaExhausted）。
+ */
+export function streamTracker() {
+  let pending = '';
+  const state = { checkedAuth: false, lastRateLimit: null, resultIsError: false };
+  const handle = (line, found) => {
+    if (line.includes('"type":"rate_limit_event"')) {
+      try { state.lastRateLimit = JSON.parse(line); } catch {}
+    } else if (line.includes('"type":"result"')) {
+      try { state.resultIsError = JSON.parse(line).is_error === true; } catch {}
+    } else if (!state.checkedAuth && line.includes('"subtype":"init"')) {
+      state.checkedAuth = true;
+      try {
+        found.push({ apiKeySource: JSON.parse(line).apiKeySource ?? null });
+      } catch {
+        found.push({ apiKeySource: null, error: true });
+      }
+    }
+  };
+  return {
+    state,
+    push(chunk) {
+      const found = [];
+      const lines = (pending + chunk).split('\n');
+      pending = lines.pop();
+      for (const line of lines) handle(line, found);
+      return found;
+    },
+    end() {
+      const found = [];
+      if (pending) handle(pending, found);
+      pending = '';
+      return found;
+    },
+  };
+}
+
+export const QUOTA_STATUSES = ['rejected', 'rate_limited'];
+const QUOTA_MAX_MS = 7 * 24 * 3600e3;
+
+/**
+ * claude 是否因訂閱額度用完而結束（嚴格條件，任一不成立就回傳 null，維持現行的異常結束處理）：
+ * runner 沒有主動終止（逾時、計費保護）；claude 非 0 結束或 result 的 is_error 為 true；
+ * 最後一個 rate_limit_event 的 status 是 rejected／rate_limited；resetsAt 在未來 7 天內（大於 1e12 時當作毫秒）。
+ * stream-json 的 rate_limit_event 沒有官方規格，status 的值曾經改變，所以只認這幾個值（dev-workflow-template#66 決定）。
+ * 成立時回傳 { until: Date, status, rateLimitType }。
+ */
+export function detectQuotaExhausted({ code, killedFor, resultIsError, lastRateLimit, now }) {
+  if (killedFor) return null;
+  if (code === 0 && !resultIsError) return null;
+  const info = lastRateLimit?.rate_limit_info;
+  if (!info || !QUOTA_STATUSES.includes(info.status)) return null;
+  const raw = Number(info.resetsAt);
+  if (!Number.isFinite(raw) || raw <= 0) return null;
+  const until = new Date(raw > 1e12 ? raw : raw * 1e3);
+  const ahead = until.getTime() - now.getTime();
+  if (ahead <= 0 || ahead > QUOTA_MAX_MS) return null;
+  return { until, status: info.status, rateLimitType: info.rateLimitType ?? null };
+}
+
+/** 全機冷卻檔（~/.agent-runner/cooldown.json）的內容是否仍有效；內容錯誤或時間已過時回傳 null。 */
+export function activeCooldown(content, now) {
+  try {
+    const c = JSON.parse(content);
+    const until = new Date(c.until);
+    return until.getTime() > now.getTime() ? { ...c, until } : null;
+  } catch {
+    return null;
+  }
 }
 
 /** 檢查設定檔；回傳所有問題（缺少的欄位一次列出），沒有問題時為空陣列。 */
