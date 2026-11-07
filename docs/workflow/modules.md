@@ -55,9 +55,9 @@ runner 依 GitHub 標籤接手工作、啟動 coding agent 執行 `/work-on-issu
 | --- | --- |
 | 啟用條件 | 全部滿足才啟用：CI 有實際檢查（不是佔位步驟）；手動執行 `/work-on-issue` 至少 3 次；停止流程（`blocked` → `## 決定`）與修正模式（`changes-requested`）各實測一次 |
 | 標籤 | `agent:ready`：可以交給 agent，由人加，或決策 agent 經人確認後加。`agent:working`：runner 處理中，由 runner 加、由 runner 移除 |
-| 規則 | runner 只負責觸發與記錄，不做判斷。接工作順序：自己 PR 上的 `changes-requested` → 已有 `## 決定`（只採信可信身分寫的）的 `blocked` → `agent:ready`（最舊的先做）。一次只做一件，在專用的 git worktree 從 `origin/main` 開始；開始時把 `agent:ready` 換成 `agent:working`，結束時移除 `agent:working`；claude 執行失敗或逾時時 runner 保存進度、自己留 `## agent 停止` 並加 `blocked`；runner 準備階段的錯誤只發本機通知；同一錯誤連續 3 次且與某張 Issue 有關時，在該 Issue 留 `## runner 提醒`（不改標籤、不影響 `## 決定`） |
+| 規則 | runner 只負責觸發與記錄，不做判斷。接工作順序：自己 PR 上的 `changes-requested` → 已有 `## 決定`（只採信可信身分寫的）的 `blocked` → `agent:ready`（最舊的先做）。同一專案一次只做一件（專案鎖），整台電腦同時執行的件數以全機名額限制（預設 2，公平輪流、做完一件就交還），在專用的 git worktree 從 `origin/main` 開始；開始時把 `agent:ready` 換成 `agent:working`，結束時移除 `agent:working`；claude 執行失敗或逾時時 runner 保存進度、自己留 `## agent 停止` 並加 `blocked`；runner 準備階段的錯誤只發本機通知；同一錯誤連續 3 次且與某張 Issue 有關時，在該 Issue 留 `## runner 提醒`（不改標籤、不影響 `## 決定`） |
 | 看板 | 標籤是主要依據。runner 開始時設 In progress、結束時設 Review；決策 agent 開工時核對看板與實際狀況並修正（憲法第 5 節） |
-| 防護 | 規則由本模組規定，數值由各專案設定：同時只跑一個（lock 檔）、`PAUSE` 檔緊急暫停；執行時段、單件時間上限，`agent:working` 長時間沒有 runner 時留言回報；sandbox 開啟，sandbox 不可用時不執行，網路只允許必要網域；禁止指令清單（合併或關閉 PR、關閉或刪除 Issue、repo／secret／release 操作、push main、強制推送、`git reset --hard`、`rm -rf`、`sudo`、`curl`、`wget`、DELETE API）；計費保護（環境中有 API key 時不執行，啟動後 `apiKeySource` 不是 `none` 就立即終止）；log 即時寫入，結尾記錄輪數、時間、token 用量 |
+| 防護 | 規則由本模組規定，數值由各專案設定：全機名額與專案鎖（見 `tools/workflow/runner/README.md`「全機名額」，附來源與可刪條件）、`PAUSE` 檔緊急暫停；執行時段、單件時間上限，`agent:working` 長時間沒有 runner 時留言回報；sandbox 開啟，sandbox 不可用時不執行，網路只允許必要網域；禁止指令清單（合併或關閉 PR、關閉或刪除 Issue、repo／secret／release 操作、push main、強制推送、`git reset --hard`、`rm -rf`、`sudo`、`curl`、`wget`、DELETE API）；計費保護（環境中有 API key 時不執行，啟動後 `apiKeySource` 不是 `none` 就立即終止）；log 即時寫入，結尾記錄輪數、時間、token 用量 |
 | runner 放置位置 | 個人專案（未啟用協作）：repo 的 `tools/workflow/runner/`，隨 template 複製、升級走 PR；個人設定（repo、帳號、worktree 路徑、看板編號）放不進版本控制的 `config.local.json`，log、lock、`PAUSE` 放不進版本控制的資料夾。多人協作（啟用協作）：放在各自的本機、repo 之外（見「協作」） |
 | 轉「已驗證」 | 條件皆已完成（是否改為「已驗證」由人決定）：✅ 實測合併確認 hook 在 `claude -p`（無人值守）下回傳 `ask` 時的行為（等同拒絕），並寫進 runner 說明（dev-workflow-template#24）；✅ runner 在第二個專案實際跑過（dev-workflow-template#20） |
 

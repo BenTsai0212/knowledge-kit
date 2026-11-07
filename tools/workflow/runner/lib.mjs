@@ -253,6 +253,31 @@ const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isStrArray = (v) => Array.isArray(v) && v.every((s) => typeof s === 'string');
 const isPosNum = (v) => typeof v === 'number' && Number.isFinite(v) && v > 0;
 
+export const DEFAULT_SLOTS = 2;
+export const DEFAULT_SLOT_WAIT_MINUTES = 30;
+export const SLOT_POLL_MS = 30e3;
+
+/**
+ * 全機名額的輪替（公平輪流）：號碼牌依名稱（取號時間）排序，只有排在前 free 位的可以取得名額。
+ * used：已被占用的名額編號；queue：所有有效的號碼牌名稱；me：自己的號碼牌。
+ * 做完一件就交還名額、重新取號，所以會排到其他等候者之後。
+ */
+export function slotTurn({ slots, used, queue, me }) {
+  // 名額數調小時，編號超出範圍的名額仍占用容量
+  const freeIndexes = Array.from({ length: slots }, (_, i) => i).filter((i) => !used.has(i))
+    .slice(0, Math.max(0, slots - used.size));
+  const position = [...queue].sort().indexOf(me);
+  const canTake = position >= 0 && position < freeIndexes.length;
+  return { canTake, position, free: freeIndexes.length, index: canTake ? freeIndexes[0] : null };
+}
+
+/** 全機設定（~/.agent-runner/config.json）：目前只有 slots；不存在時用預設值。回傳 { slots, error }。 */
+export function globalSlots(config) {
+  if (config === null || config === undefined || config.slots === undefined) return { slots: DEFAULT_SLOTS, error: null };
+  if (!Number.isInteger(config.slots) || config.slots < 1) return { slots: null, error: 'slots 必須是 1 以上的整數' };
+  return { slots: config.slots, error: null };
+}
+
 /** 檢查設定檔；回傳所有問題（缺少的欄位一次列出），沒有問題時為空陣列。 */
 export function validateConfig(config) {
   if (!isObj(config)) return ['設定檔必須是 JSON 物件'];
@@ -277,6 +302,7 @@ export function validateConfig(config) {
   if (config.maxPerRun !== undefined && !(Number.isInteger(config.maxPerRun) && config.maxPerRun >= 1)) {
     errors.push('maxPerRun 必須是 1 以上的整數');
   }
+  if (config.slotWaitMinutes !== undefined && !isPosNum(config.slotWaitMinutes)) errors.push('slotWaitMinutes 必須是正數');
   if (config.lastStart !== undefined) {
     const t = config.lastStart;
     const ok = Array.isArray(t) && t.length === 2 && Number.isInteger(t[0]) && Number.isInteger(t[1]) &&
