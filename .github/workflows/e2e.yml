@@ -11,6 +11,10 @@ on:
 permissions:
   contents: read
 
+# @huggingface/transformers 帶進的 onnxruntime-node 在 linux/x64 安裝時會從 NuGet 下載 CUDA；app 用不到它，略過（#163）
+env:
+  ONNXRUNTIME_NODE_INSTALL: skip
+
 jobs:
   list:
     runs-on: ubuntu-latest
