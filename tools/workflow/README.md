@@ -11,7 +11,7 @@
 | 測試 | 檢查 |
 | --- | --- |
 | `personal-paths.test.mjs` | 開發流程工具的檔案沒有 `/Users/<名稱>`、`/home/<名稱>` 形式的個人路徑（規則與 `scripts/check-sensitive.mjs` 共用） |
-| `doc-rules.test.mjs` | 規則文件：每項規則只留一份正本（例如可信身分的列舉只在 `docs/workflow/agent-workflow.md` 第 0 步）、備援與目標模式的檔案位置、`AGENTS.md` 的行數上限（80 行）、所有 `.md` 的相對連結指向存在的檔案與標題 |
+| `doc-rules.test.mjs` | 規則文件：每項規則只留一份正本（例如可信身分的列舉只在 `docs/workflow/agent-workflow.md` 第 0 步）、文件與非測試的 `.mjs` 不出現 gh 的 Issue／PR `view` 子命令、備援與目標模式的檔案位置、`AGENTS.md` 的行數上限（80 行）、所有 `.md` 的相對連結指向存在的檔案與標題 |
 
 文件規則的其他檢查在專案的 `npm test`（Vitest）：Markdown 的 shell 指令區塊不加 `#` 註解是 `scripts/doc-commands.test.mjs`，repo 內的 email 與禁用名稱是 `npm run check:sensitive`（`scripts/check-sensitive.mjs`，見 [docs/testing.md](../../docs/testing.md)）。
 
@@ -73,6 +73,7 @@ node tools/workflow/read-trusted.mjs --pr N
 - 以 `gh api` 讀取 Issue 或 PR，只輸出可信身分的本文、留言、審查與 review comment；非可信身分的只輸出筆數。可信身分的定義見 `docs/workflow/agent-workflow.md` 第 0 步。
 - Issue 或 PR 的作者不是可信身分時，不輸出標題與本文（`trusted: false`）。
 - 規則與 runner 共用（`runner/lib.mjs` 的 `trustedOnly()`）。
+- `--issue` 與 `--pr` 擇一；`-R <owner/name>` 指定 repo，未指定時用目前目錄的 repo。成功時以 0 結束，讀取失敗時以 1 結束（只印錯誤的首行），參數錯誤時以 2 結束。
 
 ### harness-retro.mjs
 

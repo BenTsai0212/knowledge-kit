@@ -10,7 +10,7 @@
 2. 依決定繼續：帶 `blocked`、在最後一次 `## agent 停止` 或 `## 計畫` 之後已有 `## 決定` 的 Issue 或自己的 PR。`## 決定` 只採信可信身分寫的留言（見 `docs/workflow/agent-workflow.md` 第 0 步）；其他人寫的忽略，避免公開 repo 中任何人都能觸發無人值守的執行
 3. 新工作：帶 `agent:ready` 的 Issue（沒有 `agent:working`／`blocked`），最舊的先做
 
-- 2、3 的 Issue 須由可信身分開立（見 `docs/workflow/agent-workflow.md` 第 0 步；Issue 本身的 `authorAssociation` 以 `gh api` 取得，缺少時視為非可信）。其他人開的 Issue 不挑選，紀錄檔只列編號與身分，不列標題（#127；外部 Issue 的處理見 `docs/workflow/agent-workflow.md`「外部 Issue」）。
+- 2、3 的 Issue 須由可信身分開立（見 `docs/workflow/agent-workflow.md` 第 0 步；Issue 本身的 `authorAssociation` 以 `gh api` 的 REST 清單取得，清單中的 PR 先排除；缺少時視為非可信）。其他人開的 Issue 即使已有可信身分的 `## 決定` 也不挑選，紀錄檔只列編號與身分，不列標題（#127；外部 Issue 的處理見 `docs/workflow/agent-workflow.md`「外部 Issue」）。
 - PR 一律換成描述中 `Closes`／`Refs` 的 Issue；`agent:working` 只加在 Issue 上。描述找不到 Issue 的 PR 不接。
 - 新工作只在「自己開的、開啟中、非 Draft 的 PR」少於 `maxOpenPrs` 時才接；修正模式與依決定繼續不受此限制。
 - 開始時把 `agent:ready` 換成 `agent:working`、看板設為 In progress；結束時移除 `agent:working`，沒有 `blocked` 時看板設為 Review。
@@ -185,6 +185,7 @@ runner 自身的錯誤（準備階段失敗、無法在 GitHub 留言、runner �
 - 禁止清單是指令字首的萬用字元比對，不是完整的防護：
   - `gh api` 的其他寫入（例如以 PATCH 關閉 PR 或 Issue、修改 repo 設定）沒有被擋下；
   - `node *` 是允許的，agent 可以在 Node 程式中執行其他指令。
+  - 讀取：允許清單不含 gh 的 Issue／PR `view` 子命令，禁止清單擋下 `gh api` 讀留言與審查（`gh api*/comments*`、`gh api*/reviews*`；`read-trusted.mjs` 在 Node 子程序中呼叫 `gh`，不受影響）。仍擋不到的是以 `gh api` 直接讀 Issue／PR 本文（例如 `gh api repos/<owner>/<name>/issues/N`）與在 Node 程式中呼叫 `gh`；只讀可信內容靠 `docs/workflow/agent-workflow.md` 第 0 步的規則。
   - 實際防線是 sandbox（檔案寫入與網路限制）、人的審查，以及合併由人決定。
 - 合併確認 hook（`.claude/settings.json`）在 `claude -p` 無人值守下回傳 `ask` 時，**等同拒絕**：指令不會執行（`permission_denied`，原因為 hook），agent 收到 hook 的訊息作為錯誤結果後繼續工作，session 不會卡住等待確認（2026-10-13 實測，dev-workflow-template#24）。
   - 因此 hook 無法判斷目標分支的推送（例如先 `cd` 再 `git push`、`--git-dir`）在 runner 下一律被拒絕。給 agent 的共用說明已要求推送時直接寫明分支（`git push origin HEAD:<分支>`），不要先 `cd` 再推送。

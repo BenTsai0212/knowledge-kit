@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseArgs, readIssue, readPr } from './read-trusted.mjs';
+import { pagedApi, parseArgs, readIssue, readPr } from './read-trusted.mjs';
 
 const SCRIPT = join(dirname(fileURLToPath(import.meta.url)), 'read-trusted.mjs');
 
@@ -102,16 +102,42 @@ test('readPr：外部開的 PR 不輸出標題與描述', () => {
   noLeak(view);
 });
 
+test('pagedApi：清單類以 --paginate --slurp 每頁 100 筆，各頁合併；單筆不分頁', () => {
+  const calls = [];
+  const pages = [Array.from({ length: 100 }, (_, i) => rest(`p1-${i}`, 'OWNER')), [rest('p2', 'NONE'), rest('p2b', 'MEMBER')]];
+  const run = (...a) => {
+    calls.push(a);
+    return JSON.stringify(a.includes('--paginate') ? pages : issueHead('OWNER'));
+  };
+  const view = readIssue(7, pagedApi(run, 'o/r'));
+  assert.deepEqual(calls, [['repos/o/r/issues/7'], ['--paginate', '--slurp', 'repos/o/r/issues/7/comments?per_page=100']]);
+  assert.equal(view.comments.length, 101);
+  assert.equal(view.comments.at(-1).body, 'p2b');
+  assert.equal(view.skipped.comments, 1);
+});
+
 test('parseArgs：--issue／--pr 擇一，-R 指定 repo', () => {
   assert.deepEqual(parseArgs(['--issue', '12']), { repo: '{owner}/{repo}', kind: 'issue', number: 12 });
   assert.deepEqual(parseArgs(['--pr', '3', '-R', 'o/r']), { repo: 'o/r', kind: 'pr', number: 3 });
-  assert.ok(parseArgs([]).error);
-  assert.ok(parseArgs(['--issue', 'x']).error);
-  assert.ok(parseArgs(['--comments']).error);
+  for (const bad of [[], ['--issue'], ['--issue', 'x'], ['--issue', '0'], ['--issue', '1', '--pr', '2'], ['--comments'], ['--pr', '1', '-R']]) {
+    assert.ok(parseArgs(bad).error, bad.join(' '));
+  }
+  assert.match(parseArgs(['--issue', '1', '--pr', '2']).error, /擇一/);
 });
 
-test('CLI：參數錯誤時以 1 結束，不呼叫 gh', () => {
-  const r = spawnSync(process.execPath, [SCRIPT], { encoding: 'utf8', env: { ...process.env, PATH: '' } });
+test('CLI：參數錯誤時以 2 結束，不呼叫 gh', () => {
+  for (const argv of [[], ['--issue', 'x'], ['--issue', '1', '--pr', '2']]) {
+    const r = spawnSync(process.execPath, [SCRIPT, ...argv], { encoding: 'utf8', env: { ...process.env, PATH: '' } });
+    assert.equal(r.status, 2, argv.join(' '));
+    assert.ok(r.stderr.trim(), argv.join(' '));
+  }
+});
+
+test('CLI：讀取失敗時只印首行並以 1 結束，不印 stack', () => {
+  // PATH 清空：找不到 gh，execFileSync 丟出錯誤
+  const r = spawnSync(process.execPath, [SCRIPT, '--issue', '1', '-R', 'o/r'], { encoding: 'utf8', env: { ...process.env, PATH: '' } });
   assert.equal(r.status, 1);
-  assert.match(r.stderr, /用法/);
+  assert.match(r.stderr, /^讀取失敗：/);
+  assert.equal(r.stderr.trim().split('\n').length, 1);
+  assert.equal(r.stdout, '');
 });

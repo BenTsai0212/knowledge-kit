@@ -122,3 +122,17 @@ test('文件中的相對連結都指向存在的檔案與標題', () => {
   assert.deepEqual(broken, [], `\n${broken.join('\n')}`);
   assert.ok(mdFiles.length > 10 && relative(ROOT, ROOT) === '');
 });
+
+// agent 只讀可信身分的內容（#127、dev-workflow-template#65）：文件與程式不以 gh 的 view 子命令讀 Issue／PR，改用 read-trusted.mjs；
+// runner 的允許清單也不含這兩個指令，禁止清單擋下以 gh api 讀留言與審查。測試檔中的範例字串除外。
+test('不以 gh 的 issue／pr view 讀取：.md 與非測試的 .mjs 都不出現，runner 設定一致', () => {
+  const files = execFileSync('git', ['-C', ROOT, 'ls-files', '-z', '*.md', '*.mjs'], { encoding: 'utf8' })
+    .split('\0').filter(Boolean).filter((f) => !f.endsWith('.test.mjs') && existsSync(join(ROOT, f)));
+  const pattern = /\bgh\s+(issue|pr)\s+view\b/;
+  const hits = files.filter((f) => pattern.test(read(f)));
+  assert.deepEqual(hits, [], `改用 node tools/workflow/read-trusted.mjs：${hits.join('、')}`);
+  assert.match(read('docs/workflow/agent-workflow.md'), /node tools\/workflow\/read-trusted\.mjs --issue N/);
+  const { permissions } = JSON.parse(read('tools/workflow/runner/runner-settings.base.json'));
+  assert.deepEqual(permissions.allow.filter((p) => pattern.test(p.replace(/^Bash\(|\*?\)$/g, ''))), []);
+  for (const p of ['Bash(gh api*/comments*)', 'Bash(gh api*/reviews*)']) assert.ok(permissions.deny.includes(p), p);
+});

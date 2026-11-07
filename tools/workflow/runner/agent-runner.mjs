@@ -15,8 +15,8 @@ import {
 } from './config.mjs';
 import {
   advanceAwake, agentNote, buildSettings, canStartNew, countOpenPrs, GH_RETRY_MS, inHours, isRunTmpDir, isTransientGhError,
-  lockIsActive, needsWipSave, orderWork, pickWork, recordRunnerError, remainingLabels, runnerReminder, runTmpDir,
-  runTmpEnv, shouldContinue, staleWorking, stopReportBody, TICK_MS, validateConfig, wipBranchName,
+  issueAssociations, lockIsActive, needsWipSave, orderWork, pickWork, recordRunnerError, remainingLabels, runnerReminder,
+  runTmpDir, runTmpEnv, shouldContinue, staleWorking, stopReportBody, TICK_MS, validateConfig, wipBranchName, withAssociation,
 } from './lib.mjs';
 import { notify } from './platform.mjs';
 
@@ -360,22 +360,18 @@ async function main() {
   /** 重新查詢 GitHub 挑下一件（標籤可能已改變），排除本次已處理的 Issue；沒有可做的工作時回傳 null。 */
   function nextWork() {
     const prFields = 'number,title,body,headRefName,labels,comments,author';
-    // gh issue list 沒有 Issue 本身的 authorAssociation，改由 REST API 取得（#127）
-    const associations = new Map(
-      gh('api', '--paginate', `repos/${REPO}/issues?state=open&per_page=100`,
-        '--jq', '.[] | select(.pull_request | not) | "\\(.number) \\(.author_association)"')
-        .split('\n').filter(Boolean).map((line) => {
-          const [n, a] = line.split(' ');
-          return [Number(n), a];
-        }));
-    const withAssociation = (issues) => issues.map((i) => ({ ...i, authorAssociation: associations.get(i.number) }));
+    // gh issue list 沒有 Issue 本身的 authorAssociation，以 REST 取得（#127；清單含 PR，由 issueAssociations 排除）
+    const associations = issueAssociations(
+      ghJson('api', '--paginate', '--slurp', `repos/${REPO}/issues?state=open&per_page=100`).flat());
     const { candidates, skipped } = orderWork({
       fixPrs: ghJson('pr', 'list', '-R', REPO, '--state', 'open', '--label', 'changes-requested', '--author', ME, '--json', prFields),
       blockedIssues: withAssociation(
-        ghJson('issue', 'list', '-R', REPO, '--state', 'open', '--label', 'blocked', '--json', 'number,title,comments,labels')),
+        ghJson('issue', 'list', '-R', REPO, '--state', 'open', '--label', 'blocked', '--json', 'number,title,comments,labels'),
+        associations),
       blockedPrs: ghJson('pr', 'list', '-R', REPO, '--state', 'open', '--label', 'blocked', '--author', ME, '--json', prFields),
       readyIssues: withAssociation(
-        ghJson('issue', 'list', '-R', REPO, '--state', 'open', '--label', 'agent:ready', '--json', 'number,title,labels,createdAt')),
+        ghJson('issue', 'list', '-R', REPO, '--state', 'open', '--label', 'agent:ready', '--json', 'number,title,labels,createdAt'),
+        associations),
     }, { ...config, exclude: done });
     for (const s of skipped) log('略過：', s);
     if (!candidates.length) {
