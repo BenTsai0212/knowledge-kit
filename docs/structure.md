@@ -28,7 +28,7 @@
 | `docs/workflow/` | 憲法與 workflow 手冊 |
 | `docs/rfcs/`、`docs/adr/` | 專案章程與決策紀錄 |
 | `docs/playbook/` | 方法與文件套件（需求確認清單、資料盤點表、資料安全說明、評測題庫建立步驟、驗收指標、落地新客戶步驟 `new-client-setup.md`）；入口是 [docs/playbook/README.md](playbook/README.md)，英文版在 `docs/playbook/en/`，兩份一起改 |
-| `tools/workflow/` | workflow 工具（Node，自帶 `package.json`；各工具的參數見 `tools/workflow/README.md`）；`hooks/confirm-main.mjs` 是合併與 push 到 main 前的確認 hook；`check-pr-body.mjs` 檢查 PR 描述有 `Closes`／`Refs #N`（`fast-lane` 除外）；`check-post-body.mjs` 是 agent 貼出 PR 描述與留言前的檢查（#104）；`read-trusted.mjs` 讀取 Issue 與 PR，只輸出可信身分的內容（#127）；`personal-paths.test.mjs` 檢查開發流程工具的檔案沒有 `/Users/<名稱>`、`/home/<名稱>` 形式的個人路徑（#96，fork 後要改的地方見 `docs/workflow/fork.md`）；`doc-rules.test.mjs` 檢查規則文件（一份正本、相對連結、本文件的行數上限）；`runner/` 是自動化模組的 runner（ADR 0003，指令見第 2 節）；`bootstrap-github.mjs`、`config.json` 不適用（見第 2 節） |
+| `tools/workflow/` | workflow 工具（Node，自帶 `package.json`；各工具的參數見 `tools/workflow/README.md`）；`hooks/confirm-main.mjs` 是合併與 push 到 main 前的確認 hook；`check-pr-body.mjs` 檢查 PR 描述有 `Closes`／`Refs #N`（`fast-lane` 除外）；`check-post-body.mjs` 是 agent 貼出 PR 描述與留言前的檢查（#104）；`read-trusted.mjs` 讀取 Issue 與 PR，只輸出可信身分的內容（#127）；`personal-paths.test.mjs` 檢查開發流程工具的檔案沒有 `/Users/<名稱>`、`/home/<名稱>` 形式的個人路徑（#96，fork 後要改的地方見 `docs/workflow/fork.md`）；`doc-rules.test.mjs` 檢查規則文件（一份正本、相對連結、本文件的行數上限）；`runner/` 是自動化模組的 runner（ADR 0003，指令見 `AGENTS.md` 第 2 節）；`bootstrap-github.mjs`、`config.json` 不適用（見 `AGENTS.md` 第 2 節） |
 | `.claude/settings.json` | Claude Code 設定：在 `PreToolUse`（Bash）註冊確認 hook |
 | `templates/` | Claude Project 範本與預設不啟用的模組檔案 |
 | `.github/` | Issue／PR 範本、標籤定義、CI（`workflows/ci.yml`：`checks` 與 `clients` job；`workflows/pr-body.yml`：PR 描述檢查；`workflows/sensitive.yml`：敏感資料檢查；`workflows/e2e.yml`：Playwright，參考情境與每個客戶各一格）；沒有部署 workflow |
