@@ -115,7 +115,7 @@ npx wrangler dev
 
 ## 狀態與規劃
 
-- **v1**：上面的功能（[RFC 0001](docs/rfcs/0001-project-charter.md) 第 1 階段）與線上 demo。
+- **v1**：上面的功能（[RFC 0001](docs/rfcs/0001-project-charter.md) 第 1 階段）與線上 demo。見[變更紀錄](CHANGELOG.md)。
 - **v2（規劃中）**：以虛構的多語言情境實測，包含跨語言檢索與不以空白分詞的語言（[RFC 0002](docs/rfcs/0002-public-release.md)）。
 
 ## 授權
