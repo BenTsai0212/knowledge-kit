@@ -30,7 +30,8 @@ export function isAllowedEmail(address) {
   const at = address.lastIndexOf("@");
   const local = address.slice(0, at).toLowerCase();
   const domain = address.slice(at + 1).toLowerCase();
-  if (local === "noreply") return true;
+  // git@<主機> 是 SSH 的 clone 網址（例如 GitHub 的 SSH 網址），不是個人信箱
+  if (local === "noreply" || local === "git") return true;
   if (underDomain(domain, "noreply.github.com")) return true;
   if ([...RESERVED_DOMAINS, ...FICTIONAL_DOMAINS].some((base) => underDomain(domain, base))) return true;
   return RESERVED_TLDS.includes(domain.slice(domain.lastIndexOf(".") + 1));

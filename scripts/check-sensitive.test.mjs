@@ -78,6 +78,8 @@ describe("check-sensitive", () => {
       at("ops", "dev.localhost"),
       at("local", "domain.tld"),
       at("me", "MAIL.TLD"),
+      at("git", "github.com"),
+      at("GIT", "gitlab.com"),
     ]) {
       expect(isAllowedEmail(address), address).toBe(true);
     }
@@ -88,10 +90,14 @@ describe("check-sensitive", () => {
       at("no-reply", "corp-mail.com"),
       at("ops", "tld.com"),
       at("ops", "mail.tlds"),
+      at("gitbot", "corp-mail.com"),
+      at("my.git", "corp-mail.com"),
     ]) {
       expect(isAllowedEmail(address), address).toBe(false);
     }
     expect(findEmails(`"vite": "${at("npm:vite", "8.3.5")}"`)).toEqual([]);
+    // SSH 的 clone 網址整行也放行（git@<主機>:<owner>/<name>.git）
+    expect(findEmails("git@github.com:owner/name.git").every(isAllowedEmail)).toBe(true);
   });
 
   it("個人 email 與清單中的名稱都會被擋，輸出只有檔案、行號與清單第幾項", () => {

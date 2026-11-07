@@ -44,6 +44,7 @@ MCP 不能用時，見 [modules.md](modules.md#備援github-mcp-不能用時) �
 - **加 `plan-first`**：資料庫 schema、登入權限、金流；預估超過 400 行或跨多個模組；做法仍不確定。
 - **已知的 CI 需求寫進驗收條件**（例如新增資料庫時 CI 要有對應的服務）。
 - **不要求 agent 執行環境做不到的事**：對照專案的 runner 設定（sandbox、允許的網域、禁止指令），不把啟動瀏覽器、架設測量環境、連外部網站、docker 等寫成 agent 的驗收條件；這類驗證寫成人工待辦，由審查者處理。效能量測只要求本機直連，模擬延遲或壓力測試寫成人工待辦。〔來源：驗收條件要求了 runner 禁止的事，agent 只能跳過｜不刪〕
+- **`.claude/` 的變更是人工步驟**：agent 不能寫入 `.claude/`。Issue 要新增、修改或刪除命令檔（`.claude/commands/`）或設定（`.claude/settings.json`）時，列為人工待辦，不寫成 agent 的驗收條件。〔來源：升級 template 時 agent 無法寫入 `.claude/`，命令檔的變更只能由人處理｜可刪條件：agent 的執行環境可以寫入 `.claude/` 時〕
 - **有合併後人工待辦時不指定 `Closes`**：PR 寫 `Refs #N`，合併後加 `needs-human`，人完成待辦後關閉 Issue。〔來源：Issue 指定 `Closes` 與合併後待辦衝突，出現 3 次｜不刪〕
 - **不寫 email 與個人路徑**：舉例時用 `user@example.com`、`/Users/<名稱>/…`、`<名稱>` 佔位。送出 Issue 或留言前，可把內容存成檔案，用 `npm run check:sensitive -- --file <檔案>` 自我檢查（只輸出行號與種類）。〔來源：PR 描述舉例時寫出個人路徑，公開前的稽核才抓到｜不刪〕
 - **派工後不修改 Issue 本文**：Issue 帶 `agent:ready` 或 `agent:working`，或已有對應的 PR 之後，不修改本文；要改時以 `## 決定（補充）` 留言，或先移除派工標籤再改。〔來源：派工後修改 Issue 本文，PR 依舊版完成｜不刪〕
@@ -76,6 +77,7 @@ MCP 不能用時，見 [modules.md](modules.md#備援github-mcp-不能用時) �
 
 1. **三級確認**：各操作屬於哪一級、各級怎麼確認，見 github-writes.md 第 1 節。寫入的內容碰到憲法第 5 節「人親自決定的範圍」，一律逐項確認。
 2. **合併**：只說「全部合併」不算授權；合併前在 PR 留授權紀錄，合併時以 `expectedHeadSha` 確認 head 未變。條件見 github-writes.md 第 2 節。
+   - **一張 Issue 拆成多個 PR 時**：合併寫 `Refs` 的 PR、Issue 還有下一個 PR 要做時，加回 `agent:ready` 與合併授權列在同一批確認（同一則請求），合併後一併執行，讀回標籤確認。〔來源：多個 PR 的 Issue 合併一個 PR 後沒有加回 `agent:ready`，下一個 PR 停著沒人做｜不刪〕
 3. **刪除**：見 github-writes.md 第 3 節。
 4. **本機檔案**：決策 agent 寫入本機的檔案只放在 `Claude outputs/`（不進版本控制），用完由人刪除；規則檔一律 Issue → PR，由 code agent 修改。
 5. **修正要求與 `## 決定` 的固定步驟**：依序執行，送出後讀回標籤確認。〔來源：修正要求只留言、沒加 `changes-requested`，agent 停止；runner 不接手沒有決定的 `blocked` PR｜不刪〕
