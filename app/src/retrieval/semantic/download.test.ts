@@ -117,6 +117,7 @@ describe("loadVerifiedFiles", () => {
     expect([error.reason, error.message]).toEqual(["http", "model file config.json: HTTP 503"]);
   });
 
+  // E5_MODEL 已全部登記，以測試自己的 ModelSpec 測未登記的情形
   it("有檔案未登記 SHA-256：一個檔都不下載就拋錯", async () => {
     const model = await spec();
     const { caches } = fakeCaches();
@@ -135,8 +136,9 @@ describe("E5_MODEL", () => {
     }
   });
 
-  it("登記的 SHA-256 是 64 位小寫 hex", () => {
-    for (const file of E5_MODEL.files) if (file.sha256 !== null) expect(file.sha256).toMatch(/^[0-9a-f]{64}$/);
+  it("每個檔案都已登記 64 位小寫 hex 的 SHA-256", () => {
+    expect(E5_MODEL.files).toHaveLength(5);
+    for (const file of E5_MODEL.files) expect(file.sha256, file.path).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it("q8 模型與 tokenizer 都在清單中", () => {
