@@ -2,7 +2,7 @@
 // 段落一律經 withIdentity() 由 RLS 篩選後才計分；向量快取不影響可見範圍，只省去重算。
 import type { RetrievalConfig } from "../client/types";
 import type { Database } from "../db/database";
-import { createProvider } from "./providers";
+import { createProvider, type ActiveProvider } from "./providers";
 import type { VectorProvider } from "./types";
 
 export interface RetrievedPassage {
@@ -52,13 +52,15 @@ interface PassageRow {
   content: string;
 }
 
-// provider 可以是還在準備的 Promise（例如要先下載模型）；建立 retriever 不等待，第一次檢索時才等它準備好
+type RetrievalOptions = Pick<RetrievalConfig, "topK" | "minScore">;
+
+// provider 與參數可以是還在準備的 Promise（例如要先下載模型，降級時參數也跟著換）；建立 retriever 不等待，第一次檢索時才等它準備好
 export function createRetriever(
   db: Database,
   provider: VectorProvider | Promise<VectorProvider>,
-  options: Pick<RetrievalConfig, "topK" | "minScore">,
+  options: RetrievalOptions | Promise<RetrievalOptions>,
 ): Retriever {
-  const ready = Promise.resolve(provider);
+  const ready = Promise.all([provider, options]);
   // 準備失敗時由 retrieve() 拋出；在那之前不當成未處理的 rejection
   ready.catch(() => {});
   // 段落 id → 向量。段落內容在執行期間不變；之後會修改段落內容時，需在修改時清掉該段的快取
@@ -66,8 +68,6 @@ export function createRetriever(
 
   return {
     async retrieve(identityId, question, call = {}) {
-      const topK = call.topK ?? options.topK;
-      const minScore = call.minScore ?? options.minScore;
       const { rows, supersede } = await db.withIdentity(identityId, async (tx) => ({
         // 段落不比所屬文件寬鬆，看得到段落就看得到文件，所以 JOIN 不會少掉段落（docs/retrieval.md）
         rows: (
@@ -93,7 +93,9 @@ export function createRetriever(
       }));
       if (rows.length === 0) return [];
 
-      const vp = await ready;
+      const [vp, defaults] = await ready;
+      const topK = call.topK ?? defaults.topK;
+      const minScore = call.minScore ?? defaults.minScore;
       // 問題與段落分開轉換（語意模型對兩者的處理不同）；段落只算還沒在快取中的
       const [questionVector] = await vp.embed([question], "query");
       const missing = rows.filter((r) => !cache.has(r.id));
@@ -135,7 +137,11 @@ export function createRetriever(
   };
 }
 
-// 依 client.json 的 retrieval 設定建立
-export function openRetriever(db: Database, config: RetrievalConfig): Retriever {
-  return createRetriever(db, createProvider(config), config);
+// 依 client.json 的 retrieval 設定建立。App 與評測台傳入共用的 active，語意模型只下載、初始化一次
+export function openRetriever(db: Database, config: RetrievalConfig, active: Promise<ActiveProvider> = createProvider(config)): Retriever {
+  return createRetriever(
+    db,
+    active.then(({ provider }) => provider),
+    active.then(({ options }) => options),
+  );
 }

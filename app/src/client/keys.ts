@@ -185,7 +185,8 @@ export const manifests: ManifestEntry[] = [
 
 // client/i18n/<語言>.json：鍵很多，每行列多個
 const uiStrings = {
-  loading: "required", loadFailed: "required", fictionalData: "required", demoPermissions: "required",
+  loading: "required", loadFailed: "required", retrievalFallbackTitle: "required", retrievalFallback: "required",
+  fictionalData: "required", demoPermissions: "required",
   identity: "required", language: "required", accessCodeTitle: "required", accessCodeLabel: "required",
   accessCodeHint: "required", demoAccessCodeHint: "required", demoQaNotice: "required",
   demoUploadNotice: "required", accessCodeSubmit: "required", changeAccessCode: "required",
@@ -252,6 +253,11 @@ export const i18nManifests: ManifestEntry[] = [
       unsupported: "required", too_large: "required", too_long: "required", empty: "required", no_text: "required",
       failed: "required", denied: "required", invalid: "required", no_input: "required",
     } satisfies KeyManifest<UiStrings["uploadErrors"]>,
+  },
+  {
+    schema: "i18n.schema.json",
+    pointer: "/properties/retrievalFallback",
+    keys: { download: "required", integrity: "required", init: "required" } satisfies KeyManifest<UiStrings["retrievalFallback"]>,
   },
   {
     schema: "i18n.schema.json",

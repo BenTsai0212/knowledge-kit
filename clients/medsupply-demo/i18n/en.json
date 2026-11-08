@@ -1,6 +1,12 @@
 {
   "loading": "Loading data…",
   "loadFailed": "The data couldn't be loaded. Please reload the page.",
+  "retrievalFallbackTitle": "Semantic search is unavailable; using keyword search instead",
+  "retrievalFallback": {
+    "download": "The semantic model couldn't be downloaded. You may be offline, or the network may be blocking it. Reload the page to try again; until then, questions in another language or worded differently may not find relevant passages.",
+    "integrity": "The downloaded semantic model didn't match the registered files, so it wasn't used for safety. Questions in another language or worded differently may not find relevant passages.",
+    "init": "The semantic model couldn't start in this browser. Questions in another language or worded differently may not find relevant passages."
+  },
   "fictionalData": "Fictional data",
   "demoPermissions": "Demo permissions",
   "identity": "Identity",

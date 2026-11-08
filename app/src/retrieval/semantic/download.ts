@@ -10,7 +10,7 @@ export class ModelLoadError extends Error {
     readonly path: string,
     detail: string,
   ) {
-    // 給開發者的訊息；畫面上的提示依 reason 從 client/i18n/ 取得（#163 PR 3）
+    // 給開發者的訊息；畫面上的提示依 reason 從 client/i18n/ 取得（providers.ts 的 FallbackReason）
     super(`model file ${path}: ${detail}`);
     this.name = "ModelLoadError";
   }
@@ -56,7 +56,10 @@ export async function loadVerifiedFiles(model: ModelSpec, deps: DownloadDeps): P
       // 快取內容損壞或被改動：刪除後重新下載
       await cache.delete(url);
     }
-    const response = await deps.fetch(url);
+    // 連不上（離線、被擋）與 HTTP 錯誤同樣算下載失敗
+    const response = await deps.fetch(url).catch((error: unknown) => {
+      throw new ModelLoadError("http", file.path, `fetch failed: ${error instanceof Error ? error.message : String(error)}`);
+    });
     if (!response.ok) throw new ModelLoadError("http", file.path, `HTTP ${response.status}`);
     const bytes = new Uint8Array(await response.arrayBuffer());
     const failure = await mismatch(file, bytes);

@@ -137,6 +137,10 @@ describe("check-client", () => {
     expect(validateClient(files).map((e) => e.path)).toEqual(["/retrieval/provider", "/retrieval/topK", "/retrieval/minScore"]);
     delete files["client.json"].retrieval;
     expect(validateClient(files)).toEqual([]);
+    for (const provider of ["keyword-hash", "multilingual-e5-small"]) {
+      files["client.json"].retrieval = { provider };
+      expect(validateClient(files), provider).toEqual([]);
+    }
   });
 
   it("上傳參數：passageMaxChars 為 100～1000、extractMaxBatches 為 1～10 的整數，可省略", () => {

@@ -5,6 +5,7 @@ import type { PassageMarkKind } from "../conflicts/marks";
 import type { ConflictDecision } from "../conflicts/store";
 import type { Leak, ModelGrade } from "../evals/score";
 import type { EvalCategory, EvalExpect } from "../evals/types";
+import type { FallbackReason } from "../retrieval/providers";
 import type { ParseFailure } from "../upload/parse";
 
 export type LanguageCode = string;
@@ -20,7 +21,7 @@ export interface PathRef {
 }
 
 // app/src/retrieval/providers.ts 的 PROVIDERS 鍵
-export type ProviderId = "keyword-hash";
+export type ProviderId = "keyword-hash" | "multilingual-e5-small";
 
 export interface RetrievalFile {
   provider?: ProviderId;
@@ -237,6 +238,9 @@ export type ExtractFailure = "format" | "truncated" | "write" | "no_access_code"
 export interface UiStrings {
   loading: string;
   loadFailed: string;
+  // 語意向量 provider 準備失敗、改用 keyword-hash 時的提示（問答頁與評測台）
+  retrievalFallbackTitle: string;
+  retrievalFallback: Record<FallbackReason, string>;
   // 標示：資料是虛構的、身分切換只是展示權限
   fictionalData: string;
   demoPermissions: string;

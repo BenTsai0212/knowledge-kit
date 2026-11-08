@@ -30,7 +30,7 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 
 `retrieve.ts` 只依賴 `VectorProvider` 接口。使用哪個實作，只在 `providers.ts` 依 `client.json` 的 `retrieval.provider` 決定（`providers.test.ts` 檢查）。
 
-實作可能要先下載模型才能使用，所以 `createProvider()` 回傳 Promise（未登記的值在呼叫時就拋錯）。`openRetriever()` 不等待，立即回傳 retriever；第一次 `retrieve()` 時才等實作準備好，準備失敗時由 `retrieve()` 拋出。
+實作可能要先下載模型才能使用，所以 `createProvider()` 回傳 Promise（未登記的值在呼叫時就拋錯），內容是實作、檢索參數（`topK`、`minScore`）與降級原因（見[降級](#降級)）。`openRetriever()` 不等待，立即回傳 retriever；第一次 `retrieve()` 時才等實作準備好，準備失敗時由 `retrieve()` 拋出。App 的問答、比對與評測台共用同一個 `createProvider()` 的結果，語意模型只下載、初始化一次。
 
 ## 設定
 
@@ -38,11 +38,13 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 
 | 欄位 | 預設值 | 意思 |
 | --- | --- | --- |
-| `provider` | `keyword-hash` | 使用哪個實作 |
+| `provider` | `keyword-hash` | 使用哪個實作：`keyword-hash` 或 `multilingual-e5-small` |
 | `topK` | 5 | 回傳前幾名 |
-| `minScore` | 0.1 | 最低分數門檻 |
+| `minScore` | `keyword-hash` 0.1、`multilingual-e5-small` 0.7 | 最低分數門檻 |
 
-預設值的依據：以參考資料集測試，7 題預設問題中，與問題同語言的答案段落最差排第 2 名，分數都在 0.23 以上。0.1 的門檻用來排除只有零星共同字元的段落。
+省略 `topK`、`minScore` 時依 `provider` 補上（`providers.ts` 的 `RETRIEVAL_DEFAULTS`，#163 決定 2）：兩者的分數分布不同，語意向量的分數擠在 0.7～0.9，0.7 不擋掉任何答案段落（[評估報告](evals/semantic-retrieval-2026-11.md)「分數分布與 `minScore`、`topK`」）。
+
+`keyword-hash` 預設值的依據：以參考資料集測試，7 題預設問題中，與問題同語言的答案段落最差排第 2 名，分數都在 0.23 以上。0.1 的門檻用來排除只有零星共同字元的段落。
 
 ## 預設實作：`keyword-hash`
 
@@ -103,7 +105,7 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 
 ## 語意向量：`multilingual-e5-small`（導入中）
 
-依 [ADR 0006](adr/0006-semantic-retrieval.md) 導入的可選實作（#163），程式在 `app/src/retrieval/semantic/`。**尚未登記到 `PROVIDERS`，客戶還不能選用**；降級、`client.json` 的 Schema 與畫面提示在 #163 的下一個 PR 加上。
+依 [ADR 0006](adr/0006-semantic-retrieval.md) 導入的可選實作（#163），程式在 `app/src/retrieval/semantic/`。`client.json` 寫 `"retrieval": { "provider": "multilingual-e5-small" }` 就能選用；範例客戶與線上 demo 維持 `keyword-hash`。`PROVIDERS` 以動態 import 載入這個實作，沒選用的客戶不會下載它的程式（`dist/assets/` 中有它的檔案，但不會被請求）。題庫與量測在 #163 的下一個 PR 補上。
 
 | 檔案 | 內容 |
 | --- | --- |
@@ -121,7 +123,21 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 
 **相依套件**：`@huggingface/transformers` 固定 4.3.2。它帶進的 `onnxruntime-node` 只在 Node 使用，app 用不到；它在 linux/x64 安裝時會從 NuGet 下載 CUDA，CI 以 `ONNXRUNTIME_NODE_INSTALL=skip` 略過（[docs/testing.md](testing.md)「CI 的 job」），在 Linux 開發時也可以設定同一個環境變數。
 
-測試不下載模型：下載與驗證以假的 `fetch`、Cache Storage 與 bytes 測試（`download.test.ts`），實作以注入的假模型測試（`multilingual-e5-small.test.ts`）。
+測試不下載模型：下載與驗證以假的 `fetch`、Cache Storage 與 bytes 測試（`download.test.ts`），實作以注入的假模型測試（`multilingual-e5-small.test.ts`、`providers.test.ts`）。
+
+### 降級
+
+語意向量準備失敗時，`createProvider()` 改用 `keyword-hash`，不讓問答停擺：
+
+| 原因（`FallbackReason`） | 情形 |
+| --- | --- |
+| `download` | 模型檔 HTTP 錯誤，或連不上（離線、被擋） |
+| `integrity` | 下載的檔案大小或 SHA-256 與 `model-files.ts` 不符，或有檔案未登記 SHA-256 |
+| `init` | 其他失敗：載入程式、Cache Storage 或 ONNX Runtime 初始化失敗 |
+
+- 降級後 `minScore` 改用 `keyword-hash` 的預設值 0.1（語意向量的 0.7 對 `keyword-hash` 太高，幾乎每題都會拒答），`topK` 不變。
+- 問答頁與評測台顯示提示（`RetrievalFallbackNotice`，文字是 `client/i18n/` 的 `retrievalFallbackTitle` 與依原因的 `retrievalFallback`）；錯誤本身只寫到 `console.warn`。
+- `keyword-hash` 本身不降級。測試以假的 `fetch` 與會失敗的模型確認每種原因都會降級（`providers.test.ts`），並確認降級後的檢索結果與 `keyword-hash` 的客戶相同（`retrieve.test.ts`）。
 
 ## 向量快取
 
@@ -158,7 +174,7 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
    - `id`：與 `client.json` 的 `retrieval.provider` 相同。
    - `embed(texts, kind)`：一次轉換多筆同一種文字，可在其中批次呼叫外部 API 或模型。`kind` 是 `"query"`（問題）或 `"passage"`（段落），語意模型可依此加不同前綴（例如 e5 的 `query: `、`passage: `）；不區分兩者的實作（`keyword-hash`）忽略它。
    - `similarity(a, b)`：回傳 0～1，越大越相關；cosine 為負時截到 0。`providers.test.ts` 對 `PROVIDERS` 中每個實作檢查範圍。
-2. 在 `providers.ts` 的 `PROVIDERS` 登記建立實作的函式（可以是非同步，例如先下載模型）。
+2. 在 `providers.ts` 的 `PROVIDERS` 登記建立實作的函式（可以是非同步，例如先下載模型；失敗時自動降級到 `keyword-hash`），並在 `RETRIEVAL_DEFAULTS` 登記省略 `topK`、`minScore` 時的值。
 3. 在 `client/schema/client.schema.json` 的 `retrieval.provider` 列舉，以及 `app/src/client/types.ts` 的 `ProviderId`，加上同名的值。
 4. 改 `client.json` 的 `retrieval.provider`；分數分布不同時，一併調整 `minScore` 與 `topK`。
 
