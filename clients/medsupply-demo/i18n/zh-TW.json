@@ -213,6 +213,8 @@
   "evalDiffers": "兩組不同",
   "evalQuestion": "問題",
   "evalNotRun": "未執行",
+  "evalRequiresSemantic": "不適用（需要語意檢索）",
+  "evalPassageLanguage": "只檢索 {language} 的段落",
   "evalAnswerText": "回答",
   "evalCitations": "引用",
   "evalNoCitations": "沒有引用",
@@ -230,7 +232,10 @@
     "permission": "權限",
     "out-of-scope": "題庫外",
     "conflict": "矛盾",
-    "extraction-attempt": "套取機密"
+    "extraction-attempt": "套取機密",
+    "cross-language": "跨語言",
+    "synonym": "同義詞",
+    "unrelated": "完全無關"
   },
   "evalExpect": {
     "answer": "預期回答",

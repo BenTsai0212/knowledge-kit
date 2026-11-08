@@ -32,7 +32,7 @@ const reply = (grade = '{"verdict":"correct","reason":"ok"}') => (body: AskBody)
 
 const context = (questions = sample, send: (body: AskBody) => AskEvent[] = reply()) => {
   const transport = fakeTransport(send);
-  const ctx: EvalContext = { retriever: openRetriever(db, retrieval), transport, config: clientConfig, data: dataset, questions };
+  const ctx: EvalContext = { retriever: openRetriever(db, retrieval), transport, config: clientConfig, data: dataset, questions, providerId: "keyword-hash" };
   return { ctx, transport };
 };
 
@@ -55,6 +55,65 @@ describe("estimateCalls", () => {
     const one = await estimateCalls(ctx, [DEFAULT], "keyPoints");
     expect(await estimateCalls(ctx, [DEFAULT, DEFAULT], "keyPoints")).toEqual({ ask: one.ask * 2, grade: 0, total: one.ask * 2 });
     expect(await estimateCalls(ctx, [{ topK: 5, minScore: 1.01 }], "model")).toEqual({ ask: 0, grade: 0, total: 0 });
+  });
+});
+
+describe("適用的題目與 passageLanguage（#163 決定 3）", () => {
+  const semantic = all.filter((q) => q.requires === "semantic");
+
+  it("keyword-hash 時 requires: semantic 的題目不執行、不計入預計次數", async () => {
+    expect(semantic.length).toBeGreaterThan(0);
+    const { ctx } = context([...sample, ...semantic]);
+    const run = await runEvals(ctx, { sets: [DEFAULT], mode: "keyPoints" });
+    expect(run.providerId).toBe("keyword-hash");
+    expect(run.sets[0].results.map((r) => r.question)).toEqual(sample.map((q) => q.id));
+    expect(await estimateCalls(ctx, [DEFAULT], "keyPoints")).toEqual(await estimateCalls(context().ctx, [DEFAULT], "keyPoints"));
+  });
+
+  it("語意向量 provider 時全部執行；passageLanguage 帶入每次檢索的 language", async () => {
+    const q = semantic.find((q) => q.passageLanguage !== undefined)!;
+    const { ctx } = context([q]);
+    const languages: (string | undefined)[] = [];
+    const spy: EvalContext = {
+      ...ctx,
+      providerId: "multilingual-e5-small",
+      retriever: { retrieve: (id, text, options) => (languages.push(options?.language), ctx.retriever.retrieve(id, text, options)) },
+    };
+    const run = await runEvals(spy, { sets: [DEFAULT], mode: "keyPoints" });
+    expect(run.sets[0].results.map((r) => r.question)).toEqual([q.id]);
+    expect(languages.length).toBeGreaterThan(0);
+    expect(new Set(languages)).toEqual(new Set([q.passageLanguage]));
+  });
+});
+
+// requires 的標記與 keyword-hash 的實際結果一致：沒標記的題目在範例客戶（keyword-hash）照常計分
+describe("參考題庫的 requires 與 keyword-hash（#163 決定 3）", () => {
+  const retriever = () => openRetriever(db, retrieval);
+  const top = async (q: (typeof all)[number]) =>
+    (await retriever().retrieve(q.role, q.question, { ...DEFAULT, ...(q.passageLanguage ? { language: q.passageLanguage } : {}) })).map((p) => p.id);
+
+  it("跨語言題都標記 requires: semantic", () => {
+    const cross = all.filter((q) => q.category === "cross-language");
+    expect(cross.length).toBeGreaterThanOrEqual(19);
+    expect(cross.filter((q) => q.requires !== "semantic").map((q) => q.id)).toEqual([]);
+  });
+
+  it("同義詞題：沒標記的，keyword-hash 能檢索到答案段落；標記的，檢索不到", async () => {
+    const synonyms = all.filter((q) => q.category === "synonym");
+    expect(synonyms.length).toBeGreaterThanOrEqual(6);
+    for (const q of synonyms) {
+      const found = (await top(q)).some((id) => q.answerPassages.includes(id));
+      expect(found, q.id).toBe(q.requires !== "semantic");
+    }
+  });
+
+  it("完全無關的題目：keyword-hash 檢索不到段落，在本機拒答", async () => {
+    const unrelated = all.filter((q) => q.category === "unrelated");
+    expect(unrelated.length).toBeGreaterThanOrEqual(5);
+    for (const q of unrelated) {
+      expect(q.requires, q.id).toBeUndefined();
+      expect(await top(q), q.id).toEqual([]);
+    }
   });
 });
 

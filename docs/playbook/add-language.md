@@ -26,8 +26,8 @@
 3. **各設定檔的多語文字**：顯示名稱、角色、可見等級、專案、實體與關係類型、情境名稱等，每種語言都要填。`check:client` 只檢查預設語言有沒有填，其他語言的缺漏要逐一確認。
 4. **實體名稱**：`data/entities.json` 每個實體的 `names` 加上新語言。人名沒有公認譯名時沿用原文，不要自行音譯。
 5. **文件**：新增這個語言的文件，`language` 設為 `<代碼>`。段落長度以字元計算，與其他語言相同（`passageMaxChars`）。
-6. **預設問題**：`scenarios.json` 每題加上這個語言的問題文字，`answerPassages` 列出同語言的答案段落。**第 1 階段不支援跨語言檢索**，所以每題在新語言都要有答案段落；沒有對應段落時補寫文件。
-7. **評測題庫**：依[評測題庫建立步驟](eval-question-bank.md)加入新語言的題目，至少包含權限題與題庫外的題目；不放跨語言題。
+6. **預設問題**：`scenarios.json` 每題加上這個語言的問題文字，`answerPassages` 列出同語言的答案段落。`keyword-hash` 不支援跨語言檢索，所以每題在新語言都要有答案段落；沒有對應段落時補寫文件。
+7. **評測題庫**：依[評測題庫建立步驟](eval-question-bank.md)加入新語言的題目，至少包含權限題與題庫外的題目。跨語言題（以 `passageLanguage` 指定段落的語言）一律標記 `requires: "semantic"`，`keyword-hash` 時不計入分母（[docs/evals.md](../evals.md)「跨語言、同義詞與完全無關的題目」）。
 
 不需要修改：問答 prompt 的語言名稱（以 `Intl.DisplayNames` 產生）、萃取時要求每種語言的名稱、檢索的語言篩選、說法不同只比對同語言、時間軸的語言，這些都依 `client.json` 的語言清單運作。
 
@@ -82,6 +82,12 @@
 - **先評測再決定**：以同一份題庫分別評測 `keyword-hash` 與候選做法，並加入跨語言題。語意向量的分數分布不同，要一併調整 `minScore` 與 `topK`。
 - **權限不變**：段落仍一律經過 `withIdentity()` 取得。向量要存進資料庫時屬於 migration（高風險），要為它設定 RLS，讓看不到段落的身分也看不到它的向量。
 - **外部 API**：新增 secret 與相依套件要先問人（AGENTS.md 第 6 節）；機密段落能否送到供應商，要由客戶確認。
-- **跨語言題**：換成語意向量後，題庫才放跨語言題，並在[驗收指標](acceptance-metrics.md)中另列。
+- **跨語言題**：題庫的跨語言題標記 `requires: "semantic"`，只在語意向量時計分；驗收時另外列出它們的結果（[驗收指標](acceptance-metrics.md)）。
 - 選用的模型、版本與量測結果記錄在 ADR；本文件不列廠商與價格，因為會隨時間改變。
 - 2026-11 的評估（#126）：[評估報告](../evals/semantic-retrieval-2026-11.md)、[ADR 0006](../adr/0006-semantic-retrieval.md)（Proposed）。
+
+**已導入的做法**：瀏覽器內的小型多語模型 `multilingual-e5-small`（#163），在 `client.json` 的 `retrieval.provider` 選用（[docs/client-config.md](../client-config.md)、[docs/retrieval.md](../retrieval.md)「語意向量」）。
+
+- 首次載入要下載約 135 MB 的模型，準備失敗時改用 `keyword-hash` 並提示，所以新語言的段落仍以第 1 節的方式補齊較穩。
+- model card 列出的語言（含 `th`）才考慮只靠跨語言；低資源語言的品質可能下降，先以題庫的跨語言題評測。
+- 選用前可先以本機的 `clients/local-<名稱>/` 試用與評測（[docs/retrieval.md](../retrieval.md)「瀏覽器量測」）。

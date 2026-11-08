@@ -147,18 +147,32 @@ verify 分支的 `verify/semantic/leakage.verify.test.ts` 把 `app/tests/retriev
 
 ## 瀏覽器量測（待人工量測）
 
-runner 不啟動瀏覽器，所以這部分列為人工待辦，只量 A1。
+runner 不啟動瀏覽器，所以這部分列為人工待辦，只量 A1。#163 改用 main 上的量測頁，取代 verify 分支的 `/verify-semantic.html`；頁面使用正式的 provider（固定 commit 下載、SHA-256 驗證、Cache Storage 與自己提供的 WASM，[docs/retrieval.md](../retrieval.md)「瀏覽器量測」）。
 
-1. 切到 verify 分支後執行 `npm install`、`npm run dev`。
-2. 開 `/verify-semantic.html`，DevTools 勾選 Disable cache，選 A1、wasm 後按 run（有 WebGPU 時另跑一次 webgpu）。
-3. 頁面會從 Hugging Face 的固定 commit 下載模型。
+1. 在 main 執行 `npm install`、`npm run dev`。
+2. 開 `/dev/semantic-measure.html`，先按 `clear model cache`，再按 `run`：量首次載入（模型從 Hugging Face 下載）。
+3. 不清快取再按一次 `run`：量第二次載入（從 Cache Storage 讀取）。
+4. 記下頁面輸出的 JSON，以及瀏覽器工作管理員中該分頁的記憶體。
+
+- 自己提供的 WASM 只跑 wasm 後端、單執行緒，不支援 WebGPU（#163 決定 5），所以不量 webgpu。
 
 量測後回填下表：
 
-| 瀏覽器／裝置 | 後端 | 下載量 | 載入 | 43 段 | 一次查詢 | JS heap |
+| 瀏覽器／裝置 | 快取 | 下載量 | 第一次提問（`firstQuestionMs`） | 載入 | 43 段 | 一次查詢 | JS heap | 分頁記憶體 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| （待人工量測） | 無 | | | | | | | |
+| （待人工量測） | 有 | | | | | | | |
+
+### 評測台（A1）
+
+以本機的 A1 客戶設定（`clients/local-<名稱>/`，不進版本控制）在評測台跑完整題庫（58 題），回填跨語言、同義詞與完全無關題的結果。完全無關題用來決定 ADR 0006 的本機拒答寫法：
+
+| 題型 | 題數 | 引用正確 | 答案正確 | 正確拒答 | 在本機拒答（不呼叫 `/api/ask`） | 權限滲漏 |
 | --- | --- | --- | --- | --- | --- | --- |
-| （待人工量測） | wasm | | | | | |
-| （待人工量測） | webgpu | | | | | |
+| 既有 | 28 | （待量測） | | | | |
+| 跨語言 | 19 | | | — | — | |
+| 同義詞 | 6 | | | — | — | |
+| 完全無關 | 5 | — | — | | | |
 
 ## 其他做法（只做文字比較）
 

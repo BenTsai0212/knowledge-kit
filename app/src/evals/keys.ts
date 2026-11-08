@@ -22,6 +22,8 @@ export const evalsManifests: ManifestEntry[] = [
       keyPoints: "required",
       forbidden: "required",
       referenceAnswer: "required",
+      passageLanguage: "optional",
+      requires: "optional",
     } satisfies KeyManifest<EvalQuestion>,
   },
 ];

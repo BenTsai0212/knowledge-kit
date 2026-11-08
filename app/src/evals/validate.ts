@@ -19,10 +19,15 @@ export function validateEvals(config: ClientConfig, data: Dataset, file: Questio
   const sample = datasetSample(data);
   const passages = new Set(sample.passages.map((p) => p.id));
   const roles = new Set(config.access.roles.map((r) => r.id));
+  const languageOf = new Map(Object.values(data.documents).flatMap((d) => d.passages.map((p) => [p.id, p.language ?? d.language] as const)));
   file.questions.forEach((q, i) => {
     const visible = new Set(expectedVisible(config.access, sample, q.role).passages);
     q.answerPassages.forEach((id, j) => {
       if (!passages.has(id)) push(at(i, j), `答案段落 ${id} 不存在於資料集`);
+      // 只檢索 passageLanguage 的段落，其他語言的答案段落一定檢索不到
+      else if (q.passageLanguage !== undefined && languageOf.get(id) !== q.passageLanguage) {
+        push(at(i, j), `答案段落 ${id} 不是 passageLanguage（${q.passageLanguage}）的段落`);
+      }
       // 角色不存在時由 check:client 回報
       else if (!roles.has(q.role)) return;
       else if (q.expect === "answer" && !visible.has(id)) push(at(i, j), `角色 ${q.role} 看不到答案段落 ${id}`);

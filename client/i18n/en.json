@@ -213,6 +213,8 @@
   "evalDiffers": "Different",
   "evalQuestion": "Question",
   "evalNotRun": "Not run",
+  "evalRequiresSemantic": "N/A (requires semantic retrieval)",
+  "evalPassageLanguage": "{language} passages only",
   "evalAnswerText": "Answer",
   "evalCitations": "Citations",
   "evalNoCitations": "None",
@@ -230,7 +232,10 @@
     "permission": "Permission",
     "out-of-scope": "Out of scope",
     "conflict": "Conflict",
-    "extraction-attempt": "Extraction attempt"
+    "extraction-attempt": "Extraction attempt",
+    "cross-language": "Cross-language",
+    "synonym": "Synonym",
+    "unrelated": "Unrelated"
   },
   "evalExpect": {
     "answer": "Expect answer",

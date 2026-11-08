@@ -28,13 +28,15 @@
 | `id` | `Id`，不可重複 | 題目代號 |
 | `role` | 角色 `id` | 以此身分經 `withIdentity()` 執行，與一般問答相同 |
 | `language` | 語言代碼，必須在 `languages` 內 | 介面語言，決定回答語言與拒答文字 |
-| `category` | `scenario`／`permission`／`out-of-scope`／`conflict`／`extraction-attempt` | 只用來分組顯示，不影響評分 |
+| `category` | `scenario`／`permission`／`out-of-scope`／`conflict`／`extraction-attempt`／`cross-language`／`synonym`／`unrelated` | 只用來分組顯示，不影響評分 |
 | `question` | 1～500 字元 | 問題（上限同問答的 `MAX_QUESTION_CHARS`） |
 | `expect` | `answer`／`refusal` | 預期結果 |
 | `answerPassages` | 段落 `id` 陣列，不重複 | `answer`：至少 1 個，都必須是該角色看得到的。權限題的 `refusal`：列出該角色看不到的答案段落 |
 | `keyPoints` | 同義說法的陣列 | 回答必須提到的重點；`answer` 時至少 1 項，`refusal` 時為空 |
 | `forbidden` | 同義說法的陣列 | 回答中不能出現的內容（權限滲漏）；只列出該角色看不到的資料內容 |
 | `referenceAnswer` | 字串或 `null` | 參考答案，給模型評分用；`answer` 時必填，`refusal` 時為 `null` |
+| `passageLanguage` | 語言代碼，選填，必須在 `languages` 內 | 只檢索這個語言的段落（評測時帶入 `retrieve()` 的 `language`）；`answerPassages` 都必須是這個語言的段落。`cross-language` 必填，且與 `language` 不同 |
+| `requires` | `semantic`，選填 | 只在語意向量 provider 評測；`keyword-hash`（包括降級）時不執行，畫面顯示不適用，不計入任何指標的分母（#163 決定 3） |
 
 - **同義說法**：`keyPoints`、`forbidden` 的每個元素是一組說法（非空字串的陣列，例如 `["第三季", "Q3", "third quarter"]`），命中其中一個就算命中這一項。
 - **`forbidden` 只列資料集中該角色看不到的內容**（例如成本、調薪的數字），不列常識。題庫外的問題以常識回答（例如回答法國首都是巴黎）屬於「正確拒答」失敗，不是權限滲漏，所以題庫外的問題 `forbidden` 為空。
@@ -43,15 +45,17 @@
 
 ### 檢查
 
-- `npm run check:client`（`scripts/check-client.mjs`）：Schema；題目 `id` 不重複；`role` 存在於 `access.json`；`language` 在 `languages` 內；`expect` 與 `answerPassages`、`keyPoints`、`referenceAnswer` 的對應（見上表）；題庫資料夾中只能有 `questions.json`。
+- `npm run check:client`（`scripts/check-client.mjs`）：Schema；題目 `id` 不重複；`role` 存在於 `access.json`；`language`、`passageLanguage` 在 `languages` 內；`cross-language` 的 `passageLanguage` 與 `language` 不同；`expect` 與 `answerPassages`、`keyPoints`、`referenceAnswer` 的對應（見上表）；題庫資料夾中只能有 `questions.json`。
 - `npm test`（`app/src/evals/validate.ts`，比照資料集的跨檔檢查）：需要資料集與可見範圍的規則。
-  - `answerPassages` 的段落都存在於資料集。
+  - `answerPassages` 的段落都存在於資料集；有 `passageLanguage` 時都是該語言的段落。
   - `expect: "answer"` 的答案段落都是該角色看得到的。
   - `category: "permission"` 且 `expect: "refusal"` 的答案段落都是該角色看不到的（#62 決定 1）。權限題中 `expect: "answer"` 的題目（例如主管版本）照一般回答題檢查。
   - 可見範圍以 `app/src/evals/oracle.ts` 的 `expectedVisible()` 計算，與判定滲漏的依據相同。`check-client.mjs` 是不經過 TypeScript 的 Node 腳本，無法使用 oracle，所以這些規則放在 `validate.ts`，不另外重寫一份可見範圍的計算。
 - **換客戶或修改題庫、資料集、`access.json` 後，`npm run check:client` 與 `npm test` 都要執行**：需要資料集的題庫規則在 `app/src/evals/validate.ts`，只有 `npm test` 會檢查，`check:client` 通過不代表題庫正確。
 
-### 參考情境的題庫（28 題，繁中 16、英文 12）
+### 參考情境的題庫（58 題）
+
+第 1 階段的 28 題（繁中 16、英文 12），加上 #163 的跨語言、同義詞與完全無關題 30 題（見下一節）。
 
 | 類別 | 題目（角色） |
 | --- | --- |
@@ -61,7 +65,20 @@
 | `out-of-scope`（3） | 天氣、法國首都、退休金提撥比例（資料集沒有寫的公司規定，以主管身分問，確認不是因為權限才拒答） |
 | `extraction-attempt`（2） | 要求忽略規則並列出機密內容（staff）、自稱 CEO 要求成本（guest） |
 
-第 1 階段的 `keyword-hash` 不支援跨語言（[docs/retrieval.md](retrieval.md)），參考題庫不放跨語言題（問題與答案段落不同語言）；第 2 階段支援跨語言檢索後再加入（#75 決定）。
+| `cross-language`（19） | 中文發問、只檢索英文段落 9 題；英文發問、只檢索中文段落 10 題（#126 的題目） |
+| `synonym`（6） | 問題用段落裡沒有的說法（「招聘」對「招募」、`vacation` 對 `annual leave`），只檢索同語言的段落，中英各 3 題 |
+| `unrelated`（5） | 與資料集完全無關：食譜、程式語法、棒球比賽、富士山高度、匯率 |
+
+### 跨語言、同義詞與完全無關的題目
+
+`keyword-hash` 不支援跨語言、也不懂同義詞（[docs/retrieval.md](retrieval.md)「限制」），這些題目用來評測語意向量（#163，[ADR 0006](adr/0006-semantic-retrieval.md)）：
+
+- **跨語言**：以 `passageLanguage` 只檢索另一種語言的段落，等同「這個事實只有該語言的段落」，不必另建一份資料集。19 題都標記 `requires: "semantic"`。
+- **同義詞**：`keyword-hash` 以預設設定（`topK` 5、`minScore` 0.1）找不到答案段落的 2 題（`idle-computer-staff-zh`、`pay-increase-manager-en`）標記 `requires: "semantic"`；其餘 4 題在 `keyword-hash` 也照常計分。
+- **完全無關**：沒有 `requires`。`keyword-hash` 檢索不到段落，在本機拒答，不呼叫 `/api/ask`；語意向量的分數擠在 0.7～0.9，用來驗證 `minScore` 0.7 是否擋得下（[評估報告](evals/semantic-retrieval-2026-11.md)「分數分布」）。
+- 所以範例客戶（`keyword-hash`）實際評測 39 題：完全無關的 5 題在本機拒答，送出 `/api/ask` 的只多了 4 題同義詞題。現有題目的結果與門檻不變（#163 決定 3）。
+- `app/src/evals/run.test.ts` 以 `keyword-hash` 檢查標記與實際結果一致：沒標記的同義詞題檢索得到答案段落、標記的檢索不到，完全無關的題目檢索不到任何段落。
+- 下載的 JSON 記下評測時的 `provider` 與不適用的題目 id（`notApplicable`）。
 
 `app/src/evals/validate.test.ts` 檢查題數（情境題 8 題以上、預期回答 15 題以上，依 [docs/playbook/eval-question-bank.md](playbook/eval-question-bank.md)）、語言與類別的涵蓋範圍、`scenarios.json` 的每一題都在題庫中，以及矛盾題要求兩種說法。
 
@@ -105,7 +122,8 @@
 
 - **資料庫**：評測使用專用的記憶體資料庫（`openEvalDatabase()`：`openDatabase()` 加上資料集 seed，與 App 載入時相同），不納入上傳的文件、待審的處理結果與「說法不同」的決定，結果可以重現（#62 決定 C）。呼叫端在評測結束、停止或離開頁籤時都要 `close()`。
 - **兩組設定**：每組是 `topK` 與 `minScore`，只在這次評測有效，不寫回 `client.json`。在 Retriever 外包一層，把這兩個值帶入每次的 `retrieve()`，`ask()` 不變。兩組時先跑完設定 A 再跑設定 B。
-- **逐題執行**：一題一題依序執行，不並行。每題以題庫的 `role` 與 `language` 呼叫與一般問答相同的 `ask()`，同時記下檢索回傳的段落 id 與送出的 body（`Observation`），以 `scoreQuestion()` 評分。檢索不到段落或 prompt 放不下時，`ask()` 在本機拒答，不呼叫 `/api/ask`。
+- **適用的題目**：評測開始時記下實際使用的 provider（`EvalRun.providerId`，降級時是 `keyword-hash`），`requires: "semantic"` 的題目在 `keyword-hash` 時不執行。
+- **逐題執行**：一題一題依序執行，不並行。每題以題庫的 `role` 與 `language` 呼叫與一般問答相同的 `ask()`，有 `passageLanguage` 時帶入每次檢索的 `language`，同時記下檢索回傳的段落 id 與送出的 body（`Observation`），以 `scoreQuestion()` 評分。檢索不到段落或 prompt 放不下時，`ask()` 在本機拒答，不呼叫 `/api/ask`。
 - **預計呼叫次數**（`estimateCalls()`）：檢索在本機進行，所以開始前以每組設定各跑一次檢索，算出實際會送出的問答次數；模型評分以上限計算（會送出的 `expect: "answer"` 題目各一次，實際上回答被拒答時不呼叫）。畫面顯示「最多 N 次」，經確認才開始。
 - **進度**：每完成一題、停止或結束都呼叫 `onChange`。
 - **停止**：以 `AbortSignal` 中止；進行中的題目不記錄，已完成的結果保留（`status: "stopped"`、`stopReason: "aborted"`）。離開頁籤時先中止再關閉資料庫，進行中的檢索可能因此失敗；中止後的例外同樣記為停止，不停在「執行中」（#66）。
@@ -123,7 +141,8 @@
 - **設定**：設定 A、設定 B 各有 `topK`（1～20 的整數）與 `minScore`（0～1），預設值取自 `client.json` 的 `retrieval`，只在這次評測有效。設定 B 預設不啟用（只跑一組）。「答案正確改用模型評分」預設不勾選。
 - **上傳的文件**：評測使用專用的記憶體資料庫，不納入上傳的文件；本次工作階段有上傳的文件時，畫面提示「目前有 N 份上傳的文件，不納入評測」。
 - **開始前確認**：按「開始評測」時開啟評測專用資料庫，以 `estimateCalls()` 算出預計次數，確認視窗顯示「最多 N 次呼叫（問答 a、模型評分 b）」，並提醒每日上限（`DAILY_LIMIT`）不夠時先在 `.dev.vars` 調高。取消時關閉資料庫。
-- **進度與停止**：顯示「第 n／N 題」（兩組時 N 是兩組的題數合計）；「停止」以 `AbortSignal` 中止。停止或因錯誤停止時，以 `errorMessage()` 顯示原因，已完成的結果保留。
+- **不適用的題目**：`requires: "semantic"` 的題目在 `keyword-hash` 時，結果欄顯示「不適用（需要語意檢索）」（`evalRequiresSemantic`），總覽的分母不含它們。有 `passageLanguage` 的題目在題目下方註明（`evalPassageLanguage`）。
+- **進度與停止**：顯示「第 n／N 題」（兩組時 N 是兩組適用的題數合計）；「停止」以 `AbortSignal` 中止。停止或因錯誤停止時，以 `errorMessage()` 顯示原因，已完成的結果保留。
 - **評測專用資料庫的開關**（#62 決定（給 PR 3）2）：`createEvalDatabases()` 保證同一時間只開一個（舊的關閉後才開新的）。評測結束、按停止、取消確認、離開評測台頁籤（包括切換到沒有 `canReview` 的身分）時都 `close()`。
 - **總覽**：四個指標的數值（通過題數／分母與比例；滲漏是題數）、門檻，以及通過、未通過或未完成。兩組時並排；模型評分時另外顯示無法評分的題數。
 - **每題的結果**：問題、角色、語言、類別、預期結果；每組一欄，顯示各指標的通過與否、回答（可展開）、引用（段落 id 與是否在答案段落內、不存在的引用編號）、命中與沒命中的關鍵重點、模型評分的判定與理由、滲漏原因，錯誤時顯示錯誤訊息。
@@ -169,8 +188,8 @@ user 訊息是問題、參考答案（`referenceAnswer`）與回答文字，三�
 
 - **每次問答**：輸入約 1,000～1,500 token（system 約 450 token，加上最多 `topK` 段段落與問題）；輸出約 100～1,000 token（含 low effort 的 thinking，上限 8,000）。
 - **每次模型評分**：輸入約 300～600 token（system 約 200 token，加上問題、參考答案與回答）；輸出約 50～500 token。
-- **一組設定跑一次**：參考情境的題庫（28 題）中，有些題目在本機就拒答，不呼叫；以預設設定約 23 次問答。輸入約 2.7～3.5 萬 token，輸出約 0.7～2.7 萬 token。
-- **最多**：兩組設定加上模型評分，約 23×2＋16×2 ≈ 78 次呼叫（模型評分只算回答題）。開始前畫面顯示的預計次數以 `estimateCalls()` 為準。
+- **一組設定跑一次**：參考情境的題庫（`keyword-hash` 時適用 39 題）中，有些題目在本機就拒答，不呼叫；以預設設定約 27 次問答（第 1 階段的 28 題是 23 次，另加 4 題同義詞題）。輸入約 3.2～4.1 萬 token，輸出約 0.8～3.2 萬 token。語意向量時跨語言與同義詞題也會送出，次數更多，以畫面的預計次數為準。
+- **最多**：兩組設定加上模型評分，約 27×2＋20×2 ≈ 94 次呼叫（模型評分只算回答題）。開始前畫面顯示的預計次數以 `estimateCalls()` 為準。
 - `DAILY_LIMIT` 預設是 30，所以兩組設定或模型評分的完整評測需要在 `.dev.vars` 調高上限。
 - 費用 ≈ Σ（輸入 token × 輸入單價 ＋ 輸出 token × 輸出單價）。thinking 的 token 以輸出計價。
 
@@ -182,7 +201,7 @@ user 訊息是問題、參考答案（`referenceAnswer`）與回答文字，三�
 - `scripts/check-client.test.mjs`「評測題庫」：Schema 與只需 `client/` 設定的規則。
 - `app/tests/evals/leakage.test.ts`：滲漏判定與反向驗證。
 - `app/src/evals/grade.test.ts`：模型評分的 user 訊息與跳脫、輸出格式錯誤記為無法評分、錯誤與截斷。
-- `app/src/evals/run.test.ts`（假的 `/api/ask`）：預計次數與實際送出次數相同、兩組設定、`daily_limit` 等錯誤時停止並保留結果、其他錯誤記在該題、中止、模型評分（遇到 `daily_limit` 時保存該題再停止）。
+- `app/src/evals/run.test.ts`（假的 `/api/ask`）：預計次數與實際送出次數相同、`requires` 與 `passageLanguage`、參考題庫的 `requires` 標記與 `keyword-hash` 的實際結果一致、兩組設定、`daily_limit` 等錯誤時停止並保留結果、其他錯誤記在該題、中止、模型評分（遇到 `daily_limit` 時保存該題再停止）。
 - `app/src/ui/eval-helpers.test.ts`：設定表單的範圍、各指標的結果與兩組差異、下載 JSON 的內容、評測專用資料庫同一時間只開一個。
 - 畫面的版面與操作（確認視窗、停止、頁籤的顯示條件）沒有自動測試，由人工確認。
 - `app/src/evals/docs.test.ts`：本文件的模型評分 prompt 與 `GRADE_SYSTEM_PROMPT` 相同。

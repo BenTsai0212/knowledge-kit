@@ -1,0 +1,16 @@
+<!doctype html>
+<!-- 語意向量的瀏覽器量測頁（#163，docs/retrieval.md「瀏覽器量測」）。只在 npm run dev 提供（/dev/semantic-measure.html）；build 只以 app/index.html 為入口，dist/ 不含本頁。 -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>semantic retrieval measurement</title>
+  </head>
+  <body>
+    <p>
+      <button id="run">run</button>
+      <button id="clear">clear model cache</button>
+    </p>
+    <pre id="out"></pre>
+    <script type="module" src="./semantic-measure.ts"></script>
+  </body>
+</html>

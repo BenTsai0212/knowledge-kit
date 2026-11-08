@@ -69,7 +69,9 @@ npm run check:client
 | `topK` | 整數，1～20 | 5 | 回傳前幾名段落 |
 | `minScore` | 0～1 | 依 `provider`：`keyword-hash` 0.1、`multilingual-e5-small` 0.7 | 最低分數門檻，低於此分數的段落不回傳。Schema 的 `default` 是 `keyword-hash` 的值 |
 
-評測台的設定 A、B 以 `topK`、`minScore` 為預設值，只在那次評測有效，不寫回 `client.json`（[docs/evals.md](evals.md)「畫面」）。
+評測台的設定 A、B 以 `topK`、`minScore` 為預設值，只在那次評測有效，不寫回 `client.json`（[docs/evals.md](evals.md)「畫面」）。題庫中 `requires: "semantic"` 的題目（跨語言等）只在語意向量時評測，`keyword-hash`（包括降級）時顯示不適用、不計入分母。
+
+選用 `multilingual-e5-small` 之前，可先以不進版本控制的 `clients/local-<名稱>/`（`.gitignore` 排除 `clients/local-*/`）在本機試用與量測，見 [docs/retrieval.md](retrieval.md#瀏覽器量測)。
 
 `evals.thresholds` 的欄位（指標的定義見 [docs/evals.md](evals.md)「指標」）：
 

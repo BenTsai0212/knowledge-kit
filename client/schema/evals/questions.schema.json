@@ -32,7 +32,7 @@
           "category": {
             "description": "分組顯示用，不影響評分",
             "type": "string",
-            "enum": ["scenario", "permission", "out-of-scope", "conflict", "extraction-attempt"]
+            "enum": ["scenario", "permission", "out-of-scope", "conflict", "extraction-attempt", "cross-language", "synonym", "unrelated"]
           },
           "question": {
             "description": "問題；長度上限同問答（app/src/qa/prompt.ts 的 MAX_QUESTION_CHARS）",
@@ -62,6 +62,15 @@
             "description": "參考答案（模型評分用）；answer 時必填，refusal 時為 null",
             "type": ["string", "null"],
             "minLength": 1
+          },
+          "passageLanguage": {
+            "description": "只檢索這個語言的段落（評測時帶入 retrieve() 的 language）；必須在 client.json 的 languages 內。cross-language 題必填，且與 language 不同",
+            "$ref": "../common.schema.json#/definitions/LanguageCode"
+          },
+          "requires": {
+            "description": "semantic：只在語意向量 provider 評測；keyword-hash 時顯示不適用、不計入分母",
+            "type": "string",
+            "enum": ["semantic"]
           }
         }
       }

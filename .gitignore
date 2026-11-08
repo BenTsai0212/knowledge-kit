@@ -12,3 +12,6 @@ dist/
 test-results/
 playwright-report/
 .runner-tmp/
+
+# 人工量測用的本機客戶設定（docs/retrieval.md「瀏覽器量測」），不進版本控制
+clients/local-*/
