@@ -404,6 +404,22 @@ describe("評測題庫", () => {
     ]);
   });
 
+  it("passageLanguage 必須在 languages 內；跨語言題必須指定與 language 不同的 passageLanguage", () => {
+    const data = evals();
+    const questions = data.files["questions.json"].questions;
+    const cross = questions.filter((q) => q.category === "cross-language");
+    expect(cross.length).toBeGreaterThan(1);
+    const [i, j] = [questions.indexOf(cross[0]), questions.indexOf(cross[1])];
+    questions[0].passageLanguage = "ja";
+    delete questions[i].passageLanguage;
+    questions[j].passageLanguage = questions[j].language;
+    expect(check(data)).toEqual([
+      { file: FILE, path: "/questions/0/passageLanguage", message: "語言 ja 不在 client.json 的 languages 內" },
+      { file: FILE, path: `/questions/${i}/passageLanguage`, message: "跨語言題必須指定與 language 不同的 passageLanguage" },
+      { file: FILE, path: `/questions/${j}/passageLanguage`, message: "跨語言題必須指定與 language 不同的 passageLanguage" },
+    ]);
+  });
+
   it("預期回答要有答案段落、關鍵重點與參考答案；預期拒答不能有關鍵重點，參考答案為 null", () => {
     const data = evals();
     const questions = data.files["questions.json"].questions;

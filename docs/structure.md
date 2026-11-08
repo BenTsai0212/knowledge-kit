@@ -4,7 +4,7 @@
 
 | 路徑 | 內容 |
 | --- | --- |
-| `app/` | 前端（Vite＋React＋TypeScript）；`index.html` 與 `src/`；`src/client/` 是 `client/` 設定的型別與讀取（改 Schema 時同步修改，見 `docs/client-config.md`）；`src/client/i18n.ts` 是介面文字唯一的讀取模組（`strings()`、`fill()`、`errorMessage()`；結構測試在 `i18n.test.ts`）；`src/client/source-scan.ts` 是結構測試共用的原始碼掃描；客戶資料一律以 `@client/…` 別名讀取，不以相對路徑指到 `client/`（`client/schema/` 除外；結構測試在 `src/client/client-dir.test.ts`） |
+| `app/` | 前端（Vite＋React＋TypeScript）；`index.html` 與 `src/`；`dev/` 是只在 `npm run dev` 提供的開發用頁面（語意向量的量測頁，不進 `dist/`，見 `docs/retrieval.md`「瀏覽器量測」）；`src/client/` 是 `client/` 設定的型別與讀取（改 Schema 時同步修改，見 `docs/client-config.md`）；`src/client/i18n.ts` 是介面文字唯一的讀取模組（`strings()`、`fill()`、`errorMessage()`；結構測試在 `i18n.test.ts`）；`src/client/source-scan.ts` 是結構測試共用的原始碼掃描；客戶資料一律以 `@client/…` 別名讀取，不以相對路徑指到 `client/`（`client/schema/` 除外；結構測試在 `src/client/client-dir.test.ts`） |
 | `app/src/dataset/` | 資料集（`client/data/`）的型別、鍵清單、讀取（`load.ts`）、跨檔檢查（`validate.ts`）與匯入（`seed.ts`） |
 | `app/src/retrieval/` | 檢索：`retrieve.ts` 經 `withIdentity()` 取段落再計分；`VectorProvider` 接口（`types.ts`）、預設實作 `keyword-hash`（`tokenize.ts`、`keyword-hash.ts`）；語意向量實作在 `semantic/`（導入中，`@huggingface/transformers` 只在 `semantic/runtime.ts` 以動態 import 載入）；使用哪個實作只在 `providers.ts` 決定（`providers.test.ts` 檢查）；說明見 `docs/retrieval.md`；預設問題的檢索測試是 target 測試 `scenarios.target.test.ts` |
 | `app/src/language/` | 語言模組（#83）：語言或文字類別的規則（文字類別與切詞方式 `scripts.ts`、停用詞 `stopwords.ts`、對外函式 `text.ts`），檢索的 `tokenize.ts` 與上傳的 `chunk.ts` 經由它處理；其他地方不得放這類規則（`structure.test.ts` 檢查）；說明見 `docs/retrieval.md`「語言模組」 |

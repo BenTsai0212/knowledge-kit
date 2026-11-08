@@ -438,6 +438,10 @@ export interface UiStrings {
   evalDiffers: string;
   evalQuestion: string;
   evalNotRun: string;
+  // requires: "semantic" 的題目在 keyword-hash 時的結果欄
+  evalRequiresSemantic: string;
+  // 題目的 passageLanguage：{language} 是語言代碼
+  evalPassageLanguage: string;
   evalAnswerText: string;
   evalCitations: string;
   evalNoCitations: string;

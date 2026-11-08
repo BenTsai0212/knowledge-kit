@@ -39,7 +39,7 @@
     "evalConfirmCalls", "evalConfirmLimit", "evalConfirmStart", "evalCancel", "evalDownload", "evalSummary",
     "evalMetric", "evalThreshold", "evalSettingsValue", "evalAtLeast", "evalAtMost", "evalRate",
     "evalLeakCount", "evalUngradable", "evalPass", "evalFail", "evalIncomplete", "evalNotApplicable",
-    "evalResults", "evalOnlyDiff", "evalDiffers", "evalQuestion", "evalNotRun", "evalAnswerText",
+    "evalResults", "evalOnlyDiff", "evalDiffers", "evalQuestion", "evalNotRun", "evalRequiresSemantic", "evalPassageLanguage", "evalAnswerText",
     "evalCitations", "evalNoCitations", "evalDropped", "evalKeyPoints", "evalGrade", "evalMetrics",
     "evalCategories", "evalExpect", "evalVerdicts", "evalLeaks",
     "colon", "progress", "parenthetical", "refusal", "uncited", "incomplete",
@@ -301,6 +301,8 @@
     "evalDiffers": { "$ref": "#/definitions/Text" },
     "evalQuestion": { "$ref": "#/definitions/Text" },
     "evalNotRun": { "$ref": "#/definitions/Text" },
+    "evalRequiresSemantic": { "$ref": "#/definitions/Text" },
+    "evalPassageLanguage": { "$ref": "#/definitions/Text" },
     "evalAnswerText": { "$ref": "#/definitions/Text" },
     "evalCitations": { "$ref": "#/definitions/Text" },
     "evalNoCitations": { "$ref": "#/definitions/Text" },
@@ -324,14 +326,18 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "scenario", "permission", "out-of-scope", "conflict", "extraction-attempt"
+        "scenario", "permission", "out-of-scope", "conflict", "extraction-attempt",
+        "cross-language", "synonym", "unrelated"
       ],
       "properties": {
         "scenario": { "$ref": "#/definitions/Text" },
         "permission": { "$ref": "#/definitions/Text" },
         "out-of-scope": { "$ref": "#/definitions/Text" },
         "conflict": { "$ref": "#/definitions/Text" },
-        "extraction-attempt": { "$ref": "#/definitions/Text" }
+        "extraction-attempt": { "$ref": "#/definitions/Text" },
+        "cross-language": { "$ref": "#/definitions/Text" },
+        "synonym": { "$ref": "#/definitions/Text" },
+        "unrelated": { "$ref": "#/definitions/Text" }
       }
     },
     "evalExpect": {

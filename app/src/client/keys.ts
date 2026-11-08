@@ -236,7 +236,7 @@ const uiStrings = {
   evalAtMost: "required", evalRate: "required", evalLeakCount: "required", evalUngradable: "required",
   evalPass: "required", evalFail: "required", evalIncomplete: "required", evalNotApplicable: "required",
   evalResults: "required", evalOnlyDiff: "required", evalDiffers: "required", evalQuestion: "required",
-  evalNotRun: "required", evalAnswerText: "required", evalCitations: "required", evalNoCitations: "required",
+  evalNotRun: "required", evalRequiresSemantic: "required", evalPassageLanguage: "required", evalAnswerText: "required", evalCitations: "required", evalNoCitations: "required",
   evalDropped: "required", evalKeyPoints: "required", evalGrade: "required", evalMetrics: "required",
   evalCategories: "required", evalExpect: "required", evalVerdicts: "required", evalLeaks: "required",
   colon: "required", progress: "required",
@@ -299,6 +299,7 @@ export const i18nManifests: ManifestEntry[] = [
     pointer: "/properties/evalCategories",
     keys: {
       scenario: "required", permission: "required", "out-of-scope": "required", conflict: "required", "extraction-attempt": "required",
+      "cross-language": "required", synonym: "required", unrelated: "required",
     } satisfies KeyManifest<UiStrings["evalCategories"]>,
   },
   {

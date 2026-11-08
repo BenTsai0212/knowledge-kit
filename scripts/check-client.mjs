@@ -169,6 +169,12 @@ function validateEvals(ajv, { root, files }, valid) {
     if (languages && !languages.includes(q.language)) {
       errors.push({ file, path: `${at}/language`, message: `語言 ${q.language} 不在 client.json 的 languages 內` });
     }
+    if (languages && q.passageLanguage !== undefined && !languages.includes(q.passageLanguage)) {
+      errors.push({ file, path: `${at}/passageLanguage`, message: `語言 ${q.passageLanguage} 不在 client.json 的 languages 內` });
+    }
+    if (q.category === "cross-language" && (q.passageLanguage === undefined || q.passageLanguage === q.language)) {
+      errors.push({ file, path: `${at}/passageLanguage`, message: "跨語言題必須指定與 language 不同的 passageLanguage" });
+    }
     if (q.expect === "answer") {
       if (q.answerPassages.length === 0) errors.push({ file, path: `${at}/answerPassages`, message: "預期回答時至少要有一個答案段落" });
       if (q.keyPoints.length === 0) errors.push({ file, path: `${at}/keyPoints`, message: "預期回答時至少要有一項關鍵重點" });

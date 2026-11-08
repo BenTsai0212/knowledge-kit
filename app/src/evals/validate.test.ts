@@ -44,6 +44,15 @@ describe("validateEvals", () => {
     expect(validateEvals(clientConfig, dataset, file)).toEqual([]);
   });
 
+  it("指定 passageLanguage 時，答案段落都必須是該語言的段落", () => {
+    const file = copy();
+    const i = indexOf(file, "annual-leave-staff");
+    file.questions[i].passageLanguage = "en";
+    expect(validateEvals(clientConfig, dataset, file)).toEqual([
+      { file: FILE, path: `/questions/${i}/answerPassages/0`, message: "答案段落 employee-handbook-zh-03 不是 passageLanguage（en）的段落" },
+    ]);
+  });
+
   it("app 只支援 evals.path 為 evals/", () => {
     const config = structuredClone(clientConfig);
     config.client.evals.path = "tests/";
@@ -62,7 +71,7 @@ describe("參考情境的題庫", () => {
   it("繁中與英文都有，涵蓋每個類別", () => {
     expect(new Set(questions.map((q) => q.language))).toEqual(new Set(clientConfig.client.languages));
     expect(new Set(questions.map((q) => q.category))).toEqual(
-      new Set(["scenario", "permission", "out-of-scope", "conflict", "extraction-attempt"]),
+      new Set(["scenario", "permission", "out-of-scope", "conflict", "extraction-attempt", "cross-language", "synonym", "unrelated"]),
     );
   });
 

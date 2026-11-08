@@ -105,7 +105,7 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 
 ## 語意向量：`multilingual-e5-small`（導入中）
 
-依 [ADR 0006](adr/0006-semantic-retrieval.md) 導入的可選實作（#163），程式在 `app/src/retrieval/semantic/`。`client.json` 寫 `"retrieval": { "provider": "multilingual-e5-small" }` 就能選用；範例客戶與線上 demo 維持 `keyword-hash`。`PROVIDERS` 以動態 import 載入這個實作，沒選用的客戶不會下載它的程式（`dist/assets/` 中有它的檔案，但不會被請求）。題庫與量測在 #163 的下一個 PR 補上。
+依 [ADR 0006](adr/0006-semantic-retrieval.md) 導入的可選實作（#163），程式在 `app/src/retrieval/semantic/`。`client.json` 寫 `"retrieval": { "provider": "multilingual-e5-small" }` 就能選用；範例客戶與線上 demo 維持 `keyword-hash`。`PROVIDERS` 以動態 import 載入這個實作，沒選用的客戶不會下載它的程式（`dist/assets/` 中有它的檔案，但不會被請求）。題庫的跨語言、同義詞與完全無關題見[評測](#評測)，瀏覽器的量測見[瀏覽器量測](#瀏覽器量測)。
 
 | 檔案 | 內容 |
 | --- | --- |
@@ -139,6 +139,33 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 - 問答頁與評測台顯示提示（`RetrievalFallbackNotice`，文字是 `client/i18n/` 的 `retrievalFallbackTitle` 與依原因的 `retrievalFallback`）；錯誤本身只寫到 `console.warn`。
 - `keyword-hash` 本身不降級。測試以假的 `fetch` 與會失敗的模型確認每種原因都會降級（`providers.test.ts`），並確認降級後的檢索結果與 `keyword-hash` 的客戶相同（`retrieve.test.ts`）。
 
+### 評測
+
+題庫（`client/evals/questions.json`）有只在語意向量有意義的題目（[docs/evals.md](evals.md)「跨語言、同義詞與完全無關的題目」）：
+
+- **跨語言**（19 題，`cross-language`）：以 `passageLanguage` 只檢索另一種語言的段落，等同「這個事實只有該語言的段落」，不必另建一份資料集。都標記 `requires: "semantic"`。
+- **同義詞**（6 題，`synonym`）：問題用段落裡沒有的說法，只檢索同語言的段落。`keyword-hash` 以預設設定找不到答案段落的 2 題標記 `requires: "semantic"`，其餘 4 題在 `keyword-hash` 照常計分。
+- **完全無關**（5 題，`unrelated`）：食譜、程式語法、比賽結果等，用來驗證 `minScore`。`keyword-hash` 檢索不到段落，在本機拒答。
+
+評測台在 `keyword-hash`（包括降級）時把 `requires: "semantic"` 的題目顯示為不適用、不計入分母，所以範例客戶的結果與門檻不變。`app/src/evals/run.test.ts` 以 `keyword-hash` 檢查標記與實際結果一致。語意向量的分數在 CI 拿不到（不下載模型），由人以本機的 A1 客戶設定在評測台執行（見下一節）。
+
+### 瀏覽器量測
+
+`app/dev/semantic-measure.html` 是開發專用的量測頁：只在 `npm run dev` 提供（`/dev/semantic-measure.html`），build 只以 `app/index.html` 為入口，`dist/` 不含它。頁面使用正式的 `createE5Provider()`（同一套下載、SHA-256 驗證、Cache Storage 與自己提供的 WASM），按 `run` 輸出一行 JSON：
+
+| 欄位 | 內容 |
+| --- | --- |
+| `firstQuestionMs` | 第一次提問要等多久：建立 provider（下載、驗證、初始化）＋轉全部段落＋轉問題，與問答頁的第一次提問相同 |
+| `downloadMB` | 開始前不在 Cache Storage 的模型檔大小合計（快取中有的檔案不再下載） |
+| `loadMs`、`passagesMs`、`firstQueryMs` | 上述三個階段各自的時間；段落是參考資料集的全部段落（`passages`） |
+| `queryMs` | 之後一次查詢的平均（20 次） |
+| `jsHeapMB` | `performance.memory`（只有 Chrome 有）；分頁的記憶體另看瀏覽器的工作管理員 |
+| `cachedFiles`、`crossOriginIsolated`、`cores`、`userAgent` | 量測條件 |
+
+`clear model cache` 刪除模型的 Cache Storage，用來量首次載入。
+
+**本機的 A1 客戶設定**：人工以評測台跑語意向量的題目時，把參考情境複製到 `clients/local-<名稱>/`（`.gitignore` 排除 `clients/local-*/`，不進版本控制），把 `client.json` 的 `retrieval.provider` 改成 `multilingual-e5-small`，再以 `KK_CLIENT=local-<名稱> npm run dev` 啟動。
+
 ## 向量快取
 
 - 段落向量在第一次檢索時計算，存在 retriever 的記憶體快取中，鍵是段落 id。之後只要轉換問題。
@@ -151,7 +178,7 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 ## 限制
 
 - **非語意**：只比對共同的詞與字元，不懂同義詞與換句話說。例如「主管」找不到只寫「經理」的段落，`vacation` 找不到只寫 `annual leave` 的段落。
-- **不支援跨語言**：中文問題找不到只有英文的段落，反之亦然。參考資料集的每題預設問題在兩種語言都有答案段落（#26），所以 14 個檢查都能通過；跨語言檢索是第 2 階段。語意向量的評估見[評估報告](evals/semantic-retrieval-2026-11.md)與 [ADR 0006](adr/0006-semantic-retrieval.md)（Proposed）。
+- **不支援跨語言**：中文問題找不到只有英文的段落，反之亦然。參考資料集的每題預設問題在兩種語言都有答案段落（#26），所以 14 個檢查都能通過；需要跨語言時選用[語意向量](#語意向量multilingual-e5-small導入中)（評估見[評估報告](evals/semantic-retrieval-2026-11.md)與 [ADR 0006](adr/0006-semantic-retrieval.md)，Proposed）。
 - **新增語言**：見[語言模組](#語言模組)。
 - **規模與效能**：
   - 每次檢索都掃過全部段落；RLS 對每一列呼叫 `kk.can_see()` 查一次身分，再在 JS 中逐段計分，時間隨段落數線性增加。

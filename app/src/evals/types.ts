@@ -1,8 +1,18 @@
 // client/evals/ 的型別。JSON Schema（client/schema/evals/）是唯一正本；改 Schema 時同步修改本檔與 keys.ts。
 import type { Id, LanguageCode } from "../client/types";
 
-export type EvalCategory = "scenario" | "permission" | "out-of-scope" | "conflict" | "extraction-attempt";
+export type EvalCategory =
+  | "scenario"
+  | "permission"
+  | "out-of-scope"
+  | "conflict"
+  | "extraction-attempt"
+  | "cross-language"
+  | "synonym"
+  | "unrelated";
 export type EvalExpect = "answer" | "refusal";
+// 只在語意向量 provider 有意義的題目；keyword-hash 時不適用、不計入分母（#163 決定 3）
+export type EvalRequirement = "semantic";
 
 // 一組同義說法，命中其中一個就算命中這一項
 export type Synonyms = string[];
@@ -20,6 +30,9 @@ export interface EvalQuestion {
   forbidden: Synonyms[];
   // 模型評分用；refusal 時為 null
   referenceAnswer: string | null;
+  // 只檢索這個語言的段落（評測時帶入 retrieve() 的 language）：跨語言題以此模擬「這個事實只有另一種語言的段落」
+  passageLanguage?: LanguageCode;
+  requires?: EvalRequirement;
 }
 
 export interface QuestionsFile {

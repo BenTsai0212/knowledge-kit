@@ -5,7 +5,7 @@ import { errorMessage, fill, strings, taskErrorMessage } from "../client/i18n";
 import { clientConfig } from "../client/load";
 import { dataset } from "../dataset/load";
 import { evalQuestions } from "../evals/load";
-import { estimateCalls, openEvalDatabase, runEvals, type EvalContext, type EvalRun, type EvalSettings, type QuestionResult } from "../evals/run";
+import { applies, applicableQuestions, estimateCalls, openEvalDatabase, runEvals, type EvalContext, type EvalRun, type EvalSettings, type QuestionResult } from "../evals/run";
 import { LEAKAGE_LIMIT, type Metric, type Summary } from "../evals/score";
 import type { EvalQuestion } from "../evals/types";
 import { apiTransport } from "../qa/api";
@@ -87,7 +87,9 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, fallba
     setPhase("estimating");
     try {
       const db = await dbs.current.open();
-      ctx.current = { retriever: openRetriever(db, client.retrieval, provider), transport: apiTransport({ accessCode }), config: clientConfig, data: dataset, questions };
+      // 降級時是 keyword-hash：requires: "semantic" 的題目不適用
+      const { provider: active } = await provider;
+      ctx.current = { retriever: openRetriever(db, client.retrieval, provider), transport: apiTransport({ accessCode }), config: clientConfig, data: dataset, questions, providerId: active.id };
       setEstimate(await estimateCalls(ctx.current, plan.sets, plan.mode));
       setPhase("confirm");
     } catch {
@@ -129,7 +131,8 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, fallba
 
   const setForm = (i: number, patch: Partial<Form>) => setForms((all) => all.map((f, j) => (j === i ? { ...f, ...patch } : f)));
   const done = run?.sets.reduce((n, set) => n + set.results.length, 0) ?? 0;
-  const summaries = run?.sets.map((set) => setSummary(questions, set, thresholds, run.mode)) ?? [];
+  const applicable = run === null ? questions : applicableQuestions(questions, run.providerId);
+  const summaries = run?.sets.map((set) => setSummary(applicable, set, thresholds, run.mode)) ?? [];
   const twoSets = run !== null && run.sets.length === 2;
   const byId = run?.sets.map((set) => new Map(set.results.map((r) => [r.question, r]))) ?? [];
   const rows = questions.filter((q) => !onlyDiff || !twoSets || differs(byId[0].get(q.id), byId[1].get(q.id), run?.mode ?? "keyPoints"));
@@ -146,7 +149,9 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, fallba
     );
   }
 
-  function resultCell(q: EvalQuestion, r: QuestionResult | undefined, mode: EvalRun["mode"]) {
+  function resultCell(q: EvalQuestion, r: QuestionResult | undefined, run: EvalRun) {
+    const { mode } = run;
+    if (!applies(q, run.providerId)) return <span className="muted">{s.evalRequiresSemantic}</span>;
     if (r === undefined) return <span className="muted">{s.evalNotRun}</span>;
     const v = verdicts(r, mode);
     const badges: [string, boolean][] = [
@@ -255,7 +260,7 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, fallba
         </div>
         {run?.status === "running" && (
           <p aria-live="polite">
-            {s.evalRunning} {fill(s.evalProgress, { done: Math.min(done + 1, questions.length * run.sets.length), total: questions.length * run.sets.length })}
+            {s.evalRunning} {fill(s.evalProgress, { done: Math.min(done + 1, applicable.length * run.sets.length), total: applicable.length * run.sets.length })}
           </p>
         )}
         {run?.status === "done" && <p className="muted">{s.evalDone}</p>}
@@ -334,12 +339,18 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, fallba
                     <td>
                       <strong>{q.question}</strong>
                       <div className="muted">
-                        {[access.roles.find((r) => r.id === q.role)?.label[language] ?? q.role, q.language, s.evalCategories[q.category], s.evalExpect[q.expect]].join(s.listSeparator)}
+                        {[
+                          access.roles.find((r) => r.id === q.role)?.label[language] ?? q.role,
+                          q.language,
+                          ...(q.passageLanguage === undefined ? [] : [fill(s.evalPassageLanguage, { language: q.passageLanguage })]),
+                          s.evalCategories[q.category],
+                          s.evalExpect[q.expect],
+                        ].join(s.listSeparator)}
                       </div>
                       {twoSets && differs(byId[0].get(q.id), byId[1].get(q.id), run.mode) && <span className="badge warning">{s.evalDiffers}</span>}
                     </td>
                     {byId.map((results, i) => (
-                      <td key={i}>{resultCell(q, results.get(q.id), run.mode)}</td>
+                      <td key={i}>{resultCell(q, results.get(q.id), run)}</td>
                     ))}
                   </tr>
                 ))}
