@@ -11,9 +11,17 @@ export type Extractor = (texts: string[]) => Promise<Float32Array[]>;
 export const ORT_WASM_DIR = "ort";
 export const ORT_WASM = { wasm: "ort-wasm-simd-threaded.wasm", mjs: "ort-wasm-simd-threaded.mjs" } as const;
 
-// 只回應驗證過的檔案；transformers.js 先查快取，查到就不會自己下載
+// 只回應驗證過、而且在 model-files.ts 登記過的檔案；transformers.js 先查快取，查到就不會自己下載。
+// 同一份 bytes 同時以固定 commit 與 main 兩種網址回應：transformers.js 4.3.2 的 pipeline() 先以
+// get_pipeline_files() 讀 config.json、檢查 tokenizer_config.json，這段沒有把 revision 傳下去，改查 main（#168）。
+// 內容仍是固定 commit 驗證過的檔案，不會因此取得 main 上的版本。升級 transformers.js 時重新確認是否還需要 main。
 export function verifiedCache(model: ModelSpec, files: Map<string, Uint8Array<ArrayBuffer>>) {
-  const byUrl = new Map([...files].map(([path, bytes]) => [modelFileUrl(model, path), bytes]));
+  const registered = new Set(model.files.map((file) => file.path));
+  const byUrl = new Map<string, Uint8Array<ArrayBuffer>>();
+  for (const [path, bytes] of files) {
+    if (!registered.has(path)) continue;
+    for (const revision of [model.revision, "main"]) byUrl.set(modelFileUrl({ ...model, revision }, path), bytes);
+  }
   return {
     async match(request: string) {
       const bytes = byUrl.get(request);
@@ -24,19 +32,25 @@ export function verifiedCache(model: ModelSpec, files: Map<string, Uint8Array<Ar
   };
 }
 
-export async function createTransformersExtractor(
-  model: ModelSpec,
-  files: Map<string, Uint8Array<ArrayBuffer>>,
-  wasmBase = `${import.meta.env.BASE_URL}${ORT_WASM_DIR}/`,
-): Promise<Extractor> {
-  const { env, pipeline } = await import("@huggingface/transformers");
-  // 模型檔只從 verifiedCache 取得：不從遠端下載、不用它自己的快取；查不到的檔案一律當作不存在
+type TransformersEnv = Awaited<typeof import("@huggingface/transformers")>["env"];
+
+// 模型檔只從 verifiedCache 取得：不從遠端下載、不用它自己的快取；查不到的檔案一律當作不存在
+export function useVerifiedFilesOnly(env: TransformersEnv, model: ModelSpec, files: Map<string, Uint8Array<ArrayBuffer>>) {
   env.allowRemoteModels = false;
   env.allowLocalModels = true;
   env.useBrowserCache = false;
   env.useCustomCache = true;
   env.customCache = verifiedCache(model, files);
   env.fetch = async () => new Response(null, { status: 404 });
+}
+
+export async function createTransformersExtractor(
+  model: ModelSpec,
+  files: Map<string, Uint8Array<ArrayBuffer>>,
+  wasmBase = `${import.meta.env.BASE_URL}${ORT_WASM_DIR}/`,
+): Promise<Extractor> {
+  const { env, pipeline } = await import("@huggingface/transformers");
+  useVerifiedFilesOnly(env, model, files);
   // WASM 由 ONNX Runtime 直接從 dist/ 載入，不經 transformers.js 的 WASM 快取，也不用預設的 jsDelivr
   env.useWasmCache = false;
   const wasm = env.backends.onnx.wasm;

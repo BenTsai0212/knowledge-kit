@@ -66,8 +66,19 @@ describe("verifiedCache", () => {
     // transformers.js 的 remoteHost（https://huggingface.co/）＋ remotePathTemplate（{model}/resolve/{revision}/）＋檔名
     const response = await cache.match(`https://huggingface.co/${E5_MODEL.id}/resolve/${E5_MODEL.revision}/config.json`);
     expect(new Uint8Array(await response!.arrayBuffer())).toEqual(bytes);
-    expect(await cache.match(modelFileUrl({ ...E5_MODEL, revision: "main" }, "config.json"))).toBeUndefined();
     expect(await cache.match(modelFileUrl(E5_MODEL, "generation_config.json"))).toBeUndefined();
+  });
+
+  it("main 的網址回應同一份驗證過的檔案；其他 revision、模型與未登記的檔案查不到（#168）", async () => {
+    const bytes = new TextEncoder().encode("{}") as Uint8Array<ArrayBuffer>;
+    const cache = verifiedCache(E5_MODEL, new Map([["config.json", bytes], ["generation_config.json", bytes]]));
+    const main = await cache.match(modelFileUrl({ ...E5_MODEL, revision: "main" }, "config.json"));
+    expect(new Uint8Array(await main!.arrayBuffer())).toEqual(bytes);
+    expect(await cache.match(modelFileUrl({ ...E5_MODEL, revision: "0".repeat(40) }, "config.json"))).toBeUndefined();
+    expect(await cache.match(modelFileUrl({ ...E5_MODEL, id: "Xenova/other-model" }, "config.json"))).toBeUndefined();
+    // 傳進來但沒在 model-files.ts 登記的檔案也不回應
+    expect(await cache.match(modelFileUrl(E5_MODEL, "generation_config.json"))).toBeUndefined();
+    expect(await cache.match(modelFileUrl({ ...E5_MODEL, revision: "main" }, "generation_config.json"))).toBeUndefined();
   });
 });
 
