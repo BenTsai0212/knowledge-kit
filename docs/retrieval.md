@@ -101,6 +101,28 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 - 假名改用 `segmenter`（`Intl.Segmenter` 的 `ja`）：同樣都排第 1，但最低分數 0.265，而且結果隨 ICU 版本而不同，所以不採用。
 - 參考情境 `client/` 沒有假名，切詞與分數不變。
 
+## 語意向量：`multilingual-e5-small`（導入中）
+
+依 [ADR 0006](adr/0006-semantic-retrieval.md) 導入的可選實作（#163），程式在 `app/src/retrieval/semantic/`。**尚未登記到 `PROVIDERS`，客戶還不能選用**；降級、`client.json` 的 Schema 與畫面提示在 #163 的下一個 PR 加上。
+
+| 檔案 | 內容 |
+| --- | --- |
+| `model-files.ts` | 模型 `Xenova/multilingual-e5-small`（q8）的固定 commit，以及每個檔案的大小與 SHA-256。不讓 `client.json` 設定，避免繞過固定版本 |
+| `download.ts` | `loadVerifiedFiles()`：從 `https://huggingface.co/<模型>/resolve/<commit>/<檔案>` 下載，比對大小與 SHA-256 後才交出；以 Cache Storage 快取（名稱含 commit）。快取中的檔案雜湊不符時刪除後重下；下載的檔案不符、HTTP 錯誤或有檔案未登記 SHA-256 時拋出 `ModelLoadError`，不寫入快取 |
+| `runtime.ts` | 以 transformers.js 執行模型；全 app 只有這裡載入 `@huggingface/transformers`，而且以動態 import 載入（ADR 0002，`multilingual-e5-small.test.ts` 檢查）。模型檔只從驗證過的檔案取得：關閉遠端下載與它自己的快取，`env.fetch` 一律回 404 |
+| `multilingual-e5-small.ts` | `createE5Provider()`：建立時下載並初始化，失敗時由回傳的 Promise 拋出。問題加 `query: `、段落加 `passage: ` 前綴，每批 16 筆；向量已正規化，相似度是內積，負值截到 0 |
+
+**WASM**：ONNX Runtime 的 WASM 自己提供，不從 jsDelivr 載入（`scripts/ort-wasm.mjs`）。
+
+- 用不含 asyncify 的 `ort-wasm-simd-threaded.wasm`（約 14 MB）與對應的 `.mjs`。預設的 asyncify 版超過 Cloudflare 靜態檔的單檔上限（25 MiB）。
+- 這個版本只支援 wasm 後端，不支援 WebGPU；本站沒有 COOP／COEP 標頭，所以以單執行緒執行（#163 決定 5）。
+- `npm run build` 只在選定客戶的 `retrieval.provider` 是語意向量時，把兩個檔案複製到 `dist/ort/`；單檔超過 25 MiB 時 build 失敗。`npm run dev` 一律以 `/ort/<檔名>` 提供。
+- `vite.config.ts` 讓 `onnxruntime-web` 解析成不內含 WASM 的版本（`onnxruntime-web-use-extern-wasm` 條件），否則 build 會把 asyncify 版打包進 `dist/assets/`。
+
+**相依套件**：`@huggingface/transformers` 固定 4.3.2。它帶進的 `onnxruntime-node` 只在 Node 使用，app 用不到；它在 linux/x64 安裝時會從 NuGet 下載 CUDA，CI 以 `ONNXRUNTIME_NODE_INSTALL=skip` 略過（[docs/testing.md](testing.md)「CI 的 job」），在 Linux 開發時也可以設定同一個環境變數。
+
+測試不下載模型：下載與驗證以假的 `fetch`、Cache Storage 與 bytes 測試（`download.test.ts`），實作以注入的假模型測試（`multilingual-e5-small.test.ts`）。
+
 ## 向量快取
 
 - 段落向量在第一次檢索時計算，存在 retriever 的記憶體快取中，鍵是段落 id。之後只要轉換問題。

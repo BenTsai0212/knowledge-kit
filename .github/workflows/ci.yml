@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+# @huggingface/transformers 帶進的 onnxruntime-node 在 linux/x64 安裝時會從 NuGet 下載 CUDA；app 用不到它，略過（#163）
+env:
+  ONNXRUNTIME_NODE_INSTALL: skip
+
 jobs:
   checks:
     runs-on: ubuntu-latest
@@ -20,6 +24,8 @@ jobs:
           cache: npm
       - name: 安裝
         run: npm ci
+      - name: 確認沒有下載 CUDA
+        run: test ! -e node_modules/onnxruntime-node/bin/napi-v6/linux/x64/libonnxruntime_providers_cuda.so
       - name: client 設定檢查
         run: npm run check:client
       - name: 型別檢查
