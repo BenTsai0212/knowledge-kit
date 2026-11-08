@@ -1,10 +1,11 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { clientConfig } from "../client/load";
 import { dataset } from "../dataset/load";
 import { evalQuestions } from "../evals/load";
 import { seedDataset } from "../dataset/seed";
 import { openDatabase, type Database } from "../db/database";
 import { cosine, embedText, keywordHashProvider } from "./keyword-hash";
+import { createProvider, PROVIDERS } from "./providers";
 import { createRetriever, openRetriever } from "./retrieve";
 import type { EmbedKind, VectorProvider } from "./types";
 
@@ -97,6 +98,25 @@ describe("retrieve", () => {
 
     const failing = createRetriever(db, Promise.reject(new Error("模型下載失敗")), { topK: 5, minScore: 0 });
     await expect(failing.retrieve("staff", "年假")).rejects.toThrow("模型下載失敗");
+  });
+
+  it("參數也可以是 Promise：檢索時才讀取（降級後改用 keyword-hash 的 minScore）", async () => {
+    let resolve!: (o: { topK: number; minScore: number }) => void;
+    const retriever = createRetriever(db, keywordHashProvider, new Promise((r) => (resolve = r)));
+    const pending = retriever.retrieve("staff", "年假");
+    resolve({ topK: 2, minScore: 0 });
+    expect(await pending).toEqual(await createRetriever(db, keywordHashProvider, { topK: 2, minScore: 0 }).retrieve("staff", "年假"));
+  });
+
+  it("語意模型準備失敗：以 keyword-hash 與它的 minScore 檢索，結果與 keyword-hash 的客戶相同", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const e5 = { ...clientConfig.client.retrieval, provider: "multilingual-e5-small" as const, minScore: 0.7 };
+    const failing = createProvider(e5, { ...PROVIDERS, "multilingual-e5-small": () => Promise.reject(new Error("模型初始化失敗")) });
+    const question = "到職滿一年有幾天年假？";
+    const results = await openRetriever(db, e5, failing).retrieve("staff", question);
+    expect(results.length).toBeGreaterThan(0);
+    expect(results).toEqual(await openRetriever(db, clientConfig.client.retrieval).retrieve("staff", question));
+    warn.mockRestore();
   });
 
   it("keyword-hash：每題的分數與排序和直接以 embedText、cosine 計分相同", async () => {

@@ -65,9 +65,9 @@ npm run check:client
 
 | 欄位 | 格式 | 預設值 | 說明 |
 | --- | --- | --- | --- |
-| `provider` | `keyword-hash` | `keyword-hash` | 使用哪個 `VectorProvider`。值必須登記在 `app/src/retrieval/providers.ts` 的 `PROVIDERS`；新增實作時同時在 Schema 的列舉與 `types.ts` 的 `ProviderId` 加上同名的值 |
+| `provider` | `keyword-hash`、`multilingual-e5-small` | `keyword-hash` | 使用哪個 `VectorProvider`。`multilingual-e5-small` 是語意向量，在瀏覽器下載約 135 MB 的模型；準備失敗時改用 `keyword-hash` 並顯示提示（[docs/retrieval.md](retrieval.md#降級)）。值必須登記在 `app/src/retrieval/providers.ts` 的 `PROVIDERS` 與 `RETRIEVAL_DEFAULTS`；新增實作時同時在 Schema 的列舉與 `types.ts` 的 `ProviderId` 加上同名的值 |
 | `topK` | 整數，1～20 | 5 | 回傳前幾名段落 |
-| `minScore` | 0～1 | 0.1 | 最低分數門檻，低於此分數的段落不回傳 |
+| `minScore` | 0～1 | 依 `provider`：`keyword-hash` 0.1、`multilingual-e5-small` 0.7 | 最低分數門檻，低於此分數的段落不回傳。Schema 的 `default` 是 `keyword-hash` 的值 |
 
 評測台的設定 A、B 以 `topK`、`minScore` 為預設值，只在那次評測有效，不寫回 `client.json`（[docs/evals.md](evals.md)「畫面」）。
 
@@ -265,7 +265,7 @@ JSON Schema 無法參照另一個檔的值，以下由 `scripts/check-client.mjs
 `app/src/client/load.ts` 在 build 時以 JSON import（`@client/…`，見[多客戶與切換](#多客戶與切換)）讀入 5 個設定檔，匯出型別為 `ClientConfig` 的 `clientConfig`。翻譯檔由 `app/src/client/i18n.ts` 讀入（見[翻譯檔](#翻譯檔clienti18n)）。
 
 - 執行時不做 ajv 驗證，ajv 不打包進前端；驗證只在 `npm run check:client` 與 CI 執行。
-- 省略的欄位在這裡補上預設值，讀取端拿到的型別一律是必填。目前有 `mergeStrategy`（省略時補成 `review`）、`retrieval` 的各欄位（`RETRIEVAL_DEFAULTS`）、`upload` 的各欄位（`UPLOAD_DEFAULTS`）、`conflicts` 的各欄位（`CONFLICTS_DEFAULTS`）與 `evals.thresholds` 的各欄位（`EVAL_THRESHOLDS_DEFAULTS`）；預設值與 Schema 的 `default` 相同，由 `load.test.ts` 比對。
+- 省略的欄位在這裡補上預設值，讀取端拿到的型別一律是必填。目前有 `mergeStrategy`（省略時補成 `review`）、`retrieval` 的各欄位（依 `provider` 而不同，在 `app/src/retrieval/providers.ts` 的 `RETRIEVAL_DEFAULTS`）、`upload` 的各欄位（`UPLOAD_DEFAULTS`）、`conflicts` 的各欄位（`CONFLICTS_DEFAULTS`）與 `evals.thresholds` 的各欄位（`EVAL_THRESHOLDS_DEFAULTS`）；預設值與 Schema 的 `default` 相同（`retrieval` 比對 `keyword-hash` 的列），由 `load.test.ts` 比對。
 
 ## 多客戶與切換
 

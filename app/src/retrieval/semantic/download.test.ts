@@ -117,6 +117,14 @@ describe("loadVerifiedFiles", () => {
     expect([error.reason, error.message]).toEqual(["http", "model file config.json: HTTP 503"]);
   });
 
+  it("連不上（fetch 拋錯）：與 HTTP 錯誤同樣算下載失敗", async () => {
+    const model = await spec();
+    const { caches } = fakeCaches();
+    const offline = async () => Promise.reject(new TypeError("Failed to fetch"));
+    const error = await failure(loadVerifiedFiles(model, { fetch: offline, caches }));
+    expect([error.reason, error.path, error.message]).toEqual(["http", "config.json", "model file config.json: fetch failed: Failed to fetch"]);
+  });
+
   // E5_MODEL 已全部登記，以測試自己的 ModelSpec 測未登記的情形
   it("有檔案未登記 SHA-256：一個檔都不下載就拋錯", async () => {
     const model = await spec();

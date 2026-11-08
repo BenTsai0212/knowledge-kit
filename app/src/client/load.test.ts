@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import clientSchema from "../../../client/schema/client.schema.json";
-import { clientConfig, CONFLICTS_DEFAULTS, EVAL_THRESHOLDS_DEFAULTS, normalizeClient, RETRIEVAL_DEFAULTS, UPLOAD_DEFAULTS } from "./load";
+import { RETRIEVAL_DEFAULTS } from "../retrieval/providers";
+import { clientConfig, CONFLICTS_DEFAULTS, EVAL_THRESHOLDS_DEFAULTS, normalizeClient, UPLOAD_DEFAULTS } from "./load";
 import type { ClientFiles } from "./types";
 
 describe("normalizeClient", () => {
@@ -25,13 +26,25 @@ describe("normalizeClient", () => {
 
   it("retrieval 省略的欄位補上預設值，有填時保留", () => {
     const raw = (retrieval?: object) => ({ ...clientConfig, client: { ...clientConfig.client, retrieval } }) as unknown as ClientFiles;
-    expect(normalizeClient(raw()).client.retrieval).toEqual(RETRIEVAL_DEFAULTS);
-    expect(normalizeClient(raw({ topK: 3 })).client.retrieval).toEqual({ ...RETRIEVAL_DEFAULTS, topK: 3 });
+    const keywordHash = RETRIEVAL_DEFAULTS["keyword-hash"];
+    expect(normalizeClient(raw()).client.retrieval).toEqual(keywordHash);
+    expect(normalizeClient(raw({ topK: 3 })).client.retrieval).toEqual({ ...keywordHash, topK: 3 });
   });
 
-  it("retrieval 的預設值與 Schema 的 default 相同", () => {
+  it("retrieval 省略 minScore 時依 provider 補上（#163 決定 2）；有填時保留", () => {
+    const raw = (retrieval?: object) => ({ ...clientConfig, client: { ...clientConfig.client, retrieval } }) as unknown as ClientFiles;
+    expect(normalizeClient(raw({ provider: "multilingual-e5-small" })).client.retrieval).toEqual({ provider: "multilingual-e5-small", topK: 5, minScore: 0.7 });
+    expect(normalizeClient(raw({ provider: "multilingual-e5-small", minScore: 0.8 })).client.retrieval.minScore).toBe(0.8);
+    expect(normalizeClient(raw({ provider: "keyword-hash" })).client.retrieval.minScore).toBe(0.1);
+    // 未登記的值保留，由 createProvider 拋錯
+    expect(normalizeClient(raw({ provider: "pgvector" })).client.retrieval).toEqual({ ...RETRIEVAL_DEFAULTS["keyword-hash"], provider: "pgvector" });
+  });
+
+  it("retrieval 的預設值：keyword-hash 的列與 Schema 的 default 相同；每個實作都有一列", () => {
     const props = clientSchema.properties.retrieval.properties;
-    expect(RETRIEVAL_DEFAULTS).toEqual({ provider: props.provider.default, topK: props.topK.default, minScore: props.minScore.default });
+    expect(RETRIEVAL_DEFAULTS["keyword-hash"]).toEqual({ provider: props.provider.default, topK: props.topK.default, minScore: props.minScore.default });
+    expect(Object.keys(RETRIEVAL_DEFAULTS).sort()).toEqual([...props.provider.enum].sort());
+    for (const [id, row] of Object.entries(RETRIEVAL_DEFAULTS)) expect(row.provider).toBe(id);
   });
 
   it("讀入 client/ 的範例設定", () => {
