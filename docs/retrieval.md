@@ -111,7 +111,7 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 | --- | --- |
 | `model-files.ts` | 模型 `Xenova/multilingual-e5-small`（q8）的固定 commit，以及每個檔案的大小與 SHA-256。不讓 `client.json` 設定，避免繞過固定版本 |
 | `download.ts` | `loadVerifiedFiles()`：從 `https://huggingface.co/<模型>/resolve/<commit>/<檔案>` 下載，比對大小與 SHA-256 後才交出；以 Cache Storage 快取（名稱含 commit）。快取中的檔案雜湊不符時刪除後重下；下載的檔案不符、HTTP 錯誤或有檔案未登記 SHA-256 時拋出 `ModelLoadError`，不寫入快取 |
-| `runtime.ts` | 以 transformers.js 執行模型；全 app 只有這裡載入 `@huggingface/transformers`，而且以動態 import 載入（ADR 0002，`multilingual-e5-small.test.ts` 檢查）。模型檔只從驗證過的檔案取得：關閉遠端下載與它自己的快取，`env.fetch` 一律回 404 |
+| `runtime.ts` | 以 transformers.js 執行模型；全 app 只有這裡載入 `@huggingface/transformers`，而且以動態 import 載入（ADR 0002，`multilingual-e5-small.test.ts` 檢查）。模型檔只從驗證過的檔案取得：關閉遠端下載與它自己的快取，`env.fetch` 一律回 404。同一份驗證過的 bytes 同時以固定 commit 與 `main` 的網址回應，因為 transformers.js 4.3.2 的 `pipeline()` 有些路徑不帶 `revision`、改查 `main`（#168，升級時重新確認）；只回應 `model-files.ts` 登記過的檔案，其他 revision 與檔案查不到。以真正的 transformers.js 跑到 `pipeline()` 讀完設定與 tokenizer 的測試在 `runtime.test.ts` |
 | `multilingual-e5-small.ts` | `createE5Provider()`：建立時下載並初始化，失敗時由回傳的 Promise 拋出。問題加 `query: `、段落加 `passage: ` 前綴，每批 16 筆；向量已正規化，相似度是內積，負值截到 0 |
 
 **WASM**：ONNX Runtime 的 WASM 自己提供，不從 jsDelivr 載入（`scripts/ort-wasm.mjs`）。
