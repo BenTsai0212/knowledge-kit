@@ -116,7 +116,7 @@ Most documents in `docs/`, as well as `AGENTS.md` and the code comments, are in 
 ## Status and roadmap
 
 - **v1**: the features above (phase 1 of [RFC 0001](docs/rfcs/0001-project-charter.md)) and the online demo. See [CHANGELOG.md](CHANGELOG.md).
-- **v2 (planned)**: testing multiple languages with a fictional multilingual scenario, including cross-language retrieval and languages written without spaces between words ([RFC 0002](docs/rfcs/0002-public-release.md)).
+- **v2 (planned)**: cross-language retrieval, tested with a fictional multilingual scenario ([RFC 0002](docs/rfcs/0002-public-release.md)).
 
 ## License
 
