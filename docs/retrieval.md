@@ -103,7 +103,7 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 - 假名改用 `segmenter`（`Intl.Segmenter` 的 `ja`）：同樣都排第 1，但最低分數 0.265，而且結果隨 ICU 版本而不同，所以不採用。
 - 參考情境 `client/` 沒有假名，切詞與分數不變。
 
-## 語意向量：`multilingual-e5-small`（導入中）
+## 語意向量：`multilingual-e5-small`
 
 依 [ADR 0006](adr/0006-semantic-retrieval.md) 導入的可選實作（#163），程式在 `app/src/retrieval/semantic/`。`client.json` 寫 `"retrieval": { "provider": "multilingual-e5-small" }` 就能選用；範例客戶與線上 demo 維持 `keyword-hash`。`PROVIDERS` 以動態 import 載入這個實作，沒選用的客戶不會下載它的程式（`dist/assets/` 中有它的檔案，但不會被請求）。題庫的跨語言、同義詞與完全無關題見[評測](#評測)，瀏覽器的量測見[瀏覽器量測](#瀏覽器量測)。
 
@@ -147,7 +147,7 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 - **同義詞**（6 題，`synonym`）：問題用段落裡沒有的說法，只檢索同語言的段落。`keyword-hash` 以預設設定找不到答案段落的 2 題標記 `requires: "semantic"`，其餘 4 題在 `keyword-hash` 照常計分。
 - **完全無關**（5 題，`unrelated`）：食譜、程式語法、比賽結果等，用來驗證 `minScore`。`keyword-hash` 檢索不到段落，在本機拒答。
 
-評測台在 `keyword-hash`（包括降級）時把 `requires: "semantic"` 的題目顯示為不適用、不計入分母，所以範例客戶的結果與門檻不變。`app/src/evals/run.test.ts` 以 `keyword-hash` 檢查標記與實際結果一致。語意向量的分數在 CI 拿不到（不下載模型），由人以本機的 A1 客戶設定在評測台執行（見下一節）。
+評測台在 `keyword-hash`（包括降級）時把 `requires: "semantic"` 的題目顯示為不適用、不計入分母，所以範例客戶的結果與門檻不變。`app/src/evals/run.test.ts` 以 `keyword-hash` 檢查標記與實際結果一致。語意向量的分數在 CI 拿不到（不下載模型），由人以本機的 A1 客戶設定在評測台執行（見下一節）；2026-11 的結果在[評估報告](evals/semantic-retrieval-2026-11.md)「評測台（A1）」：本機拒答 0 題，拒答依賴模型。
 
 ### 瀏覽器量測
 
@@ -178,7 +178,7 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 ## 限制
 
 - **非語意**：只比對共同的詞與字元，不懂同義詞與換句話說。例如「主管」找不到只寫「經理」的段落，`vacation` 找不到只寫 `annual leave` 的段落。
-- **不支援跨語言**：中文問題找不到只有英文的段落，反之亦然。參考資料集的每題預設問題在兩種語言都有答案段落（#26），所以 14 個檢查都能通過；需要跨語言時選用[語意向量](#語意向量multilingual-e5-small導入中)（評估見[評估報告](evals/semantic-retrieval-2026-11.md)與 [ADR 0006](adr/0006-semantic-retrieval.md)，Proposed）。
+- **不支援跨語言**：中文問題找不到只有英文的段落，反之亦然。參考資料集的每題預設問題在兩種語言都有答案段落（#26），所以 14 個檢查都能通過；需要跨語言時選用[語意向量](#語意向量multilingual-e5-small)（評估見[評估報告](evals/semantic-retrieval-2026-11.md)與 [ADR 0006](adr/0006-semantic-retrieval.md)）。
 - **新增語言**：見[語言模組](#語言模組)。
 - **規模與效能**：
   - 每次檢索都掃過全部段落；RLS 對每一列呼叫 `kk.can_see()` 查一次身分，再在 JS 中逐段計分，時間隨段落數線性增加。

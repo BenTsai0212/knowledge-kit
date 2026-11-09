@@ -84,4 +84,4 @@ Common notes:
 - **External API**: ask a person before adding a secret or dependency (AGENTS.md section 6); the client must confirm whether confidential passages may be sent to the provider.
 - **Cross-language questions**: add them to the question bank only after switching to semantic vectors, and list them separately in [Acceptance metrics](acceptance-metrics.md).
 - Record the chosen model, version, and measurements in an ADR. This document lists no vendors or prices because they change over time.
-- The 2026-11 evaluation (#126), in Traditional Chinese: [evaluation report](../../evals/semantic-retrieval-2026-11.md), [ADR 0006](../../adr/0006-semantic-retrieval.md) (Proposed).
+- The 2026-11 evaluation (#126), in Traditional Chinese: [evaluation report](../../evals/semantic-retrieval-2026-11.md), [ADR 0006](../../adr/0006-semantic-retrieval.md) (Accepted).

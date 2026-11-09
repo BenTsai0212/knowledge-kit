@@ -84,7 +84,7 @@
 - **外部 API**：新增 secret 與相依套件要先問人（AGENTS.md 第 6 節）；機密段落能否送到供應商，要由客戶確認。
 - **跨語言題**：題庫的跨語言題標記 `requires: "semantic"`，只在語意向量時計分；驗收時另外列出它們的結果（[驗收指標](acceptance-metrics.md)）。
 - 選用的模型、版本與量測結果記錄在 ADR；本文件不列廠商與價格，因為會隨時間改變。
-- 2026-11 的評估（#126）：[評估報告](../evals/semantic-retrieval-2026-11.md)、[ADR 0006](../adr/0006-semantic-retrieval.md)（Proposed）。
+- 2026-11 的評估（#126）：[評估報告](../evals/semantic-retrieval-2026-11.md)、[ADR 0006](../adr/0006-semantic-retrieval.md)（Accepted）。
 
 **已導入的做法**：瀏覽器內的小型多語模型 `multilingual-e5-small`（#163），在 `client.json` 的 `retrieval.provider` 選用（[docs/client-config.md](../client-config.md)、[docs/retrieval.md](../retrieval.md)「語意向量」）。
 

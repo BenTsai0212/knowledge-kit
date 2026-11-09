@@ -1,17 +1,18 @@
 # 語意向量評估報告（2026-11）
 
 - Issue：#126（Epic #93 第 11 項）；計畫與 `## 決定` 在 #126 的留言
-- 決策草稿：[ADR 0006](../adr/0006-semantic-retrieval.md)（Proposed）
+- 決策：[ADR 0006](../adr/0006-semantic-retrieval.md)（Accepted，#163 導入後以瀏覽器量測回填）
 - 量測程式：verify 分支 `verify/126-semantic-retrieval`（commit `e130f19`，不合併），`verify/semantic/` 與 `app/verify-semantic.*`
-- main 的檢索行為與相依套件不變；本報告只是評估。
+- 本報告原本只是評估（main 不變）；#163 導入後，[瀏覽器量測](#瀏覽器量測)與[評測台（A1）](#評測台a1)以 main 的正式實作量測。
 
 ## 結論
 
 - **建議 A1（`multilingual-e5-small`，q8）**，作為可選的 provider。`keyword-hash` 保留為預設與降級選項。
+- **導入後的瀏覽器量測**（#163）：評測台 58 題引用 40/41、答案 41/41、拒答 17/17、權限滲漏 0；本機拒答 0 題（拒答依賴模型）。無快取時第一次提問約 50 秒、有快取時約 1.7 秒，分頁記憶體約 740 MB。
 - 跨語言題答案段落進前 5 名：A1 是 18/19，`keyword-hash` 是 10/19。同義詞題 6/6，`keyword-hash` 是 5/6。既有題目都是 16/16，沒有變差。
 - 權限滲漏：A1、A2 都是 0。
 - **本機拒答不能只靠 `minScore`**：A1 的分數擠在 0.7～0.9，拒答題的最高分（0.902）高過答案段落的最低分（0.740）。`keyword-hash` 也有重疊（0.329 對 0），所以本機拒答本來就只擋得住一部分。拒答主要仍靠模型。
-- **檔案太大，Worker 放不下**：q8 模型檔約 118 MB（另有 17 MB 的 tokenizer）。transformers.js 預設的 WASM（asyncify 版）是 26,861,777 bytes。兩者都超過 Cloudflare 靜態檔的單檔上限（25 MiB = 26,214,400 bytes；本次未能連線查證文件，導入前再確認）。
+- **檔案太大，Worker 放不下**：q8 模型檔約 118 MB（另有 17 MB 的 tokenizer）。transformers.js 預設的 WASM（asyncify 版）是 26,861,777 bytes。兩者都超過 Cloudflare 靜態檔的單檔上限（25 MiB = 26,214,400 bytes；本次未能連線查證文件，PR #128 審查時查證）。
 - 首次載入的下載量約 155 MiB。換算時間：10 Mbps 約 130 秒，50 Mbps 約 26 秒。所以只適合「客戶需要跨語言」時選用，不適合當預設。
 
 ## 量測環境
@@ -26,7 +27,7 @@
 | | A1 | A2 |
 | --- | --- | --- |
 | 模型 | `intfloat/multilingual-e5-small`（轉換版 `Xenova/multilingual-e5-small`） | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`（轉換版 `Xenova/…`） |
-| 授權 | 上游 MIT。轉換版未另標授權，導入前確認 | 上游 Apache-2.0。轉換版同左 |
+| 授權 | 上游 MIT。轉換版未另標授權，是上游的 ONNX 權重，依上游的 MIT 使用（#163 人工確認，ADR 0006） | 上游 Apache-2.0。轉換版同左 |
 | 支援語言 | model card：xlm-roberta 的 100 種語言（metadata 列 94 種，含 `zh`、`th`）；低資源語言品質可能下降 | metadata 列 50 種（含 `zh-cn`、`zh-tw`、`th`） |
 | 最大長度 | 512 tokens | 128 tokens（較長的段落會被截斷） |
 | 向量維度 | 384 | 384 |
@@ -105,7 +106,7 @@
 | 0.8 | 41／0 | 12／14 | 37／0 |
 
 - 三者都沒有能同時「不擋答案、擋下拒答題」的門檻。A1 拒答題分數最高的是權限題（`bluewing-budget-staff` 0.902）：該身分看得到同專案的其他段落，主題很接近。
-- **建議**：A1 的 `minScore` 設 0.7（答案題不受影響），本機拒答只擋明顯無關的問題，其餘交給模型拒答（與現在相同，`docs/qa.md`）。`topK` 維持 5，涵蓋 40/41 題；改成 8 可全部涵蓋，但 prompt 會變長，導入時再看評測台的結果決定。
+- **建議**：A1 的 `minScore` 設 0.7（答案題不受影響），其餘交給模型拒答（與現在相同，`docs/qa.md`）。導入後的評測台顯示 0.7 連完全無關的問題也擋不下（[評測台（A1）](#評測台a1)），所以本機拒答幾乎不起作用。`topK` 維持 5，涵蓋 40/41 題；改成 8 可全部涵蓋，但 prompt 會變長，導入時再看評測台的結果決定。
 - 要讓本機拒答有效，可在導入的 Issue 評估「相對門檻」，例如與第 1 名的差距，或與一組無關問題的分數比較。本次未量測。
 
 ## 權限滲漏
@@ -145,9 +146,9 @@ verify 分支的 `verify/semantic/leakage.verify.test.ts` 把 `app/tests/retriev
 - 換算：10 Mbps 約 130 秒，50 Mbps 約 26 秒。`tokenizer.json` 若以壓縮傳輸會少一些；ONNX 檔壓縮效果不大。
 - 不含 `asyncify` 的 `ort-wasm-simd-threaded.wasm` 是 14,264,838 bytes。
 
-## 瀏覽器量測（待人工量測）
+## 瀏覽器量測
 
-runner 不啟動瀏覽器，所以這部分列為人工待辦，只量 A1。#163 改用 main 上的量測頁，取代 verify 分支的 `/verify-semantic.html`；頁面使用正式的 provider（固定 commit 下載、SHA-256 驗證、Cache Storage 與自己提供的 WASM，[docs/retrieval.md](../retrieval.md)「瀏覽器量測」）。
+runner 不啟動瀏覽器，所以由人量測（#163），只量 A1。量測頁是 main 上的 `/dev/semantic-measure.html`，取代 verify 分支的 `/verify-semantic.html`；頁面使用正式的 provider（固定 commit 下載、SHA-256 驗證、Cache Storage 與自己提供的 WASM，[docs/retrieval.md](../retrieval.md)「瀏覽器量測」）。
 
 1. 在 main 執行 `npm install`、`npm run dev`。
 2. 開 `/dev/semantic-measure.html`，先按 `clear model cache`，再按 `run`：量首次載入（模型從 Hugging Face 下載）。
@@ -156,23 +157,46 @@ runner 不啟動瀏覽器，所以這部分列為人工待辦，只量 A1。#163
 
 - 自己提供的 WASM 只跑 wasm 後端、單執行緒，不支援 WebGPU（#163 決定 5），所以不量 webgpu。
 
-量測後回填下表：
+條件：main `e7e385d`，Chrome 155、macOS、10 核心、`crossOriginIsolated: false`、wasm 後端單執行緒，參考資料集 43 段。時間單位是 ms，大小是頁面輸出的 MB（`downloadMB` 以 1,048,576 bytes 為 1 MB）。
 
-| 瀏覽器／裝置 | 快取 | 下載量 | 第一次提問（`firstQuestionMs`） | 載入 | 43 段 | 一次查詢 | JS heap | 分頁記憶體 |
+| 快取 | 下載量 | 第一次提問（`firstQuestionMs`） | 載入 | 43 段 | 第一次查詢 | 一次查詢（20 次平均） | JS heap | 分頁記憶體 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| （待人工量測） | 無 | | | | | | | |
-| （待人工量測） | 有 | | | | | | | |
+| 無 | 129.1 | 49,642 | 48,353 | 1,274 | 15 | 16 | 370 | — |
+| 有 | 0 | 1,670 | 399 | 1,256 | 15 | 15.5 | 365 | 740 |
+
+- 無快取時約 50 秒幾乎都是下載（下載量即模型檔 135,392,183 bytes）；有快取時第一次提問 1.7 秒，其中 43 段的向量約 1.3 秒。段落數增加時這部分會等比例變長。
+- 分頁記憶體是 Chrome 工作管理員的「記憶體使用量」，在有快取的 `run` 之後讀取。
+- Heap snapshot（無快取的 `run` 之後）是 713 MB，其中 `JSArrayBuffer` 佔 673 MB（94%）。推測同一份模型 bytes 保留了數份（驗證後的 bytes、交給 transformers.js 的 Response、ONNX Runtime 內部），本次未進一步分析。
+- 與 Node 的量測比較：一次查詢 15 ms（Node wasm 8.1 ms），43 段約 1.3 秒（Node wasm 391 ms），瀏覽器的單執行緒 wasm 較慢。
 
 ### 評測台（A1）
 
-以本機的 A1 客戶設定（`clients/local-<名稱>/`，不進版本控制）在評測台跑完整題庫（58 題），回填跨語言、同義詞與完全無關題的結果。完全無關題用來決定 ADR 0006 的本機拒答寫法：
+以本機的 A1 客戶設定（`clients/local-e5/`，不進版本控制：`retrieval.provider` 是 `multilingual-e5-small`、`topK` 5、`minScore` 省略即 0.7）在評測台以關鍵重點模式跑完整題庫，58 題全部適用。main `e7e385d`。
+
+| 指標 | 結果 | 門檻 |
+| --- | --- | --- |
+| 引用 | 40/41（97.6%） | 0.9 |
+| 答案 | 41/41（100%） | 0.8 |
+| 權限滲漏 | 0/58 | 0 |
+| 拒答 | 17/17（100%） | 1 |
+
+依題型：
 
 | 題型 | 題數 | 引用正確 | 答案正確 | 正確拒答 | 在本機拒答（不呼叫 `/api/ask`） | 權限滲漏 |
 | --- | --- | --- | --- | --- | --- | --- |
-| 既有 | 28 | （待量測） | | | | |
-| 跨語言 | 19 | | | — | — | |
-| 同義詞 | 6 | | | — | — | |
-| 完全無關 | 5 | — | — | | | |
+| 既有 | 28（答案題 16、拒答題 12） | 16/16 | 16/16 | 12/12 | 0 | 0 |
+| 跨語言 | 19 | 18/19 | 19/19 | — | 0 | 0 |
+| 同義詞 | 6 | 6/6 | 6/6 | — | 0 | 0 |
+| 完全無關 | 5 | — | — | 5/5 | 0 | 0 |
+
+- 同義詞 6 題包含 `keyword-hash` 找不到答案段落的 `idle-computer-staff-zh` 與 `pay-increase-manager-en`。
+- 引用未過的 1 題是 `longpier-vendor-manager-zh-en`：答案正確（廠商 B），但多引用了不在答案段落中的 `longpier-vendor-en-01`。
+- **本機拒答**：評測前的預估是 58 次問答呼叫，也就是 58 題都有段落超過 `minScore` 0.7，本機拒答 0 題。完全無關的 5 題與其他 12 題拒答題都由模型拒答。所以 A1 的本機拒答幾乎不起作用，拒答依賴模型（ADR 0006「設定」）。
+- 問答頁以中文問「到職滿一年有幾天年假？」可以回答；只用英文段落時同樣可答（`annual-leave-staff-zh-en`）。
+
+### 降級提示
+
+同一個 A1 設定，以 DevTools 的 Network request blocking 擋下 `https://huggingface.co/*`，刪除模型的 Cache Storage（`kk-model-761b726d…`）後重新整理：問答頁顯示「語意檢索無法使用，已改用關鍵字檢索」，同語言的問題仍可回答。
 
 ## 其他做法（只做文字比較）
 
