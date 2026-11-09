@@ -1,0 +1,56 @@
+{
+  "entityTypes": [
+    {
+      "id": "site",
+      "label": { "zh-TW": "據點", "en": "Site", "ja": "拠点" },
+      "color": "#0E7C86",
+      "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
+      "mergeStrategy": "auto"
+    },
+    {
+      "id": "team",
+      "label": { "zh-TW": "部門", "en": "Team", "ja": "部署" },
+      "color": "#2E7D5B",
+      "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
+      "mergeStrategy": "auto"
+    },
+    {
+      "id": "person",
+      "label": { "zh-TW": "人員", "en": "Person", "ja": "人物" },
+      "color": "#C2410C",
+      "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
+      "mergeStrategy": "review"
+    },
+    {
+      "id": "product",
+      "label": { "zh-TW": "產品", "en": "Product", "ja": "製品" },
+      "color": "#3D7AB8",
+      "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
+      "mergeStrategy": "review"
+    },
+    {
+      "id": "project",
+      "label": { "zh-TW": "專案", "en": "Project", "ja": "プロジェクト" },
+      "color": "#B26A00",
+      "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": false },
+      "mergeStrategy": "review"
+    },
+    {
+      "id": "partner",
+      "label": { "zh-TW": "合作廠商", "en": "Partner", "ja": "取引先" },
+      "color": "#8A5CC2",
+      "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
+      "mergeStrategy": "review"
+    }
+  ],
+  "relationTypes": [
+    { "id": "located-at", "label": { "zh-TW": "位於", "en": "Located at", "ja": "所在" }, "from": ["team"], "to": ["site"] },
+    { "id": "member-of", "label": { "zh-TW": "隸屬", "en": "Member of", "ja": "所属" }, "from": ["person"], "to": ["team"] },
+    { "id": "leads", "label": { "zh-TW": "負責", "en": "Leads", "ja": "責任者" }, "from": ["person"], "to": ["team", "project"] },
+    { "id": "works-on", "label": { "zh-TW": "參與", "en": "Works on", "ja": "参加" }, "from": ["person", "team"], "to": ["project"] },
+    { "id": "develops", "label": { "zh-TW": "開發", "en": "Develops", "ja": "開発" }, "from": ["project"], "to": ["product"] },
+    { "id": "produces", "label": { "zh-TW": "生產", "en": "Produces", "ja": "生産" }, "from": ["site"], "to": ["product"] },
+    { "id": "distributes", "label": { "zh-TW": "經銷", "en": "Distributes", "ja": "販売代理" }, "from": ["partner"], "to": ["product"] },
+    { "id": "supplies", "label": { "zh-TW": "供應", "en": "Supplies", "ja": "供給" }, "from": ["partner"], "to": ["site"] }
+  ]
+}
