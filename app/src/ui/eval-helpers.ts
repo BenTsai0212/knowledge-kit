@@ -15,6 +15,25 @@ export function parseSettings(topK: string, minScore: string): EvalSettings | nu
   return { topK: k, minScore: m };
 }
 
+// 一組設定的表單：edited 記下人改過的欄位，這些欄位不換成實際生效的預設值
+export interface SettingsForm {
+  topK: string;
+  minScore: string;
+  edited: Partial<Record<"topK" | "minScore", true>>;
+}
+
+// 檢索參數 → 還沒改過的表單（預設值）
+export const settingsForm = (options: EvalSettings): SettingsForm => ({ topK: String(options.topK), minScore: String(options.minScore), edited: {} });
+
+// provider 準備好後，人還沒改過的欄位換成實際生效的檢索參數（ActiveProvider.options）：降級時 minScore 是 keyword-hash 的預設值（#178）
+export function effectiveForm(form: SettingsForm, options: EvalSettings): SettingsForm {
+  return {
+    ...form,
+    topK: form.edited.topK ? form.topK : String(options.topK),
+    minScore: form.edited.minScore ? form.minScore : String(options.minScore),
+  };
+}
+
 export function gradesOf(set: SetRun): Map<string, ModelGrade> {
   return new Map(set.results.flatMap((r) => (r.grade ? [[r.question, r.grade] as const] : [])));
 }

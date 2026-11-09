@@ -153,6 +153,7 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 | `init` | 其他失敗：載入程式、Cache Storage 或 ONNX Runtime 初始化失敗 |
 
 - 降級後 `minScore` 改用 `keyword-hash` 的預設值 0.1（語意向量的 0.7 對 `keyword-hash` 太高，幾乎每題都會拒答），`topK` 不變。
+- 評測台的設定表單同樣以降級後的值為預設值：provider 準備好後，人還沒改過的欄位換成 `ActiveProvider.options`，否則評測會以 0.7 為門檻、幾乎每題拒答（#178，見 [evals.md「畫面」](evals.md#畫面)）。
 - 問答頁與評測台顯示提示（`RetrievalFallbackNotice`，經 `RetrievalNotice` 顯示；文字是 `client/i18n/` 的 `retrievalFallbackTitle` 與依原因的 `retrievalFallback`）；錯誤本身只寫到 `console.warn`。
 - `keyword-hash` 本身不降級。測試以假的 `fetch` 與會失敗的模型確認每種原因都會降級（`providers.test.ts`），並確認降級後的檢索結果與 `keyword-hash` 的客戶相同（`retrieve.test.ts`）。
 
