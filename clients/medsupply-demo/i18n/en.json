@@ -1,6 +1,10 @@
 {
   "loading": "Loading data…",
   "loadFailed": "The data couldn't be loaded. Please reload the page.",
+  "modelLoadingTitle": "Loading the semantic model",
+  "modelDownloadingTitle": "Downloading the semantic model",
+  "modelDownloadProgress": "{loaded} of {total} MB downloaded. The model is downloaded on first use and loaded from the browser cache after that.",
+  "modelPreparing": "Questions you ask now will be answered once the model is ready.",
   "retrievalFallbackTitle": "Semantic search is unavailable; using keyword search instead",
   "retrievalFallback": {
     "download": "The semantic model couldn't be downloaded. You may be offline, or the network may be blocking it. Reload the page to try again; until then, questions in another language or worded differently may not find relevant passages.",

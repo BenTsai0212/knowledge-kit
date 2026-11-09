@@ -317,6 +317,14 @@ button.citation {
   justify-items: start;
 }
 
+/* 語意模型的下載進度（RetrievalNotice.tsx） */
+.notice progress {
+  display: block;
+  width: min(20rem, 100%);
+  margin: 0.25rem 0;
+  accent-color: var(--notice-color);
+}
+
 .dialog-header {
   display: flex;
   justify-content: space-between;

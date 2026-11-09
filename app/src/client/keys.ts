@@ -185,7 +185,9 @@ export const manifests: ManifestEntry[] = [
 
 // client/i18n/<語言>.json：鍵很多，每行列多個
 const uiStrings = {
-  loading: "required", loadFailed: "required", retrievalFallbackTitle: "required", retrievalFallback: "required",
+  loading: "required", loadFailed: "required",
+  modelLoadingTitle: "required", modelDownloadingTitle: "required", modelDownloadProgress: "required", modelPreparing: "required",
+  retrievalFallbackTitle: "required", retrievalFallback: "required",
   fictionalData: "required", demoPermissions: "required",
   identity: "required", language: "required", accessCodeTitle: "required", accessCodeLabel: "required",
   accessCodeHint: "required", demoAccessCodeHint: "required", demoQaNotice: "required",

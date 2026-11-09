@@ -55,7 +55,7 @@
   - 第 12 項（泰文）可以先用 A1 處理跨語言：model card 列有 `th`。
 - **代價**：
   - 首次載入要下載約 143 MiB（模型 135,392,183 bytes＋自己提供的 WASM 14,289,219 bytes，不含 JS），不適合當預設，也不適合線上 demo 的預設設定。
-  - **第一次提問要等很久**：瀏覽器實測（Chrome 155、macOS）無快取時第一次提問約 50 秒（`firstQuestionMs` 49,642 ms，幾乎都是下載模型檔，`downloadMB` 129.1，即 135,392,183 bytes），有快取時約 1.7 秒。等待期間問答頁目前沒有「模型下載中」的提示，是否加上另開 Issue 決定。
+  - **第一次提問要等很久**：瀏覽器實測（Chrome 155、macOS）無快取時第一次提問約 50 秒（`firstQuestionMs` 49,642 ms，幾乎都是下載模型檔，`downloadMB` 129.1，即 135,392,183 bytes），有快取時約 1.7 秒。等待期間問答頁與評測台顯示「模型下載中」的提示與進度（#171，[docs/retrieval.md](../retrieval.md)「準備中的提示」）。
   - **執行時記憶體增加**：瀏覽器實測的分頁記憶體約 740 MB（Chrome 工作管理員，有快取的量測之後；JS heap 約 370 MB）。Heap snapshot 713 MB 中 `JSArrayBuffer` 佔 673 MB（94%），推測同一份模型 bytes 保留了數份（驗證後的 bytes、交給 transformers.js 的 Response、ONNX Runtime 內部），可作為日後減少記憶體的方向。Node 的 wasm 後端 RSS 最高約 1.3 GB（含 Node 版 transformers.js，是上限）。
   - 新增相依套件 `@huggingface/transformers` 4.3.2（含 `onnxruntime-web`、`onnxruntime-node`、`sharp`），供應鏈與更新的負擔都增加。
   - `onnxruntime-web` 是 transformers.js 4.3.2 指定的**開發版** `1.31.0-dev.20260914-8d85527a0`，不是正式版；跟著 transformers.js 固定，不單獨升級。升級 transformers.js 時一併確認它指定的 `onnxruntime-web` 版本，以及 `ort-wasm-simd-threaded.wasm` 的大小與檔名（PR #165 的修正要求）。
@@ -64,7 +64,8 @@
 - **後續工作**（#163）：
   - 已完成：接口、provider、下載與雜湊驗證、降級、`client.json` 的 Schema（PR #164～#166）；跨語言題、同義詞題與完全無關題併入題庫與驗收指標，瀏覽器量測頁（[docs/retrieval.md](../retrieval.md)「瀏覽器量測」）。
   - 人工量測（瀏覽器量測、評測台、降級提示、模型授權）已回填報告與本 ADR，改為 Accepted。
-  - 未做：問答頁的「模型下載中」提示（另開 Issue 決定）；本機拒答改用相對門檻等做法（報告「分數分布」）。
+  - 已完成：問答頁與評測台的「模型下載中」提示與進度（#171）。
+  - 未做：本機拒答改用相對門檻等做法（報告「分數分布」）。
 - **重新檢討的條件**：
   - 出現檔案小於單檔上限、品質相當的多語模型，可隨 `dist/` 提供。
   - 段落數增加到載入時重算太慢（Node wasm：430 段約 4 秒）：改為 build 時預先計算參考資料集，或存進資料庫（需 migration 與 RLS）。
