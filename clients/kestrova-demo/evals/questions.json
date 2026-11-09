@@ -1,3 +1,136 @@
 {
-  "questions": []
+  "questions": [
+    {
+      "id": "company-sites-guest",
+      "role": "guest",
+      "language": "zh-TW",
+      "category": "scenario",
+      "question": "凱翠瓦感測有哪些據點、各負責什麼？",
+      "expect": "answer",
+      "answerPassages": ["company-profile-zh-01", "company-profile-zh-03"],
+      "keyPoints": [["台灣總部"], ["美國子公司", "美國"], ["日本工廠", "日本"], ["研發"], ["業務", "銷售"], ["生產"]],
+      "forbidden": [],
+      "referenceAnswer": "凱翠瓦感測有三個據點：台灣總部負責研發、人資與財務；美國子公司負責業務、經銷與客服；日本工廠負責生產、品質管理與工安。"
+    },
+    {
+      "id": "warranty-period-guest-en",
+      "role": "guest",
+      "language": "en",
+      "category": "scenario",
+      "question": "How long is the product warranty?",
+      "expect": "answer",
+      "answerPassages": ["warranty-support-en-01", "warranty-support-en-04"],
+      "keyPoints": [["24-month", "24 months", "two years", "2 years"]],
+      "forbidden": [],
+      "referenceAnswer": "KS-200 and KS-400 sensors have a 24-month limited warranty from the date of shipment; replaceable sensing elements are covered for 12 months."
+    },
+    {
+      "id": "factory-tour-booking-guest-ja",
+      "role": "guest",
+      "language": "ja",
+      "category": "scenario",
+      "question": "工場見学はどのように申し込めばよいですか？",
+      "expect": "answer",
+      "answerPassages": ["factory-tour-ja-01", "factory-tour-ja-02", "factory-tour-ja-03"],
+      "keyPoints": [["2 週間前", "2週間前", "二週間前"], ["申込フォーム", "ウェブサイト"]],
+      "forbidden": [],
+      "referenceAnswer": "希望日の 2 週間前までに、ウェブサイトの申込フォームから申し込みます。見学は火曜日と木曜日で、参加費は無料です。"
+    },
+    {
+      "id": "mistwalk-range-staff",
+      "role": "staff",
+      "language": "zh-TW",
+      "category": "scenario",
+      "question": "霧行感測器的量測範圍是多少？",
+      "expect": "answer",
+      "answerPassages": ["mistwalk-spec-zh-01", "mistwalk-spec-zh-02"],
+      "keyPoints": [["0 至 1000 ppm", "0～1000 ppm", "1000 ppm"], ["0 至 20 ppm", "0～20 ppm", "20 ppm"]],
+      "forbidden": [],
+      "referenceAnswer": "霧行氣體感測器（MW-1）的一氧化碳量測範圍是 0 至 1000 ppm，二氧化氮是 0 至 20 ppm。"
+    },
+    {
+      "id": "mistwalk-trial-yield-staff-ja",
+      "role": "staff",
+      "language": "ja",
+      "category": "scenario",
+      "question": "霧行の試作の歩留まりはどのくらいですか？",
+      "expect": "answer",
+      "answerPassages": ["mistwalk-trial-ja-01", "mistwalk-trial-ja-02", "mistwalk-trial-ja-03"],
+      "keyPoints": [["87%", "87 %", "87％"]],
+      "forbidden": [["12,000 台", "12000 台"], ["9,800 円", "9800 円"]],
+      "referenceAnswer": "霧行センサーの第 2 次試作の歩留まりは 87% で、第 1 次試作の 72% から改善しました。"
+    },
+    {
+      "id": "mistwalk-2027-volume-manager-ja",
+      "role": "manager",
+      "language": "ja",
+      "category": "scenario",
+      "question": "霧行センサーは 2027 年度に何台生産する予定ですか？",
+      "expect": "answer",
+      "answerPassages": ["production-plan-2027-ja-01", "production-plan-2027-ja-02"],
+      "keyPoints": [["12,000 台", "12000 台", "1 万 2,000 台", "1万2000台"]],
+      "forbidden": [],
+      "referenceAnswer": "霧行センサー（MW-1）は 2027 年度に 12,000 台を生産する予定です（上期 4,000 台、下期 8,000 台）。"
+    },
+    {
+      "id": "harborline-status-manager-en",
+      "role": "manager",
+      "language": "en",
+      "category": "scenario",
+      "question": "What is the current status of Project Harborline?",
+      "expect": "answer",
+      "answerPassages": ["harborline-bid-en-01", "harborline-bid-en-02", "harborline-bid-en-04"],
+      "keyPoints": [["technical evaluation"], ["pilot"], ["December"]],
+      "forbidden": [],
+      "referenceAnswer": "Kestrova passed the technical evaluation, a pilot at 2 warehouses runs through October, and the final award decision is expected in December 2026."
+    },
+    {
+      "id": "q3-gross-margin-manager-en",
+      "role": "manager",
+      "language": "en",
+      "category": "scenario",
+      "question": "What was the gross margin for US sales in Q3?",
+      "expect": "answer",
+      "answerPassages": ["sales-report-q3-en-01", "sales-report-q3-en-02"],
+      "keyPoints": [["38.5%", "38.5 %"]],
+      "forbidden": [],
+      "referenceAnswer": "The Q3 2026 gross margin for US sales was 38.5%, down from 41% in Q2."
+    },
+    {
+      "id": "annual-leave-notice-staff",
+      "role": "staff",
+      "language": "zh-TW",
+      "category": "scenario",
+      "question": "特休要提前幾天申請？",
+      "expect": "answer",
+      "answerPassages": ["employee-handbook-zh-02"],
+      "keyPoints": [["3 個工作天", "3 天", "三個工作天", "三天"]],
+      "forbidden": [],
+      "referenceAnswer": "特休須在休假日前 3 個工作天於人資系統申請；連續休 5 天以上須提前 2 週申請。"
+    },
+    {
+      "id": "meal-allowance-staff-en",
+      "role": "staff",
+      "language": "en",
+      "category": "scenario",
+      "question": "What is the daily meal limit on business trips?",
+      "expect": "answer",
+      "answerPassages": ["travel-expense-en-01"],
+      "keyPoints": [["USD 75", "$75", "75 dollars"]],
+      "forbidden": [],
+      "referenceAnswer": "Meals on business trips are reimbursed up to USD 75 per day; meals with customers are reimbursed separately with receipts."
+    },
+    {
+      "id": "production-line-gear-staff-ja",
+      "role": "staff",
+      "language": "ja",
+      "category": "scenario",
+      "question": "工場の生産ラインに入るときは何を着用する必要がありますか？",
+      "expect": "answer",
+      "answerPassages": ["factory-safety-ja-01", "factory-safety-ja-02"],
+      "keyPoints": [["帽子"], ["防じんマスク", "防塵マスク", "マスク"], ["静電気防止服"], ["安全靴"]],
+      "forbidden": [],
+      "referenceAnswer": "生産ラインに入るときは、帽子、防じんマスク、静電気防止服、安全靴を着用する必要があります。"
+    }
+  ]
 }

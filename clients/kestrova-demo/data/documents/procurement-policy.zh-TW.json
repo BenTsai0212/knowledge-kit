@@ -1,0 +1,13 @@
+{
+  "id": "procurement-policy-zh",
+  "title": "採購與供應商管理規定",
+  "language": "zh-TW",
+  "date": "2026-02-05",
+  "visibility": "internal",
+  "passages": [
+    { "id": "procurement-policy-zh-01", "text": "單筆採購金額在新台幣 50 萬元以下，由部門主管核准；超過 50 萬元須經財務長核准；超過 300 萬元須經總經理核准。" },
+    { "id": "procurement-policy-zh-02", "text": "採購金額超過新台幣 10 萬元時，須取得至少 3 家廠商的報價；無法比價時須填寫比價例外單。" },
+    { "id": "procurement-policy-zh-03", "text": "關鍵零件須向合格供應商採購。感測元件的合格供應商是晶澄材料，由晶澄材料直接供貨給日本工廠。" },
+    { "id": "procurement-policy-zh-04", "text": "合格供應商每年稽核一次。評分低於 70 分者列入觀察名單，連續兩年低於 70 分者取消資格。" }
+  ]
+}

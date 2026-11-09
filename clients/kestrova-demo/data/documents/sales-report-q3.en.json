@@ -1,0 +1,12 @@
+{
+  "id": "sales-report-q3-en",
+  "title": "Q3 2026 US Sales Report",
+  "language": "en",
+  "date": "2026-10-08",
+  "visibility": "confidential",
+  "passages": [
+    { "id": "sales-report-q3-en-01", "text": "Q3 2026 US revenue was USD 4.6 million, up 12% year over year. The KS-400 accounted for 58% of revenue." },
+    { "id": "sales-report-q3-en-02", "text": "The Q3 gross margin for US sales was 38.5%, down from 41% in Q2 because of higher freight costs." },
+    { "id": "sales-report-q3-en-03", "text": "Tamberline Supply contributed 35% of Q3 US revenue. The renewal rate for our top accounts was 92%." }
+  ]
+}

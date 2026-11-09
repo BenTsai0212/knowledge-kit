@@ -1,0 +1,12 @@
+{
+  "id": "rd-roadmap-2027-zh",
+  "title": "2027 年研發藍圖",
+  "language": "zh-TW",
+  "date": "2026-06-10",
+  "visibility": "internal",
+  "passages": [
+    { "id": "rd-roadmap-2027-zh-01", "text": "2027 年的研發重點有三項：霧行氣體感測器量產、KS-400 新增 PM1.0 量測，以及所有產品支援 LoRaWAN 無線傳輸。" },
+    { "id": "rd-roadmap-2027-zh-02", "text": "第二代 KS-200 預計在 2027 年第四季推出，耗電量比現行機種降低 40%。" },
+    { "id": "rd-roadmap-2027-zh-03", "text": "為了支援上述計畫，研發部 2027 年將新增 6 名韌體與演算法工程師。" }
+  ]
+}

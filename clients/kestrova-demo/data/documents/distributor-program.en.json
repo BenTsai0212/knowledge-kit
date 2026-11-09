@@ -1,0 +1,12 @@
+{
+  "id": "distributor-program-en",
+  "title": "Distributor Program Terms",
+  "language": "en",
+  "date": "2026-02-12",
+  "visibility": "internal",
+  "passages": [
+    { "id": "distributor-program-en-01", "text": "Tamberline Supply is Kestrova's authorized US distributor for the KS-200 and KS-400 product lines." },
+    { "id": "distributor-program-en-02", "text": "Authorized distributors receive 25% off the list price and must meet a minimum annual purchase of USD 120,000." },
+    { "id": "distributor-program-en-03", "text": "Distributors provide first-line technical support and must escalate unresolved issues within 48 hours to Kestrova Customer Support, led by Marcus Ellery." }
+  ]
+}

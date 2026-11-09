@@ -1,0 +1,13 @@
+{
+  "id": "employee-handbook-zh",
+  "title": "員工手冊：出勤與請假",
+  "language": "zh-TW",
+  "date": "2026-03-01",
+  "visibility": "internal",
+  "passages": [
+    { "id": "employee-handbook-zh-01", "text": "上班時間為週一至週五 9:00 至 18:00，可在 8:00 至 10:00 之間彈性上班，每天須滿 8 小時，不含午休 1 小時。" },
+    { "id": "employee-handbook-zh-02", "text": "特休須在休假日前 3 個工作天，於人資系統提出申請；連續休 5 天以上，須提前 2 週申請，並經部門主管核准。" },
+    { "id": "employee-handbook-zh-03", "text": "病假一年 30 天以內，薪資折半發給；連續請病假 3 天以上，須附醫師診斷證明。" },
+    { "id": "employee-handbook-zh-04", "text": "加班須事先經主管核准。平日加班可選擇加班費或補休，補休須在 6 個月內休完。" }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "quality-procedure-ja",
+  "title": "品質管理手順",
+  "language": "ja",
+  "date": "2026-03-05",
+  "visibility": "internal",
+  "passages": [
+    { "id": "quality-procedure-ja-01", "text": "出荷前の全数検査では、各センサーの測定値を基準器と比較し、誤差が ±2% 以内であることを確認する。" },
+    { "id": "quality-procedure-ja-02", "text": "抜き取り検査はロットごとに 32 台を対象とし、不良が 1 台でも見つかった場合はロット全体を再検査する。" },
+    { "id": "quality-procedure-ja-03", "text": "不良品は専用の保管場所に隔離し、品質管理課が 3 営業日以内に原因を調査して是正処置報告書を作成する。品質管理課の課長は有村真紀である。" }
+  ]
+}

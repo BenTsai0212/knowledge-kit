@@ -1,0 +1,13 @@
+{
+  "id": "mistwalk-trial-ja",
+  "title": "霧行 試作報告",
+  "language": "ja",
+  "date": "2026-09-12",
+  "visibility": "internal",
+  "project": "mistwalk",
+  "passages": [
+    { "id": "mistwalk-trial-ja-01", "text": "2026 年 8 月、日本工場の生産部で霧行センサー（MW-1）の第 2 次試作を 500 台行った。" },
+    { "id": "mistwalk-trial-ja-02", "text": "第 2 次試作の歩留まりは 87% で、第 1 次試作の 72% から改善した。主な不良原因はセンサー素子のはんだ付け不良である。" },
+    { "id": "mistwalk-trial-ja-03", "text": "量産開始の条件は歩留まり 95% 以上とし、第 3 次試作を 2026 年 12 月に予定している。試作の責任者は、生産部を統括する工場長の森下智也である。" }
+  ]
+}
