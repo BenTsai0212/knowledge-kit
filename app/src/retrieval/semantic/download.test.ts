@@ -136,6 +136,63 @@ describe("loadVerifiedFiles", () => {
   });
 });
 
+describe("下載進度（#171）", () => {
+  // 分成多段送出的回應，模擬大檔逐段到達
+  const chunked = (bytes: Uint8Array<ArrayBuffer>, size: number) =>
+    new Response(
+      new ReadableStream<Uint8Array>({
+        start(controller) {
+          for (let i = 0; i < bytes.byteLength; i += size) controller.enqueue(bytes.slice(i, i + size));
+          controller.close();
+        },
+      }),
+    );
+
+  async function download(model: ModelSpec, caches: DownloadDeps["caches"]) {
+    const reports: { loaded: number; total: number }[] = [];
+    const bodies: Record<string, Uint8Array<ArrayBuffer>> = { [modelFileUrl(model, "config.json")]: A, [modelFileUrl(model, "onnx/model.onnx")]: B };
+    const fetch = async (url: string) => chunked(bodies[url], 3);
+    const files = await loadVerifiedFiles(model, { fetch, caches }, (progress) => reports.push(progress));
+    return { files, reports };
+  }
+
+  it("沒有快取：連網前回報 0，之後逐段累計到登記大小的合計；交出的 bytes 與驗證不變", async () => {
+    const model = await spec();
+    const total = A.byteLength + B.byteLength;
+    const { files, reports } = await download(model, fakeCaches().caches);
+    expect(files.get("config.json")).toEqual(A);
+    expect(files.get("onnx/model.onnx")).toEqual(B);
+    // config（6 bytes）分 3＋3，weights!（8 bytes）分 3＋3＋2
+    expect(reports.map((r) => r.loaded)).toEqual([0, 3, 6, 6, 9, 12, 14]);
+    expect(reports.every((r) => r.total === total)).toBe(true);
+  });
+
+  it("部分檔案在快取：從快取讀到的大小計入已下載", async () => {
+    const model = await spec();
+    const { caches, stores } = fakeCaches();
+    stores.set(cacheName(model), new Map([[modelFileUrl(model, "config.json"), A]]));
+    const { reports } = await download(model, caches);
+    expect(reports.map((r) => r.loaded)).toEqual([6, 9, 12, 14]);
+  });
+
+  it("全部在快取：不回報進度", async () => {
+    const model = await spec();
+    const { caches } = fakeCaches();
+    await download(model, caches);
+    const { reports } = await download(model, caches);
+    expect(reports).toEqual([]);
+  });
+
+  it("回應超過登記大小：進度不超過合計，照樣以大小不符拒絕", async () => {
+    const model = await spec();
+    const reports: number[] = [];
+    const fetch = async () => chunked(bytesOf("config + more"), 4);
+    const error = await failure(loadVerifiedFiles(model, { fetch, caches: fakeCaches().caches }, (p) => reports.push(p.loaded)));
+    expect(error.reason).toBe("size");
+    expect(Math.max(...reports)).toBe(A.byteLength);
+  });
+});
+
 describe("E5_MODEL", () => {
   it("固定在 commit SHA，網址不含 main 等會變動的 ref", () => {
     expect(E5_MODEL.revision).toMatch(/^[0-9a-f]{40}$/);

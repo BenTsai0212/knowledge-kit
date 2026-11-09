@@ -9,7 +9,8 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "loading", "loadFailed", "retrievalFallbackTitle", "retrievalFallback", "fictionalData", "demoPermissions", "identity", "language", "accessCodeTitle",
+    "loading", "loadFailed", "modelLoadingTitle", "modelDownloadingTitle", "modelDownloadProgress", "modelPreparing",
+    "retrievalFallbackTitle", "retrievalFallback", "fictionalData", "demoPermissions", "identity", "language", "accessCodeTitle",
     "accessCodeLabel", "accessCodeHint", "demoAccessCodeHint", "demoQaNotice", "demoUploadNotice", "accessCodeSubmit", "changeAccessCode", "presetQuestions", "scenarioRole",
     "questionLabel", "questionPlaceholder", "askButton", "answering", "emptyAnswer", "openSource", "sourceTitle",
     "closeSource", "views", "tabQa", "tabGraph", "legend", "graphEmpty", "selectEntity", "relatedEntities",
@@ -48,6 +49,10 @@
   "properties": {
     "loading": { "$ref": "#/definitions/Text" },
     "loadFailed": { "$ref": "#/definitions/Text" },
+    "modelLoadingTitle": { "$ref": "#/definitions/Text" },
+    "modelDownloadingTitle": { "$ref": "#/definitions/Text" },
+    "modelDownloadProgress": { "$ref": "#/definitions/Text" },
+    "modelPreparing": { "$ref": "#/definitions/Text" },
     "retrievalFallbackTitle": { "$ref": "#/definitions/Text" },
     "retrievalFallback": {
       "description": "語意向量 provider 準備失敗、改用 keyword-hash 時的說明，依原因（app/src/retrieval/providers.ts 的 FallbackReason）",

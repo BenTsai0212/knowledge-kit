@@ -125,6 +125,23 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 
 測試不下載模型：下載與驗證以假的 `fetch`、Cache Storage 與 bytes 測試（`download.test.ts`），實作以注入的假模型測試（`multilingual-e5-small.test.ts`、`providers.test.ts`）。
 
+### 準備中的提示
+
+語意向量無快取時第一次提問約 50 秒，幾乎都在下載約 129 MB 的模型檔（ADR 0006「代價」），所以準備期間問答頁與評測台顯示提示（`app/src/ui/RetrievalNotice.tsx`，判斷是 `retrieval-notice.ts` 的純函式 `retrievalNotice()`）：
+
+| 狀態 | 提示 |
+| --- | --- |
+| 準備中，需要下載 | 「下載中」與進度：已下載／總大小（MB，1024 × 1024 bytes，小數一位）與進度條 |
+| 準備中，從快取載入，或下載完成後初始化 | 「載入中」，不顯示進度 |
+| 準備好 | 不顯示 |
+| 降級 | 改顯示降級提示（見[降級](#降級)） |
+
+- 進度由 `download.ts` 的 `loadVerifiedFiles()` 以 `onProgress` 回報 `{ loaded, total }`：`total` 是 `model-files.ts` 登記大小的合計，`loaded` 含從快取讀到的檔案。開始連網時先回報一次，之後逐段讀取回應、每收到一段回報一次；下載的檔案超過登記大小時，進度不超過該檔的大小。全部從快取取得時不回報，畫面因此只顯示「載入中」。
+- 逐段讀取取得的 bytes 與 `arrayBuffer()` 相同，大小與 SHA-256 驗證、快取與固定 commit 都不變。
+- `createProvider(config, factories, onProgress)` 把回呼交給實作（`ProviderFactory` 的參數）；App 只在顯示的數字改變時更新畫面。
+- 只有 `preparesModel()`（`providers.ts`）為真的實作顯示準備中的提示；`keyword-hash` 的客戶畫面不變。
+- 文字是 `client/i18n/` 的 `modelLoadingTitle`、`modelDownloadingTitle`、`modelDownloadProgress`（參數 `{loaded}`、`{total}`）與 `modelPreparing`。測試以注入的假下載回報進度（`download.test.ts`、`providers.test.ts`），畫面以 `renderToStaticMarkup` 檢查（`app/src/ui/retrieval-notice.test.ts`）。
+
 ### 降級
 
 語意向量準備失敗時，`createProvider()` 改用 `keyword-hash`，不讓問答停擺：
@@ -136,7 +153,7 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 | `init` | 其他失敗：載入程式、Cache Storage 或 ONNX Runtime 初始化失敗 |
 
 - 降級後 `minScore` 改用 `keyword-hash` 的預設值 0.1（語意向量的 0.7 對 `keyword-hash` 太高，幾乎每題都會拒答），`topK` 不變。
-- 問答頁與評測台顯示提示（`RetrievalFallbackNotice`，文字是 `client/i18n/` 的 `retrievalFallbackTitle` 與依原因的 `retrievalFallback`）；錯誤本身只寫到 `console.warn`。
+- 問答頁與評測台顯示提示（`RetrievalFallbackNotice`，經 `RetrievalNotice` 顯示；文字是 `client/i18n/` 的 `retrievalFallbackTitle` 與依原因的 `retrievalFallback`）；錯誤本身只寫到 `console.warn`。
 - `keyword-hash` 本身不降級。測試以假的 `fetch` 與會失敗的模型確認每種原因都會降級（`providers.test.ts`），並確認降級後的檢索結果與 `keyword-hash` 的客戶相同（`retrieve.test.ts`）。
 
 ### 評測

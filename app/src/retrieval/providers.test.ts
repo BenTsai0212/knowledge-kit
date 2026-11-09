@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } fr
 import clientSchema from "../../../client/schema/client.schema.json";
 import { clientConfig } from "../client/load";
 import type { ProviderId } from "../client/types";
-import { createProvider, PROVIDERS, RETRIEVAL_DEFAULTS, type ProviderFactory } from "./providers";
+import { createProvider, PROVIDERS, RETRIEVAL_DEFAULTS, type ProgressListener, type ProviderFactory } from "./providers";
 import { loadVerifiedFiles, type DownloadDeps } from "./semantic/download";
 import { E5_MODEL, modelFileUrl } from "./semantic/model-files";
 import { createE5Provider, type E5Deps } from "./semantic/multilingual-e5-small";
@@ -142,6 +142,22 @@ describe("降級到 keyword-hash（#163）", () => {
       },
     ];
     for (const factories of failures) expect((await createProvider(E5, factories)).fallback).toEqual({ from: "multilingual-e5-small", reason: "init" });
+  });
+
+  it("下載進度經 createProvider 交給 onProgress（#171）", async () => {
+    const reports: { loaded: number; total: number }[] = [];
+    const unavailable = async () => new Response(null, { status: 503 });
+    const loadFiles: E5Deps["loadFiles"] = (model, listener) => loadVerifiedFiles(model, { fetch: unavailable, caches: emptyCaches }, listener);
+    const factories = { ...TESTABLE, "multilingual-e5-small": (onProgress?: ProgressListener) => createE5Provider({ ...fakeE5Deps, loadFiles }, onProgress) };
+    const total = E5_MODEL.files.reduce((sum, f) => sum + f.bytes, 0);
+    expect((await createProvider(E5, factories, (p) => reports.push(p))).fallback?.reason).toBe("download");
+    expect(reports).toEqual([{ loaded: 0, total }]);
+  });
+
+  it("keyword-hash 不回報進度", async () => {
+    const reports: unknown[] = [];
+    await createProvider(clientConfig.client.retrieval, TESTABLE, (p) => reports.push(p));
+    expect(reports).toEqual([]);
   });
 
   it("keyword-hash 本身失敗時不降級，照常拋出", async () => {

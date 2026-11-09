@@ -238,6 +238,11 @@ export type ExtractFailure = "format" | "truncated" | "write" | "no_access_code"
 export interface UiStrings {
   loading: string;
   loadFailed: string;
+  // 語意向量 provider 準備中的提示（問答頁與評測台）：從快取載入或初始化時、下載時與進度（{loaded}、{total} 是 MB），以及兩者共用的說明
+  modelLoadingTitle: string;
+  modelDownloadingTitle: string;
+  modelDownloadProgress: string;
+  modelPreparing: string;
   // 語意向量 provider 準備失敗、改用 keyword-hash 時的提示（問答頁與評測台）
   retrievalFallbackTitle: string;
   retrievalFallback: Record<FallbackReason, string>;

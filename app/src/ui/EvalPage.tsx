@@ -9,11 +9,12 @@ import { applies, applicableQuestions, estimateCalls, openEvalDatabase, runEvals
 import { LEAKAGE_LIMIT, type Metric, type Summary } from "../evals/score";
 import type { EvalQuestion } from "../evals/types";
 import { apiTransport } from "../qa/api";
-import type { ActiveProvider, ProviderFallback } from "../retrieval/providers";
+import { preparesModel, type ActiveProvider } from "../retrieval/providers";
 import { openRetriever } from "../retrieval/retrieve";
 import { createEvalDatabases, differs, evalReport, parseSettings, setSummary, TOP_K_MAX, verdicts } from "./eval-helpers";
 import { Notice } from "./Notice";
-import { RetrievalFallbackNotice } from "./RetrievalFallbackNotice";
+import { RetrievalNotice } from "./RetrievalNotice";
+import type { ProviderStatus } from "./retrieval-notice";
 
 const { client, access } = clientConfig;
 const questions = evalQuestions.questions;
@@ -33,9 +34,9 @@ interface Props {
   accessCode: string;
   // 本次工作階段上傳的文件數（不納入評測，只提示）
   uploadedCount: number;
-  // App 共用的 VectorProvider；降級時評測的是 keyword-hash，以提示標明
+  // App 共用的 VectorProvider 與準備狀態；準備中顯示下載進度，降級時評測的是 keyword-hash，以提示標明
   provider: Promise<ActiveProvider>;
-  fallback: ProviderFallback | null;
+  status: ProviderStatus;
   // 結果由 App 保存，切換頁籤後仍可查看與下載
   run: EvalRun | null;
   onRun(run: EvalRun): void;
@@ -46,7 +47,7 @@ type Phase = "idle" | "estimating" | "confirm" | "running";
 
 const percent = (rate: number) => Math.round(rate * 1000) / 10;
 
-export function EvalPage({ language, accessCode, uploadedCount, provider, fallback, run, onRun, onRejectAccessCode }: Props) {
+export function EvalPage({ language, accessCode, uploadedCount, provider, status, run, onRun, onRejectAccessCode }: Props) {
   const s = strings(language);
   const [forms, setForms] = useState<Form[]>([DEFAULT_FORM, DEFAULT_FORM]);
   const [useB, setUseB] = useState(false);
@@ -239,7 +240,7 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, fallba
           {s.evalModelGrading}
         </label>
         {plan === null && <p className="error">{s.evalInvalidSettings}</p>}
-        <RetrievalFallbackNotice language={language} fallback={fallback} />
+        <RetrievalNotice language={language} preparesModel={preparesModel(client.retrieval)} status={status} />
         {uploadedCount > 0 && <Notice kind="info" title={fill(s.evalUploaded, { count: uploadedCount })} />}
         {failed && <p className="error">{s.loadFailed}</p>}
         <div className="dialog-actions">

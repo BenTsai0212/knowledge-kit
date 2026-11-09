@@ -12,7 +12,7 @@ import { planExtraction, runExtraction, type ExtractionState } from "./extractio
 import { readReview } from "./extraction/store";
 import { ask } from "./qa/answer";
 import { apiTransport } from "./qa/api";
-import { createProvider, type ActiveProvider, type ProviderFallback } from "./retrieval/providers";
+import { createProvider, preparesModel, PROVIDERS, type ActiveProvider, type ProgressListener } from "./retrieval/providers";
 import { openRetriever } from "./retrieval/retrieve";
 import { readSource, type SourceDocument } from "./sources/source";
 import { clearAccessCode, loadAccessCode, saveAccessCode } from "./ui/access-code";
@@ -21,7 +21,8 @@ import { AnswerView, type AnswerState } from "./ui/AnswerView";
 import { EvalPage } from "./ui/EvalPage";
 import { GraphPage } from "./ui/GraphPage";
 import { QuestionPanel } from "./ui/QuestionPanel";
-import { RetrievalFallbackNotice } from "./ui/RetrievalFallbackNotice";
+import { RetrievalNotice } from "./ui/RetrievalNotice";
+import { PREPARING, sameDisplay, type ProviderStatus } from "./ui/retrieval-notice";
 import { ReviewPage } from "./ui/ReviewPage";
 import { pendingCount } from "./ui/review-helpers";
 import { createExtractionRunner } from "./ui/extraction-runner";
@@ -37,7 +38,9 @@ const { client, access } = clientConfig;
 
 // 問答、比對與評測台共用一個 VectorProvider：語意模型只下載、初始化一次。App 掛載時才開始準備，不在匯入時
 let sharedProvider: Promise<ActiveProvider> | null = null;
-const activeProvider = () => (sharedProvider ??= createProvider(client.retrieval));
+// 下載進度轉給目前掛載的 App（StrictMode 重新掛載時換成新的）
+let onModelProgress: ProgressListener = () => {};
+const activeProvider = () => (sharedProvider ??= createProvider(client.retrieval, PROVIDERS, (progress) => onModelProgress(progress)));
 
 // 頁籤：導覽列與切換身分時的判斷用同一份結果（線上 demo、展示模式都在載入時決定）
 const views = (canReview: boolean) => visibleViews(canReview, onlineDemo, presentationMode);
@@ -80,8 +83,8 @@ export function App() {
   const [pending, setPending] = useState<{ identity: string; count: number } | null>(null);
   // 評測台最近一次的結果（#62）：只在記憶體，切換頁籤後仍可查看與下載
   const [evalRun, setEvalRun] = useState<EvalRun | null>(null);
-  // 語意向量 provider 準備失敗、改用 keyword-hash 時的原因（docs/retrieval.md「降級」）
-  const [fallback, setFallback] = useState<ProviderFallback | null>(null);
+  // VectorProvider 的準備狀態：準備中的下載進度，與準備失敗、改用 keyword-hash 時的原因（docs/retrieval.md「準備中的提示」「降級」）
+  const [providerStatus, setProviderStatus] = useState<ProviderStatus>(PREPARING);
   const s = strings(language);
   const tabLabels: Record<View, string> = {
     qa: s.tabQa,
@@ -124,9 +127,14 @@ export function App() {
 
   useEffect(() => {
     let cancelled = false;
-    void activeProvider().then((active) => !cancelled && setFallback(active.fallback));
+    onModelProgress = (progress) => {
+      const next: ProviderStatus = { state: "preparing", progress };
+      setProviderStatus((current) => (sameDisplay(current, next) ? current : next));
+    };
+    void activeProvider().then((active) => !cancelled && setProviderStatus({ state: "ready", fallback: active.fallback }));
     return () => {
       cancelled = true;
+      onModelProgress = () => {};
     };
   }, []);
 
@@ -271,7 +279,7 @@ export function App() {
               accessCode={accessCode ?? ""}
               uploadedCount={uploaded.size}
               provider={activeProvider()}
-              fallback={fallback}
+              status={providerStatus}
               run={evalRun}
               onRun={setEvalRun}
               onRejectAccessCode={rejectAccessCode}
@@ -353,7 +361,7 @@ export function App() {
           {db === null && <p className="card muted">{s.loading}</p>}
           {/* 線上 demo：提問會傳給模型供應商（#100 計畫第 8 項） */}
           {onlineDemo.enabled && <p className="badge warning">{s.demoQaNotice}</p>}
-          <RetrievalFallbackNotice language={language} fallback={fallback} />
+          <RetrievalNotice language={language} preparesModel={preparesModel(client.retrieval)} status={providerStatus} />
           <QuestionPanel language={language} disabled={retriever === null} onAsk={onAsk} />
           <AnswerView language={language} state={answer} onOpenSource={onOpenSource} />
           {source !== null && <SourcePanel language={language} source={source} onOpenSource={onOpenSource} onClose={() => (sources.current.cancel(), setSource(null))} />}
