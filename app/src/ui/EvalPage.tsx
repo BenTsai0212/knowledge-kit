@@ -6,12 +6,12 @@ import { clientConfig } from "../client/load";
 import { dataset } from "../dataset/load";
 import { evalQuestions } from "../evals/load";
 import { applies, applicableQuestions, estimateCalls, openEvalDatabase, runEvals, type EvalContext, type EvalRun, type EvalSettings, type QuestionResult } from "../evals/run";
-import { LEAKAGE_LIMIT, type Metric, type Summary } from "../evals/score";
+import { LEAKAGE_LIMIT, type AnswerMode, type Metric, type Summary } from "../evals/score";
 import type { EvalQuestion } from "../evals/types";
 import { apiTransport } from "../qa/api";
 import { preparesModel, type ActiveProvider } from "../retrieval/providers";
 import { openRetriever } from "../retrieval/retrieve";
-import { createEvalDatabases, differs, evalReport, parseSettings, setSummary, TOP_K_MAX, verdicts } from "./eval-helpers";
+import { createEvalDatabases, differs, effectiveForm, evalReport, parseSettings, settingsForm, setSummary, TOP_K_MAX, verdicts, type SettingsForm } from "./eval-helpers";
 import { Notice } from "./Notice";
 import { RetrievalNotice } from "./RetrievalNotice";
 import type { ProviderStatus } from "./retrieval-notice";
@@ -22,12 +22,8 @@ const { thresholds } = client.evals;
 const METRICS = ["citation", "answer", "leakage", "refusal"] as const;
 const SET_NAMES = ["A", "B"];
 
-interface Form {
-  topK: string;
-  minScore: string;
-}
-// 預設值取自 client.json 的 retrieval；只在這次評測有效
-const DEFAULT_FORM: Form = { topK: String(client.retrieval.topK), minScore: String(client.retrieval.minScore) };
+// 預設值先取自 client.json 的 retrieval，provider 準備好後換成實際生效的參數（降級時不同，#178）；只在這次評測有效
+const DEFAULT_FORM = settingsForm(client.retrieval);
 
 interface Props {
   language: string;
@@ -49,7 +45,7 @@ const percent = (rate: number) => Math.round(rate * 1000) / 10;
 
 export function EvalPage({ language, accessCode, uploadedCount, provider, status, run, onRun, onRejectAccessCode }: Props) {
   const s = strings(language);
-  const [forms, setForms] = useState<Form[]>([DEFAULT_FORM, DEFAULT_FORM]);
+  const [forms, setForms] = useState<SettingsForm[]>([DEFAULT_FORM, DEFAULT_FORM]);
   const [useB, setUseB] = useState(false);
   const [model, setModel] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
@@ -58,6 +54,8 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
   const [onlyDiff, setOnlyDiff] = useState(false);
   const dbs = useRef(createEvalDatabases(() => openEvalDatabase(clientConfig, dataset)));
   const ctx = useRef<EvalContext | null>(null);
+  // 確認視窗估算時的設定；開始後以同一組執行
+  const planned = useRef<{ sets: EvalSettings[]; mode: AnswerMode } | null>(null);
   const controller = useRef<AbortController | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
 
@@ -69,6 +67,18 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
       void databases.close();
     };
   }, []);
+
+  // provider 準備好後，人還沒改過的欄位換成實際生效的檢索參數
+  useEffect(() => {
+    let live = true;
+    provider.then(
+      ({ options }) => live && setForms((all) => all.map((f) => effectiveForm(f, options))),
+      () => {},
+    );
+    return () => {
+      live = false;
+    };
+  }, [provider]);
 
   useEffect(() => {
     const d = dialog.current;
@@ -89,9 +99,13 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
     try {
       const db = await dbs.current.open();
       // 降級時是 keyword-hash：requires: "semantic" 的題目不適用
-      const { provider: active } = await provider;
+      const { provider: active, options } = await provider;
+      // provider 準備好之前按下開始時，表單可能還是 client.json 的值：以實際生效的參數估算與執行
+      const sets = forms.slice(0, plan.sets.length).map((f) => effectiveForm(f, options)).map((f) => parseSettings(f.topK, f.minScore));
+      if (!sets.every((x) => x !== null)) throw new Error("invalid settings");
+      planned.current = { sets: sets as EvalSettings[], mode: plan.mode };
       ctx.current = { retriever: openRetriever(db, client.retrieval, provider), transport: apiTransport({ accessCode }), config: clientConfig, data: dataset, questions, providerId: active.id };
-      setEstimate(await estimateCalls(ctx.current, plan.sets, plan.mode));
+      setEstimate(await estimateCalls(ctx.current, planned.current.sets, planned.current.mode));
       setPhase("confirm");
     } catch {
       await cancel();
@@ -101,16 +115,17 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
 
   async function cancel() {
     ctx.current = null;
+    planned.current = null;
     setPhase("idle");
     await dbs.current.close();
   }
 
   async function start() {
-    if (ctx.current === null || plan === null) return;
+    if (ctx.current === null || planned.current === null) return;
     const abort = (controller.current = new AbortController());
     setPhase("running");
     try {
-      const final = await runEvals(ctx.current, plan, onRun, abort.signal);
+      const final = await runEvals(ctx.current, planned.current, onRun, abort.signal);
       if (final.stopReason === "invalid_access_code") onRejectAccessCode();
     } catch {
       // 離開頁籤時資料庫已關閉，進行中的檢索會失敗；已完成的結果已經透過 onRun 保存
@@ -130,7 +145,8 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
     URL.revokeObjectURL(a.href);
   }
 
-  const setForm = (i: number, patch: Partial<Form>) => setForms((all) => all.map((f, j) => (j === i ? { ...f, ...patch } : f)));
+  const setForm = (i: number, field: "topK" | "minScore", value: string) =>
+    setForms((all) => all.map((f, j) => (j === i ? { ...f, [field]: value, edited: { ...f.edited, [field]: true } } : f)));
   const done = run?.sets.reduce((n, set) => n + set.results.length, 0) ?? 0;
   const applicable = run === null ? questions : applicableQuestions(questions, run.providerId);
   const summaries = run?.sets.map((set) => setSummary(applicable, set, thresholds, run.mode)) ?? [];
@@ -222,11 +238,11 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
               <legend>{fill(s.evalSetName, { name: SET_NAMES[i] })}</legend>
               <label>
                 {s.evalTopK}
-                <input type="number" min={1} max={TOP_K_MAX} step={1} value={f.topK} onChange={(e) => setForm(i, { topK: e.target.value })} />
+                <input type="number" min={1} max={TOP_K_MAX} step={1} value={f.topK} onChange={(e) => setForm(i, "topK", e.target.value)} />
               </label>
               <label>
                 {s.evalMinScore}
-                <input type="number" min={0} max={1} step={0.05} value={f.minScore} onChange={(e) => setForm(i, { minScore: e.target.value })} />
+                <input type="number" min={0} max={1} step={0.05} value={f.minScore} onChange={(e) => setForm(i, "minScore", e.target.value)} />
               </label>
             </fieldset>
           ),

@@ -1,9 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { clientConfig } from "../client/load";
 import type { EvalRun, QuestionResult, SetRun } from "../evals/run";
 import type { QuestionScore } from "../evals/score";
 import { evalQuestions } from "../evals/load";
-import { createEvalDatabases, differs, evalReport, parseSettings, setSummary, verdicts } from "./eval-helpers";
+import type { RetrievalConfig } from "../client/types";
+import { keywordHashProvider } from "../retrieval/keyword-hash";
+import { createProvider, PROVIDERS, RETRIEVAL_DEFAULTS, withRetrievalDefaults } from "../retrieval/providers";
+import { createEvalDatabases, differs, effectiveForm, evalReport, parseSettings, setSummary, settingsForm, verdicts } from "./eval-helpers";
 
 const { thresholds } = clientConfig.client.evals;
 const questions = evalQuestions.questions.slice(0, 2);
@@ -35,6 +38,46 @@ describe("parseSettings", () => {
     for (const [k, m] of [["0", "0.1"], ["21", "0.1"], ["2.5", "0.1"], ["", "0.1"], ["5", ""], ["5", "-0.1"], ["5", "1.5"], ["5", "abc"]]) {
       expect(parseSettings(k, m), `${k} ${m}`).toBeNull();
     }
+  });
+});
+
+describe("effectiveForm（#178）", () => {
+  afterEach(() => vi.restoreAllMocks());
+  const semantic = withRetrievalDefaults({ provider: "multilingual-e5-small" });
+  // 語意模型不下載：成功時以 keyword-hash 代替，失敗時拋錯
+  const ready = (config: RetrievalConfig, fails: boolean) =>
+    createProvider(config, {
+      ...PROVIDERS,
+      "multilingual-e5-small": async () => {
+        if (fails) throw new Error("model failed");
+        return keywordHashProvider;
+      },
+    });
+
+  it("沒有降級：預設值與 client.retrieval 相同", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    for (const config of [clientConfig.client.retrieval, withRetrievalDefaults(), semantic]) {
+      const { options, fallback } = await ready(config, false);
+      expect(fallback).toBeNull();
+      expect(effectiveForm(settingsForm(config), options)).toEqual(settingsForm(config));
+    }
+  });
+
+  it("降級：minScore 改為 keyword-hash 的預設值，topK 不變", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const config = { ...semantic, topK: 7 };
+    const { options, fallback } = await ready(config, true);
+    expect(fallback).not.toBeNull();
+    expect(effectiveForm(settingsForm(config), options)).toEqual({ topK: "7", minScore: String(RETRIEVAL_DEFAULTS["keyword-hash"].minScore), edited: {} });
+  });
+
+  it("人已改過的欄位不覆蓋", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { options } = await ready(semantic, true);
+    const minScore = { ...settingsForm(semantic), minScore: "0.5", edited: { minScore: true as const } };
+    expect(effectiveForm(minScore, options)).toEqual({ ...minScore, topK: String(semantic.topK) });
+    const both = { topK: "3", minScore: "0.9", edited: { topK: true as const, minScore: true as const } };
+    expect(effectiveForm(both, options)).toEqual(both);
   });
 });
 

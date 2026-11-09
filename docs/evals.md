@@ -138,7 +138,7 @@
 評測台頁籤（`app/src/ui/EvalPage.tsx`；純函式在 `app/src/ui/eval-helpers.ts`）。
 
 - **誰看得到**：只有 `canReview` 的身分（`access.json`）。切換到沒有 `canReview` 的身分時回到問答頁，比照待審頁。需要邀請碼，沒有時顯示邀請碼輸入畫面；遇到 `invalid_access_code` 時與問答相同，清除邀請碼。
-- **設定**：設定 A、設定 B 各有 `topK`（1～20 的整數）與 `minScore`（0～1），預設值取自 `client.json` 的 `retrieval`，只在這次評測有效。設定 B 預設不啟用（只跑一組）。「答案正確改用模型評分」預設不勾選。
+- **設定**：設定 A、設定 B 各有 `topK`（1～20 的整數）與 `minScore`（0～1），只在這次評測有效。預設值是實際生效的檢索參數：一開始取自 `client.json` 的 `retrieval`，provider 準備好後換成 `ActiveProvider.options`；語意向量降級時 `minScore` 因此是 `keyword-hash` 的預設值（見 [retrieval.md「降級」](retrieval.md#降級)），沒有降級時與 `client.json` 相同。人改過的欄位不覆蓋。provider 準備好之前就按「開始評測」時，估算會等 provider 準備好，並以同樣的規則換掉沒改過的欄位，估算與執行用同一組設定（`effectiveForm()`，#178）。設定 B 預設不啟用（只跑一組）。「答案正確改用模型評分」預設不勾選。
 - **上傳的文件**：評測使用專用的記憶體資料庫，不納入上傳的文件；本次工作階段有上傳的文件時，畫面提示「目前有 N 份上傳的文件，不納入評測」。
 - **開始前確認**：按「開始評測」時開啟評測專用資料庫，以 `estimateCalls()` 算出預計次數，確認視窗顯示「最多 N 次呼叫（問答 a、模型評分 b）」，並提醒每日上限（`DAILY_LIMIT`）不夠時先在 `.dev.vars` 調高。取消時關閉資料庫。
 - **不適用的題目**：`requires: "semantic"` 的題目在 `keyword-hash` 時，結果欄顯示「不適用（需要語意檢索）」（`evalRequiresSemantic`），總覽的分母不含它們。有 `passageLanguage` 的題目在題目下方註明（`evalPassageLanguage`）。
