@@ -10,12 +10,12 @@ Retrieval tokenization and upload chunking apply rules by each character's **scr
 | --- | --- | --- |
 | A. Verified | Traditional Chinese (`zh-TW`), English (`en`), Japanese (`ja`, #83) | The client folder only (section 1) |
 | B. Space-separated languages | French, German, Spanish, Indonesian, Korean | The client folder only is enough to work; but the stopwords and trailing-`s` removal are English rules, so confirm retrieval quality with evaluation (section 2) |
-| C. Not space-separated, no rules in the language module yet | Thai, Lao, Burmese, Khmer | First open a separate Issue to change the language module (section 3), then change the client folder |
+| C. Not space-separated, no rules in the language module yet | Thai, Lao, Burmese, Khmer | With A1 (`multilingual-e5-small`), semantic vectors handle retrieval and cross-language retrieval directly, with no language module change first; change the client folder only (sections 1 and 4). With `keyword-hash` only, first open a separate Issue to change the language module (section 3), then change the client folder |
 | D. Right-to-left | Arabic, Hebrew | The interface does not support right-to-left layout; this is a code change, so open a separate Issue to discuss it |
 
 Simplified Chinese (`zh-CN`) shares the Han tokenization rules with Traditional Chinese, but the stopwords are Traditional characters (for example 這, 們, 與), so the Simplified 这, 们, 与 are not removed. Start as case A; if the evaluation is not good enough, add Simplified stopwords following section 3.
 
-**During new client setup** ([New client setup](new-client-setup.md)), if you hit case C or D: stop, report, and open a separate Issue; do not work around it in the client data.
+**During new client setup** ([New client setup](new-client-setup.md)), if you hit case D, or case C with `keyword-hash` only: stop, report, and open a separate Issue; do not work around it in the client data.
 
 ## 1. Changes in the client folder
 
@@ -26,8 +26,8 @@ Using `clients/<name>/`; `<code>` is a BCP 47 language code (for example `ja`, `
 3. **Localized text in the settings files**: display name, roles, visibility levels, projects, entity and relation types, scenario names, and so on must be filled in for every language. `check:client` only checks that the default language is filled in, so check the other languages one by one.
 4. **Entity names**: add the new language to the `names` of every entity in `data/entities.json`. For people's names without a standard translation, keep the original name; do not transliterate.
 5. **Documents**: add documents in this language with `language` set to `<code>`. Passage length is counted in characters, the same as other languages (`passageMaxChars`).
-6. **Default questions**: in `scenarios.json`, add question text in this language to every question, with same-language answer passages in `answerPassages`. **Phase 1 does not support cross-language retrieval**, so every question needs answer passages in the new language; if there is no matching passage, write more documents.
-7. **Evaluation question bank**: add questions in the new language following [Building the evaluation question bank](eval-question-bank.md), including at least permission and out-of-scope questions; no cross-language questions.
+6. **Default questions**: in `scenarios.json`, add question text in this language to every question, with same-language answer passages in `answerPassages`. `keyword-hash` does not support cross-language retrieval, so every question needs answer passages in the new language; if there is no matching passage, write more documents.
+7. **Evaluation question bank**: add questions in the new language following [Building the evaluation question bank](eval-question-bank.md), including at least permission and out-of-scope questions. Cross-language questions (with `passageLanguage` setting the passage language) are always marked `requires: "semantic"` and are left out of the denominator under `keyword-hash` ([docs/evals.md](../../evals.md), section "跨語言、同義詞與完全無關的題目").
 
 No changes needed for: language names in the question-answering prompt (generated with `Intl.DisplayNames`), asking for names in every language during extraction, the language filter in retrieval, comparing only same-language passages for conflicting information, and the timeline language. These all work from the language list in `client.json`.
 
@@ -47,6 +47,8 @@ These languages work without code changes, but the current rules were designed f
 Approach: change the client folder only, then look at the checks and evaluation in section 1. If answer passage ranks or answer accuracy are not good enough, open a separate Issue to add stopwords or suffix rules for this language in the language module (the process in section 3). Do not rewrite questions or loosen thresholds just to pass.
 
 ## 3. When the language module needs new rules
+
+**First check whether you need it**: with A1 (`multilingual-e5-small`), languages not separated by spaces (case C) work directly with semantic vectors for retrieval and cross-language retrieval, with no language module change first ([docs/retrieval.md](../../retrieval.md#語意向量multilingual-e5-small), section "語意向量"). Only with `keyword-hash` do you need the rules in this section: text without rules falls into "other scripts", each run between spaces becomes one word, and only the 3-character groups can partly match, so retrieval works very poorly ([docs/retrieval.md](../../retrieval.md#限制), section "限制"). This template ships no rules for Thai or similar languages ([RFC 0002](../../rfcs/0002-public-release.md), section "修訂紀錄"); when needed, implement them in the client's fork following this section.
 
 The language module is code shared by every client, so changes go through their own Issue and PR, **never in the same PR as client data**. Follow #83:
 
@@ -82,6 +84,12 @@ Common notes:
 - **Evaluate before deciding**: evaluate `keyword-hash` and each candidate with the same question bank, adding cross-language questions. Semantic vectors have a different score distribution, so adjust `minScore` and `topK` as well.
 - **Permissions do not change**: passages are always fetched through `withIdentity()`. Storing vectors in the database is a migration (high risk) and needs RLS, so roles that cannot see a passage cannot see its vector either.
 - **External API**: ask a person before adding a secret or dependency (AGENTS.md section 6); the client must confirm whether confidential passages may be sent to the provider.
-- **Cross-language questions**: add them to the question bank only after switching to semantic vectors, and list them separately in [Acceptance metrics](acceptance-metrics.md).
+- **Cross-language questions**: mark them `requires: "semantic"` in the question bank; they are scored only with semantic vectors. List their results separately at acceptance ([Acceptance metrics](acceptance-metrics.md)).
 - Record the chosen model, version, and measurements in an ADR. This document lists no vendors or prices because they change over time.
 - The 2026-11 evaluation (#126), in Traditional Chinese: [evaluation report](../../evals/semantic-retrieval-2026-11.md), [ADR 0006](../../adr/0006-semantic-retrieval.md) (Accepted).
+
+**Adopted approach**: the small multilingual browser model `multilingual-e5-small` (#163), selected with `retrieval.provider` in `client.json` ([docs/client-config.md](../../client-config.md), [docs/retrieval.md](../../retrieval.md), section "語意向量").
+
+- The first load downloads a model of about 135 MB, and if preparation fails the app falls back to `keyword-hash` with a notice, so it is still safer to fill in the new language's passages as in section 1.
+- Rely on cross-language retrieval alone only for languages listed in the model card (including `th`); quality may drop for low-resource languages, so evaluate with the question bank's cross-language questions first.
+- Before choosing it, you can try and evaluate it with a local `clients/local-<name>/` ([docs/retrieval.md](../../retrieval.md), section "瀏覽器量測").

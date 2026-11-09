@@ -92,7 +92,7 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 **新增語言**時只修改客戶資料夾（`client.json` 的 `languages`、翻譯檔、資料集）與語言模組：
 
 1. 以空白分詞、文字類別已有規則的語言（例如法文、德文）：不必改語言模組；但英文停用詞與去掉複數 `s` 的規則套用在所有「其他文字」上，需要時在 `scripts.ts` 為該文字類別另加規則。
-2. 不以空白分詞的語言（例如日文、泰文）：在 `scripts.ts` 的 `SCRIPTS` 加上該文字類別，選擇 `bigram` 或 `segmenter`；需要時在 `stopwords.ts` 加上停用詞。
+2. 不以空白分詞的語言（例如日文、泰文）：只用 `keyword-hash` 時，在 `scripts.ts` 的 `SCRIPTS` 加上該文字類別，選擇 `bigram` 或 `segmenter`；需要時在 `stopwords.ts` 加上停用詞。
 3. 句尾標點或換行相連的方式不同時，修改 `scripts.ts` 的 `SENTENCE_ENDS`、`FULLWIDTH_PUNCTUATION` 或類別的 `joinsWithoutSpace`。
 4. 執行 `npm run check:clients <名稱>`：`app/src/retrieval/scenarios.target.test.ts` 以該客戶的每種語言檢索預設問題，同語言的答案段落要在前 K 名內。
 
@@ -179,6 +179,7 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 
 - **非語意**：只比對共同的詞與字元，不懂同義詞與換句話說。例如「主管」找不到只寫「經理」的段落，`vacation` 找不到只寫 `annual leave` 的段落。
 - **不支援跨語言**：中文問題找不到只有英文的段落，反之亦然。參考資料集的每題預設問題在兩種語言都有答案段落（#26），所以 14 個檢查都能通過；需要跨語言時選用[語意向量](#語意向量multilingual-e5-small)（評估見[評估報告](evals/semantic-retrieval-2026-11.md)與 [ADR 0006](adr/0006-semantic-retrieval.md)）。
+- **不以空白分詞、語言模組沒有規則的語言**（例如泰文）：這類文字併入「其他文字」，兩個空白之間的一整串成為一個詞，只剩 3 字元組能部分比對，`keyword-hash` 的檢索效果很差。需要時選用[語意向量](#語意向量multilingual-e5-small)，不必先改語言模組；只用 `keyword-hash` 時才為它在語言模組加上規則（[新增語言步驟](playbook/add-language.md)第 3 節）。本 template 不內建泰文的規則（[RFC 0002](rfcs/0002-public-release.md)「修訂紀錄」）。
 - **新增語言**：見[語言模組](#語言模組)。
 - **規模與效能**：
   - 每次檢索都掃過全部段落；RLS 對每一列呼叫 `kk.can_see()` 查一次身分，再在 JS 中逐段計分，時間隨段落數線性增加。
