@@ -1,0 +1,14 @@
+{
+  "id": "mistwalk-spec-zh",
+  "title": "霧行氣體感測器規格書",
+  "language": "zh-TW",
+  "date": "2026-04-20",
+  "visibility": "internal",
+  "project": "mistwalk",
+  "passages": [
+    { "id": "mistwalk-spec-zh-01", "text": "霧行專案開發的霧行氣體感測器（型號 MW-1）可量測一氧化碳與二氧化氮：一氧化碳的量測範圍為 0 至 1000 ppm，二氧化氮為 0 至 20 ppm。" },
+    { "id": "mistwalk-spec-zh-02", "text": "解析度為一氧化碳 1 ppm、二氧化氮 0.1 ppm；反應時間（T90）小於 30 秒。" },
+    { "id": "mistwalk-spec-zh-03", "text": "操作溫度為 −20 至 60°C，防護等級 IP65，支援 Modbus RTU 與 4–20 mA 輸出。" },
+    { "id": "mistwalk-spec-zh-04", "text": "感測元件的預期壽命為 5 年，建議每 12 個月校正一次。霧行專案由研發部經理許承翰負責。" }
+  ]
+}

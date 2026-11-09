@@ -1,0 +1,151 @@
+{
+  "scenarios": [
+    {
+      "id": "guest-onboarding",
+      "title": { "zh-TW": "新人了解公司", "en": "Getting to know the company", "ja": "新入社員が会社を知る" },
+      "description": {
+        "zh-TW": "以訪客身分查詢三個據點的公開資訊；答案分別寫在繁中、英文與日文的文件",
+        "en": "Look up public information from all three sites as a guest; the answers are written in Chinese, English, and Japanese documents",
+        "ja": "ゲストとして 3 拠点の公開情報を調べます。答えは繁体字中国語、英語、日本語の文書にそれぞれ書かれています"
+      },
+      "role": "guest",
+      "questions": [
+        {
+          "id": "company-sites",
+          "text": {
+            "zh-TW": "凱翠瓦感測有哪些據點、各負責什麼？",
+            "en": "What sites does Kestrova Sensing have, and what is each one responsible for?",
+            "ja": "ケストロヴァ・センシングにはどのような拠点があり、それぞれ何を担当していますか？"
+          },
+          "answerPassages": ["company-profile-zh-01"]
+        },
+        {
+          "id": "warranty-period",
+          "text": {
+            "zh-TW": "產品保固多久？",
+            "en": "How long is the product warranty?",
+            "ja": "製品の保証期間はどのくらいですか？"
+          },
+          "answerPassages": ["warranty-support-en-01"]
+        },
+        {
+          "id": "factory-tour-booking",
+          "text": {
+            "zh-TW": "怎麼申請參觀工廠？",
+            "en": "How do I book a factory tour?",
+            "ja": "工場見学はどのように申し込めばよいですか？"
+          },
+          "answerPassages": ["factory-tour-ja-01", "factory-tour-ja-02"]
+        }
+      ]
+    },
+    {
+      "id": "mistwalk-progress",
+      "title": { "zh-TW": "霧行專案進度", "en": "Project Mistwalk progress", "ja": "霧行プロジェクトの進捗" },
+      "description": {
+        "zh-TW": "以一般員工（霧行專案成員）身分查規格（繁中）與試產結果（日文）",
+        "en": "Look up the specification (Chinese) and trial production results (Japanese) as a staff member on Project Mistwalk",
+        "ja": "一般社員（霧行プロジェクトのメンバー）として、仕様（繁体字中国語）と試作結果（日本語）を調べます"
+      },
+      "role": "staff",
+      "questions": [
+        {
+          "id": "mistwalk-range",
+          "text": {
+            "zh-TW": "霧行感測器的量測範圍是多少？",
+            "en": "What is the measurement range of the Mistwalk sensor?",
+            "ja": "霧行センサーの測定範囲はどのくらいですか？"
+          },
+          "answerPassages": ["mistwalk-spec-zh-01"]
+        },
+        {
+          "id": "mistwalk-trial-yield",
+          "text": {
+            "zh-TW": "霧行試產的良率是多少？",
+            "en": "What was the yield of the Mistwalk trial production?",
+            "ja": "霧行の試作の歩留まりはどのくらいですか？"
+          },
+          "answerPassages": ["mistwalk-trial-ja-02"]
+        }
+      ]
+    },
+    {
+      "id": "manager-overview",
+      "title": { "zh-TW": "主管看全貌", "en": "The manager's full picture", "ja": "管理職が全体を把握する" },
+      "description": {
+        "zh-TW": "以主管身分查機密的生產計畫、港灣專案與業績；切換成一般員工再問同一題，會看到拒答",
+        "en": "Look up the confidential production plan, Project Harborline, and sales results as a manager; switch to staff and ask again to see a refusal",
+        "ja": "管理職として機密の生産計画、港湾プロジェクト、営業実績を調べます。一般社員に切り替えて同じ質問をすると、回答できないことを確認できます"
+      },
+      "role": "manager",
+      "questions": [
+        {
+          "id": "mistwalk-2027-volume",
+          "text": {
+            "zh-TW": "霧行感測器 2027 年預計生產多少台？",
+            "en": "How many Mistwalk sensors are planned for production in 2027?",
+            "ja": "霧行センサーは 2027 年度に何台生産する予定ですか？"
+          },
+          "answerPassages": ["production-plan-2027-ja-01", "production-plan-2027-ja-02"]
+        },
+        {
+          "id": "harborline-status",
+          "text": {
+            "zh-TW": "港灣專案目前進度如何？",
+            "en": "What is the current status of Project Harborline?",
+            "ja": "港湾プロジェクトの現在の進捗はどうなっていますか？"
+          },
+          "answerPassages": ["harborline-bid-en-01", "harborline-bid-en-02"]
+        },
+        {
+          "id": "q3-gross-margin",
+          "text": {
+            "zh-TW": "第三季美國業務的毛利率是多少？",
+            "en": "What was the gross margin for US sales in Q3?",
+            "ja": "第 3 四半期の米国営業の粗利率はどのくらいですか？"
+          },
+          "answerPassages": ["sales-report-q3-en-02"]
+        }
+      ]
+    },
+    {
+      "id": "rules-and-travel",
+      "title": { "zh-TW": "規定與出差", "en": "Policies and travel", "ja": "規則と出張" },
+      "description": {
+        "zh-TW": "以一般員工身分查三個據點的規定：請假（繁中）、差旅（英文）、工安（日文）",
+        "en": "Look up policies from all three sites as a staff member: leave (Chinese), travel (English), and factory safety (Japanese)",
+        "ja": "一般社員として 3 拠点の規則を調べます。休暇（繁体字中国語）、出張（英語）、工場の安全（日本語）"
+      },
+      "role": "staff",
+      "questions": [
+        {
+          "id": "annual-leave-notice",
+          "text": {
+            "zh-TW": "特休要提前幾天申請？",
+            "en": "How many days in advance do I need to request annual leave?",
+            "ja": "年次有給休暇は何日前までに申請する必要がありますか？"
+          },
+          "answerPassages": ["employee-handbook-zh-02"]
+        },
+        {
+          "id": "meal-allowance",
+          "text": {
+            "zh-TW": "出差的每日餐費上限是多少？",
+            "en": "What is the daily meal limit on business trips?",
+            "ja": "出張時の 1 日あたりの食事代の上限はいくらですか？"
+          },
+          "answerPassages": ["travel-expense-en-01"]
+        },
+        {
+          "id": "production-line-gear",
+          "text": {
+            "zh-TW": "進入工廠產線要穿戴什麼？",
+            "en": "What do I need to wear to enter the factory production line?",
+            "ja": "工場の生産ラインに入るときは何を着用する必要がありますか？"
+          },
+          "answerPassages": ["factory-safety-ja-01", "factory-safety-ja-02"]
+        }
+      ]
+    }
+  ]
+}

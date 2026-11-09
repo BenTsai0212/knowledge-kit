@@ -1,0 +1,13 @@
+{
+  "id": "factory-safety-ja",
+  "title": "工場安全規則",
+  "language": "ja",
+  "date": "2026-02-15",
+  "visibility": "internal",
+  "passages": [
+    { "id": "factory-safety-ja-01", "text": "生産ラインに入る際は、防じん帽、防じんマスク、静電気防止服、安全靴を必ず着用すること。" },
+    { "id": "factory-safety-ja-02", "text": "生産ラインに入る前に、エアシャワーを 20 秒以上浴びること。指輪や腕時計などの装飾品は外すこと。" },
+    { "id": "factory-safety-ja-03", "text": "化学物質を扱う作業では、保護メガネと耐薬品手袋を着用し、作業後に使用量を記録すること。" },
+    { "id": "factory-safety-ja-04", "text": "事故、けが、ヒヤリハットが発生した場合は、24 時間以内に生産部の安全衛生担当へ報告すること。" }
+  ]
+}

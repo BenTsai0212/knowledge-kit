@@ -1,0 +1,16 @@
+{
+  "visibilityLevels": [
+    { "id": "public", "label": { "zh-TW": "公開", "en": "Public", "ja": "公開" }, "rank": 0, "color": "#4F7A65" },
+    { "id": "internal", "label": { "zh-TW": "內部", "en": "Internal", "ja": "社内" }, "rank": 1, "color": "#2F5D8A" },
+    { "id": "confidential", "label": { "zh-TW": "機密", "en": "Confidential", "ja": "機密" }, "rank": 2, "color": "#B42318" }
+  ],
+  "projects": [
+    { "id": "mistwalk", "label": { "zh-TW": "霧行專案", "en": "Project Mistwalk", "ja": "霧行プロジェクト" } },
+    { "id": "harborline", "label": { "zh-TW": "港灣專案", "en": "Project Harborline", "ja": "港湾プロジェクト" } }
+  ],
+  "roles": [
+    { "id": "guest", "label": { "zh-TW": "訪客", "en": "Guest", "ja": "ゲスト" }, "visibility": "public", "projects": [], "canUpload": false, "canReview": false },
+    { "id": "staff", "label": { "zh-TW": "一般員工", "en": "Staff", "ja": "一般社員" }, "visibility": "internal", "projects": ["mistwalk"], "canUpload": true, "canReview": false },
+    { "id": "manager", "label": { "zh-TW": "主管", "en": "Manager", "ja": "管理職" }, "visibility": "confidential", "projects": ["mistwalk", "harborline"], "canUpload": true, "canReview": true }
+  ]
+}

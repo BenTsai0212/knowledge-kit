@@ -1,0 +1,14 @@
+{
+  "id": "harborline-bid-en",
+  "title": "Harborline Bid Status",
+  "language": "en",
+  "date": "2026-08-18",
+  "visibility": "internal",
+  "project": "harborline",
+  "passages": [
+    { "id": "harborline-bid-en-01", "text": "Project Harborline is our bid to provide air-quality monitoring for 14 US warehouses of a large logistics operator. Sales Director Dana Whitcombe leads the bid." },
+    { "id": "harborline-bid-en-02", "text": "Status as of August 2026: we passed the technical evaluation, and a pilot at 2 warehouses runs through October. The final award decision is expected in December 2026." },
+    { "id": "harborline-bid-en-03", "text": "Our bid price is USD 1.32 million for 1,600 KS-400 units, including three years of support, at a 31% gross margin.", "visibility": "confidential" },
+    { "id": "harborline-bid-en-04", "text": "Tamberline Supply will handle installation at the warehouses. Customer Support lead Marcus Ellery owns the support plan for the pilot." }
+  ]
+}

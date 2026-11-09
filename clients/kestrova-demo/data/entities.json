@@ -1,0 +1,185 @@
+{
+  "entities": [
+    {
+      "id": "site-taiwan-hq",
+      "type": "site",
+      "name": "台灣總部",
+      "names": { "zh-TW": "台灣總部", "en": "Taiwan Headquarters", "ja": "台湾本社" },
+      "aliases": ["Taiwan Headquarters", "台湾本社"],
+      "sources": ["company-profile-zh-01", "company-profile-zh-03"]
+    },
+    {
+      "id": "site-us-subsidiary",
+      "type": "site",
+      "name": "美國子公司",
+      "names": { "zh-TW": "美國子公司", "en": "US Subsidiary", "ja": "米国子会社" },
+      "aliases": ["US Subsidiary", "米国子会社"],
+      "sources": ["company-profile-zh-01", "company-profile-zh-03"]
+    },
+    {
+      "id": "site-japan-factory",
+      "type": "site",
+      "name": "日本工廠",
+      "names": { "zh-TW": "日本工廠", "en": "Japan Factory", "ja": "日本工場" },
+      "aliases": ["Japan Factory", "日本工場"],
+      "sources": ["company-profile-zh-01", "company-profile-zh-03", "procurement-policy-zh-03", "factory-tour-ja-01", "mistwalk-trial-ja-01", "production-plan-2027-ja-01"]
+    },
+    {
+      "id": "team-rd",
+      "type": "team",
+      "name": "研發部",
+      "names": { "zh-TW": "研發部", "en": "R&D", "ja": "研究開発部" },
+      "aliases": ["R&D", "研究開発部"],
+      "sources": ["company-profile-zh-01", "mistwalk-spec-zh-04", "rd-roadmap-2027-zh-03", "salary-adjustment-2026-zh-02"]
+    },
+    {
+      "id": "team-hr",
+      "type": "team",
+      "name": "人資部",
+      "names": { "zh-TW": "人資部", "en": "Human Resources", "ja": "人事部" },
+      "aliases": ["Human Resources", "人事部"],
+      "sources": ["company-profile-zh-01", "salary-adjustment-2026-zh-03"]
+    },
+    {
+      "id": "team-finance",
+      "type": "team",
+      "name": "財務部",
+      "names": { "zh-TW": "財務部", "en": "Finance", "ja": "財務部" },
+      "aliases": ["Finance"],
+      "sources": ["company-profile-zh-01", "salary-adjustment-2026-zh-03"]
+    },
+    {
+      "id": "team-sales",
+      "type": "team",
+      "name": "業務部",
+      "names": { "zh-TW": "業務部", "en": "Sales", "ja": "営業部" },
+      "aliases": ["Sales", "営業部"],
+      "sources": ["company-profile-zh-01", "price-list-2026-en-02", "harborline-bid-en-01"]
+    },
+    {
+      "id": "team-support",
+      "type": "team",
+      "name": "客服部",
+      "names": { "zh-TW": "客服部", "en": "Customer Support", "ja": "カスタマーサポート" },
+      "aliases": ["Customer Support", "カスタマーサポート"],
+      "sources": ["company-profile-zh-01", "warranty-support-en-03", "distributor-program-en-03", "harborline-bid-en-04"]
+    },
+    {
+      "id": "team-production",
+      "type": "team",
+      "name": "生產部",
+      "names": { "zh-TW": "生產部", "en": "Production", "ja": "生産部" },
+      "aliases": ["Production", "生産部"],
+      "sources": ["company-profile-zh-01", "factory-safety-ja-04", "mistwalk-trial-ja-01", "mistwalk-trial-ja-03"]
+    },
+    {
+      "id": "team-quality",
+      "type": "team",
+      "name": "品管課",
+      "names": { "zh-TW": "品管課", "en": "Quality Control", "ja": "品質管理課" },
+      "aliases": ["Quality Control", "品質管理課"],
+      "sources": ["company-profile-zh-01", "quality-procedure-ja-03"]
+    },
+    {
+      "id": "person-hsu-chenghan",
+      "type": "person",
+      "name": "許承翰",
+      "names": { "zh-TW": "許承翰", "en": "Chenghan Hsu", "ja": "許承翰" },
+      "aliases": ["Chenghan Hsu"],
+      "sources": ["mistwalk-spec-zh-04"]
+    },
+    {
+      "id": "person-chien-yian",
+      "type": "person",
+      "name": "簡怡安",
+      "names": { "zh-TW": "簡怡安", "en": "Yian Chien", "ja": "簡怡安" },
+      "aliases": ["Yian Chien"],
+      "sources": ["salary-adjustment-2026-zh-03"]
+    },
+    {
+      "id": "person-dana-whitcombe",
+      "type": "person",
+      "name": "Dana Whitcombe",
+      "names": { "zh-TW": "Dana Whitcombe", "en": "Dana Whitcombe", "ja": "Dana Whitcombe" },
+      "sources": ["price-list-2026-en-02", "harborline-bid-en-01"]
+    },
+    {
+      "id": "person-marcus-ellery",
+      "type": "person",
+      "name": "Marcus Ellery",
+      "names": { "zh-TW": "Marcus Ellery", "en": "Marcus Ellery", "ja": "Marcus Ellery" },
+      "sources": ["distributor-program-en-03", "harborline-bid-en-04"]
+    },
+    {
+      "id": "person-morishita-tomoya",
+      "type": "person",
+      "name": "森下智也",
+      "names": { "zh-TW": "森下智也", "en": "Tomoya Morishita", "ja": "森下智也" },
+      "aliases": ["Tomoya Morishita"],
+      "sources": ["mistwalk-trial-ja-03"]
+    },
+    {
+      "id": "person-arimura-maki",
+      "type": "person",
+      "name": "有村真紀",
+      "names": { "zh-TW": "有村真紀", "en": "Maki Arimura", "ja": "有村真紀" },
+      "aliases": ["Maki Arimura"],
+      "sources": ["quality-procedure-ja-03"]
+    },
+    {
+      "id": "product-ks-200",
+      "type": "product",
+      "name": "KS-200 溫濕度感測器",
+      "names": { "zh-TW": "KS-200 溫濕度感測器", "en": "KS-200 Temperature and Humidity Sensor", "ja": "KS-200 温湿度センサー" },
+      "aliases": ["KS-200", "KS-200 Temperature and Humidity Sensor", "KS-200 温湿度センサー"],
+      "sources": ["company-profile-zh-02", "rd-roadmap-2027-zh-02", "warranty-support-en-01", "price-list-2026-en-01", "distributor-program-en-01", "factory-tour-ja-03", "production-plan-2027-ja-01"]
+    },
+    {
+      "id": "product-ks-400",
+      "type": "product",
+      "name": "KS-400 粉塵感測器",
+      "names": { "zh-TW": "KS-400 粉塵感測器", "en": "KS-400 Particulate Sensor", "ja": "KS-400 粉じんセンサー" },
+      "aliases": ["KS-400", "KS-400 Particulate Sensor", "KS-400 粉じんセンサー"],
+      "sources": ["company-profile-zh-02", "rd-roadmap-2027-zh-01", "warranty-support-en-01", "price-list-2026-en-01", "distributor-program-en-01", "harborline-bid-en-03", "sales-report-q3-en-01", "factory-tour-ja-03", "production-plan-2027-ja-01"]
+    },
+    {
+      "id": "product-mw-1",
+      "type": "product",
+      "name": "霧行氣體感測器",
+      "names": { "zh-TW": "霧行氣體感測器（MW-1）", "en": "Mistwalk Gas Sensor (MW-1)", "ja": "霧行ガスセンサー（MW-1）" },
+      "aliases": ["MW-1", "Mistwalk Gas Sensor", "霧行センサー"],
+      "sources": ["mistwalk-spec-zh-01", "rd-roadmap-2027-zh-01", "mistwalk-trial-ja-01", "production-plan-2027-ja-01", "capex-plan-ja-01"]
+    },
+    {
+      "id": "project-mistwalk",
+      "type": "project",
+      "name": "霧行專案",
+      "names": { "zh-TW": "霧行專案", "en": "Project Mistwalk", "ja": "霧行プロジェクト" },
+      "aliases": ["Project Mistwalk", "霧行プロジェクト"],
+      "sources": ["mistwalk-spec-zh-01", "mistwalk-spec-zh-04", "mistwalk-trial-ja-01"]
+    },
+    {
+      "id": "project-harborline",
+      "type": "project",
+      "name": "港灣專案",
+      "names": { "zh-TW": "港灣專案", "en": "Project Harborline", "ja": "港湾プロジェクト" },
+      "aliases": ["Project Harborline", "港湾プロジェクト"],
+      "sources": ["harborline-bid-en-01", "harborline-bid-en-02"]
+    },
+    {
+      "id": "partner-tamberline",
+      "type": "partner",
+      "name": "Tamberline Supply",
+      "names": { "zh-TW": "Tamberline Supply", "en": "Tamberline Supply", "ja": "Tamberline Supply" },
+      "sources": ["distributor-program-en-01", "harborline-bid-en-04", "sales-report-q3-en-03"]
+    },
+    {
+      "id": "partner-jingcheng",
+      "type": "partner",
+      "name": "晶澄材料",
+      "names": { "zh-TW": "晶澄材料", "en": "Jingcheng Materials", "ja": "晶澄材料" },
+      "aliases": ["Jingcheng Materials"],
+      "sources": ["procurement-policy-zh-03"]
+    }
+  ]
+}

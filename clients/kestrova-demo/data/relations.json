@@ -1,0 +1,30 @@
+{
+  "relations": [
+    { "id": "rd-located-at-taiwan-hq", "type": "located-at", "from": "team-rd", "to": "site-taiwan-hq", "sources": ["company-profile-zh-01"] },
+    { "id": "hr-located-at-taiwan-hq", "type": "located-at", "from": "team-hr", "to": "site-taiwan-hq", "sources": ["company-profile-zh-01"] },
+    { "id": "finance-located-at-taiwan-hq", "type": "located-at", "from": "team-finance", "to": "site-taiwan-hq", "sources": ["company-profile-zh-01"] },
+    { "id": "sales-located-at-us-subsidiary", "type": "located-at", "from": "team-sales", "to": "site-us-subsidiary", "sources": ["company-profile-zh-01"] },
+    { "id": "support-located-at-us-subsidiary", "type": "located-at", "from": "team-support", "to": "site-us-subsidiary", "sources": ["company-profile-zh-01"] },
+    { "id": "production-located-at-japan-factory", "type": "located-at", "from": "team-production", "to": "site-japan-factory", "sources": ["company-profile-zh-01"] },
+    { "id": "quality-located-at-japan-factory", "type": "located-at", "from": "team-quality", "to": "site-japan-factory", "sources": ["company-profile-zh-01"] },
+    { "id": "hsu-member-of-rd", "type": "member-of", "from": "person-hsu-chenghan", "to": "team-rd", "sources": ["mistwalk-spec-zh-04"] },
+    { "id": "hsu-leads-mistwalk", "type": "leads", "from": "person-hsu-chenghan", "to": "project-mistwalk", "sources": ["mistwalk-spec-zh-04"] },
+    { "id": "chien-leads-hr", "type": "leads", "from": "person-chien-yian", "to": "team-hr", "sources": ["salary-adjustment-2026-zh-03"] },
+    { "id": "whitcombe-leads-sales", "type": "leads", "from": "person-dana-whitcombe", "to": "team-sales", "sources": ["price-list-2026-en-02", "harborline-bid-en-01"] },
+    { "id": "whitcombe-leads-harborline", "type": "leads", "from": "person-dana-whitcombe", "to": "project-harborline", "sources": ["harborline-bid-en-01"] },
+    { "id": "ellery-leads-support", "type": "leads", "from": "person-marcus-ellery", "to": "team-support", "sources": ["distributor-program-en-03", "harborline-bid-en-04"] },
+    { "id": "ellery-works-on-harborline", "type": "works-on", "from": "person-marcus-ellery", "to": "project-harborline", "sources": ["harborline-bid-en-04"] },
+    { "id": "morishita-leads-production", "type": "leads", "from": "person-morishita-tomoya", "to": "team-production", "sources": ["mistwalk-trial-ja-03"] },
+    { "id": "morishita-works-on-mistwalk", "type": "works-on", "from": "person-morishita-tomoya", "to": "project-mistwalk", "sources": ["mistwalk-trial-ja-03"] },
+    { "id": "arimura-leads-quality", "type": "leads", "from": "person-arimura-maki", "to": "team-quality", "sources": ["quality-procedure-ja-03"] },
+    { "id": "rd-works-on-mistwalk", "type": "works-on", "from": "team-rd", "to": "project-mistwalk", "sources": ["mistwalk-spec-zh-04"] },
+    { "id": "production-works-on-mistwalk", "type": "works-on", "from": "team-production", "to": "project-mistwalk", "sources": ["mistwalk-trial-ja-01"] },
+    { "id": "mistwalk-develops-mw-1", "type": "develops", "from": "project-mistwalk", "to": "product-mw-1", "sources": ["mistwalk-spec-zh-01"] },
+    { "id": "japan-factory-produces-ks-200", "type": "produces", "from": "site-japan-factory", "to": "product-ks-200", "sources": ["factory-tour-ja-03", "production-plan-2027-ja-01"] },
+    { "id": "japan-factory-produces-ks-400", "type": "produces", "from": "site-japan-factory", "to": "product-ks-400", "sources": ["factory-tour-ja-03", "production-plan-2027-ja-01"] },
+    { "id": "japan-factory-produces-mw-1", "type": "produces", "from": "site-japan-factory", "to": "product-mw-1", "sources": ["mistwalk-trial-ja-01", "production-plan-2027-ja-01"] },
+    { "id": "tamberline-distributes-ks-200", "type": "distributes", "from": "partner-tamberline", "to": "product-ks-200", "sources": ["distributor-program-en-01"] },
+    { "id": "tamberline-distributes-ks-400", "type": "distributes", "from": "partner-tamberline", "to": "product-ks-400", "sources": ["distributor-program-en-01"] },
+    { "id": "jingcheng-supplies-japan-factory", "type": "supplies", "from": "partner-jingcheng", "to": "site-japan-factory", "sources": ["procurement-policy-zh-03"] }
+  ]
+}

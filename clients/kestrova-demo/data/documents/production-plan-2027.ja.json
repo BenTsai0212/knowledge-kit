@@ -1,0 +1,12 @@
+{
+  "id": "production-plan-2027-ja",
+  "title": "2027 年度生産計画",
+  "language": "ja",
+  "date": "2026-10-20",
+  "visibility": "confidential",
+  "passages": [
+    { "id": "production-plan-2027-ja-01", "text": "日本工場の 2027 年度の生産計画は、KS-200 が 48,000 台、KS-400 が 30,000 台、霧行センサー（MW-1）が 12,000 台である。" },
+    { "id": "production-plan-2027-ja-02", "text": "霧行センサーは 2027 年 4 月に量産を開始し、上期に 4,000 台、下期に 8,000 台を生産する予定である。" },
+    { "id": "production-plan-2027-ja-03", "text": "霧行センサーの目標製造原価は、1 台あたり 9,800 円とする。" }
+  ]
+}

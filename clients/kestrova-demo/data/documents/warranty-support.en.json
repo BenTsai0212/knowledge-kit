@@ -1,0 +1,13 @@
+{
+  "id": "warranty-support-en",
+  "title": "Product Warranty and Support Policy",
+  "language": "en",
+  "date": "2026-01-20",
+  "visibility": "public",
+  "passages": [
+    { "id": "warranty-support-en-01", "text": "Kestrova KS-200 and KS-400 sensors carry a 24-month limited warranty from the date of shipment. Replaceable sensing elements are covered for 12 months." },
+    { "id": "warranty-support-en-02", "text": "To request warranty service, submit an RMA request through the support portal. Replacement units ship within 5 business days after the RMA is approved." },
+    { "id": "warranty-support-en-03", "text": "Customer Support is available Monday to Friday, 8 a.m. to 6 p.m. Central Time, and responds to support tickets within one business day." },
+    { "id": "warranty-support-en-04", "text": "The warranty does not cover damage caused by improper installation, use beyond the rated operating conditions, or unauthorized repairs." }
+  ]
+}

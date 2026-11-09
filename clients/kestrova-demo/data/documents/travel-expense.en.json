@@ -1,0 +1,13 @@
+{
+  "id": "travel-expense-en",
+  "title": "Travel and Expense Policy",
+  "language": "en",
+  "date": "2026-03-10",
+  "visibility": "internal",
+  "passages": [
+    { "id": "travel-expense-en-01", "text": "Meals on business trips are reimbursed up to USD 75 per day. Meals with customers are reimbursed separately and require receipts." },
+    { "id": "travel-expense-en-02", "text": "Hotel stays are reimbursed up to USD 220 per night in major cities and USD 160 per night elsewhere." },
+    { "id": "travel-expense-en-03", "text": "Book economy class for domestic flights. Business class is allowed only for international flights longer than 8 hours." },
+    { "id": "travel-expense-en-04", "text": "Submit expense reports within 30 days after the trip, with receipts for any item over USD 25." }
+  ]
+}

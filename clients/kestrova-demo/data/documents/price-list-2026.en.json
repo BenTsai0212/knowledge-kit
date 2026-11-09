@@ -1,0 +1,12 @@
+{
+  "id": "price-list-2026-en",
+  "title": "2026 US Price List",
+  "language": "en",
+  "date": "2026-01-05",
+  "visibility": "internal",
+  "passages": [
+    { "id": "price-list-2026-en-01", "text": "2026 US list prices: KS-200 Temperature and Humidity Sensor, USD 189 per unit; KS-400 Particulate Sensor, USD 349 per unit." },
+    { "id": "price-list-2026-en-02", "text": "Volume discounts: 5% off for orders of 50 to 199 units and 10% off for 200 units or more. Any discount above 10% requires approval from Sales Director Dana Whitcombe." },
+    { "id": "price-list-2026-en-03", "text": "An extended warranty that adds 12 months of coverage is priced at 12% of the unit list price." }
+  ]
+}
