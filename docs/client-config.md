@@ -301,8 +301,12 @@ JSON Schema 無法參照另一個檔的值，以下由 `scripts/check-client.mjs
 3. **build**：`vite build` 輸出到暫存資料夾，結束後刪除，不覆蓋 `dist/`。
 
 - `clients/` 底下的每個資料夾都視為客戶（檔案如 `README.md` 不算）；沒有 `client.json` 或名稱不合法時失敗，不略過。
-- **target 測試**只放與客戶無關的斷言，不用參考情境的 id：`app/src/dataset/dataset.target.test.ts`（資料集通過 `validateDataset()`）、`app/src/evals/evals.target.test.ts`（題庫通過 `validateEvals()`，含以 oracle 計算的可見範圍）、`app/src/retrieval/scenarios.target.test.ts`（預設問題以每種語言檢索，同語言的答案段落在前 K 名內）、`worker/src/models.target.test.ts`（`client.json` 的 `model` 在 Worker 白名單內）。檔名也符合 `*.test.ts`，`npm test` 會以 `client/` 再執行一次。
+- **target 測試**只放與客戶無關的斷言，不用參考情境的 id：`app/src/dataset/dataset.target.test.ts`（資料集通過 `validateDataset()`）、`app/src/evals/evals.target.test.ts`（題庫通過 `validateEvals()`，含以 oracle 計算的可見範圍）、`app/src/retrieval/scenarios.target.test.ts`（預設問題以每種語言檢索，同語言的答案段落在前 K 名內；見下方「選用語意向量的客戶」）、`worker/src/models.target.test.ts`（`client.json` 的 `model` 在 Worker 白名單內）。檔名也符合 `*.test.ts`，`npm test` 會以 `client/` 再執行一次。
 - CI 的 `clients` job（`workflows/ci.yml`）在每個 PR 與 push 到 main 時執行 `npm run check:clients`。
+- **選用語意向量的客戶**（`retrieval.provider` 不是 `keyword-hash`，#175）：CI 不下載模型，客戶檢查與 Playwright 一律以 `keyword-hash` 檢查。
+  - `scenarios.target.test.ts` 以 `keyword-hash` 檢索，`topK` 沿用客戶的設定，`minScore` 用 `keyword-hash` 的預設值；只檢查與問題同語言的答案段落。
+  - 涵蓋規則放寬：`keyword-hash` 的客戶每題在每種語言都要有同語言答案段落；語意向量的客戶每種語言都要有問題文字，且至少一種語言有同語言答案段落（事實可能只寫在一種語言）。案例與規則在 `app/src/retrieval/scenario-cases.ts`。
+  - 跨語言的檢索不在 CI 驗證，由人以評測台在瀏覽器確認（[docs/evals.md](evals.md)）。Playwright 的做法見 [docs/testing.md](testing.md)「客戶」。
 
 ## 擴充 Schema
 

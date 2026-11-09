@@ -13,8 +13,15 @@ export type RoleId = string;
 // 預設問題（scenarios.json）；資料庫載入完成前停用
 export const presetQuestions = scenarios.scenarios.flatMap((x) => x.questions.map((q) => ({ role: x.role as RoleId, text: q.text[language] })));
 
+// 擋下語意模型的下載（模型檔的網址見 app/src/retrieval/semantic/model-files.ts）：CI 不下載模型，
+// 選用語意向量的客戶降級到 keyword-hash（#175，docs/testing.md「客戶」）；keyword-hash 的客戶不會發出這類請求。須在 page.goto 之前呼叫
+export async function blockModelDownload(page: Page): Promise<void> {
+  await page.route("https://huggingface.co/**", (route) => route.abort());
+}
+
 // 打開首頁（path 可帶網址參數，例如展示模式的 /?mode=presentation）、輸入邀請碼，等資料庫載入完成（預設問題的按鈕可以按）
 export async function openApp(page: Page, path = "/"): Promise<void> {
+  await blockModelDownload(page);
   await routeFakeAsk(page);
   await page.goto(path);
   await page.getByLabel(s.accessCodeLabel).fill(ACCESS_CODE);

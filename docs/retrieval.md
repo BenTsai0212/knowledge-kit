@@ -94,7 +94,7 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 1. 以空白分詞、文字類別已有規則的語言（例如法文、德文）：不必改語言模組；但英文停用詞與去掉複數 `s` 的規則套用在所有「其他文字」上，需要時在 `scripts.ts` 為該文字類別另加規則。
 2. 不以空白分詞的語言（例如日文、泰文）：只用 `keyword-hash` 時，在 `scripts.ts` 的 `SCRIPTS` 加上該文字類別，選擇 `bigram` 或 `segmenter`；需要時在 `stopwords.ts` 加上停用詞。
 3. 句尾標點或換行相連的方式不同時，修改 `scripts.ts` 的 `SENTENCE_ENDS`、`FULLWIDTH_PUNCTUATION` 或類別的 `joinsWithoutSpace`。
-4. 執行 `npm run check:clients <名稱>`：`app/src/retrieval/scenarios.target.test.ts` 以該客戶的每種語言檢索預設問題，同語言的答案段落要在前 K 名內。
+4. 執行 `npm run check:clients <名稱>`：`app/src/retrieval/scenarios.target.test.ts` 以該客戶的每種語言檢索預設問題，同語言的答案段落要在前 K 名內。選用語意向量的客戶也以 `keyword-hash` 檢查（[docs/client-config.md](client-config.md)「客戶檢查」）。
 
 **日文的規則與實測**（#83）：以暫時的客戶 `clients/lang-ja/`（參考情境加上 `ja`：日文翻譯檔、實體的日文名稱、4 份日文文件、預設問題與 4 題日文題庫）驗證，只改了客戶資料夾與語言模組（`scripts.ts`、`stopwords.ts`）；暫時客戶不放進 repo（#77 決定 7）。
 

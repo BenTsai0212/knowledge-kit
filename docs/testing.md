@@ -129,6 +129,7 @@ repo 預計公開，CI 紀錄也會公開，所以兩者的輸出都**不包含�
 
 - **選定客戶**：與 build 相同，以 `KK_CLIENT` 選擇（`scripts/client-dir.mjs` 的 `resolveClientDir()`）；`e2e/support/client.ts` 在 Node 端以 `fs` 讀取該客戶的 JSON。build 與測試要用同一個 `KK_CLIENT`。
 - **身分**由 `access.json` 推算，都取可見等級 rank 最高者（同分時取較前面的）：能審查的身分（參考情境是 `manager`）、不能審查的身分（`staff`）、能上傳的身分、能上傳也能審查的身分。假萃取的實體類型是 `knowledge-model.json` 的第一個，名稱在 `client.languages` 的每種語言都相同。
+- **語意模型不下載**（#175）：`openApp()` 與 `demo.spec.ts` 以 `blockModelDownload()` 擋下 `huggingface.co` 的請求（`e2e/support/app.ts`）。選用語意向量的客戶在頁面上降級到 `keyword-hash`，並顯示降級提示；預設問題與其他測試只靠預設語言的同語言檢索，所以每個情境的預設問題要有預設語言的答案段落。`keyword-hash` 的客戶不會發出這類請求，不受影響。
 - **前提不成立時略過**：例如沒有不能審查的身分、資料集中沒有某身分完全看不到的文件，該測試以 `test.skip(條件, 原因)` 略過。`e2e/support/skip-reporter.ts` 在輸出與 CI 的 job summary 列出略過的測試與原因；**參考情境不得有任何略過**，有的話整次執行算失敗（#77 決定 4）。
 
 ### 測試內容
