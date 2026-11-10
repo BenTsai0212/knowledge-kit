@@ -6,12 +6,15 @@ interface Props {
   graph: Graph;
   entityId: string;
   language: string;
+  // 點相關實體：從它繼續展開（#199）
   onSelect(entityId: string): void;
+  // 只看它：從它重新開始展開
+  onShowOnly(entityId: string): void;
   onOpenSource(passageId: string): void;
 }
 
-// 點節點時顯示：類型、名稱、相關實體（可點）與出處段落（可打開原文）
-export function EntityPanel({ graph, entityId, language, onSelect, onOpenSource }: Props) {
+// 點節點時顯示：類型、名稱、只看它、相關實體（可點）與出處段落（可打開原文）
+export function EntityPanel({ graph, entityId, language, onSelect, onShowOnly, onOpenSource }: Props) {
   const s = strings(language);
   const entity = graph.entities.find((e) => e.id === entityId);
   if (entity === undefined) return null;
@@ -22,6 +25,9 @@ export function EntityPanel({ graph, entityId, language, onSelect, onOpenSource 
       <h2>
         {name} <span className="badge">{entityTypeLabel(entity.type, language)}</span>
       </h2>
+      <button type="button" onClick={() => onShowOnly(entityId)}>
+        {s.graphShowOnly}
+      </button>
       <h3>{s.relatedEntities}</h3>
       <ul>
         {relatedEntities(graph, entityId, language).map((r) => (
