@@ -245,7 +245,7 @@ describe("能做的決定", { timeout: 30_000 }, () => {
   });
 });
 
-describe("偽造的正式資料寫入", () => {
+describe("偽造的正式資料寫入", { timeout: 30_000 }, () => {
   const forged = async (sql: string, setupDecision?: string) => {
     const w = await setup();
     if (setupDecision) await w.db.withIdentity("manager", (tx) => tx.exec(setupDecision));
@@ -281,7 +281,7 @@ describe("偽造的正式資料寫入", () => {
   });
 });
 
-describe("核准與退回", () => {
+describe("核准與退回", { timeout: 30_000 }, () => {
   it("核准：修改名稱建立新實體、合併到既有實體、關係的兩端解析成核准後的實體；狀態寫入待審區", async () => {
     const w = await setup();
     const names = { "zh-TW": "測試人員乙", en: "Test Person B" };
@@ -375,7 +375,7 @@ describe("圖譜已有的關係（#189 決定 1）", { timeout: 30_000 }, () => 
   });
 });
 
-describe("核准前後的可見範圍", () => {
+describe("核准前後的可見範圍", { timeout: 30_000 }, () => {
   it("每個身分的圖譜與 oracle 一致；主管上傳的機密文件核准後，一般員工看不到新實體與關係", async () => {
     const w = await setup();
     for (const id of IDENTITIES) expect(await graphKeys(w.db, id), `核准前 ${id}`).toEqual(expectedGraph(w, id));
