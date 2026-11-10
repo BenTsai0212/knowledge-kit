@@ -277,7 +277,7 @@ describe("處理", { timeout: 30_000 }, () => {
   });
 });
 
-describe("kk_app 的權限", () => {
+describe("kk_app 的權限", { timeout: 30_000 }, () => {
   it("新資料表只有 SELECT、INSERT，沒有 UPDATE、DELETE", async () => {
     const w = await setup();
     const privileges = await w.db.withIdentity("manager", async (tx) =>
@@ -296,7 +296,7 @@ describe("kk_app 的權限", () => {
   });
 });
 
-describe("readConflicts", () => {
+describe("readConflicts", { timeout: 30_000 }, () => {
   it("每組附兩段的內容、文件標題、等級、專案、日期與決定", async () => {
     const w = await setup();
     const items = await readConflicts(w.db, "manager");

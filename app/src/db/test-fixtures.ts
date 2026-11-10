@@ -38,6 +38,7 @@ export const KK_TABLES = [
   "pending_relations",
   "pending_relation_sources",
   "review_decisions",
+  "review_retractions",
   "conflicts",
   "conflict_decisions",
 ] as const;

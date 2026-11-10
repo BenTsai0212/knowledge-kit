@@ -48,7 +48,7 @@ const SQL = `
   SELECT d.id AS document_id, d.title, to_char(d.document_date, 'YYYY-MM-DD') AS date, d.language,
          d.visibility_level_id AS visibility, d.project_id AS project,
          p.id AS passage_id, p.content,
-         coalesce(array_agg(s.entity_id ORDER BY s.entity_id) FILTER (WHERE s.entity_id IS NOT NULL), '{}') AS entity_ids
+         coalesce(array_agg(DISTINCT s.entity_id ORDER BY s.entity_id) FILTER (WHERE s.entity_id IS NOT NULL), '{}') AS entity_ids
     FROM kk.documents d
     JOIN kk.passages p ON p.document_id = d.id
     LEFT JOIN kk.entity_sources s ON s.passage_id = p.id

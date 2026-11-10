@@ -31,6 +31,7 @@ const entity = (id: string, status: ReviewEntity["status"] = "pending"): ReviewE
   names: { "zh-TW": id, en: id },
   sources: [],
   status,
+  decisionId: status === "pending" ? null : id,
   mergedInto: null,
 });
 const relation = (id: string, from: string, to: string, status: ReviewRelation["status"] = "pending"): ReviewRelation => ({
@@ -40,6 +41,7 @@ const relation = (id: string, from: string, to: string, status: ReviewRelation["
   to,
   sources: [],
   status,
+  decisionId: status === "pending" ? null : id,
   rejectedWithEntity: false,
 });
 const LANGS = ["zh-TW", "en"];

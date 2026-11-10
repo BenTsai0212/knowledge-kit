@@ -70,11 +70,12 @@ PGlite 的 session user 固定是 superuser `postgres`。以 `username: "kk_app"
 | `documents` | `id` PK、`title`、`language`、`visibility_level_id`、`project_id`（可為 NULL）、`source_uri`（可為 NULL）、`document_date`（`date`，可為 NULL）、`uploaded_by`（上傳者的身分 id；資料集為 NULL） | 資料集或上傳 |
 | `passages` | `id` PK、`document_id`、`ordinal`、`language`、`content`、`visibility_level_id`、`project_id`（可為 NULL） | 資料集或上傳 |
 | `entities` | `id` PK、`entity_type`、`name`、`names`（`jsonb` 物件，依語言的顯示名稱，預設 `{}`） | 萃取或資料集 |
-| `entity_sources` | `entity_id`、`passage_id`（出處，合為 PK） | 同上 |
+| `entity_sources` | `entity_id`、`passage_id`（出處）、`decision_id`（寫入它的核准決定；資料集為 NULL），三者 `UNIQUE NULLS NOT DISTINCT`（0009） | 同上 |
 | `relations` | `id` PK、`relation_type`、`from_entity_id`、`to_entity_id` | 同上 |
-| `relation_sources` | `relation_id`、`passage_id`（出處，合為 PK）、`from_entity_id`、`to_entity_id`（與關係的兩端相同，以複合外鍵參照 `relations (id, from_entity_id, to_entity_id)` 確保一致） | 同上 |
+| `relation_sources` | `relation_id`、`passage_id`（出處）、`decision_id`（同上，三者不重複）、`from_entity_id`、`to_entity_id`（與關係的兩端相同，以複合外鍵參照 `relations (id, from_entity_id, to_entity_id)` 確保一致） | 同上 |
 | `pending_entities`、`pending_entity_sources`、`pending_relations`、`pending_relation_sources` | 待審的實體、關係與出處；每列帶 `document_id`，以複合外鍵保證出處與兩端屬於同一份文件 | 萃取（#44） |
-| `review_decisions` | `item_id` PK（待審實體或關係）、`decision`（`approve`／`reject`）、`decided_by`、`names`、`merge_into` | 核准與退回（#44） |
+| `review_decisions` | `id` PK（由 `round` 算出：第 1 次等於 `item_id`，之後是 `<item_id>~<round>`）、`item_id`（待審實體或關係）、`round`（`(item_id, round)` 不重複）、`decision`（`approve`／`reject`）、`decided_by`、`names`、`merge_into` | 核准與退回（#44）；撤回後可以再決定（0009） |
+| `review_retractions` | `decision_id` PK（每個決定最多撤回一次）、`document_id`（項目所屬的文件）、`retracted_by`、`retracted_at`、`cascade_of`（連帶撤回時指向實體的撤回） | 撤回（ADR 0007，0009） |
 | `conflicts` | `id` PK（`pc-` 開頭）、`document_id`（新文件）、`new_passage_id`（新文件的段落，以複合外鍵保證屬於新文件）、`old_passage_id`（既有段落）、`summary`（1～200 字）；`(new_passage_id, old_passage_id)` 不重複 | 說法不同的偵測（#51） |
 | `conflict_decisions` | `conflict_id` PK、`new_passage_id`、`old_passage_id`（以複合外鍵保證與 `conflicts` 一致）、`decision`（`coexist`／`supersede`／`not_conflict`）、`decided_by` | 主管的處理（#51） |
 
@@ -105,8 +106,8 @@ PGlite 的 session user 固定是 superuser `postgres`。以 `username: "kk_app"
 | --- | --- |
 | `documents` | `can_see(visibility_level_id, project_id)` |
 | `passages` | 自己的 `can_see(...)`，且所屬文件看得到 |
-| `entity_sources` | 出處段落看得到 |
-| `relation_sources` | 出處段落看得到，且兩端的實體都看得到 |
+| `entity_sources` | 出處段落看得到，且不是已撤回的決定寫入的（0009） |
+| `relation_sources` | 出處段落看得到、兩端的實體都看得到，且不是已撤回的決定寫入的（0009） |
 | `entities` | 至少一個出處看得到。**沒有出處的實體沒有人看得到** |
 | `relations` | 至少一個出處看得到，且兩端的實體都看得到 |
 | `identities`、`identity_projects` | 只有自己這一列 |
@@ -137,7 +138,7 @@ policy 中的子查詢同樣受 RLS 限制，所以「段落看得到」已包�
 
 ## 待審與核准
 
-上傳文件的萃取結果（#44，migration 0006；萃取的流程見 [docs/extraction.md](extraction.md)）先寫入待審資料表，核准後才寫入正式的 `entities`、`relations` 與出處。**只用 INSERT**：核准與退回寫成 `review_decisions`（每個項目一筆，主鍵保證只能決定一次），`kk_app` 仍然沒有任何 `UPDATE`、`DELETE`。寫入與核准集中在 `app/src/extraction/store.ts`，一律經 `withIdentity()`。
+上傳文件的萃取結果（#44，migration 0006；萃取的流程見 [docs/extraction.md](extraction.md)）先寫入待審資料表，核准後才寫入正式的 `entities`、`relations` 與出處。**只用 INSERT**：核准與退回寫成 `review_decisions`（每個項目同時最多一筆有效的決定；撤回後才能再決定，見下方「撤回」），`kk_app` 仍然沒有任何 `UPDATE`、`DELETE`。寫入與核准集中在 `app/src/extraction/store.ts`，一律經 `withIdentity()`。
 
 **`kk_app` 的權限**（0006 新增的部分）：
 
@@ -159,6 +160,24 @@ policy 中的子查詢同樣受 RLS 限制，所以「段落看得到」已包�
 - **合併後可見範圍變大**（#44 決定）：把待審實體合併到既有實體時，新文件的段落成為該實體的出處。依「實體只要有一個看得到的出處就看得到」，看得到新文件的人也看得到該實體，包含只在其他文件出現過的其他語言名稱。待審區的合併選單會提示這一點。
 - **圖譜已有的關係**（#189 決定 1）：核准的待審關係與核准者看得到的既有關係完全相同（類型、合併後的兩端）時，`store.ts` 只寫 `review_decisions`，不寫入 `relations` 與 `relation_sources`，避免重複的關係；RLS 不變（見 [docs/extraction.md](extraction.md)「合併」）。`oracle.ts` 的 `approvedSample()` 不模擬這一點，`review.test.ts` 的範例資料不使用與既有關係相同的待審關係。
 - `oracle.ts` 的 `expectedReviewVisible()`、`canDecide()`、`approvedSample()` 是上述規則的獨立實作；`app/tests/extraction/review.test.ts` 以兩種設定（參考情境，以及一般員工也能審核）比對，並測試偽造的決定與正式資料寫入。
+
+### 撤回
+
+核准或退回之後可以撤回（ADR 0007，migration 0009）。撤回寫成 `review_retractions`，**只用 INSERT**；撤回後項目回到待審（沒有有效的決定），可以再決定一次，所有決定與撤回都保留。寫入集中在 `store.ts` 的 `retract()`。
+
+| 資料表 | 權限 | 寫入（`WITH CHECK`） | 讀取（`USING`） |
+| --- | --- | --- | --- |
+| `review_retractions` | `SELECT`、`INSERT` | 有 `can_review`、`retracted_by` 是自己、`retracted_at` 是現在；決定看得到（項目看得到），且項目屬於 `document_id` 的文件 | `document_id` 的文件看得到（不要求 `can_review`） |
+| `review_decisions` | 不變 | 0006 的條件，加上 `round` 等於 `kk.next_round(item_id)`：先前的決定都已撤回時是筆數加一，還有有效的決定時是 NULL（寫入失敗） | 不變 |
+| `entities`、`relations`、兩張出處表 | 不變 | 0006 的條件，id 改用決定的 `id`，出處帶上 `decision_id`；決定與關係兩端的核准都必須未撤回 | 出處扣掉已撤回的決定寫入的列 |
+
+- **撤回的單位是一個決定**：只移除這份文件經這個決定寫入的出處。實體或關係沒有其他看得到的出處時就看不到；一端看不到的關係也看不到。其他文件的出處不受影響，合併造成的可見範圍擴大隨之收回。`kk.is_approved()` 改為判斷有效（未撤回）的核准。
+- **連帶撤回**（#209 決定 6）：撤回實體的核准時，`retract()` 在同一個交易中撤回端點是這個待審實體、已核准且未撤回的關係（`cascade_of` 指向實體的撤回）。policy 不強制連帶撤回；只撤回實體時，關係也因一端看不到而看不到。
+- **參考情境與資料集的內容撤回不了**：它們的出處 `decision_id` 為 NULL，沒有可以撤回的決定。
+- **再決定的 id**：新建的實體與關係以決定的 `id` 為 id（例如 `pe-…~2`），不會與已撤回的列衝突；已撤回的實體與關係仍留在資料表中，沒有出處所以看不到，仍可以是合併對象。同一段落可以由不同的決定各寫一筆出處，讀取圖譜與時間軸時去除重複。
+- **撤回紀錄的可見範圍**（ADR 0007 決定 6）：一般讀者的出處 policy 要查 `review_retractions`，所以文件看得到就看得到撤回紀錄。**看得到文件的人也看得到該文件的撤回紀錄，包括撤回者的身分 id。** 看得到出處段落就看得到所屬文件，所以出處的撤回一定讀得到。
+- **既有資料的回填**：0009 依 `review_decisions` 回填出處的 `decision_id`（寫法同 0003）。migration 以 `kk_owner` 執行並受 FORCE RLS 限制，回填只在資料庫從 migration 重建、還沒有資料列時正確；改用持久化的資料庫前要重新檢討（AGENTS.md 第 5 節）。
+- `oracle.ts` 的 `ReviewSample.retractions`、`approvedSample()`（只算有效的決定）、`canRetract()` 是撤回規則的獨立實作；`review.test.ts` 以 oracle 比對撤回前後每個身分的圖譜，並測試連帶撤回、再核准、看不到文件或沒有 `can_review` 的身分不能撤回、偽造的撤回紀錄與 `UPDATE`／`DELETE`。
 
 ## 說法不同
 
