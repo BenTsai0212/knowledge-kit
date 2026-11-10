@@ -6,7 +6,7 @@ import { evalQuestions } from "../evals/load";
 import type { RetrievalConfig } from "../client/types";
 import { keywordHashProvider } from "../retrieval/keyword-hash";
 import { createProvider, PROVIDERS, RETRIEVAL_DEFAULTS, withRetrievalDefaults } from "../retrieval/providers";
-import { createEvalDatabases, differs, effectiveForm, evalReport, parseSettings, setSummary, settingsForm, verdicts } from "./eval-helpers";
+import { createEvalDatabases, differs, effectiveForm, evalReport, parseReportSource, parseSettings, setSummary, settingsForm, verdicts } from "./eval-helpers";
 
 const { thresholds } = clientConfig.client.evals;
 const questions = evalQuestions.questions.slice(0, 2);
@@ -126,6 +126,33 @@ describe("evalReport", () => {
     const e5 = evalReport(run("multilingual-e5-small"), all, thresholds, meta);
     expect(e5.notApplicable).toEqual([]);
     expect(e5.sets[0].summary).toMatchObject({ done: 2, total: 3, complete: false });
+  });
+});
+
+describe("parseReportSource（品質報告的第二份輸入，#210）", () => {
+  const set: SetRun = { settings: { topK: 5, minScore: 0.1 }, results: questions.map((q) => result({ id: q.id })) };
+  const run: EvalRun = { mode: "keyPoints", providerId: "keyword-hash", sets: [set], status: "done", startedAt: "2026-10-30T00:00:00.000Z", finishedAt: "2026-10-30T00:05:00.000Z" };
+  const json = JSON.stringify(evalReport(run, questions, thresholds, { model: clientConfig.client.model, questionBank: { hash: "0123456789ab", questions: 2 } }));
+
+  it("下載 JSON 原樣讀回；沒有題庫版本的舊格式也可以", () => {
+    expect(parseReportSource(json)).toEqual(JSON.parse(json));
+    const { questionBank: _bank, model: _model, ...legacy } = JSON.parse(json);
+    expect(parseReportSource(JSON.stringify(legacy))).toEqual(legacy);
+  });
+
+  it("不是 JSON 或形狀不對時為 null", () => {
+    const base = JSON.parse(json);
+    const broken = [
+      "not json",
+      "[]",
+      JSON.stringify({ ...base, mode: "other" }),
+      JSON.stringify({ ...base, sets: [] }),
+      JSON.stringify({ ...base, finishedAt: 1 }),
+      JSON.stringify({ ...base, questionBank: { hash: 1 } }),
+      JSON.stringify({ ...base, sets: [{ ...base.sets[0], summary: { ...base.sets[0].summary, answer: null } }] }),
+      JSON.stringify({ ...base, sets: [{ ...base.sets[0], results: [{ question: "q" }] }] }),
+    ];
+    expect(broken.map(parseReportSource)).toEqual(broken.map(() => null));
   });
 });
 

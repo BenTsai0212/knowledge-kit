@@ -1,7 +1,7 @@
-// 評測台畫面（EvalPage.tsx）用的純函式：設定表單、各組的指標、兩組差異、下載 JSON，以及評測專用資料庫的開關。
+// 評測台畫面（EvalPage.tsx）用的純函式：設定表單、各組的指標、兩組差異、下載 JSON 與品質報告的第二份輸入，以及評測專用資料庫的開關。
 import type { EvalThresholds, ModelCode } from "../client/types";
 import { applicableQuestions, type EvalRun, type EvalSettings, type QuestionResult, type SetRun } from "../evals/run";
-import type { QuestionBank } from "../evals/report";
+import type { QuestionBank, ReportSource } from "../evals/report";
 import { answerCorrect, LEAKAGE_LIMIT, summarize, type AnswerMode, type ModelGrade, type Summary } from "../evals/score";
 import type { EvalQuestion } from "../evals/types";
 
@@ -82,6 +82,36 @@ export function evalReport(run: EvalRun, questions: EvalQuestion[], thresholds: 
       results: set.results,
     })),
   };
+}
+
+const isObject = (x: unknown): x is Record<string, unknown> => typeof x === "object" && x !== null && !Array.isArray(x);
+const isMetric = (x: unknown) => isObject(x) && typeof x.passed === "number" && typeof x.total === "number" && (x.rate === null || typeof x.rate === "number");
+
+// 品質報告的第二份輸入（另一次的下載 JSON）：檢查報告用到的欄位，形狀不對時為 null（#210）
+export function parseReportSource(text: string): ReportSource | null {
+  let x: unknown;
+  try {
+    x = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (!isObject(x)) return null;
+  const { provider } = x;
+  if ((x.mode !== "keyPoints" && x.mode !== "model") || typeof provider !== "string" || typeof x.status !== "string") return null;
+  if (typeof x.startedAt !== "string" || !(x.finishedAt === null || typeof x.finishedAt === "string")) return null;
+  if (!Array.isArray(x.notApplicable) || !Array.isArray(x.sets) || x.sets.length === 0) return null;
+  if (x.questionBank !== undefined && !(isObject(x.questionBank) && (x.questionBank.hash === null || typeof x.questionBank.hash === "string"))) return null;
+  const setOk = (set: unknown) =>
+    isObject(set) &&
+    isObject(set.settings) &&
+    typeof set.settings.topK === "number" &&
+    typeof set.settings.minScore === "number" &&
+    isObject(set.summary) &&
+    typeof set.summary.complete === "boolean" &&
+    ["citation", "answer", "leakage", "refusal"].every((k) => isMetric((set.summary as Record<string, unknown>)[k])) &&
+    Array.isArray(set.results) &&
+    set.results.every((r) => isObject(r) && typeof r.question === "string" && isObject(r.score) && Array.isArray(r.score.leaks));
+  return x.sets.every(setOk) ? (x as unknown as ReportSource) : null;
 }
 
 // 評測專用資料庫：同一時間只開一個，舊的關閉後才開新的；close() 關閉最近開的那個（開啟中也會在開好後關閉），可重複呼叫

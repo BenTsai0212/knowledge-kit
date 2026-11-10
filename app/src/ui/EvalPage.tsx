@@ -1,18 +1,19 @@
-// 評測台（#62，docs/evals.md「畫面」）：兩組檢索設定、預計呼叫次數的確認、進度與停止、總覽、每題的結果與兩組差異、下載 JSON。
+// 評測台（#62，docs/evals.md「畫面」）：兩組檢索設定、預計呼叫次數的確認、進度與停止、總覽、每題的結果與兩組差異、下載 JSON 與品質報告（#210）。
 // 只有 canReview 的身分看得到（App 決定）。評測使用專用的記憶體資料庫，評測結束、停止或離開頁籤時關閉。
 import { useEffect, useRef, useState } from "react";
 import { errorMessage, fill, strings, taskErrorMessage } from "../client/i18n";
 import { clientConfig } from "../client/load";
 import { dataset } from "../dataset/load";
 import { evalQuestions, evalQuestionsSource } from "../evals/load";
-import { questionBank } from "../evals/report";
+import { qualityReport, questionBank, type ReportSource } from "../evals/report";
+import { reportHtml } from "../evals/report-html";
 import { applies, applicableQuestions, estimateCalls, openEvalDatabase, runEvals, type EvalContext, type EvalRun, type EvalSettings, type QuestionResult } from "../evals/run";
 import { LEAKAGE_LIMIT, type AnswerMode, type Metric, type Summary } from "../evals/score";
 import type { EvalQuestion } from "../evals/types";
 import { apiTransport } from "../qa/api";
 import { preparesModel, type ActiveProvider } from "../retrieval/providers";
 import { openRetriever } from "../retrieval/retrieve";
-import { createEvalDatabases, differs, effectiveForm, evalReport, parseSettings, settingsForm, setSummary, TOP_K_MAX, verdicts, type SettingsForm } from "./eval-helpers";
+import { createEvalDatabases, differs, effectiveForm, evalReport, parseReportSource, parseSettings, settingsForm, setSummary, TOP_K_MAX, verdicts, type SettingsForm } from "./eval-helpers";
 import { Notice } from "./Notice";
 import { RetrievalNotice } from "./RetrievalNotice";
 import type { ProviderStatus } from "./retrieval-notice";
@@ -46,6 +47,14 @@ type Phase = "idle" | "estimating" | "confirm" | "running";
 
 const percent = (rate: number) => Math.round(rate * 1000) / 10;
 
+function save(blob: Blob, name: string) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 export function EvalPage({ language, accessCode, uploadedCount, provider, status, run, onRun, onRejectAccessCode }: Props) {
   const s = strings(language);
   const [forms, setForms] = useState<SettingsForm[]>([DEFAULT_FORM, DEFAULT_FORM]);
@@ -55,6 +64,10 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
   const [estimate, setEstimate] = useState({ ask: 0, grade: 0, total: 0 });
   const [failed, setFailed] = useState(false);
   const [onlyDiff, setOnlyDiff] = useState(false);
+  // 品質報告：要報告的設定組與另一次的下載 JSON（選填，顯示穩定性）
+  const [reportSet, setReportSet] = useState(0);
+  const [previous, setPrevious] = useState<ReportSource | null>(null);
+  const [previousInvalid, setPreviousInvalid] = useState(false);
   const dbs = useRef(createEvalDatabases(() => openEvalDatabase(clientConfig, dataset)));
   const ctx = useRef<EvalContext | null>(null);
   // 確認視窗估算時的設定；開始後以同一組執行
@@ -138,15 +151,27 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
     }
   }
 
+  const stamp = (run: EvalRun) => run.startedAt.replace(/[:.]/g, "-");
+  const report = async (run: EvalRun) => evalReport(run, questions, thresholds, { model: client.model, questionBank: await bank });
+
   async function download() {
     if (run === null) return;
-    const meta = { model: client.model, questionBank: await bank };
-    const blob = new Blob([JSON.stringify(evalReport(run, questions, thresholds, meta), null, 2)], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `evals-${run.startedAt.replace(/[:.]/g, "-")}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    save(new Blob([JSON.stringify(await report(run), null, 2)], { type: "application/json" }), `evals-${stamp(run)}.json`);
+  }
+
+  // 品質報告（docs/evals.md「品質報告」）：只在評測完成後
+  async function downloadReport() {
+    if (run === null) return;
+    const current = await report(run);
+    const set = Math.min(reportSet, current.sets.length - 1);
+    const html = reportHtml(qualityReport({ questions, access, data: dataset, thresholds, current, set, previous }), access, language);
+    save(new Blob([html], { type: "text/html" }), `quality-report-${stamp(run)}.html`);
+  }
+
+  async function choosePrevious(file: File | undefined) {
+    const parsed = file === undefined ? null : parseReportSource(await file.text());
+    setPrevious(parsed);
+    setPreviousInvalid(file !== undefined && parsed === null);
   }
 
   const setForm = (i: number, field: "topK" | "minScore", value: string) =>
@@ -285,6 +310,33 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
           </p>
         )}
         {run?.status === "done" && <p className="muted">{s.evalDone}</p>}
+        {run?.status === "done" && phase !== "running" && (
+          <fieldset>
+            <legend>{s.evalReport.title}</legend>
+            {run.sets.length === 2 && (
+              <label>
+                {s.evalReport.set}
+                <select value={reportSet} onChange={(e) => setReportSet(Number(e.target.value))}>
+                  {run.sets.map((set, i) => (
+                    <option key={i} value={i}>
+                      {fill(s.parenthetical, { text: fill(s.evalSetName, { name: SET_NAMES[i] }), note: fill(s.evalSettingsValue, set.settings) })}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <label>
+              {s.evalReport.previous}
+              <input type="file" accept=".json,application/json" onChange={(e) => void choosePrevious(e.target.files?.[0])} />
+            </label>
+            {previousInvalid && <p className="error">{s.evalReport.previousInvalid}</p>}
+            <div className="dialog-actions">
+              <button type="button" className="secondary" onClick={() => void downloadReport()}>
+                {s.evalReport.download}
+              </button>
+            </div>
+          </fieldset>
+        )}
         {run?.status === "stopped" && (
           <Notice kind="warning" title={s.evalStopped}>
             {run.stopReason === "aborted" ? s.evalAborted : errorMessage(language, run.stopReason ?? "")}

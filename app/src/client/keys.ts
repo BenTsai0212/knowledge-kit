@@ -260,7 +260,7 @@ const uiStrings = {
   evalResults: "required", evalOnlyDiff: "required", evalDiffers: "required", evalQuestion: "required",
   evalNotRun: "required", evalRequiresSemantic: "required", evalPassageLanguage: "required", evalAnswerText: "required", evalCitations: "required", evalNoCitations: "required",
   evalDropped: "required", evalKeyPoints: "required", evalGrade: "required", evalMetrics: "required",
-  evalCategories: "required", evalExpect: "required", evalVerdicts: "required", evalLeaks: "required",
+  evalCategories: "required", evalExpect: "required", evalVerdicts: "required", evalLeaks: "required", evalReport: "required",
   colon: "required", progress: "required",
   parenthetical: "required", refusal: "required", refusalNextTitle: "required", refusalNextRephrase: "required",
   refusalNextAskPerson: "required", refusalNextUpload: "required", refusalGotoUpload: "required", uncited: "required", incomplete: "required",
@@ -359,6 +359,21 @@ export const i18nManifests: ManifestEntry[] = [
     keys: {
       retrieved: "required", sentPassage: "required", sentDocument: "required", cited: "required", forbidden: "required",
     } satisfies KeyManifest<UiStrings["evalLeaks"]>,
+  },
+  {
+    schema: "i18n.schema.json",
+    pointer: "/properties/evalReport",
+    keys: {
+      download: "required", previous: "required", previousInvalid: "required", set: "required", title: "required", editNote: "required", headline: "required", headlineMet: "required",
+      headlineUnmet: "required", headlineIncomplete: "required", headlineBothMet: "required", headlineSecondUnmet: "required", unmetItem: "required", metricsTitle: "required", result: "required", meets: "required",
+      second: "required", bothMeet: "required", yes: "required", no: "required", undetermined: "required", stabilityTitle: "required", stabilityWith: "required", stabilityDiffering: "required",
+      noteBankDiffers: "required", noteBankUnknown: "required", noteIncomplete: "required", noteSettingsDiffer: "required", noteCurrentIncomplete: "required", rolesTitle: "required", roleLine: "required", leakExplain: "required",
+      limitsTitle: "required", limitQuestions: "required", limitAccess: "required", limitScope: "required", appendixTitle: "required", matrixTitle: "required", matrixCell: "required", role: "required",
+      category: "required", restrictedNote: "required", failuresTitle: "required", number: "required", failed: "required", reason: "required", action: "required", noFailures: "required",
+      numberNote: "required", conditionsTitle: "required", bank: "required", bankValue: "required", unknown: "required", coverage: "required", coverageValue: "required", coverageLevel: "required",
+      settings: "required", retrieval: "required", notApplicable: "required", mode: "required", modeKeyPoints: "required", modeModel: "required", model: "required", date: "required",
+      dateValue: "required", calls: "required", callsValue: "required", scope: "required",
+    } satisfies KeyManifest<UiStrings["evalReport"]>,
   },
   {
     schema: "i18n.schema.json",
