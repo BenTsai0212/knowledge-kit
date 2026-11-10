@@ -7,8 +7,8 @@
 | 1 | [需求確認清單](requirements-checklist.md) | 可直接給客戶 | 第一次訪談，確認要展示什麼、給誰看、誰能看什麼 |
 | 2 | [資料盤點表](data-inventory.md) | 可直接給客戶填寫 | 盤點文件的種類、機密程度、語言與負責人，決定 demo 用哪些資料 |
 | 3 | [資料安全說明](data-security.md) | 可直接給客戶 | 說明 demo 怎麼處理資料、哪些資料不能放進 demo |
-| 4 | [評測題庫建立步驟](eval-question-bank.md) | 內部（可附給客戶參考） | 和客戶一起出題，量化問答品質 |
-| 5 | [驗收指標](acceptance-metrics.md) | 內部（可附給客戶參考） | demo 交付前要達到的門檻，以及怎麼解讀結果 |
+| 4 | [評測題庫建立步驟](eval-question-bank.md) | 內部（可附給客戶參考） | 和客戶一起出題，量化問答品質；交付後的題庫維護 |
+| 5 | [驗收指標](acceptance-metrics.md) | 內部（可附給客戶參考） | demo 交付前要達到的門檻、怎麼解讀結果，以及交付時附上的品質報告 |
 | 6 | [落地新客戶步驟](new-client-setup.md) | 內部（給 coding agent） | 依訪談與盤點建立 clients/<名稱>/ 的 demo |
 | 7 | [新增語言步驟](add-language.md) | 內部（給 coding agent 與決策者） | 為客戶的 demo 加上一種語言；何時需要語意向量 |
 
