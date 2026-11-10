@@ -157,6 +157,7 @@ policy 中的子查詢同樣受 RLS 限制，所以「段落看得到」已包�
 - **`kk.is_approved()`**：`review_decisions` 的 INSERT policy 要檢查「關係的兩端都已核准」，但 policy 直接查詢自己的資料表會被 PostgreSQL 視為無限遞迴，所以寫成 PL/pgSQL 函式（不會被內聯進 policy，執行時套用 `review_decisions` 的 SELECT policy）。函式都以呼叫者權限執行，不使用 `SECURITY DEFINER`。
 - **待審與已退回的內容不會外流**：檢索、問答、圖譜、路徑、時間軸、原文的查詢都不讀取待審資料表；核准後的可見範圍沿用「權限規則」。
 - **合併後可見範圍變大**（#44 決定）：把待審實體合併到既有實體時，新文件的段落成為該實體的出處。依「實體只要有一個看得到的出處就看得到」，看得到新文件的人也看得到該實體，包含只在其他文件出現過的其他語言名稱。待審區的合併選單會提示這一點。
+- **圖譜已有的關係**（#189 決定 1）：核准的待審關係與核准者看得到的既有關係完全相同（類型、合併後的兩端）時，`store.ts` 只寫 `review_decisions`，不寫入 `relations` 與 `relation_sources`，避免重複的關係；RLS 不變（見 [docs/extraction.md](extraction.md)「合併」）。`oracle.ts` 的 `approvedSample()` 不模擬這一點，`review.test.ts` 的範例資料不使用與既有關係相同的待審關係。
 - `oracle.ts` 的 `expectedReviewVisible()`、`canDecide()`、`approvedSample()` 是上述規則的獨立實作；`app/tests/extraction/review.test.ts` 以兩種設定（參考情境，以及一般員工也能審核）比對，並測試偽造的決定與正式資料寫入。
 
 ## 說法不同

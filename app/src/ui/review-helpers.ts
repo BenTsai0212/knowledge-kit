@@ -1,9 +1,11 @@
 // 待審頁的核准計畫（#44）：每筆實體的合併選擇，以及批次核准時要送出的項目。
-// 需要選擇合併對象的項目（suggestMerge 的 choose）不能批次核准，只能逐筆決定。
+// 有兩個以上候選的項目（suggestMerge 的 choose）不能批次核准，只能逐筆決定；
+// 只有一個候選的是系統建議，預先帶入合併對象、可以批次核准（#189 決定，取代 #44 決定中「一個候選也要逐筆選」）。
 import type { LocalizedText } from "../client/types";
 import type { ConflictItem } from "../conflicts/store";
 import type { MergeSuggestion } from "../extraction/merge";
-import type { EntityApproval, ReviewDocument } from "../extraction/store";
+import type { EntityApproval, ReviewDocument, ReviewEntity, ReviewRelation } from "../extraction/store";
+import type { Graph, GraphRelation } from "../graph/read";
 
 // mergeInto：既有實體的 id；null 表示建立新實體；undefined 表示還沒選擇
 export interface EntityChoice {
@@ -12,13 +14,16 @@ export interface EntityChoice {
   names?: LocalizedText;
 }
 
+// 系統建議：需要確認、但只有一個候選（#189）
+export const isSuggested = (suggestion: MergeSuggestion) => suggestion.mode === "choose" && suggestion.candidates.length === 1;
+
 export function initialChoice(suggestion: MergeSuggestion): EntityChoice {
   if (suggestion.mode === "new") return { mergeInto: null };
   if (suggestion.mode === "auto") return { mergeInto: suggestion.target };
-  return { mergeInto: undefined };
+  return { mergeInto: isSuggested(suggestion) ? suggestion.candidates[0] : undefined };
 }
 
-export const canBatch = (suggestion: MergeSuggestion) => suggestion.mode !== "choose";
+export const canBatch = (suggestion: MergeSuggestion) => suggestion.mode !== "choose" || isSuggested(suggestion);
 
 // 各語言的名稱去掉前後空白後都有值（#47 審查）
 export const namesComplete = (names: LocalizedText, languages: readonly string[]) => languages.every((l) => (names[l] ?? "").trim() !== "");
@@ -35,7 +40,30 @@ export function entityApproval(id: string, choice: EntityChoice, languages: read
   return { id, names: Object.fromEntries(languages.map((l) => [l, choice.names![l].trim()])) };
 }
 
+// 待審實體核准後的 id：已核准的用核准時的決定，待審的用目前的選擇（建立新實體時沿用待審 id）；還沒選擇或已退回時為 undefined
+function resolvedId(doc: ReviewDocument, choices: Record<string, EntityChoice>, id: string): string | undefined {
+  const e = doc.entities.find((x) => x.id === id);
+  if (e === undefined || e.status === "rejected") return undefined;
+  if (e.status === "approved") return e.mergedInto ?? e.id;
+  const into = (choices[id] ?? { mergeInto: null }).mergeInto;
+  return into === undefined ? undefined : (into ?? id);
+}
+
+// 圖譜已有（#189）：依目前的選擇算出兩端，類型與兩端都相同的既有關係（只看核准者看得到的關係）
+export function existingRelation(
+  doc: ReviewDocument,
+  relation: Pick<ReviewRelation, "type" | "from" | "to">,
+  choices: Record<string, EntityChoice>,
+  graph: Pick<Graph, "relations">,
+): GraphRelation | undefined {
+  const from = resolvedId(doc, choices, relation.from);
+  const to = resolvedId(doc, choices, relation.to);
+  if (from === undefined || to === undefined) return undefined;
+  return graph.relations.find((r) => r.type === relation.type && r.from === from && r.to === to);
+}
+
 // 批次核准：只包含待審、可以批次核准的實體，以及兩端都已核准或一起核准的待審關係。
+// 圖譜已有的關係放在 existingRelations：只寫核准決定，不重複建立（#189 決定 1）。
 // 名稱不完整的實體略過，回傳略過的筆數（skipped）。
 // only 有值時只處理其中的項目（勾選的項目）；沒有值時處理整份文件（「核准這份文件的全部」）
 export function batchPlan(
@@ -43,8 +71,9 @@ export function batchPlan(
   suggestions: Record<string, MergeSuggestion>,
   choices: Record<string, EntityChoice>,
   languages: readonly string[],
+  graph: Pick<Graph, "relations">,
   only?: ReadonlySet<string>,
-): { entities: EntityApproval[]; relations: string[]; skipped: number } {
+): { entities: EntityApproval[]; relations: string[]; existingRelations: string[]; skipped: number } {
   const included = (id: string) => only === undefined || only.has(id);
   const candidates = doc.entities.filter((e) => e.status === "pending" && included(e.id) && canBatch(suggestions[e.id] ?? { mode: "new" }));
   const skipped = candidates.filter((e) => namesInvalid(choices[e.id] ?? { mergeInto: null }, languages)).length;
@@ -53,8 +82,92 @@ export function batchPlan(
     .filter((a): a is EntityApproval => a !== null);
   const approving = new Set(entities.map((e) => e.id));
   const approved = (id: string) => approving.has(id) || doc.entities.some((e) => e.id === id && e.status === "approved");
-  const relations = doc.relations.filter((r) => r.status === "pending" && included(r.id) && approved(r.from) && approved(r.to)).map((r) => r.id);
-  return { entities, relations, skipped };
+  const ready = doc.relations.filter((r) => r.status === "pending" && included(r.id) && approved(r.from) && approved(r.to));
+  const existing = (r: ReviewRelation) => existingRelation(doc, r, choices, graph) !== undefined;
+  return {
+    entities,
+    relations: ready.filter((r) => !existing(r)).map((r) => r.id),
+    existingRelations: ready.filter(existing).map((r) => r.id),
+    skipped,
+  };
+}
+
+export interface GroupRelation {
+  relation: ReviewRelation;
+  // 圖譜已有：核准時只寫決定，不重複建立
+  existing: boolean;
+}
+
+// 放在最上面、需要人確認的一組：一個待審實體，加上掛在它底下的待審關係（#189）
+export interface ReviewGroup {
+  entity: ReviewEntity;
+  // decide：兩個以上候選，需要選擇合併對象；new：建立新實體（名稱由模型寫，給人看一眼）
+  kind: "decide" | "new";
+  // 目前還不能核准的原因：還沒選擇合併對象、名稱不完整
+  blocked?: "choose" | "names";
+  relations: GroupRelation[];
+}
+
+export interface ReviewGroups {
+  groups: ReviewGroup[];
+  // 系統已準備：系統建議與 auto 的合併，以及兩端都不在 groups 的關係（含圖譜已有）
+  prepared: { entities: ReviewEntity[]; relations: GroupRelation[] };
+  summary: {
+    // 核准後新增的實體與關係
+    newEntities: number;
+    newRelations: number;
+    // 合併到既有實體的實體、圖譜已有的關係
+    mergedEntities: number;
+    existingRelations: number;
+    // 還有幾組需要你確認：需要決定的組＋新增的組（#189 決定 2）
+    toConfirm: number;
+  };
+}
+
+// 待審頁的分組（#189）：分在哪一區依合併建議決定，不隨選擇改變（改選擇時項目不會跳到別的區）；
+// 不能核准的原因、圖譜已有與摘要依目前的選擇計算
+export function reviewGroups(
+  doc: ReviewDocument,
+  suggestions: Record<string, MergeSuggestion>,
+  choices: Record<string, EntityChoice>,
+  graph: Pick<Graph, "relations">,
+  languages: readonly string[],
+): ReviewGroups {
+  const choiceOf = (id: string) => choices[id] ?? initialChoice(suggestions[id] ?? { mode: "new" });
+  const pendingEntities = doc.entities.filter((e) => e.status === "pending");
+  const groups: ReviewGroup[] = [];
+  const prepared: ReviewGroups["prepared"] = { entities: [], relations: [] };
+  for (const entity of pendingEntities) {
+    const suggestion = suggestions[entity.id] ?? { mode: "new" };
+    if (suggestion.mode !== "new" && canBatch(suggestion)) {
+      prepared.entities.push(entity);
+      continue;
+    }
+    const choice = choiceOf(entity.id);
+    const blocked = choice.mergeInto === undefined ? "choose" : namesInvalid(choice, languages) ? "names" : undefined;
+    groups.push({ entity, kind: suggestion.mode === "new" ? "new" : "decide", ...(blocked && { blocked }), relations: [] });
+  }
+  const pendingRelations = doc.relations.filter((r) => r.status === "pending");
+  let existingCount = 0;
+  for (const relation of pendingRelations) {
+    const existing = existingRelation(doc, relation, choices, graph) !== undefined;
+    if (existing) existingCount++;
+    // 掛在第一個屬於 groups 的端點底下
+    const owner = groups.find((g) => g.entity.id === relation.from) ?? groups.find((g) => g.entity.id === relation.to);
+    (owner?.relations ?? prepared.relations).push({ relation, existing });
+  }
+  const into = pendingEntities.map((e) => choiceOf(e.id).mergeInto);
+  return {
+    groups,
+    prepared,
+    summary: {
+      newEntities: into.filter((m) => m === null).length,
+      mergedEntities: into.filter((m) => typeof m === "string").length,
+      newRelations: pendingRelations.length - existingCount,
+      existingRelations: existingCount,
+      toConfirm: groups.length,
+    },
+  };
 }
 
 // 關係是否能核准：兩端都已核准

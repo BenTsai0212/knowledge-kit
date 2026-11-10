@@ -141,21 +141,21 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
     }
   }
   // skippedCount：批次核准時因名稱不完整而略過的筆數（逐筆核准時為 0，清除先前的提示）
-  const approveItems = (docId: string, items: { entities: EntityApproval[]; relations: string[] }, skippedCount = 0) =>
+  const approveItems = (docId: string, items: { entities: EntityApproval[]; relations: string[]; existingRelations?: string[] }, skippedCount = 0) =>
     run(
       docId,
       () => approve(db, identity, items, { defaultLanguage: client.defaultLanguage }),
       {
         text: toastText(
           { one: s.reviewToastApprovedOne, many: s.reviewToastApproved },
-          itemLabels(docId, items.entities.map((e) => e.id), items.relations),
+          itemLabels(docId, items.entities.map((e) => e.id), [...items.relations, ...(items.existingRelations ?? [])]),
         ),
         graph: true,
       },
       skippedCount,
     );
   const approveBatch = (docId: string, plan: ReturnType<typeof batchPlan>) =>
-    void approveItems(docId, { entities: plan.entities, relations: plan.relations }, plan.skipped);
+    void approveItems(docId, { entities: plan.entities, relations: plan.relations, existingRelations: plan.existingRelations }, plan.skipped);
   const rejectItems = (docId: string, items: { entities: string[]; relations: string[] }) =>
     run(docId, () => reject(db, identity, items), {
       text: toastText({ one: s.reviewToastRejectedOne, many: s.reviewToastRejected }, itemLabels(docId, items.entities, items.relations)),
@@ -313,10 +313,10 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                 <button type="button" className="secondary" disabled={busy} onClick={() => setSelected(new Set(batchable))}>
                   {s.reviewSelectAll}
                 </button>
-                <button type="button" disabled={busy || selected.size === 0} onClick={() => approveBatch(doc.id, batchPlan(doc, suggestions, allChoices, client.languages, selected))}>
+                <button type="button" disabled={busy || selected.size === 0} onClick={() => approveBatch(doc.id, batchPlan(doc, suggestions, allChoices, client.languages, graph, selected))}>
                   {busy ? s.reviewWorking : s.reviewApproveSelected}
                 </button>
-                <button type="button" disabled={busy} onClick={() => approveBatch(doc.id, batchPlan(doc, suggestions, allChoices, client.languages))}>
+                <button type="button" disabled={busy} onClick={() => approveBatch(doc.id, batchPlan(doc, suggestions, allChoices, client.languages, graph))}>
                   {busy ? s.reviewWorking : s.reviewApproveDocument}
                 </button>
               </div>
@@ -327,7 +327,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
               {pendingEntities.map((e) => {
                 const suggestion = suggestions[e.id];
                 const choice = choiceOf(e);
-                const needsChoice = suggestion.mode === "choose";
+                const needsChoice = !canBatch(suggestion);
                 const candidates = suggestion.mode === "choose" ? suggestion.candidates : suggestion.mode === "auto" ? [suggestion.target] : [];
                 const names: LocalizedText = choice.names ?? e.names;
                 const invalidNames = namesInvalid(choice, client.languages);

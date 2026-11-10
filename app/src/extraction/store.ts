@@ -226,11 +226,22 @@ export function readReview(db: Database, identityId: string | null): Promise<Rev
   });
 }
 
-// 在一個交易中核准：先實體（寫決定，再建立新實體或把出處加到合併對象），再關係（兩端都已核准）。任何一列被拒絕就全部不寫入
+// 待審關係的兩端解析成核准後的實體（合併對象或新建的實體）後，類型與兩端都相同、核准者看得到的既有關係（#189）
+const EXISTING_RELATION = `
+  SELECT x.id FROM kk.pending_relations r
+    JOIN kk.review_decisions f ON f.item_id = r.from_pending_id
+    JOIN kk.review_decisions t ON t.item_id = r.to_pending_id
+    JOIN kk.relations x ON x.relation_type = r.relation_type
+     AND x.from_entity_id = coalesce(f.merge_into, f.item_id) AND x.to_entity_id = coalesce(t.merge_into, t.item_id)
+   WHERE r.id = $1 LIMIT 1`;
+
+// 在一個交易中核准：先實體（寫決定，再建立新實體或把出處加到合併對象），再關係（兩端都已核准）。任何一列被拒絕就全部不寫入。
+// 圖譜已有的關係只寫決定，不建立關係與出處（#189 決定 1）：existingRelations 是畫面算出的圖譜已有，寫入前在同一個交易再查一次，
+// 已經不存在時整筆不寫入（conflict）；relations 查到相同的既有關係時（例如舊的分頁、同時開兩個分頁）也只寫決定
 export async function approve(
   db: Database,
   identityId: string | null,
-  items: { entities: EntityApproval[]; relations: string[] },
+  items: { entities: EntityApproval[]; relations: string[]; existingRelations?: string[] },
   options: { defaultLanguage: LanguageCode },
 ): Promise<void> {
   try {
@@ -266,8 +277,13 @@ export async function approve(
           [e.id],
         );
       }
+      for (const id of items.existingRelations ?? []) {
+        await tx.query("INSERT INTO kk.review_decisions (item_id, decision, decided_by) VALUES ($1, 'approve', kk.current_identity_id())", [id]);
+        if ((await tx.query(EXISTING_RELATION, [id])).rows.length === 0) throw new ReviewError("conflict");
+      }
       for (const id of items.relations) {
         await tx.query("INSERT INTO kk.review_decisions (item_id, decision, decided_by) VALUES ($1, 'approve', kk.current_identity_id())", [id]);
+        if ((await tx.query(EXISTING_RELATION, [id])).rows.length > 0) continue;
         // 兩端解析成核准後的實體：合併對象或新建的實體
         await tx.query(
           `INSERT INTO kk.relations (id, relation_type, from_entity_id, to_entity_id)
