@@ -1,6 +1,7 @@
 // 給客戶的品質報告（#210，docs/evals.md「品質報告」）的內容：純函式，輸入是下載 JSON（evalReport()）的內容，可選另一次的下載 JSON 顯示穩定性。
-// 機密（#210 決定 3）：報告會被帶出系統，只放 id、類別、身分、數字與判定；不放題目文字、回答、段落、keyPoints、forbidden、referenceAnswer 與滲漏的 term。
-// 可見等級最高的身分在附錄只呈現各類別的彙總，不列題目 id。
+// 機密（#210 決定 3 與補充）：報告會被帶出系統，只放題目序號、類別、身分、數字與判定；不放題目 id、題目文字、回答、段落、keyPoints、forbidden、referenceAnswer 與滲漏的 term。
+// 題目 id 是描述性名稱，可能透露題目內容，所以改用題目在 questions.json 的序號（從 1 開始；只對同一個題庫雜湊有效）。
+// 可見等級最高的身分在附錄只呈現各類別的彙總，不列題目序號。
 import type { AccessFile, EvalThresholds } from "../client/types";
 import type { Dataset } from "../dataset/load";
 import type { EvalSettings, QuestionResult } from "./run";
@@ -86,8 +87,8 @@ export interface QualityReport {
   categories: EvalCategory[];
   // 身分 × 類別：通過數／題數（任一指標未通過或有滲漏就不算通過）
   matrix: { role: string; category: EvalCategory; passed: number; total: number }[];
-  // 未通過的題目；可見等級最高的身分不列出
-  failures: { id: string; role: string; category: EvalCategory; failed: MetricKey[] }[];
+  // 未通過的題目，以題目在 questions.json 的序號（從 1 開始）代替 id；可見等級最高的身分不列出
+  failures: { number: number; role: string; category: EvalCategory; failed: MetricKey[] }[];
   // 可見等級最高的身分中未通過的題數（只在 matrix 呈現彙總）
   restrictedFailures: number;
   coverage: Coverage;
@@ -182,6 +183,7 @@ export function qualityReport(input: ReportInput): QualityReport {
   const set = current.sets[input.set];
   const complete = set.summary.complete && current.status === "done";
   const byId = new Map(questions.map((q) => [q.id, q]));
+  const numberOf = new Map(questions.map((q, i) => [q.id, i + 1]));
   const results = set.results.filter((r) => byId.has(r.question));
   const restricted = restrictedRoles(access);
 
@@ -243,7 +245,7 @@ export function qualityReport(input: ReportInput): QualityReport {
         return cell.length === 0 ? [] : [{ role, category, passed: cell.filter((r) => r.failed.length === 0).length, total: cell.length }];
       }),
     ),
-    failures: failing.filter((r) => !restricted.has(r.q.role)).map((r) => ({ id: r.q.id, role: r.q.role, category: r.q.category, failed: r.failed })),
+    failures: failing.filter((r) => !restricted.has(r.q.role)).map((r) => ({ number: numberOf.get(r.q.id)!, role: r.q.role, category: r.q.category, failed: r.failed })),
     restrictedFailures: failing.filter((r) => restricted.has(r.q.role)).length,
     coverage: coverage(questions, input.data, access),
     conditions: {

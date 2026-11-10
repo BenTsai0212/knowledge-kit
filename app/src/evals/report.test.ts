@@ -132,7 +132,7 @@ describe("qualityReport：一次", () => {
     expect(r.roles.map((x) => x.role)).toEqual(access.roles.map((x) => x.id).filter((id) => questions.some((q) => q.role === id)));
   });
 
-  it("身分 × 類別：通過數／題數；最高可見等級的身分只有彙總，不列題目 id", () => {
+  it("身分 × 類別：通過數／題數；未通過的題目以序號列出，最高可見等級的身分只有彙總", () => {
     const results = allPass();
     results[questions.indexOf(openQ)] = resultFor(openQ, { citation: true });
     results[questions.indexOf(restrictedQ)] = resultFor(restrictedQ, { answer: true });
@@ -144,7 +144,7 @@ describe("qualityReport：一次", () => {
     expect(r.matrix.find((c) => c.role === restrictedQ.role && c.category === restrictedQ.category)).toMatchObject({
       passed: questions.filter((q) => q.role === restrictedQ.role && q.category === restrictedQ.category).length - 1,
     });
-    expect(r.failures).toEqual([{ id: openQ.id, role: openQ.role, category: openQ.category, failed: ["citation"] }]);
+    expect(r.failures).toEqual([{ number: questions.indexOf(openQ) + 1, role: openQ.role, category: openQ.category, failed: ["citation"] }]);
     expect(r.restrictedFailures).toBe(1);
     expect(r.roles.find((x) => x.role === restrictedQ.role)!.restricted).toBe(true);
   });
@@ -229,11 +229,18 @@ describe("qualityReport：機密（#210 決定 3）", () => {
     expect(secrets.filter((s) => text.includes(s))).toEqual([]);
   });
 
-  it("最高可見等級的身分的題目 id 不出現", () => {
+  it("不含任何題目 id（#210 決定補充：id 可能透露題目內容）", () => {
+    const results = questions.map((q) => resultFor(q, { leakage: true, ...(q.expect === "answer" ? { answer: true } : { refusal: true }) }));
+    const r = qualityReport(input(source(results, { notApplicable: questions.slice(0, 2).map((q) => q.id) }), source(results)));
+    const text = JSON.stringify(r);
+    expect(r.failures.length).toBeGreaterThan(0);
+    expect(questions.map((q) => q.id).filter((id) => text.includes(id))).toEqual([]);
+  });
+
+  it("未通過的題目是題庫中的序號（從 1 開始）；最高可見等級的身分不列出", () => {
     const results = questions.map((q) => resultFor(q, { leakage: true }));
-    const text = JSON.stringify(qualityReport(input(source(results))));
-    const ids = questions.filter((q) => restricted.has(q.role)).map((q) => q.id);
-    expect(ids.length).toBeGreaterThan(0);
-    expect(ids.filter((id) => text.includes(`"${id}"`))).toEqual([]);
+    const r = qualityReport(input(source(results)));
+    expect(r.failures.map((f) => f.number)).toEqual(questions.flatMap((q, i) => (restricted.has(q.role) ? [] : [i + 1])));
+    expect(r.restrictedFailures).toBe(questions.filter((q) => restricted.has(q.role)).length);
   });
 });
