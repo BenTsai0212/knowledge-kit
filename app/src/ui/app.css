@@ -159,6 +159,43 @@ main.qa > .mention-panel {
   text-align: left;
 }
 
+/* 「回答提到」與「接著問」（#198）：淺色外框的次要按鈕，不比提問等主要動作搶眼。
+   文字是 text 放在 surface 上；按鈕以文字辨識，外框只是輔助，所以用 border（WCAG 1.4.11 不要求按鈕外框的對比）。
+   目前在面板中的實體（aria-pressed）：主色外框加粗，底色是主色的淡色底（12%，與選取中的項目相同，check:client 檢查對比） */
+button.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  border-radius: var(--radius-pill);
+}
+
+button.chip:hover {
+  border-color: var(--color-primary);
+}
+
+button.chip[aria-pressed="true"] {
+  /* 外框加粗 1px，內距少 1px，按鈕大小不變 */
+  border: 2px solid var(--color-primary);
+  padding: calc(0.25rem - 1px) calc(0.75rem - 1px);
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+}
+
+.follow-ups button.chip {
+  border-radius: var(--radius-medium);
+}
+
+/* 實體類型的色點（knowledge-model.json 的 color，與 surface 的對比 ≥ 3:1 由 check:client 檢查） */
+.type-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  flex: none;
+  border-radius: 50%;
+  background: var(--type-color);
+}
+
 .session-questions h2 {
   font-size: 0.9rem;
 }

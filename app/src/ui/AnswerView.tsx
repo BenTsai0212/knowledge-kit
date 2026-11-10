@@ -1,4 +1,4 @@
-import type { Ref } from "react";
+import type { CSSProperties, Ref } from "react";
 import { clientConfig } from "../client/load";
 import type { Graph, GraphEntity } from "../graph/read";
 import type { Answer } from "../qa/answer";
@@ -17,6 +17,12 @@ export interface AnswerState {
   mentions?: { graph: Graph; entities: GraphEntity[] };
 }
 
+// 目前在右側實體面板中的實體（#198）：同一題的圖譜與實體 id 都相同時，「回答提到」的按鈕為選取狀態
+export interface OpenEntity {
+  graph: Graph;
+  id: string;
+}
+
 interface Props {
   // 元素 id（左側「這次的問題」捲到該題）
   id: string;
@@ -28,11 +34,12 @@ interface Props {
   onOpenSource(passageId: string): void;
   onGotoUpload(): void;
   onOpenEntity(graph: Graph, entityId: string): void;
+  openEntity: OpenEntity | null;
 }
 
 const { entityTypes } = clientConfig.knowledgeModel;
 
-export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, onGotoUpload, onOpenEntity }: Props) {
+export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, onGotoUpload, onOpenEntity, openEntity }: Props) {
   const s = strings(language);
   const { answer } = state;
   const stepText: Record<RefusalStep, string> = {
@@ -96,7 +103,7 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
             </p>
           )}
           {state.mentions !== undefined && state.mentions.entities.length > 0 && (
-            <Mentions language={language} {...state.mentions} onOpenEntity={onOpenEntity} />
+            <Mentions language={language} {...state.mentions} onOpenEntity={onOpenEntity} openEntity={openEntity} />
           )}
         </>
       )}
@@ -104,8 +111,21 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
   );
 }
 
-// 「回答提到」：依 knowledge-model.json 的類型順序分組；同名的實體加上第一個相關實體的名稱以便區分
-function Mentions({ language, graph, entities, onOpenEntity }: { language: string; graph: Graph; entities: GraphEntity[]; onOpenEntity: Props["onOpenEntity"] }) {
+// 「回答提到」：依 knowledge-model.json 的類型順序分組；同名的實體加上第一個相關實體的名稱以便區分。
+// 淺色外框的按鈕，名稱前是類型色點（裝飾，類型另有文字標籤）；目前在面板中的實體為選取狀態（#198）
+function Mentions({
+  language,
+  graph,
+  entities,
+  onOpenEntity,
+  openEntity,
+}: {
+  language: string;
+  graph: Graph;
+  entities: GraphEntity[];
+  onOpenEntity: Props["onOpenEntity"];
+  openEntity: OpenEntity | null;
+}) {
   const s = strings(language);
   const types = [...new Set([...entityTypes.map((t) => t.id), ...entities.map((e) => e.type)])];
   return (
@@ -114,11 +134,19 @@ function Mentions({ language, graph, entities, onOpenEntity }: { language: strin
       {types.map((type) => {
         const ofType = entities.filter((e) => e.type === type);
         if (ofType.length === 0) return null;
+        const color = entityTypes.find((t) => t.id === type)?.color;
         return (
           <div key={type} className="mention-group">
             <span className="badge">{entityTypeLabel(type, language)}</span>
             {ofType.map((e) => (
-              <button key={e.id} type="button" onClick={() => onOpenEntity(graph, e.id)}>
+              <button
+                key={e.id}
+                type="button"
+                className="chip"
+                aria-pressed={openEntity?.graph === graph && openEntity.id === e.id}
+                onClick={() => onOpenEntity(graph, e.id)}
+              >
+                <span className="type-dot" style={{ "--type-color": color ?? "var(--color-graphFallback)" } as CSSProperties} aria-hidden="true" />
                 {entityOptionLabel(graph, e, language)}
               </button>
             ))}

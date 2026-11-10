@@ -8,7 +8,7 @@ import { excludedEntities, topConnected } from "../graph/search";
 import { EntityIcon } from "./EntityIcon";
 import { EntityPanel } from "./EntityPanel";
 import { EntitySearch } from "./EntitySearch";
-import { entityName } from "./graph-labels";
+import { entityOptionLabel } from "./graph-labels";
 import { GraphView } from "./GraphView";
 import { PathPanel } from "./PathPanel";
 import { createRequestGate } from "./requests";
@@ -74,9 +74,10 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, in
   if (graph.entities.length === 0) return <p className="card muted">{s.graphEmpty}</p>;
 
   const onExpand = (id: string) => setExpansion((current) => expand(graph, current, id));
+  // 與搜尋結果、節點標籤相同：同名的實體加上第一個相關實體的名稱（#198）
   const nameOf = (id: string) => {
     const entity = graph.entities.find((e) => e.id === id);
-    return entity === undefined ? id : entityName(entity, language);
+    return entity === undefined ? id : entityOptionLabel(graph, entity, language);
   };
   const toggleType = (id: string) =>
     setTypes((current) => {
@@ -147,7 +148,7 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, in
                   <li key={entity.id}>
                     <button type="button" className="link" onClick={() => setExpansion(only(entity.id))}>
                       {type !== undefined && <EntityIcon icon={type.icon} color={type.color} />}
-                      {entityName(entity, language)}
+                      {entityOptionLabel(graph, entity, language)}
                     </button>{" "}
                     <span className="muted">{fill(s.graphRelationCount, { count })}</span>
                   </li>

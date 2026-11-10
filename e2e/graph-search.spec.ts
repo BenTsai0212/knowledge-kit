@@ -2,7 +2,8 @@
 // 在問答中問（填進輸入框、不送出）；類型篩選；多跳路徑；手機寬度。圖譜不呼叫模型，不點畫布（展開從搜尋與面板操作）。
 import { expect, test, type Page } from "@playwright/test";
 import { openApp, openTab, s, switchIdentity, tab } from "./support/app";
-import { knowledgeModel, language, nonReviewer, reviewer } from "./support/client";
+import { access, knowledgeModel, language, nonReviewer, reviewer } from "./support/client";
+import { sameNameEntities } from "./support/dataset";
 import type { Cy } from "./support/graph";
 
 const CANVAS = ".graph-page .graph-canvas";
@@ -131,6 +132,31 @@ test("在問答中問：切到問答頁，問句填進輸入框，不送出", as
   await expect(tab(page, s.tabQa)).toHaveAttribute("aria-current", "page");
   await expect(page.getByPlaceholder(s.questionPlaceholder)).toHaveValue(s.askAboutEntity.replace("{name}", name));
   await expect(page.locator("section.answer")).toHaveCount(0);
+});
+
+// 同名的實體（#198）：節點標籤、搜尋結果與面板標題都加上第一個相關實體的名稱，兩位分得出來
+const twins = access.roles.map((r) => ({ role: r.id, group: sameNameEntities(r.id, language)[0] })).find((x) => x.group !== undefined);
+
+test("同名的實體：節點標籤與實體面板的標題分得出來", async ({ page }) => {
+  test.skip(twins === undefined, "資料集中沒有同一個身分看得到的同名實體");
+  const { role, group } = twins!;
+  const data = await openGraph(page, role);
+  const labels = group.ids.map((id) => data.labels[id]);
+  for (const label of labels) {
+    expect(label.startsWith(group.name)).toBe(true);
+    expect(label.length).toBeGreaterThan(group.name.length);
+  }
+  expect(new Set(labels).size).toBe(labels.length);
+
+  // 以名稱搜尋：每一位各有一個選項（與節點標籤相同），選了之後面板的標題也相同
+  for (const [i, id] of group.ids.entries()) {
+    await search(page).fill(group.name);
+    await expect(page.getByRole("option", { name: new RegExp(`^${escape(group.name)}`) })).toHaveCount(group.ids.length);
+    await option(page, labels[i]).click();
+    await expect.poll(async () => (await graphData(page))!.selected).toEqual([id]);
+    const panel = page.getByRole("region", { name: labels[i], exact: true });
+    await expect(panel.getByRole("heading", { level: 2 })).toHaveText(labels[i]);
+  }
 });
 
 test("類型篩選：沒勾的類型變灰，搜尋不到", async ({ page }) => {

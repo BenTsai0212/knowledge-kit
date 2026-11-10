@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Graph, SourcePassage } from "../graph/read";
-import { entityName, entityOptionLabel, entityTypeLabel, relatedEntities, relationTypeLabel, sourcesForLanguage } from "./graph-labels";
+import { entityName, entityOptionLabel, entityTypeLabel, nodeLabels, relatedEntities, relationTypeLabel, sourcesForLanguage } from "./graph-labels";
 
 const entity = (id: string, names: Record<string, string>) => ({ id, type: "person", name: `${id}-name`, names, sources: [] });
 const graph: Graph = {
@@ -38,6 +38,32 @@ describe("圖譜的顯示文字", () => {
       relations: [{ id: "r1", type: "member-of", from: "lin-1", to: "rd", sources: [] }],
     };
     expect(twins.entities.map((e) => entityOptionLabel(twins, e, "en"))).toEqual(["Lin (R&D)", "Lin (lin-2)", "R&D", "Solo"]);
+  });
+
+  it("節點標籤與搜尋結果相同：同名時加說明，不同名時只有名稱（#198）", () => {
+    const twins: Graph = {
+      entities: [entity("lin-1", { "zh-TW": "林" }), entity("lin-2", { "zh-TW": "林" }), entity("rd", { "zh-TW": "研發部" }), entity("sales", { "zh-TW": "業務部" })],
+      relations: [
+        { id: "r1", type: "member-of", from: "lin-1", to: "rd", sources: [] },
+        { id: "r2", type: "member-of", from: "lin-2", to: "sales", sources: [] },
+      ],
+    };
+    expect([...nodeLabels(twins, "zh-TW")]).toEqual([
+      ["lin-1", "林（研發部）"],
+      ["lin-2", "林（業務部）"],
+      ["rd", "研發部"],
+      ["sales", "業務部"],
+    ]);
+    // 鄰近圖只有 lin-1 與研發部：以小圖比對會漏掉另一位林，所以以完整的圖（labelGraph）比對
+    const nearby: Graph = { entities: twins.entities.filter((e) => e.id === "lin-1" || e.id === "rd"), relations: [twins.relations[0]] };
+    expect([...nodeLabels(nearby, "zh-TW")]).toEqual([
+      ["lin-1", "林"],
+      ["rd", "研發部"],
+    ]);
+    expect([...nodeLabels(nearby, "zh-TW", twins)]).toEqual([
+      ["lin-1", "林（研發部）"],
+      ["rd", "研發部"],
+    ]);
   });
 });
 

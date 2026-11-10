@@ -132,6 +132,17 @@ describe("followUps", () => {
     expect(followUps(fan, "wang", "zh-TW")).toHaveLength(MAX_FOLLOW_UPS);
   });
 
+  it("同名的實體在問句中與搜尋結果相同，加上第一個相關實體的名稱；不同名時不加（#198）", () => {
+    // lin-rd 的第一個關係是 works-on → 青翼專案
+    for (const language of ["zh-TW", "en"]) {
+      const questions = followUps(GRAPH, "lin-rd", language);
+      expect(questions).toHaveLength(2);
+      const name = language === "en" ? "Zhiming Lin (Project Bluewing)" : "林志明（青翼專案）";
+      expect(questions.every((q) => q.includes(name))).toBe(true);
+    }
+    expect(followUps(GRAPH, "wang", "zh-TW").every((q) => q.includes("王小明") && !q.includes("王小明（"))).toBe(true);
+  });
+
   it("沒有關係或找不到實體時沒有", () => {
     expect(followUps(GRAPH, "lin-sales", "zh-TW")).toEqual([]);
     expect(followUps(GRAPH, "missing", "zh-TW")).toEqual([]);

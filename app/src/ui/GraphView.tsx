@@ -6,7 +6,7 @@ import { ALL, focusOf, nearRelations, selectedOf, type Expansion } from "../grap
 import type { PathStep } from "../graph/path";
 import type { Graph } from "../graph/read";
 import { relationCounts } from "../graph/search";
-import { entityName } from "./graph-labels";
+import { nodeLabels } from "./graph-labels";
 import { DIMMED_NODE_SCALE, edgeWidth, graphStyle, nodeSize } from "./graph-style";
 import { EXPAND_MS, motionDuration, PAN_MS, watchReducedMotion } from "./motion";
 import { watchColorScheme } from "./theme";
@@ -24,6 +24,8 @@ interface Props {
   excluded?: ReadonlySet<string>;
   // 右側實體面板的小型鄰近圖（#195）：高度較低
   compact?: boolean;
+  // 判斷同名實體用的圖（#198）：鄰近圖傳入完整的可見圖；沒有傳入時用 graph
+  labelGraph?: Graph;
 }
 
 const NONE: ReadonlySet<string> = new Set();
@@ -31,8 +33,9 @@ const NONE: ReadonlySet<string> = new Set();
 const { entityTypes, relationTypes } = clientConfig.knowledgeModel;
 
 // 節點的類型（type）決定外圈色與圖示，找不到類型時由 graphStyle() 套用 graphFallback 與通用圖示；
-// 節點大小依看得到的關聯數（變灰時縮小），線粗依看得到的出處數
-function elements(graph: Graph, language: string): ElementDefinition[] {
+// 標籤與搜尋結果相同，同名的實體加上第一個相關實體的名稱（nodeLabels()）；節點大小依看得到的關聯數（變灰時縮小），線粗依看得到的出處數
+function elements(graph: Graph, language: string, labelGraph: Graph): ElementDefinition[] {
+  const labels = nodeLabels(graph, language, labelGraph);
   const relationLabel = new Map(relationTypes.map((t) => [t.id, t.label[language]]));
   const degree = relationCounts(graph);
   // 先排成一個圓作為起始位置，cose 不打亂起始位置（randomize: false），版面每次相同
@@ -41,7 +44,7 @@ function elements(graph: Graph, language: string): ElementDefinition[] {
     ...graph.entities.map((e, i) => {
       const size = nodeSize(degree.get(e.id) ?? 0);
       return {
-        data: { id: e.id, type: e.type, label: entityName(e, language), size, dimmedSize: Math.round(size * DIMMED_NODE_SCALE) },
+        data: { id: e.id, type: e.type, label: labels.get(e.id), size, dimmedSize: Math.round(size * DIMMED_NODE_SCALE) },
         position: { x: 300 * Math.cos(i * step), y: 300 * Math.sin(i * step) },
       };
     }),
@@ -161,7 +164,7 @@ function trackContainer(element: HTMLElement, cy: Core): () => void {
   };
 }
 
-export function GraphView({ graph, language, selected, path, onSelect, expansion, excluded = NONE, compact = false }: Props) {
+export function GraphView({ graph, language, selected, path, onSelect, expansion, excluded = NONE, compact = false, labelGraph = graph }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const cy = useRef<Core | null>(null);
   // tap 事件在 cytoscape 實例建立時註冊，以 ref 取得最新的 onSelect
@@ -178,7 +181,7 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
       if (cancelled || container.current === null) return;
       const instance = cytoscape({
         container: container.current,
-        elements: elements(graph, language),
+        elements: elements(graph, language, labelGraph),
         layout: { name: "cose", randomize: false, animate: false },
         style: currentStyle(reduced.current),
       });
@@ -199,7 +202,7 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
       cy.current = null;
     };
     // selected、expansion 的變化在下面的 effect 處理，不重建圖
-  }, [graph, language]);
+  }, [graph, language, labelGraph]);
 
   // 系統切換淺色／深色或減少動態效果時，重新讀出並套用到 cytoscape
   useEffect(() => {

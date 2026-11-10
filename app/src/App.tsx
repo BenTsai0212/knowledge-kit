@@ -400,6 +400,7 @@ export function App() {
               onOpenSource={onOpenSource}
               onGotoUpload={() => setView("upload")}
               onOpenEntity={onOpenEntity}
+              openEntity={entity}
             />
             <QuestionPanel language={language} disabled={retriever === null || answering} text={draft} onText={setDraft} onAsk={onAsk} />
           </div>
