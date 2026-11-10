@@ -111,7 +111,8 @@ for (const role of lessPrivileged) {
     });
     await switchIdentity(page, role);
 
-    const answer = page.locator("section.answer");
+    // 問答往下累積（#195），看最新一題
+    const answer = page.locator("section.answer").last();
     const ask = async (question: string) => {
       await page.getByPlaceholder(s.questionPlaceholder).fill(question);
       await page.getByRole("button", { name: s.askButton, exact: true }).click();

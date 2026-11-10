@@ -1,5 +1,6 @@
-// 主畫面：PGlite 在瀏覽器中載入並匯入資料集；身分與語言切換；問答（需要邀請碼）、圖譜、時間軸、上傳（後三者不呼叫模型）四個頁籤，
+// 主畫面：PGlite 在瀏覽器中載入並匯入資料集；左側導覽切換身分、語言與頁籤；問答（需要邀請碼）、圖譜、時間軸、上傳（後三者不呼叫模型）四個頁籤，
 // canReview 的身分另有待審與評測台（需要邀請碼；線上 demo 不顯示評測台）；展示模式（?mode=presentation）只顯示問答與圖譜；引用跳回原文。
+// 問答頁是左導覽、中間對話、右側原文的三欄（#195，docs/qa.md「畫面」）。
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clientConfig } from "./client/load";
 import { planConflicts, runConflicts, shouldDetectConflicts, type ConflictState } from "./conflicts/run";
@@ -17,9 +18,9 @@ import { openRetriever } from "./retrieval/retrieve";
 import { readSource, type SourceDocument } from "./sources/source";
 import { clearAccessCode, loadAccessCode, saveAccessCode } from "./ui/access-code";
 import { AccessCodeForm } from "./ui/AccessCodeForm";
-import { AnswerView, type AnswerState } from "./ui/AnswerView";
 import { EvalPage } from "./ui/EvalPage";
 import { GraphPage } from "./ui/GraphPage";
+import { Conversation, type Turn } from "./ui/Conversation";
 import { QuestionPanel } from "./ui/QuestionPanel";
 import { RetrievalNotice } from "./ui/RetrievalNotice";
 import { PREPARING, sameDisplay, type ProviderStatus } from "./ui/retrieval-notice";
@@ -32,7 +33,7 @@ import { SourcePanel } from "./ui/SourcePanel";
 import { strings } from "./client/i18n";
 import { TimelinePage } from "./ui/TimelinePage";
 import { UploadPage } from "./ui/UploadPage";
-import { Toolbar } from "./ui/Toolbar";
+import { Sidebar } from "./ui/Sidebar";
 
 const { client, access } = clientConfig;
 
@@ -54,7 +55,9 @@ export function App() {
   const [codeRejected, setCodeRejected] = useState(false);
   const [db, setDb] = useState<Database | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
-  const [answer, setAnswer] = useState<AnswerState | null>(null);
+  // 這次的問答，依序往下累積；每題獨立回答，不帶上一題（#195）
+  const [turns, setTurns] = useState<readonly Turn[]>([]);
+  const nextTurn = useRef(0);
   const [source, setSource] = useState<SourceDocument | null>(null);
   // 本次工作階段上傳的文件（時間軸加上「上傳」標籤），以及從上傳頁跳到時間軸時要捲動到的文件（#42）
   const [uploaded, setUploaded] = useState<ReadonlySet<string>>(new Set());
@@ -88,14 +91,8 @@ export function App() {
   // VectorProvider 的準備狀態：準備中的下載進度，與準備失敗、改用 keyword-hash 時的原因（docs/retrieval.md「準備中的提示」「降級」）
   const [providerStatus, setProviderStatus] = useState<ProviderStatus>(PREPARING);
   const s = strings(language);
-  const tabLabels: Record<View, string> = {
-    qa: s.tabQa,
-    graph: s.tabGraph,
-    timeline: s.tabTimeline,
-    upload: s.tabUpload,
-    review: s.tabReview,
-    evals: s.tabEvals,
-  };
+  // 回答串流中：停用送出與預設問題，不以新提問中斷前一題（#195 決定 3）
+  const answering = turns.some((t) => t.answer === undefined);
 
   useEffect(() => {
     // StrictMode 在開發時會執行兩次；先結束的那次關閉自己開的資料庫
@@ -142,11 +139,11 @@ export function App() {
 
   const retriever = useMemo(() => (db === null ? null : openRetriever(db, client.retrieval, activeProvider())), [db]);
 
-  // 切換身分或語言：清掉回答與原文，之後才到的結果一律忽略
+  // 切換身分或語言：清掉對話與原文，之後才到的結果一律忽略
   function discard() {
     questions.current.cancel();
     sources.current.cancel();
-    setAnswer(null);
+    setTurns([]);
     setSource(null);
   }
 
@@ -158,26 +155,26 @@ export function App() {
   }
 
   async function onAsk(question: string) {
-    if (retriever === null || accessCode === null) return;
-    sources.current.cancel();
-    setSource(null);
-    // 以送出當下的身分與語言提問
+    if (retriever === null || accessCode === null || answering) return;
+    // 以送出當下的身分與語言提問；只送出這一題的文字
     const ticket = questions.current.begin();
-    setAnswer({ question, streaming: "" });
+    const id = `turn-${nextTurn.current++}`;
+    const update = (turn: Turn) => setTurns((all) => all.map((t) => (t.id === id ? turn : t)));
+    setTurns((all) => [...all, { id, question, streaming: "" }]);
     const ctx = { retriever, transport: apiTransport({ accessCode }), model: client.model, displayName: client.displayName };
     const result = await ask(
       ctx,
       { identityId: identity, text: question, language },
-      (streaming) => ticket.isCurrent() && setAnswer({ question, streaming }),
+      (streaming) => ticket.isCurrent() && update({ id, question, streaming }),
       ticket.signal,
     );
     if (!ticket.isCurrent()) return;
     if (result.kind === "error" && result.error === "invalid_access_code") {
       rejectAccessCode();
-      setAnswer(null);
+      setTurns((all) => all.filter((t) => t.id !== id));
       return;
     }
-    setAnswer({ question, streaming: "", answer: result });
+    update({ id, question, streaming: "", answer: result });
   }
 
   // 以上傳時記錄的身分寫入待審；邀請碼用開始（或重試）當下的碼，沒有碼時記為失敗，輸入後可以重試
@@ -237,7 +234,7 @@ export function App() {
 
   return (
     <div className="app">
-      <Toolbar
+      <Sidebar
         language={language}
         identity={identity}
         onIdentity={(id) => {
@@ -257,20 +254,19 @@ export function App() {
                 setCodeRejected(false);
               }
         }
+        views={views(canReview)}
+        view={view}
+        onView={setView}
+        tabExtra={{ review: pending?.identity === identity && <span className="tab-count">{pending.count}</span> }}
+        questions={turns}
+        onQuestion={(id) => void document.getElementById(id)?.scrollIntoView({ block: "start" })}
       />
-      {/* 第一層：底線式的導覽列（#48） */}
-      <nav className="primary-tabs" aria-label={s.views}>
-        {views(canReview).map((id) => (
-          <button key={id} type="button" aria-current={view === id ? "page" : undefined} onClick={() => setView(id)}>
-            {tabLabels[id]}
-            {id === "review" && pending?.identity === identity && <span className="tab-count">{pending.count}</span>}
-          </button>
-        ))}
-      </nav>
       {loadFailed ? (
-        <p className="card error">{s.loadFailed}</p>
+        <main className="page">
+          <p className="card error">{s.loadFailed}</p>
+        </main>
       ) : view !== "qa" && (view !== "evals" || accessCode !== null) ? (
-        <main>
+        <main className="page">
           {db === null ? (
             <p className="card muted">{s.loading}</p>
           ) : view === "graph" ? (
@@ -349,29 +345,34 @@ export function App() {
           {source !== null && <SourcePanel language={language} source={source} onOpenSource={onOpenSource} onClose={() => (sources.current.cancel(), setSource(null))} />}
         </main>
       ) : accessCode === null ? (
-        <AccessCodeForm
-          language={language}
-          rejected={codeRejected}
-          onSubmit={(code) => {
-            saveAccessCode(code);
-            setAccessCode(code);
-            setCodeRejected(false);
-          }}
-        />
-      ) : (
-        <main>
-          {db === null && <p className="card muted">{s.loading}</p>}
-          {/* 線上 demo：提問會傳給模型供應商（#100 計畫第 8 項） */}
-          {onlineDemo.enabled && <p className="badge warning">{s.demoQaNotice}</p>}
-          <RetrievalNotice language={language} preparesModel={preparesModel(client.retrieval)} status={providerStatus} />
-          <QuestionPanel language={language} disabled={retriever === null} onAsk={onAsk} />
-          <AnswerView
+        <main className="page">
+          <AccessCodeForm
             language={language}
-            state={answer}
-            canUpload={canUpload}
-            onOpenSource={onOpenSource}
-            onGotoUpload={() => setView("upload")}
+            rejected={codeRejected}
+            onSubmit={(code) => {
+              saveAccessCode(code);
+              setAccessCode(code);
+              setCodeRejected(false);
+            }}
           />
+        </main>
+      ) : (
+        // 中間是對話與固定在下方的輸入區，右側是原文面板（關閉時中間欄變寬）
+        <main className={source === null ? "qa" : "qa with-panel"}>
+          <div className="qa-center">
+            {db === null && <p className="card muted">{s.loading}</p>}
+            {/* 線上 demo：提問會傳給模型供應商（#100 計畫第 8 項） */}
+            {onlineDemo.enabled && <p className="badge warning">{s.demoQaNotice}</p>}
+            <RetrievalNotice language={language} preparesModel={preparesModel(client.retrieval)} status={providerStatus} />
+            <Conversation
+              language={language}
+              turns={turns}
+              canUpload={canUpload}
+              onOpenSource={onOpenSource}
+              onGotoUpload={() => setView("upload")}
+            />
+            <QuestionPanel language={language} disabled={retriever === null || answering} onAsk={onAsk} />
+          </div>
           {source !== null && <SourcePanel language={language} source={source} onOpenSource={onOpenSource} onClose={() => (sources.current.cancel(), setSource(null))} />}
         </main>
       )}

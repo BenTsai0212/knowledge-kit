@@ -268,6 +268,9 @@ export interface UiStrings {
   askButton: string;
   answering: string;
   emptyAnswer: string;
+  // 三欄的問答頁（#195）：輸入框下方的說明（每題獨立回答）、左側導覽「這次的問題」
+  qaIndependent: string;
+  sessionQuestions: string;
   openSource: string;
   sourceTitle: string;
   closeSource: string;
