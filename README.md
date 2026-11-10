@@ -10,13 +10,14 @@ The demo is a prototype for demonstration, not a production system.
 
 ## Features
 
-- **Q&A with citations and refusals**: answers cite the passages they are based on, and the app refuses when the visible documents don't contain the answer ([docs/qa.md](docs/qa.md)).
+- **Q&A with citations and refusals**: the Q&A page has three columns: navigation on the left (role, language, and tabs, plus the questions asked in this session), the conversation in the middle, and the source passage or entity panel on the right. Answers cite the passages they are based on, and clicking a citation opens the source on the right. When the visible documents don't contain the answer, the app refuses and lists next steps under "You can try" (rephrase, ask about the responsible person or department, and, for roles that can upload, upload a document and ask again) ([docs/qa.md](docs/qa.md)).
+- **Mentioned entities and follow-up questions**: below each answer, "Mentioned in this answer" lists the entities it mentions. Click one to see its type, a small neighborhood graph, and its relations in the right panel, with "Ask next" questions written from each relation's question templates (filled into the input box, not sent) and a link to the graph. Only entities visible to the current role are listed ([docs/qa.md](docs/qa.md), section "畫面").
 - **Visibility levels and project permissions**: each role sees only the documents allowed by its level and projects, enforced by row-level security in PGlite ([docs/data-model.md](docs/data-model.md)).
-- **Knowledge graph and paths**: entities and relations from the documents, and the shortest path between two entities ([docs/graph.md](docs/graph.md)).
+- **Knowledge graph and paths**: entities and relations from the documents. Pick an entity with the search box or from "Most connected", then expand step by step from it while everything outside the focus is grayed out; you can filter by type. Nodes show an icon for their type, their size is the number of relations, and line width is the number of sources. The right panel lists relations and the documents an entity appears in, and lets you ask about it in Q&A. The shortest path between two entities is below the right panel ([docs/graph.md](docs/graph.md)).
 - **Timeline**: visible documents and passages by date ([docs/graph.md](docs/graph.md)).
-- **Upload and extraction**: uploaded documents are split into passages, and extracted entities and relations are written only after review ([docs/upload.md](docs/upload.md), [docs/extraction.md](docs/extraction.md)).
+- **Upload and extraction**: uploaded documents are split into passages, and the visibility level defaults to the most restrictive level the current role can choose. Extracted entities and relations are written only after review. The review page is prepared by the system first (a single candidate with the same name is suggested as a merge, and relations already in the graph are not created again) and collapsed into one line, so only the groups that need a person's decision are at the top ([docs/upload.md](docs/upload.md), [docs/extraction.md](docs/extraction.md)).
 - **Conflicting information**: detects when an uploaded document says something different from existing passages ([docs/conflicts.md](docs/conflicts.md)).
-- **Evaluation page**: runs a question bank and scores citations, key points, refusals, and leaks ([docs/evals.md](docs/evals.md)).
+- **Evaluation page**: runs a question bank and scores citations, key points, refusals, and leaks. It is a tool for the people delivering the demo, shown only when you add `?tools=evals` to the URL, and only to roles that can review ([docs/evals.md](docs/evals.md), section "開啟評測台").
 - **Multilingual interface and retrieval**: interface text comes from translation files, and retrieval handles each language's script ([docs/client-config.md](docs/client-config.md), [docs/retrieval.md](docs/retrieval.md)). Optionally, in-browser semantic vectors (`multilingual-e5-small`) enable cross-language retrieval: ask in one language and retrieve documents written in another ([docs/retrieval.md](docs/retrieval.md#語意向量multilingual-e5-small), section "語意向量").
 - **Theme colors and dark mode**: colors come from the settings, with a dark palette for `prefers-color-scheme: dark` ([docs/client-config.md](docs/client-config.md)).
 
@@ -41,7 +42,7 @@ Cross-language retrieval in the fictional multilingual client `clients/kestrova-
 **Try it:** <https://knowledge-kit-demo.bentsai0212.workers.dev>
 
 - A public trial code is already filled in; just submit it. All visitors share its daily question limit, so the quota may run out for the day.
-- The evaluation page is hidden, because one run makes many model calls.
+- There is no evaluation page, even with `?tools=evals`, because one run makes many model calls.
 - Questions and uploaded content are sent to the model provider. **Don't enter or upload personal or confidential information.**
 - Uploaded documents exist only in your browser and disappear when you reload the page.
 - **Presentation mode**: add `?mode=presentation` to the URL to show only Q&A and the graph, which suits showing the demo to others ([docs/qa.md](docs/qa.md#展示模式)).
@@ -57,7 +58,7 @@ npm install
 npm run dev
 ```
 
-This starts the reference scenario (`client/`) with the Vite dev server. Browsing the graph, timeline, and documents works without a key. To ask questions, run the Worker locally with your own Anthropic API key:
+This starts the reference scenario (`client/`) with the Vite dev server. Browsing the graph, timeline, and documents works without a key. The evaluation page appears when you add `?tools=evals` to the URL. To ask questions, run the Worker locally with your own Anthropic API key:
 
 ```bash
 cp .dev.vars.example .dev.vars
@@ -121,6 +122,7 @@ Most documents in `docs/`, as well as `AGENTS.md` and the code comments, are in 
 ## Status and roadmap
 
 - **v1**: the features above (phase 1 of [RFC 0001](docs/rfcs/0001-project-charter.md)) and the online demo. See [CHANGELOG.md](CHANGELOG.md).
+- **v2.1**: product experience: the three-column Q&A page, mentioned entities and follow-up questions, step-by-step graph expansion, a review page prepared by the system, and next steps when nothing is found. See [CHANGELOG.md](CHANGELOG.md).
 - **v2**: cross-language retrieval with optional in-browser semantic vectors (`multilingual-e5-small`), tested with the fictional multilingual client `clients/kestrova-demo/` (Traditional Chinese, English, and Japanese, each fact written in only one language). Its 18 cross-language questions across six directions scored 18/18 for both citations and answers ([evaluation results](clients/kestrova-demo/evals/README.md#驗收結果), [RFC 0002](docs/rfcs/0002-public-release.md)). See [CHANGELOG.md](CHANGELOG.md).
 
 ## License

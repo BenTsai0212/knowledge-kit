@@ -10,13 +10,14 @@ demo 是展示用的原型，不是正式系統。
 
 ## 功能
 
-- **附引用的問答與拒答**：回答附上依據的段落；看得到的文件中沒有答案時拒答（[docs/qa.md](docs/qa.md)）。
+- **附引用的問答與拒答**：問答頁是三欄：左側導覽（身分、語言與頁籤，另列這次問過的問題）、中間依序累積的對話、右側原文或實體面板。回答附上依據的段落，點引用在右側打開原文；看得到的文件中沒有答案時拒答，下方列出「可以試試」的下一步（換個說法、改問負責的人或部門，能上傳時多一項上傳後再問）（[docs/qa.md](docs/qa.md)）。
+- **回答提到與接著問**：回答下方列出回答提到的實體，點了在右側面板看它的類型、鄰近的小圖與關係，並以各關係的問句範本給出「接著問」（填進輸入框，不直接送出），或到圖譜中查看。只列出目前身分看得到的實體（[docs/qa.md](docs/qa.md)「畫面」）。
 - **可見等級與專案權限**：每個角色只看得到等級與專案允許的文件，由 PGlite 的 row-level security 執行（[docs/data-model.md](docs/data-model.md)）。
-- **知識圖譜與路徑**：文件中的實體與關係，以及兩個實體之間的最短路徑（[docs/graph.md](docs/graph.md)）。
+- **知識圖譜與路徑**：文件中的實體與關係。以搜尋框或「關聯最多」選一個實體，從它逐步展開，聚焦以外的部分變灰；可依類型篩選。節點以類型圖示區分，大小是關聯數、線粗是出處數；右側面板列出關係與出現的文件，也能在問答中問它。兩個實體之間的最短路徑在右側面板下方（[docs/graph.md](docs/graph.md)）。
 - **時間軸**：依日期列出看得到的文件與段落（[docs/graph.md](docs/graph.md)）。
-- **上傳與萃取**：上傳的文件切成段落，萃取出的實體與關係經過審核才寫入（[docs/upload.md](docs/upload.md)、[docs/extraction.md](docs/extraction.md)）。
+- **上傳與萃取**：上傳的文件切成段落，可見等級預設為目前身分能選的最嚴格等級。萃取出的實體與關係經過審核才寫入；待審頁由系統先準備（同名只有一個候選時預先帶入合併、圖譜已有的關係不重複建立），收合成一行，只把需要人確認的組放在最上面（[docs/upload.md](docs/upload.md)、[docs/extraction.md](docs/extraction.md)）。
 - **說法不同的偵測**：上傳的文件與既有段落說法不同時標示出來（[docs/conflicts.md](docs/conflicts.md)）。
-- **評測台**：執行題庫，為引用、關鍵重點、拒答與滲漏評分（[docs/evals.md](docs/evals.md)）。
+- **評測台**：執行題庫，為引用、關鍵重點、拒答與滲漏評分。是交付方用的工具，網址加上 `?tools=evals` 時才顯示，只給能審核的身分（[docs/evals.md](docs/evals.md)「開啟評測台」）。
 - **多語言介面與檢索**：介面文字來自翻譯檔，檢索依各語言的文字處理（[docs/client-config.md](docs/client-config.md)、[docs/retrieval.md](docs/retrieval.md)）。可選用瀏覽器內的語意向量（`multilingual-e5-small`）跨語言檢索：以一種語言發問，檢索另一種語言的文件（[docs/retrieval.md](docs/retrieval.md#語意向量multilingual-e5-small)「語意向量」）。
 - **主題色與深色模式**：顏色來自設定，`prefers-color-scheme: dark` 時改用深色配色（[docs/client-config.md](docs/client-config.md)）。
 
@@ -41,7 +42,7 @@ demo 是展示用的原型，不是正式系統。
 **試用：**<https://knowledge-kit-demo.bentsai0212.workers.dev>
 
 - 已預先填入公開的試用碼，直接送出即可。所有訪客共用每日的提問次數，當天的額度可能用完。
-- 評測台隱藏，因為執行一次會呼叫很多次模型。
+- 沒有評測台（網址加上 `?tools=evals` 也一樣），因為執行一次會呼叫很多次模型。
 - 問題與上傳的內容會傳給模型供應商。**不要輸入或上傳個人或機密資料。**
 - 上傳的文件只存在你的瀏覽器，重新整理即消失。
 - **展示模式**：網址加上 `?mode=presentation` 時只顯示問答與圖譜，適合對外展示（[docs/qa.md](docs/qa.md#展示模式)）。
@@ -57,7 +58,7 @@ npm install
 npm run dev
 ```
 
-以 Vite 開發伺服器啟動參考情境（`client/`）。瀏覽圖譜、時間軸與文件不需要金鑰。要問答時，用自己的 Anthropic API 金鑰在本機執行 Worker：
+以 Vite 開發伺服器啟動參考情境（`client/`）。瀏覽圖譜、時間軸與文件不需要金鑰。評測台在網址加上 `?tools=evals` 時顯示。要問答時，用自己的 Anthropic API 金鑰在本機執行 Worker：
 
 ```bash
 cp .dev.vars.example .dev.vars
@@ -121,6 +122,7 @@ npx wrangler dev
 ## 狀態與規劃
 
 - **v1**：上面的功能（[RFC 0001](docs/rfcs/0001-project-charter.md) 第 1 階段）與線上 demo。見[變更紀錄](CHANGELOG.md)。
+- **v2.1**：產品體驗：問答頁的三欄版面、回答提到與接著問、圖譜逐步展開、待審頁由系統先準備、查不到時的下一步。見[變更紀錄](CHANGELOG.md)。
 - **v2**：跨語言檢索，可選用瀏覽器內的語意向量（`multilingual-e5-small`），以虛構的多語言客戶 `clients/kestrova-demo/`（繁中、英文、日文，每個事實只寫在一種語言）實測：跨語言題六個方向共 18 題，引用與答案都 18/18（[評測結果](clients/kestrova-demo/evals/README.md#驗收結果)、[RFC 0002](docs/rfcs/0002-public-release.md)）。見[變更紀錄](CHANGELOG.md)。
 
 ## 授權

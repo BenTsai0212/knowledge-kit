@@ -51,8 +51,8 @@ Based on sections B and C of the requirements checklist and the data inventory.
 
 **`knowledge-model.json`**
 
-- Entity types: per B2, usually 3–6. Choose a color for each, with contrast ≥ 3:1 against both light and dark backgrounds (`check:client` checks this).
-- Relation types: per B3.
+- Entity types: per B2, usually 3–6. Choose a color for each, with contrast ≥ 3:1 against both light and dark backgrounds (`check:client` checks this), and an icon from the fixed icon set (`icon`, unique within the client, checked by `check:client`; "`entityTypes[]`" in [docs/client-config.md](../../client-config.md)).
+- Relation types: per B3. For each relation, write the "follow-up question" templates (`questions.outgoing` and `questions.incoming`, one per language) as natural questions in that language; the only parameters are `{name}` (required) and `{type}`. The rules are in "問句範本" in [docs/client-config.md](../../client-config.md).
 - Merge strategy: `review` by default; use `auto` only for types whose names are known to be unique within the client (for example departments) (B5).
 
 **Demo scenario design**: per A3 and A4, design 3–5 scenarios (one role per scenario, 2–4 default questions each). Write them as a list first; answer passages are filled in at step 5. At least one scenario must show "the same question gives different answers for different roles" (each scenario has one role, so you can design one high-privilege scenario and switch roles during the demo). Every default question needs question text in every language in `client.json`; what it needs for answer passages depends on `retrieval.provider` (checked by `npm run check:clients`; see "客戶檢查" in [docs/client-config.md](../../client-config.md)):
@@ -137,7 +137,7 @@ For semantic-vector clients, Playwright blocks the model download, so the page f
 This step needs the real key and is run by a person locally; the agent prepares the commands and a results table, then stops.
 
 1. Raise `DAILY_LIMIT` in `.dev.vars` to cover both runs combined. Use the evaluation page's confirmation dialog ("Up to N calls", shown when you press "Start evaluation"; you can check the number and cancel) for the calls each run needs; adding setting B or model grading needs more calls. Restart `npx wrangler dev` after changing `.dev.vars`.
-2. Run `KK_CLIENT=<name> npm run build`, then `npx wrangler dev`, and open the evaluation page as a `canReview` role. With semantic vectors, wait until the "downloading model" notice ends and confirm there is no fallback notice (item 6 of [Acceptance metrics](acceptance-metrics.md)).
+2. Run `KK_CLIENT=<name> npm run build`, then `npx wrangler dev`, open `/?tools=evals` (without this parameter the evaluation page is not shown; "開啟評測台" in [docs/evals.md](../../evals.md)), and open the evaluation page as a `canReview` role. With semantic vectors, wait until the "downloading model" notice ends and confirm there is no fallback notice (item 6 of [Acceptance metrics](acceptance-metrics.md)).
 3. Following items 2 and 3 of [Acceptance metrics](acceptance-metrics.md), run twice: first with default settings and key-point scoring; then run it again, or once with model grading. Both runs must meet the thresholds. To compare retrieval settings, you can add setting B side by side in the second run ("Differences between two retrieval settings" in Acceptance metrics); this is optional.
 4. Record the four metrics, the number of calls and the cost, and why each failed question failed. After Checkpoint 3 passes, record the results in the client's `evals/README.md` (for example "驗收結果" in `clients/kestrova-demo/evals/README.md`).
 
