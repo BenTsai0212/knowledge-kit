@@ -147,7 +147,8 @@ npm run check:client
 | `onStatus` | `danger`、`warning`、`success`、`info` | 4.5:1 |
 | `text` | `mark`；主色的淡色底（12%，選取中的項目） | 4.5:1 |
 | `text` | 各可見等級的淡色底（`access.json` 的 `color` 14%，等級標籤） | 4.5:1 |
-| 實體類型的 `color`（圖譜節點，非文字） | `background`、`surface` | 3:1 |
+| 實體類型的 `color`（圖譜節點的外圈與圖示，非文字） | `background`、`surface` | 3:1 |
+| `text`（選取的節點的圖示，非文字） | 各實體類型的淡色底（`color` 14% + `surface`） | 3:1 |
 
 錯誤訊息指出配色、欄位與背景，例如 `theme.json /darkColors/textMuted：與 surface 的對比 3.9:1，需要 4.5:1`；可見等級與實體類型會指出是哪一個，例如 `knowledge-model.json /entityTypes/0/color：「人員」（person）與 darkColors 的 background 對比 2.5:1，需要 3:1`。對比值無條件捨去到小數一位。
 
@@ -163,7 +164,8 @@ npm run check:client
 | --- | --- | --- | --- |
 | `id` | 是 | `Id`，不可重複 | 例如 `person`、`project` |
 | `label` | 是 | `LocalizedText` | 顯示名稱 |
-| `color` | 是 | `#RRGGBB` | 圖譜中節點的顏色（[docs/graph.md](graph.md)），淺色與深色模式共用，與兩組 `background`、`surface` 的對比都要 ≥ 3:1（[對比度](#對比度)）。沒有預設值：類型由客戶定義 |
+| `color` | 是 | `#RRGGBB` | 圖譜中節點外圈與圖示的顏色（[docs/graph.md](graph.md)），淺色與深色模式共用，與兩組 `background`、`surface` 的對比都要 ≥ 3:1（[對比度](#對比度)）。沒有預設值：類型由客戶定義 |
+| `icon` | 否 | 固定圖示集的名稱，預設 `generic` | 圖譜節點與圖例的圖示：`person`（人像）、`team`（多人）、`building`（建築）、`folder`（資料夾）、`box`（產品）、`factory`（工廠、據點）、`handshake`（合作）、`hospital`（醫院）、`gavel`（標案）、`document`（文件、規章）、`generic`（通用）。同一個客戶內不可重複（`generic` 除外），讓類型不只靠顏色區分。圖示集在 `app/src/ui/entity-icons.ts`，新增圖示時一併改 Schema 的 `enum` |
 | `aliasRules.ignoreCase` | 是 | boolean | 比對名稱與別名時忽略大小寫 |
 | `aliasRules.normalizeWidth` | 是 | boolean | 比對前把全形英數與符號轉為半形 |
 | `aliasRules.ignoreWhitespace` | 是 | boolean | 比對時忽略空白 |
@@ -267,7 +269,7 @@ JSON Schema 無法參照另一個檔的值，以下由 `scripts/check-client.mjs
 `app/src/client/load.ts` 在 build 時以 JSON import（`@client/…`，見[多客戶與切換](#多客戶與切換)）讀入 5 個設定檔，匯出型別為 `ClientConfig` 的 `clientConfig`。翻譯檔由 `app/src/client/i18n.ts` 讀入（見[翻譯檔](#翻譯檔clienti18n)）。
 
 - 執行時不做 ajv 驗證，ajv 不打包進前端；驗證只在 `npm run check:client` 與 CI 執行。
-- 省略的欄位在這裡補上預設值，讀取端拿到的型別一律是必填。目前有 `mergeStrategy`（省略時補成 `review`）、`retrieval` 的各欄位（依 `provider` 而不同，在 `app/src/retrieval/providers.ts` 的 `RETRIEVAL_DEFAULTS`）、`upload` 的各欄位（`UPLOAD_DEFAULTS`）、`conflicts` 的各欄位（`CONFLICTS_DEFAULTS`）與 `evals.thresholds` 的各欄位（`EVAL_THRESHOLDS_DEFAULTS`）；預設值與 Schema 的 `default` 相同（`retrieval` 比對 `keyword-hash` 的列），由 `load.test.ts` 比對。
+- 省略的欄位在這裡補上預設值，讀取端拿到的型別一律是必填。目前有 `mergeStrategy`（省略時補成 `review`）、`icon`（省略時補成 `generic`）、`retrieval` 的各欄位（依 `provider` 而不同，在 `app/src/retrieval/providers.ts` 的 `RETRIEVAL_DEFAULTS`）、`upload` 的各欄位（`UPLOAD_DEFAULTS`）、`conflicts` 的各欄位（`CONFLICTS_DEFAULTS`）與 `evals.thresholds` 的各欄位（`EVAL_THRESHOLDS_DEFAULTS`）；預設值與 Schema 的 `default` 相同（`retrieval` 比對 `keyword-hash` 的列），由 `load.test.ts` 比對。
 
 ## 多客戶與切換
 

@@ -77,13 +77,19 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
 | --- | --- |
 | `ui/GraphPage.tsx` | 讀取圖譜；切換身分或語言時重新讀取，之後才回來的舊結果忽略（`ui/requests.ts`）；選取的節點已看不到時清除；從問答頁的「在圖譜中查看」打開時選取該實體（`initialSelected`，看不到時不選取，#195） |
 | `ui/GraphView.tsx`（鄰近圖） | 問答頁右側的實體面板也用它畫以實體為中心的小圖（`compact`，見 [docs/qa.md](qa.md)「回答提到」） |
-| `ui/GraphView.tsx` | 以 cytoscape 畫圖：節點依實體類型著色（`knowledge-model.json` 的 `color`），標籤是 `names[介面語言]`，邊的標籤是關係類型的 `label` |
-| `ui/graph-style.ts` | cytoscape 的樣式：從 `theme.json` 的 CSS 變數讀出顏色（找不到實體類型時用 `graphFallback`），標籤加上背景色的外框；系統切換淺色／深色時由 `GraphView.tsx` 重新套用（[client-config.md](client-config.md)「`theme.json`」） |
+| `ui/GraphView.tsx` | 以 cytoscape 畫圖：節點帶實體類型、看得到的關聯數（大小），邊帶看得到的出處數（線粗）；標籤是 `names[介面語言]`，邊的標籤是關係類型的 `label` |
+| `ui/graph-style.ts` | cytoscape 的樣式（見下方「節點與線」）：從 `theme.json` 的 CSS 變數讀出顏色（找不到實體類型時用 `graphFallback` 與通用圖示），標籤加上背景色的外框；系統切換淺色／深色時由 `GraphView.tsx` 重新套用（[client-config.md](client-config.md)「`theme.json`」） |
+| `ui/entity-icons.ts`、`ui/EntityIcon.tsx` | 實體類型的固定圖示集（自畫的 24×24 SVG path，不使用圖示套件）：cytoscape 節點以 SVG data URI 當背景圖，圖例以同一份 path 畫 `<svg>`（`aria-hidden`，旁邊一律有類型名稱） |
 | `ui/EntityPanel.tsx` | 點節點時顯示類型、名稱、相關實體（可點）與出處段落；出處以 `readSource()` 打開原文 |
 | `ui/PathPanel.tsx` | 多跳路徑：選起點與終點，在圖上標示路徑，逐步列出每個關係與它的出處；找不到時顯示固定文字「找不到這兩個實體之間的路徑。」，不區分原因 |
 | `ui/TimelinePage.tsx` | 時間軸：依日期由新到舊列出介面語言的文件與看得到的段落，可依實體篩選；日期直接顯示 `YYYY-MM-DD` 字串，沒有日期時顯示「未註明日期」；本次工作階段上傳的文件加上「上傳」標籤，從上傳頁跳過來時捲動到該文件並標示後淡出（`animationend` 時結束；減少動態效果時不淡出）（[docs/upload.md](upload.md)） |
 | `ui/graph-labels.ts` | 實體、類型、關係類型的顯示文字與相關實體；出處的語言（`sourcesForLanguage()`，見下方）；下拉選單中顯示名稱相同的實體（兩位林志明）加上第一個相關實體的名稱以便區分 |
 
+- **節點與線**（#199）：
+  - 節點是白底（`surface`，深色模式是深色底）圓形，外圈與圖示是實體類型的 `color`，圖示是 `knowledge-model.json` 的 `icon`（[client-config.md](client-config.md)「`entityTypes[]`」）；圖例是圖示＋類型名稱。
+  - 節點大小＝看得到的關聯數（`nodeSize()`：32px 起，每個關聯加 4px，最多 64px）；線粗＝看得到的出處數（`edgeWidth()`：1 個 1.75px，每多一個加 0.75px，最多 5 個）。
+  - 選取的節點：類型色 14% 的淡色底、陰影（cytoscape 的 `underlay`），圖示改用 `text` 色（深色模式中類型色放在淡色底上不足 3:1）。對比由 `check:client` 檢查（[client-config.md](client-config.md)「對比度」）。
+  - 類型不只靠顏色區分：同一個客戶內每種類型的圖示不同（`check:client` 檢查）。
 - **cytoscape**：以 `import("cytoscape")` 動態載入，build 時分成獨立的 chunk（約 435 KB，gzip 約 138 KB），只用問答的人不必下載。cytoscape 自帶型別，不安裝 `@types/cytoscape`（ADR 0001「修訂」）。
 - **版面**：內建的 `cose`（力導向）。節點先依順序排成一個圓作為起始位置，並設 `randomize: false`，所以同樣的資料每次的版面相同；不需要額外的版面套件。
 - **出處優先顯示介面語言**（#36）：節點詳細資訊與多跳路徑的出處，都以 `ui/graph-labels.ts` 的 `sourcesForLanguage()` 決定：

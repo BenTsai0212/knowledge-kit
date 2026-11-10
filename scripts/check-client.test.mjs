@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -94,6 +94,12 @@ describe("check-client", () => {
       })),
       { file: "knowledge-model.json", path: "/entityTypes/0/color", message: "「人員」（person）與 darkColors 的 background 對比 2.5:1，需要 3:1" },
       { file: "knowledge-model.json", path: "/entityTypes/0/color", message: "「人員」（person）與 darkColors 的 surface 對比 2.2:1，需要 3:1" },
+      // 選取的節點：圖示改用 text，放在類型色 14% 的淡色底上
+      ...[["部門", "team", 1], ["專案", "project", 2]].map(([name, id, i]) => ({
+        file: "knowledge-model.json",
+        path: `/entityTypes/${i}/color`,
+        message: `「${name}」（${id}）的選取底色（14% + surface）與 darkColors 的 text 對比 2.9:1，需要 3:1`,
+      })),
     ]);
   });
 
@@ -169,6 +175,38 @@ describe("check-client", () => {
     files["knowledge-model.json"].entityTypes[0].color = "blue";
     delete files["knowledge-model.json"].entityTypes[1].color;
     expect(validateClient(files).map((e) => e.path)).toEqual(["/entityTypes/0/color", "/entityTypes/1"]);
+  });
+
+  it("實體類型的圖示只接受固定圖示集，省略時預設 generic", () => {
+    const files = example();
+    files["knowledge-model.json"].entityTypes[0].icon = "rocket";
+    delete files["knowledge-model.json"].entityTypes[1].icon;
+    expect(validateClient(files).map((e) => e.path)).toEqual(["/entityTypes/0/icon"]);
+    expect(schema("knowledge-model.schema.json").properties.entityTypes.items.properties.icon.default).toBe("generic");
+  });
+
+  it("同一個客戶內實體類型的圖示不重複，generic（含省略）除外", () => {
+    const files = example();
+    const types = files["knowledge-model.json"].entityTypes;
+    types[1].icon = types[0].icon;
+    expect(validateClient(files)).toEqual([
+      { file: "knowledge-model.json", path: "/entityTypes/1/icon", message: `icon ${types[0].icon} 重複` },
+    ]);
+    types[0].icon = "generic";
+    delete types[1].icon;
+    delete types[2].icon;
+    expect(validateClient(files)).toEqual([]);
+  });
+
+  it("client/ 與 clients/ 的每種實體類型都設定了圖示（不是 generic）", () => {
+    const root = new URL("../", import.meta.url);
+    const dirs = ["client/", ...readdirSync(new URL("clients/", root), { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => `clients/${d.name}/`)];
+    expect(dirs.length).toBeGreaterThan(1);
+    for (const dir of dirs) {
+      const model = readJson(new URL(`${dir}knowledge-model.json`, root));
+      const generic = model.entityTypes.filter((t) => (t.icon ?? "generic") === "generic").map((t) => `${dir} ${t.id}`);
+      expect(generic).toEqual([]);
+    }
   });
 
   it("可見等級的顏色必填，格式為 #RRGGBB", () => {

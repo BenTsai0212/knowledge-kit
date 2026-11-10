@@ -21,6 +21,11 @@
             "type": "string",
             "pattern": "^#[0-9A-Fa-f]{6}$"
           },
+          "icon": {
+            "description": "圖譜節點與圖例的圖示，從固定圖示集挑選（app/src/ui/entity-icons.ts）；省略時為 generic",
+            "enum": ["person", "team", "building", "folder", "box", "factory", "handshake", "hospital", "gavel", "document", "generic"],
+            "default": "generic"
+          },
           "aliasRules": {
             "description": "比對名稱與別名前的正規化",
             "type": "object",

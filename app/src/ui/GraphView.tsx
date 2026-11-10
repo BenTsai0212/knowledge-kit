@@ -5,7 +5,7 @@ import { clientConfig } from "../client/load";
 import type { PathStep } from "../graph/path";
 import type { Graph } from "../graph/read";
 import { entityName } from "./graph-labels";
-import { graphStyle } from "./graph-style";
+import { edgeWidth, graphStyle, nodeSize } from "./graph-style";
 import { watchColorScheme } from "./theme";
 
 interface Props {
@@ -21,22 +21,27 @@ interface Props {
 
 const { entityTypes, relationTypes } = clientConfig.knowledgeModel;
 
-// 找不到實體類型時不設 color，由 graphStyle() 套用 theme.json 的 graphFallback
+// 節點的類型（type）決定外圈色與圖示，找不到類型時由 graphStyle() 套用 graphFallback 與通用圖示；
+// 節點大小依看得到的關聯數，線粗依看得到的出處數
 function elements(graph: Graph, language: string): ElementDefinition[] {
-  const color = new Map(entityTypes.map((t) => [t.id, t.color]));
   const relationLabel = new Map(relationTypes.map((t) => [t.id, t.label[language]]));
+  const degree = new Map<string, number>();
+  for (const r of graph.relations) for (const id of [r.from, r.to]) degree.set(id, (degree.get(id) ?? 0) + 1);
   // 先排成一個圓作為起始位置，cose 不打亂起始位置（randomize: false），版面每次相同
   const step = (2 * Math.PI) / Math.max(graph.entities.length, 1);
   return [
-    ...graph.entities.map((e, i) => {
-      const typeColor = color.get(e.type);
-      return {
-        data: { id: e.id, label: entityName(e, language), ...(typeColor === undefined ? {} : { color: typeColor }) },
-        position: { x: 300 * Math.cos(i * step), y: 300 * Math.sin(i * step) },
-      };
-    }),
+    ...graph.entities.map((e, i) => ({
+      data: { id: e.id, type: e.type, label: entityName(e, language), size: nodeSize(degree.get(e.id) ?? 0) },
+      position: { x: 300 * Math.cos(i * step), y: 300 * Math.sin(i * step) },
+    })),
     ...graph.relations.map((r) => ({
-      data: { id: `relation:${r.id}`, source: r.from, target: r.to, label: relationLabel.get(r.type) ?? r.type },
+      data: {
+        id: `relation:${r.id}`,
+        source: r.from,
+        target: r.to,
+        label: relationLabel.get(r.type) ?? r.type,
+        width: edgeWidth(r.sources.length),
+      },
     })),
   ];
 }
@@ -44,7 +49,7 @@ function elements(graph: Graph, language: string): ElementDefinition[] {
 // 目前生效的 CSS 變數（淺色或深色）
 function currentStyle() {
   const style = getComputedStyle(document.documentElement);
-  return graphStyle((name) => style.getPropertyValue(name));
+  return graphStyle((name) => style.getPropertyValue(name), entityTypes);
 }
 
 function markPath(cy: Core, path: PathStep[] | null) {

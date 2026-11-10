@@ -249,6 +249,13 @@ function checkReferences(valid) {
   if (model) {
     const file = "knowledge-model.json";
     unique(file, "/entityTypes", model.entityTypes);
+    // 類型不只靠顏色區分（WCAG 1.4.1）：同一個客戶內的圖示不重複，通用圖示（generic 或省略）除外
+    const icons = new Set();
+    model.entityTypes.forEach((t, i) => {
+      if ((t.icon ?? "generic") === "generic") return;
+      if (icons.has(t.icon)) errors.push({ file, path: `/entityTypes/${i}/icon`, message: `icon ${t.icon} 重複` });
+      icons.add(t.icon);
+    });
     unique(file, "/relationTypes", model.relationTypes);
     const entityTypes = ids(model.entityTypes);
     model.relationTypes.forEach((rel, i) => {
@@ -292,9 +299,11 @@ export const TEXT_CONTRAST = 4.5;
 export const GRAPHIC_CONTRAST = 3;
 const SCHEMES = ["colors", "darkColors"];
 const STATUS = ["danger", "warning", "success", "info"];
-// app.css 的淡色比例：提示框與可見等級標籤 14%，選取中的項目 12%
+// app.css 的淡色比例：提示框與可見等級標籤 14%，選取中的項目 12%；
+// 圖譜中選取的節點是類型色 14% 的淡色底（app/src/ui/graph-style.ts 的 SELECTED_NODE_TINT）
 const TINT = 14;
 const SELECTED_TINT = 12;
+const SELECTED_NODE_TINT = 14;
 
 const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 
@@ -364,8 +373,18 @@ function checkContrast(valid) {
         });
       }
     });
-    // 圖譜的節點：實體類型的顏色放在頁面或面板的背景上
+    // 圖譜的節點：實體類型色的外圈與圖示放在頁面或面板的背景上；
+    // 選取時圖示改用 text，放在類型色的淡色底上（深色模式中類型色在淡色底上不足 3:1）
     valid["knowledge-model.json"]?.entityTypes.forEach((type, i) => {
+      const selected = mix(type.color, SELECTED_NODE_TINT, c.surface);
+      const value = contrast(c.text, selected);
+      if (value < GRAPHIC_CONTRAST) {
+        errors.push({
+          file: "knowledge-model.json",
+          path: `/entityTypes/${i}/color`,
+          message: `${label(type)}的選取底色（${SELECTED_NODE_TINT}% + surface）與 ${scheme} 的 text 對比 ${ratio(value)}，需要 ${GRAPHIC_CONTRAST}:1`,
+        });
+      }
       for (const bg of ["background", "surface"]) {
         const value = contrast(type.color, c[bg]);
         if (value < GRAPHIC_CONTRAST) {
