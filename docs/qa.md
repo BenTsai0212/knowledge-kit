@@ -182,13 +182,19 @@ Rules:
 
 | 元件 | 內容 |
 | --- | --- |
-| `App.tsx` | 狀態：資料庫、邀請碼、身分、語言、目前的回答、開啟的原文 |
+| `App.tsx` | 狀態：資料庫、邀請碼、身分、語言、這次的問答（依序累積）、開啟的原文 |
 | `ui/AccessCodeForm.tsx` | 輸入邀請碼（`type="password"`）；碼被拒時顯示原因 |
-| `ui/Toolbar.tsx` | 身分切換（`access.json` 的角色，標示「展示用權限」）、語言切換、「虛構資料」標示、更換邀請碼 |
-| `ui/QuestionPanel.tsx` | 依情境分組的預設問題（標示情境的角色）、自由提問（500 字元上限） |
-| `ui/AnswerView.tsx` | 串流文字；結束後引用顯示成可點的編號；標示拒答（下方附「可以試試」的下一步，見「拒答」）、未附出處、不完整與錯誤訊息 |
-| `ui/SourcePanel.tsx` | 原文：文件標題與該身分看得到的段落，標示被引用的段落並捲動到該處；段落旁有說法不同與取代的標示（`ui/PassageMarks.tsx`，點擊後打開另一段，見 [docs/conflicts.md](conflicts.md)「畫面」） |
+| `ui/Sidebar.tsx` | 左側導覽：公司名稱、「虛構資料」標示、身分切換（`access.json` 的角色，標示「展示用權限」）、語言切換、更換邀請碼、頁籤；問答頁另列「這次的問題」，點了捲到該題 |
+| `ui/Conversation.tsx` | 中間的對話：每一題一個 `AnswerView`，依序往下累積；新的一題出現時捲到該題 |
+| `ui/QuestionPanel.tsx` | 固定在下方的輸入區：一行可橫向捲動的預設問題（依情境分組、標示情境的角色）、自由提問（500 字元上限）、「每一題都是獨立回答」的說明 |
+| `ui/AnswerView.tsx` | 一題：串流文字；結束後引用顯示成可點的編號；標示拒答（下方附「可以試試」的下一步，見「拒答」）、未附出處、不完整與錯誤訊息 |
+| `ui/SourcePanel.tsx` | 右側面板的原文（其他頁籤顯示在頁面下方）：文件標題與該身分看得到的段落，標示被引用的段落並捲動到該處；段落旁有說法不同與取代的標示（`ui/PassageMarks.tsx`，點擊後打開另一段，見 [docs/conflicts.md](conflicts.md)「畫面」） |
 
+- **版面**（#195）：問答頁是左導覽、中間對話、右側面板的三欄。
+  - `app.css`：`.app` 是高度 `100dvh` 的 grid（左導覽 15rem＋其餘），各欄自己捲動，整頁不捲動；問答頁的 `main.qa` 再分成中間與右側面板（`minmax(20rem, 28rem)`），右側面板關閉時中間欄變寬。中間欄是 flex 直列，對話區 `flex: 1` 並自己捲動，輸入區放在最後（不用 `position: fixed`，不會蓋住對話）。
+  - 其他頁籤（圖譜、時間軸、上傳、待審、評測台）只移到左側導覽，內容佔中間與右側兩欄，頁面本身的版面不變。
+  - **手機寬度**（`max-width: 640px`）：改成單欄、整頁捲動，順序是左導覽、對話、輸入區、右側面板；點引用時原文面板捲動到引用的段落。正式的手機設計之後另外處理。
+  - 不寫 ADR：只是畫面版面的調整，不改技術選擇或資料流程（#195 決定）。
 - **資料庫**：頁面載入時在瀏覽器中以 PGlite 建立記憶體資料庫，執行 migration 並匯入資料集（與測試相同的 `openDatabase()`＋`seedDataset()`）。載入完成前預設問題不能按。
   - 本機量測（`npm run build`＋`npx wrangler dev`、Chrome）：
     - 靜態檔：JS 約 0.9 MB（gzip 約 230 KB）、`pglite.wasm` 約 10 MB（gzip 約 3.5 MB）、`pglite.data` 約 6.3 MB（gzip 約 2.1 MB）。
@@ -196,10 +202,10 @@ Rules:
   - `vite.config.ts` 設 `optimizeDeps.exclude: ["@electric-sql/pglite"]`：開發伺服器預先打包會改變 PGlite 載入 wasm 與資料檔的路徑。
 - **邀請碼**：存在 React state 與 `sessionStorage`（`ui/access-code.ts`），關閉分頁就清除；不放會保留到下次開啟的瀏覽器儲存（`access-code.test.ts` 掃描 `app/src/`），也不放網址（只放在 `X-Access-Code` header）。收到 `invalid_access_code` 時清除並回到輸入畫面。
 - **提問**：預設問題與自由提問都以**送出當下**選的身分與語言提問（#26 決定 1、2）；預設問題旁標示的情境角色只是說明。
+- **每一題獨立回答**（#195）：問答依序往下累積，但每題只送出該題的文字，不帶上一題的問題與回答（`app/src/qa/` 的流程不變）；輸入框下方標明這一點。回答串流中停用送出與預設問題，不以新提問中斷前一題（#195 決定 3）。
 - **切換身分或語言時捨棄進行中的回答**（`ui/requests.ts`）：
-  - 清掉畫面上的回答與開啟的原文。
+  - 清掉畫面上的對話（「這次的問題」一併清除）與開啟的原文。
   - 進行中的提問以 `AbortSignal` 取消連線（`apiTransport` 把 signal 傳給 `fetch`），之後才收到的 `onText` 與 `ask()` 的結果都忽略；原文的讀取也一樣。
-  - 新的提問開始時，前一個提問同樣被捨棄。
 - **原文**（`app/src/sources/source.ts`）：`readSource(db, identityId, passageId)` 經 `withIdentity()` 讀取段落所屬的文件，以及其中該身分看得到的段落（依順序）；看不到時回 `null`。文件中看不到的段落直接省略，不標示「有段落被隱藏」。`app/tests/sources/source.test.ts` 以 `oracle.ts` 對每個身分 × 每段段落測試。
 - **介面文字**：都在翻譯檔 `client/i18n/<語言>.json`，只透過 `app/src/client/i18n.ts` 讀取（[docs/client-config.md](client-config.md)「翻譯檔」）；角色、情境、公司名稱來自 `client/`；語言名稱以 `Intl.DisplayNames` 用該語言自己的名稱顯示。
 - **線上 demo**（#100）：見下方「線上 demo」。

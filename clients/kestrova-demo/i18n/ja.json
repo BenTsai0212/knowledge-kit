@@ -30,6 +30,8 @@
   "askButton": "質問する",
   "answering": "回答を作成しています…",
   "emptyAnswer": "質問の例を選ぶか、質問を入力して送信してください。",
+  "qaIndependent": "質問ごとに個別に回答します。前の質問は考慮しません。",
+  "sessionQuestions": "今回の質問",
   "openSource": "出典を開く",
   "sourceTitle": "出典",
   "closeSource": "閉じる",

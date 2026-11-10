@@ -118,7 +118,7 @@ repo 預計公開，CI 紀錄也會公開，所以兩者的輸出都**不包含�
 
 - 對 `npm run build` 產生的 `dist/` 執行：`playwright.config.ts` 的 `webServer` 以 `vite preview`（port 4173）提供預覽頁。
 - `/api/ask` 一律由測試以 `page.route` 回傳假的 SSE（`e2e/support/fake-ask.ts`），依 `system` 的開頭分辨問答、萃取、比對與評分；不使用真實金鑰，也不啟動 Worker。不認得的請求回錯誤，測試因而失敗。
-- 畫面文字一律從選定客戶的 `i18n/` 讀取（`e2e/support/app.ts`），只用預設語言；身分以 Toolbar 的選單切換。
+- 畫面文字一律從選定客戶的 `i18n/` 讀取（`e2e/support/app.ts`），只用預設語言；身分以左側導覽的選單切換。
 - 不使用固定的等待時間，只靠 Playwright 的自動等待與會重試的斷言；資料庫是否載入完成，以預設問題的按鈕可以按為準。
 - `workers: 1`（每個頁面在瀏覽器內建一個 PGlite）；CI 中失敗時重試 2 次，第一次重試時記錄 trace，失敗時保留截圖。
 - `e2e/tsconfig.json` 加入 `vite/client` 的型別，因為測試匯入的 `app/src/evals/oracle.ts` 會連帶檢查使用 `import.meta.glob` 的檔案；沒有 `@types/node`，用到的 `node:fs` 與 `process.env` 在 `e2e/support/node-fs.d.ts` 自行宣告。
@@ -140,6 +140,7 @@ repo 預計公開，CI 紀錄也會公開，所以兩者的輸出都**不包含�
 | `access.spec.ts` | 越權：打開原文後切換身分，原文面板與時間軸不殘留看不到的段落；串流回答中切換身分；待審只給 `canReview` 的身分；沒有 `?tools=evals` 時所有身分都看不到評測台，帶參數時只給 `canReview` 的身分；在評測台切換成沒有 `canReview` 的身分；查不到時，同一身分問「資料沒寫」與「看不到的段落」的拒答與下一步完全相同，能上傳的身分可以從「到上傳頁」切到上傳頁籤（#192） |
 | `interactions.spec.ts` | 互動邊角：上傳寫入中按 Esc；評測執行中離開頁籤再回來顯示「已停止」；深色模式（`emulateMedia`） |
 | `review.spec.ts` | 待審頁（#189）：上傳走查用的通知（`fixtures/walkthrough-notice.md`），1280×720 的第一個畫面看得到摘要、進度與需要確認的組，系統已準備收合成一行並附可見範圍提示，「核准這份文件的全部」後沒有遺留待審；依參考情境的圖譜，其他客戶略過 |
+| `layout.spec.ts` | 問答頁的三欄版面（#195）：1280×720 的第一個畫面看得到輸入框、最新一題的回答與右側的原文面板，整頁不捲動；問答往下累積、輸入框位置不變、同一題問兩次送出的內容相同（不帶上一題）、「這次的問題」列出兩題，切換身分時清除；串流中停用送出與預設問題；手機寬度（390×844）上下堆疊、沒有橫向捲動、可以提問並看到原文 |
 | `presentation.spec.ts` | 客戶展示模式（#129，`/?mode=presentation`）：每個身分都只有問答與圖譜兩個頁籤（同時帶 `?tools=evals` 也一樣）；問答附出處並打開原文、圖譜畫出畫布 |
 | `demo.spec.ts` | 線上 demo 的設定（#100，只在 `VITE_ONLINE_DEMO=1` 的 build 執行，見下方「線上 demo」）：公開試用碼預先填入並以它提問、問答與上傳頁的提醒、評測台隱藏（帶 `?tools=evals` 也一樣）而待審保留、上傳後萃取的實體出現在待審 |
 

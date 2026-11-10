@@ -1,3 +1,4 @@
+import type { Ref } from "react";
 import type { Answer } from "../qa/answer";
 import { splitCitations } from "../qa/citations";
 import { errorMessage, strings } from "../client/i18n";
@@ -12,17 +13,19 @@ export interface AnswerState {
 }
 
 interface Props {
+  // 元素 id（左側「這次的問題」捲到該題）
+  id: string;
+  ref?: Ref<HTMLElement>;
   language: string;
-  state: AnswerState | null;
+  state: AnswerState;
   // 目前身分能上傳、且上傳頁籤看得到時，拒答下方多一項上傳與「到上傳頁」按鈕
   canUpload: boolean;
   onOpenSource(passageId: string): void;
   onGotoUpload(): void;
 }
 
-export function AnswerView({ language, state, canUpload, onOpenSource, onGotoUpload }: Props) {
+export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, onGotoUpload }: Props) {
   const s = strings(language);
-  if (state === null) return <section className="card muted">{s.emptyAnswer}</section>;
   const { answer } = state;
   const stepText: Record<RefusalStep, string> = {
     rephrase: s.refusalNextRephrase,
@@ -31,7 +34,7 @@ export function AnswerView({ language, state, canUpload, onOpenSource, onGotoUpl
   };
 
   return (
-    <section className="card answer" aria-live="polite">
+    <section id={id} ref={ref} className="card answer" aria-live="polite">
       <h2>{state.question}</h2>
       {answer === undefined && (
         <>

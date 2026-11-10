@@ -32,7 +32,7 @@ export async function openApp(page: Page, path = "/"): Promise<void> {
   await expect(page.getByRole("button", { name: presetQuestions[0].text, exact: true })).toBeEnabled();
 }
 
-// 以 Toolbar 的身分選單切換身分
+// 以左側導覽的身分選單切換身分
 export async function switchIdentity(page: Page, id: RoleId): Promise<void> {
   const role = access.roles.find((r) => r.id === id)!;
   await page.getByRole("banner").getByLabel(s.identity).selectOption({ label: role.label[language] });

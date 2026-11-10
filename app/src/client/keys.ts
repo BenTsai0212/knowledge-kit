@@ -194,6 +194,7 @@ const uiStrings = {
   demoUploadNotice: "required", accessCodeSubmit: "required", changeAccessCode: "required",
   presetQuestions: "required", scenarioRole: "required", questionLabel: "required",
   questionPlaceholder: "required", askButton: "required", answering: "required", emptyAnswer: "required",
+  qaIndependent: "required", sessionQuestions: "required",
   openSource: "required", sourceTitle: "required", closeSource: "required", views: "required", tabQa: "required",
   tabGraph: "required", legend: "required", graphEmpty: "required", selectEntity: "required",
   relatedEntities: "required", entitySources: "required", tabTimeline: "required", pathTitle: "required",
