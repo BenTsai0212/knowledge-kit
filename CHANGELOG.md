@@ -38,7 +38,7 @@ Product experience: the Q&A, graph, and review pages were redesigned so that a f
 
 ### Docs
 
-- The README, the docs, and the playbook were updated for the changes above (#205).
+- The README, the docs, and the playbook were updated for the changes above, with new README screenshots of the Q&A page, the step-by-step graph, the review page, the timeline, and cross-language retrieval (#205).
 
 ## [2.0.0]
 

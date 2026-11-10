@@ -21,13 +21,17 @@ demo 是展示用的原型，不是正式系統。
 - **多語言介面與檢索**：介面文字來自翻譯檔，檢索依各語言的文字處理（[docs/client-config.md](docs/client-config.md)、[docs/retrieval.md](docs/retrieval.md)）。可選用瀏覽器內的語意向量（`multilingual-e5-small`）跨語言檢索：以一種語言發問，檢索另一種語言的文件（[docs/retrieval.md](docs/retrieval.md#語意向量multilingual-e5-small)「語意向量」）。
 - **主題色與深色模式**：顏色來自設定，`prefers-color-scheme: dark` 時改用深色配色（[docs/client-config.md](docs/client-config.md)）。
 
-預設問題的回答，附引用並打開原文面板：
+問答頁（主管身分）：預設問題的回答附引用與「回答提到」，點其中的實體，右側打開實體面板，有鄰近圖、相關實體與「接著問」：
 
-![附引用的問答回答，旁邊打開原文面板](docs/images/qa-zh-TW.png)
+![主管身分的問答頁：「長堤專案目前的進度如何？」的回答附引用與「回答提到」，右側是張雅婷的實體面板，有鄰近圖、相關實體與接著問](docs/images/qa-zh-TW.png)
 
-知識圖譜與實體面板（主管身分）：
+知識圖譜（主管身分）：從「關聯最多」選產品研發部，再展開青翼專案（「已展開：產品研發部 → 青翼專案」），焦點以外的部分變灰，右側是選取實體的面板：
 
-![知識圖譜與選取實體的實體面板（主管身分）](docs/images/graph-zh-TW.png)
+![主管身分的知識圖譜，從產品研發部逐步展開到青翼專案，其餘部分變灰，右側是青翼專案的實體面板](docs/images/graph-zh-TW.png)
+
+主管上傳一份通知後的待審頁：摘要、需要人確認的一組，系統已準備好的項目收合成一行：
+
+![主管身分的待審頁：核准後會新增的摘要、「還有 1 組需要你確認」的一位新人員與兩筆關係，以及收合的「系統已準備 7 筆」](docs/images/review-zh-TW.png)
 
 時間軸的第一個畫面（主管身分）：
 

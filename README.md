@@ -21,13 +21,17 @@ The demo is a prototype for demonstration, not a production system.
 - **Multilingual interface and retrieval**: interface text comes from translation files, and retrieval handles each language's script ([docs/client-config.md](docs/client-config.md), [docs/retrieval.md](docs/retrieval.md)). Optionally, in-browser semantic vectors (`multilingual-e5-small`) enable cross-language retrieval: ask in one language and retrieve documents written in another ([docs/retrieval.md](docs/retrieval.md#語意向量multilingual-e5-small), section "語意向量").
 - **Theme colors and dark mode**: colors come from the settings, with a dark palette for `prefers-color-scheme: dark` ([docs/client-config.md](docs/client-config.md)).
 
-An answer to a preset question, with its citation and the source passage opened:
+The Q&A page, seen as a manager: the answer to a preset question with its citations and "Mentioned in this answer". Clicking an entity opens the entity panel on the right, with a small neighborhood graph, related entities, and "Ask next":
 
-![Q&A answer with a citation and the source passage panel open](docs/images/qa-en.png)
+![Q&A page as a manager: the answer to "What is the status of Project Longpier?" with citations and "Mentioned in this answer", and the entity panel for Yating Chang on the right with a neighborhood graph, related entities, and Ask next](docs/images/qa-en.png)
 
-The knowledge graph with an entity panel, seen as a manager:
+The knowledge graph, seen as a manager: Product Development was picked from "Most connected", then Project Bluewing was expanded ("Expanded: Product Development → Project Bluewing"). Everything outside the focus is grayed out, and the right panel shows the selected entity:
 
-![Knowledge graph with the entity panel for a selected entity, as a manager](docs/images/graph-en.png)
+![Knowledge graph as a manager, expanded step by step from Product Development to Project Bluewing, with the rest of the graph grayed out and the entity panel for Project Bluewing on the right](docs/images/graph-en.png)
+
+The review page after a manager uploads a notice: a summary, the one group that needs a person's decision, and the items the system already prepared, collapsed into one line (the document title is in Chinese because the notice itself is a Chinese document):
+
+![Review page as a manager: a summary of what approving adds, one group that needs confirmation with a new person and two relations, and "The system prepared 7 items" collapsed](docs/images/review-en.png)
 
 The first screen of the timeline, seen as a manager:
 
