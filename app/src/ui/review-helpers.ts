@@ -65,7 +65,7 @@ export function existingRelation(
 // 批次核准：只包含待審、可以批次核准的實體，以及兩端都已核准或一起核准的待審關係。
 // 圖譜已有的關係放在 existingRelations：只寫核准決定，不重複建立（#189 決定 1）。
 // 名稱不完整的實體略過，回傳略過的筆數（skipped）。
-// only 有值時只處理其中的項目（勾選的項目）；沒有值時處理整份文件（「核准這份文件的全部」）
+// only 有值時只處理其中的項目；沒有值時處理整份文件（「核准這份文件的全部」）
 export function batchPlan(
   doc: ReviewDocument,
   suggestions: Record<string, MergeSuggestion>,
@@ -167,6 +167,25 @@ export function reviewGroups(
       existingRelations: existingCount,
       toConfirm: groups.length,
     },
+  };
+}
+
+// 確認一組（#189）：這組的實體，加上它底下兩端都已核准或一起核准的關係（需要逐筆選擇的實體也可以，選擇後才能確認）。
+// 還沒選擇合併對象或名稱不完整時回 null；另一端還待審的關係留在組裡
+export function groupPlan(
+  doc: ReviewDocument,
+  group: ReviewGroup,
+  choices: Record<string, EntityChoice>,
+  languages: readonly string[],
+): { entities: EntityApproval[]; relations: string[]; existingRelations: string[] } | null {
+  const entity = entityApproval(group.entity.id, choices[group.entity.id] ?? { mergeInto: null }, languages);
+  if (entity === null) return null;
+  const approved = (id: string) => id === entity.id || doc.entities.some((e) => e.id === id && e.status === "approved");
+  const ready = group.relations.filter((g) => approved(g.relation.from) && approved(g.relation.to));
+  return {
+    entities: [entity],
+    relations: ready.filter((g) => !g.existing).map((g) => g.relation.id),
+    existingRelations: ready.filter((g) => g.existing).map((g) => g.relation.id),
   };
 }
 

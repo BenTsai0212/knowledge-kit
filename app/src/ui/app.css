@@ -503,6 +503,59 @@ label.inline {
   margin-right: 0.5rem;
 }
 
+/* 待審頁的分組（#189）：每筆一行，動作靠右；組裡的關係縮排；系統已準備收合成一行 */
+.review-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+}
+
+.review-actions {
+  display: inline-flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.review-rows {
+  display: grid;
+  gap: 0.35rem;
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0 0 0 1.25rem;
+}
+
+.review-hint {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+}
+
+.review-summary {
+  margin: 0.25rem 0;
+}
+
+.review-progress {
+  align-items: center;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.review-prepared {
+  margin-top: 0.75rem;
+}
+
+.review-prepared > summary {
+  cursor: pointer;
+}
+
+.review-prepared > .review-rows {
+  padding-left: 0;
+}
+
+.badge.primary {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
 
 /* 待審頁籤的筆數（#48） */
 .tab-count {

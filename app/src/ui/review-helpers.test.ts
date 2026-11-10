@@ -9,6 +9,7 @@ import {
   canBatch,
   entityApproval,
   existingRelation,
+  groupPlan,
   highlightSegments,
   initialChoice,
   inputSize,
@@ -220,6 +221,31 @@ describe("reviewGroups：需要決定的組", () => {
   it("新增的實體名稱不完整時標示原因", () => {
     const g = reviewGroups(d, suggestions, { "pe-new": { mergeInto: null, names: { "zh-TW": "甲", en: "" } } }, NO_GRAPH, LANGS);
     expect(g.groups.find((x) => x.entity.id === "pe-new")?.blocked).toBe("names");
+  });
+
+  it("groupPlan：確認一組＝實體加上兩端都已核准或一起核准的關係；需要逐筆選擇的實體選擇後才能確認", () => {
+    const g = reviewGroups(d, suggestions, {}, NO_GRAPH, LANGS);
+    const [lin, created] = g.groups;
+    expect(groupPlan(d, lin, { "pe-lin": { mergeInto: undefined } }, LANGS)).toBeNull();
+    expect(groupPlan(d, lin, { "pe-lin": { mergeInto: "person-lin-zhiming-rd" } }, LANGS)).toEqual({
+      entities: [{ id: "pe-lin", mergeInto: "person-lin-zhiming-rd" }],
+      relations: ["pr-lin-ops"],
+      existingRelations: [],
+    });
+    // pr-new-lin 的另一端（林志明）還待審：留在組裡，不送出
+    expect(groupPlan(d, created, {}, LANGS)).toEqual({ entities: [{ id: "pe-new" }], relations: [], existingRelations: [] });
+    expect(groupPlan(d, created, { "pe-new": { mergeInto: null, names: { "zh-TW": "甲", en: "" } } }, LANGS)).toBeNull();
+  });
+
+  it("groupPlan：圖譜已有的關係只寫決定", () => {
+    const graph = { relations: [{ id: "lin-member-of-ops", type: "member-of", from: "person-lin-zhiming-rd", to: "pe-ops", sources: [] }] };
+    const choices = { "pe-lin": { mergeInto: "person-lin-zhiming-rd" } };
+    const g = reviewGroups(d, suggestions, choices, graph, LANGS);
+    expect(groupPlan(d, g.groups[0], choices, LANGS)).toEqual({
+      entities: [{ id: "pe-lin", mergeInto: "person-lin-zhiming-rd" }],
+      relations: [],
+      existingRelations: ["pr-lin-ops"],
+    });
   });
 });
 

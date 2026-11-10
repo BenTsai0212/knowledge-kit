@@ -344,8 +344,6 @@ export interface UiStrings {
   reviewRefresh: string;
   reviewEntities: string;
   reviewRelations: string;
-  reviewSelectAll: string;
-  reviewApproveSelected: string;
   reviewApproveDocument: string;
   reviewApprove: string;
   reviewReject: string;
@@ -361,6 +359,18 @@ export interface UiStrings {
   // 核准前修改的名稱，每種語言都必須有值（#47 審查）
   reviewNamesRequired: string;
   reviewSkippedNames: string;
+  // 待審頁的分組（#189）：每份文件的摘要與進度、系統已準備、圖譜已有、新增、確認一組、出處的開關
+  reviewSummary: string;
+  reviewProgress: string;
+  reviewProgressDone: string;
+  reviewDecideLeft: string;
+  reviewPrepared: string;
+  reviewPreparedMergeHint: string;
+  reviewSuggested: string;
+  reviewExisting: string;
+  reviewNew: string;
+  reviewConfirm: string;
+  reviewSources: string;
   // 提示框的標題與動作（#48）
   noticeParseTitle: string;
   noticeWriteTitle: string;

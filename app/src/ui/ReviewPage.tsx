@@ -1,6 +1,7 @@
-// 待審頁（#44，docs/extraction.md「畫面」）：只有 canReview 的身分看得到。依文件分組列出待審的實體與關係，
-// 可以修改名稱、選擇合併對象、勾選後批次核准、核准整份文件、退回；另有「已退回」分頁。
-// 卡片平常只顯示名稱，按「編輯名稱」才可以修改；出處預設 2 行、標出實體名稱；核准或退回後顯示短提示（#48）。
+// 待審頁（#44，docs/extraction.md「畫面」）：只有 canReview 的身分看得到。依文件列出待審的實體與關係，
+// 每份文件開頭是摘要與進度，需要確認的組在最上面，系統已準備的收合成一行（#189，分組在 review-helpers.ts 的 reviewGroups()）；
+// 可以修改名稱、選擇合併對象、確認一組、核准整份文件、退回；另有「已退回」分頁。
+// 每筆一行，按「編輯名稱」才可以修改；出處點開才顯示，預設 2 行、標出實體名稱；核准或退回後顯示短提示（#48）。
 // 每份文件另有「說法不同」區塊（#51）：新舊段落並列、三選一處理；已處理的在「已處理的說法不同」分頁。
 // 讀取與寫入都經 store.ts、conflicts/store.ts（RLS 決定看得到、能核准什麼）；模型輸出一律以文字節點顯示。
 import { Fragment, useEffect, useRef, useState } from "react";
@@ -9,7 +10,7 @@ import type { LocalizedText } from "../client/types";
 import { decideConflict, readConflicts, type ConflictDecision, type ConflictItem, type ConflictPassage } from "../conflicts/store";
 import type { Database } from "../db/database";
 import { suggestMerge, type MergeSuggestion } from "../extraction/merge";
-import { approve, readReview, reject, ReviewError, type EntityApproval, type ReviewDocument, type ReviewEntity } from "../extraction/store";
+import { approve, readReview, reject, ReviewError, type EntityApproval, type ReviewDocument, type ReviewEntity, type ReviewRelation } from "../extraction/store";
 import { readGraph, type Graph } from "../graph/read";
 import { AccessBadges } from "./AccessBadges";
 import { entityOptionLabel, entityTypeLabel, relationTypeLabel } from "./graph-labels";
@@ -18,17 +19,17 @@ import { createRequestGate } from "./requests";
 import {
   batchPlan,
   canBatch,
-  entityApproval,
+  groupPlan,
   highlightSegments,
   initialChoice,
   inputSize,
   namesInvalid,
-  relationReady,
   reviewDocuments,
+  reviewGroups,
   toastText,
   type EntityChoice,
 } from "./review-helpers";
-import { strings } from "../client/i18n";
+import { fill, strings } from "../client/i18n";
 import { createToastTimer, type ToastTimer } from "./toast-timer";
 
 interface Props {
@@ -62,13 +63,14 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   const [conflicts, setConflicts] = useState<ConflictItem[]>([]);
   const [graph, setGraph] = useState<Graph | null>(null);
   const [choices, setChoices] = useState<Record<string, EntityChoice>>({});
-  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   // 核准或退回的錯誤、批次核准時因名稱不完整而略過的筆數；顯示在該文件的卡片上方（#48）
   const [notice, setNotice] = useState<{ docId: string; error?: string; skipped?: number } | null>(null);
   const [busy, setBusy] = useState(false);
   // 正在編輯名稱的實體、展開的出處（項目 id 與段落 id）、核准或退回後的短提示
   const [editing, setEditing] = useState<ReadonlySet<string>>(new Set());
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  // 點開出處的項目 id（#189：每筆一行，出處點開才顯示）
+  const [openSources, setOpenSources] = useState<ReadonlySet<string>>(new Set());
   // graph：附「到圖譜查看」（只有核准；退回的項目不會出現在圖譜）。
   // id 每次遞增，當作 key：文字與上一次相同時也重新掛載，重新播放進場動畫（#48 審查第 2 次）
   const [toast, setToast] = useState<{ id: number; text: string; graph: boolean } | null>(null);
@@ -86,7 +88,6 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
       setDocs(reviewDocuments(d, c));
       setConflicts(c);
       setGraph(g);
-      setSelected(new Set());
     });
     return () => reads.current.cancel();
   }, [db, identity, version]);
@@ -115,7 +116,6 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
     else next.add(id);
     return next;
   };
-  const toggle = (id: string) => setSelected((cur) => flip(cur, id));
   const refresh = () => {
     setVersion((v) => v + 1);
     onChanged();
@@ -230,6 +230,130 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
     </div>
   );
 
+  // 出處的開關：每筆一行，出處點開才顯示（#189）
+  const sourcesToggle = (itemId: string, count: number) =>
+    count > 0 && (
+      <button type="button" className="link" aria-expanded={openSources.has(itemId)} onClick={() => setOpenSources((cur) => flip(cur, itemId))}>
+        {fill(s.reviewSources, { count })}
+      </button>
+    );
+  // 一筆實體一行（#189）：類型、標籤、名稱、合併選擇、出處的開關與動作。
+  // badge：「新增」「系統建議」；mergeHint：選擇合併時在下一行提示可見範圍；confirm：「確認」一組（沒有時只有退回）
+  const entityRow = (doc: ReviewDocument, e: ReviewEntity, opts: { badge?: string; mergeHint?: boolean; confirm?: () => void; confirmDisabled?: boolean }) => {
+    const pending = e.status === "pending";
+    const suggestion = suggestions[e.id];
+    const choice = choiceOf(e);
+    const candidates = suggestion.mode === "choose" ? suggestion.candidates : suggestion.mode === "auto" ? [suggestion.target] : [];
+    const needsChoice = !canBatch(suggestion);
+    const names: LocalizedText = choice.names ?? e.names;
+    const invalidNames = pending && namesInvalid(choice, client.languages);
+    // 只有建立新實體的項目可以編輯名稱（#44 決定 4）；名稱不完整時一直顯示輸入框
+    const editable = pending && choice.mergeInto === null;
+    const isEditing = editable && (editing.has(e.id) || invalidNames);
+    return (
+      <>
+        <div className="review-row">
+          <span className="badge">{entityTypeLabel(e.type, language)}</span>
+          {opts.badge !== undefined && <span className="badge primary">{opts.badge}</span>}
+          {isEditing ? (
+            <span className="review-names editing">
+              {client.languages.map((l) => (
+                <label key={l} className="inline">
+                  {languageNames.of(l) ?? l}
+                  <input
+                    type="text"
+                    lang={l}
+                    value={names[l] ?? ""}
+                    size={inputSize(names[l] ?? "")}
+                    disabled={busy}
+                    onChange={(ev) => setChoice(e.id, { ...choice, names: { ...names, [l]: ev.target.value } })}
+                  />
+                </label>
+              ))}
+              <button type="button" className="secondary" disabled={busy || invalidNames} onClick={() => setEditing((cur) => flip(cur, e.id))}>
+                {s.reviewEditDone}
+              </button>
+            </span>
+          ) : (
+            <span className="review-names">
+              {client.languages.map((l, i) => (
+                <Fragment key={l}>
+                  {i > 0 && " / "}
+                  <span lang={l}>{(choice.mergeInto === null ? names : e.names)[l]}</span>
+                </Fragment>
+              ))}
+              {editable && (
+                <button type="button" className="link" disabled={busy} onClick={() => setEditing((cur) => flip(cur, e.id))}>
+                  {s.reviewEditNames}
+                </button>
+              )}
+            </span>
+          )}
+          {pending && candidates.length > 0 && (
+            <label className="inline">
+              {s.reviewMergeInto}
+              <select
+                value={choice.mergeInto === undefined ? "" : (choice.mergeInto ?? "new")}
+                disabled={busy}
+                onChange={(ev) => setChoice(e.id, { mergeInto: ev.target.value === "" ? undefined : ev.target.value === "new" ? null : ev.target.value })}
+              >
+                {needsChoice && <option value="">{s.reviewChoose}</option>}
+                {candidates.map((id) => {
+                  const target = graph.entities.find((x) => x.id === id);
+                  return (
+                    <option key={id} value={id}>
+                      {target ? entityOptionLabel(graph, target, language) : id}
+                    </option>
+                  );
+                })}
+                <option value="new">{s.reviewCreateNew}</option>
+              </select>
+            </label>
+          )}
+          {pending && needsChoice && choice.mergeInto === undefined && <span className="badge warning">{s.reviewNeedsChoice}</span>}
+          {invalidNames && <span className="error">{s.reviewNamesRequired}</span>}
+          {sourcesToggle(e.id, e.sources.length)}
+          {pending && (
+            <span className="review-actions">
+              {opts.confirm !== undefined && (
+                <button type="button" disabled={busy || opts.confirmDisabled} onClick={opts.confirm}>
+                  {busy ? s.reviewWorking : s.reviewConfirm}
+                </button>
+              )}
+              <button type="button" className="secondary" disabled={busy} onClick={() => void rejectItems(doc.id, { entities: [e.id], relations: [] })}>
+                {s.reviewReject}
+              </button>
+            </span>
+          )}
+        </div>
+        {opts.mergeHint && pending && typeof choice.mergeInto === "string" && <p className="muted review-hint">{s.reviewMergeHint}</p>}
+        {openSources.has(e.id) && sourceList(doc, e.id, e.sources, [e.id])}
+      </>
+    );
+  };
+  // 一段關係一行：「起點 —關係→ 終點」、圖譜已有、出處的開關與退回；waiting：另一端還待審，確認這組時不會一起核准
+  const relationRow = (doc: ReviewDocument, r: ReviewRelation, opts: { existing?: boolean; waiting?: boolean }) => (
+    <>
+      <div className="review-row">
+        <span>
+          {nameOf(doc, r.from)} —{relationTypeLabel(r.type, language)}→ {nameOf(doc, r.to)}
+        </span>
+        {opts.existing && <span className="badge">{s.reviewExisting}</span>}
+        {r.rejectedWithEntity && <span className="badge">{s.reviewRejectedWithEntity}</span>}
+        {opts.waiting && <span className="muted">{s.reviewRelationBlocked}</span>}
+        {sourcesToggle(r.id, r.sources.length)}
+        {r.status === "pending" && (
+          <span className="review-actions">
+            <button type="button" className="secondary" disabled={busy} onClick={() => void rejectItems(doc.id, { entities: [], relations: [r.id] })}>
+              {s.reviewReject}
+            </button>
+          </span>
+        )}
+      </div>
+      {openSources.has(r.id) && sourceList(doc, r.id, r.sources, [r.from, r.to])}
+    </>
+  );
+
   return (
     <div className="review-page">
       <div className="review-toolbar">
@@ -280,11 +404,16 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
       )}
 
       {visibleDocs.map((doc) => {
-        const pendingEntities = doc.entities.filter((e) => e.status === itemStatus);
-        const pendingRelations = doc.relations.filter((r) => r.status === itemStatus);
         const docConflicts = conflictsOf(doc.id);
         const approvedCount = [...doc.entities, ...doc.relations].filter((x) => x.status === "approved").length;
-        const batchable = [...pendingEntities.filter((e) => canBatch(suggestions[e.id])).map((e) => e.id), ...pendingRelations.map((r) => r.id)];
+        // 待審分頁：分組、摘要與進度（#189）；只有說法不同、沒有待審實體與關係的文件不顯示
+        const g = tab === "pending" ? reviewGroups(doc, suggestions, allChoices, graph, client.languages) : null;
+        const preparedCount = g === null ? 0 : g.prepared.entities.length + g.prepared.relations.length;
+        const hasItems = g !== null && g.groups.length + preparedCount > 0;
+        const decideLeft = g?.groups.filter((x) => x.kind === "decide").length ?? 0;
+        const preparedMerges = g?.prepared.entities.some((e) => typeof allChoices[e.id].mergeInto === "string") ?? false;
+        const rejectedEntities = tab === "rejected" ? doc.entities.filter((e) => e.status === "rejected") : [];
+        const rejectedRelations = tab === "rejected" ? doc.relations.filter((r) => r.status === "rejected") : [];
         return (
           <section key={doc.id} className="card review-doc">
             {notice?.docId === doc.id && notice.error !== undefined && (
@@ -307,149 +436,88 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                 {approvedCount}
               </p>
             )}
-            {/* 只有說法不同、沒有待審實體與關係的文件不顯示批次核准 */}
-            {tab === "pending" && pendingEntities.length + pendingRelations.length > 0 && (
-              <div className="dialog-actions">
-                <button type="button" className="secondary" disabled={busy} onClick={() => setSelected(new Set(batchable))}>
-                  {s.reviewSelectAll}
-                </button>
-                <button type="button" disabled={busy || selected.size === 0} onClick={() => approveBatch(doc.id, batchPlan(doc, suggestions, allChoices, client.languages, graph, selected))}>
-                  {busy ? s.reviewWorking : s.reviewApproveSelected}
-                </button>
-                <button type="button" disabled={busy} onClick={() => approveBatch(doc.id, batchPlan(doc, suggestions, allChoices, client.languages, graph))}>
-                  {busy ? s.reviewWorking : s.reviewApproveDocument}
-                </button>
-              </div>
+            {g !== null && hasItems && (
+              <>
+                <p className="review-summary">
+                  {fill(s.reviewSummary, {
+                    entities: g.summary.newEntities,
+                    relations: g.summary.newRelations,
+                    merged: g.summary.mergedEntities,
+                    existing: g.summary.existingRelations,
+                  })}
+                </p>
+                <div className="dialog-actions review-progress">
+                  <strong>{g.summary.toConfirm > 0 ? fill(s.reviewProgress, { count: g.summary.toConfirm }) : s.reviewProgressDone}</strong>
+                  <button type="button" disabled={busy} onClick={() => approveBatch(doc.id, batchPlan(doc, suggestions, allChoices, client.languages, graph))}>
+                    {busy ? s.reviewWorking : s.reviewApproveDocument}
+                  </button>
+                  {decideLeft > 0 && <span className="muted">{fill(s.reviewDecideLeft, { count: decideLeft })}</span>}
+                </div>
+                {/* 需要你確認的組：一組一個實體，關係掛在它底下；「確認」一併核准已經可以核准的關係 */}
+                {g.groups.length > 0 && (
+                  <ul className="review-list">
+                    {g.groups.map((group) => {
+                      const plan = groupPlan(doc, group, allChoices, client.languages);
+                      return (
+                        <li key={group.entity.id}>
+                          {entityRow(doc, group.entity, {
+                            badge: group.kind === "new" ? s.reviewNew : undefined,
+                            mergeHint: true,
+                            confirm: () => {
+                              if (plan) void approveItems(doc.id, plan);
+                            },
+                            confirmDisabled: plan === null,
+                          })}
+                          {group.relations.length > 0 && (
+                            <ul className="review-rows">
+                              {group.relations.map((x) => {
+                                const other = x.relation.from === group.entity.id ? x.relation.to : x.relation.from;
+                                const waiting = other !== group.entity.id && !doc.entities.some((e) => e.id === other && e.status === "approved");
+                                return <li key={x.relation.id}>{relationRow(doc, x.relation, { existing: x.existing, waiting })}</li>;
+                              })}
+                            </ul>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+                {/* 系統已準備：系統建議、自動合併與圖譜已有，收合成一行；合併的可見範圍提示在收合時也看得到 */}
+                {preparedCount > 0 && (
+                  <details className="review-prepared">
+                    <summary>
+                      {fill(s.reviewPrepared, { count: preparedCount })}
+                      {preparedMerges && <span className="muted"> {s.reviewPreparedMergeHint}</span>}
+                    </summary>
+                    <ul className="review-rows">
+                      {g.prepared.entities.map((e) => (
+                        <li key={e.id}>{entityRow(doc, e, { badge: s.reviewSuggested })}</li>
+                      ))}
+                      {g.prepared.relations.map((x) => (
+                        <li key={x.relation.id}>{relationRow(doc, x.relation, { existing: x.existing })}</li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </>
             )}
 
-            {pendingEntities.length > 0 && <h3>{s.reviewEntities}</h3>}
-            <ul className="review-list">
-              {pendingEntities.map((e) => {
-                const suggestion = suggestions[e.id];
-                const choice = choiceOf(e);
-                const needsChoice = !canBatch(suggestion);
-                const candidates = suggestion.mode === "choose" ? suggestion.candidates : suggestion.mode === "auto" ? [suggestion.target] : [];
-                const names: LocalizedText = choice.names ?? e.names;
-                const invalidNames = namesInvalid(choice, client.languages);
-                // 只有建立新實體的項目可以編輯名稱（#44 決定 4）；名稱不完整時一直顯示輸入框
-                const editable = tab === "pending" && choice.mergeInto === null;
-                const isEditing = editable && (editing.has(e.id) || invalidNames);
-                return (
-                  <li key={e.id}>
-                    {tab === "pending" && (
-                      <input type="checkbox" aria-label={pendingName(e, language)} disabled={busy || needsChoice} checked={selected.has(e.id)} onChange={() => toggle(e.id)} />
-                    )}
-                    <span className="badge">{entityTypeLabel(e.type, language)}</span>{" "}
-                    {isEditing ? (
-                      <span className="review-names editing">
-                        {client.languages.map((l) => (
-                          <label key={l} className="inline">
-                            {languageNames.of(l) ?? l}
-                            <input
-                              type="text"
-                              lang={l}
-                              value={names[l] ?? ""}
-                              size={inputSize(names[l] ?? "")}
-                              disabled={busy}
-                              onChange={(ev) => setChoice(e.id, { ...choice, names: { ...names, [l]: ev.target.value } })}
-                            />
-                          </label>
-                        ))}
-                        <button type="button" className="secondary" disabled={busy || invalidNames} onClick={() => setEditing((cur) => flip(cur, e.id))}>
-                          {s.reviewEditDone}
-                        </button>
-                      </span>
-                    ) : (
-                      <span className="review-names">
-                        {client.languages.map((l, i) => (
-                          <Fragment key={l}>
-                            {i > 0 && " / "}
-                            <span lang={l}>{(choice.mergeInto === null ? names : e.names)[l]}</span>
-                          </Fragment>
-                        ))}
-                        {editable && (
-                          <button type="button" className="link" disabled={busy} onClick={() => setEditing((cur) => flip(cur, e.id))}>
-                            {s.reviewEditNames}
-                          </button>
-                        )}
-                      </span>
-                    )}
-                    {needsChoice && tab === "pending" && <p className="badge warning">{s.reviewNeedsChoice}</p>}
-                    {tab === "pending" && candidates.length > 0 && (
-                      <label className="inline">
-                        {s.reviewMergeInto}
-                        <select
-                          value={choice.mergeInto === undefined ? "" : (choice.mergeInto ?? "new")}
-                          disabled={busy}
-                          onChange={(ev) => setChoice(e.id, { mergeInto: ev.target.value === "" ? undefined : ev.target.value === "new" ? null : ev.target.value })}
-                        >
-                          {needsChoice && <option value="">{s.reviewChoose}</option>}
-                          {candidates.map((id) => {
-                            const target = graph.entities.find((x) => x.id === id);
-                            return (
-                              <option key={id} value={id}>
-                                {target ? entityOptionLabel(graph, target, language) : id}
-                              </option>
-                            );
-                          })}
-                          <option value="new">{s.reviewCreateNew}</option>
-                        </select>
-                      </label>
-                    )}
-                    {tab === "pending" && typeof choice.mergeInto === "string" && <p className="muted">{s.reviewMergeHint}</p>}
-                    {tab === "pending" && invalidNames && <p className="error">{s.reviewNamesRequired}</p>}
-                    {sourceList(doc, e.id, e.sources, [e.id])}
-                    {tab === "pending" && (
-                      <div className="dialog-actions">
-                        <button
-                          type="button"
-                          disabled={busy || choice.mergeInto === undefined || invalidNames}
-                          onClick={() => {
-                            const approval = entityApproval(e.id, choice, client.languages);
-                            if (approval) void approveItems(doc.id, { entities: [approval], relations: [] });
-                          }}
-                        >
-                          {busy ? s.reviewWorking : s.reviewApprove}
-                        </button>
-                        <button type="button" className="secondary" disabled={busy} onClick={() => void rejectItems(doc.id, { entities: [e.id], relations: [] })}>
-                          {s.reviewReject}
-                        </button>
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-
-            {pendingRelations.length > 0 && <h3>{s.reviewRelations}</h3>}
-            <ul className="review-list">
-              {pendingRelations.map((r) => (
-                <li key={r.id}>
-                  {tab === "pending" && (
-                    <input type="checkbox" aria-label={r.id} disabled={busy} checked={selected.has(r.id)} onChange={() => toggle(r.id)} />
-                  )}
-                  {nameOf(doc, r.from)} —{relationTypeLabel(r.type, language)}→ {nameOf(doc, r.to)}
-                  {r.rejectedWithEntity && <span className="badge">{s.reviewRejectedWithEntity}</span>}
-                  {sourceList(doc, r.id, r.sources, [r.from, r.to])}
-                  {tab === "pending" && (
-                    <div className="dialog-actions">
-                      <button
-                        type="button"
-                        disabled={busy || !relationReady(doc, r.id)}
-                        title={relationReady(doc, r.id) ? undefined : s.reviewRelationBlocked}
-                        onClick={() => void approveItems(doc.id, { entities: [], relations: [r.id] })}
-                      >
-                        {busy ? s.reviewWorking : s.reviewApprove}
-                      </button>
-                      <button type="button" className="secondary" disabled={busy} onClick={() => void rejectItems(doc.id, { entities: [], relations: [r.id] })}>
-                        {s.reviewReject}
-                      </button>
-                      {!relationReady(doc, r.id) && <span className="muted">{s.reviewRelationBlocked}</span>}
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
+            {rejectedEntities.length > 0 && <h3>{s.reviewEntities}</h3>}
+            {rejectedEntities.length > 0 && (
+              <ul className="review-rows">
+                {rejectedEntities.map((e) => (
+                  <li key={e.id}>{entityRow(doc, e, {})}</li>
+                ))}
+              </ul>
+            )}
+            {rejectedRelations.length > 0 && <h3>{s.reviewRelations}</h3>}
+            {rejectedRelations.length > 0 && (
+              <ul className="review-rows">
+                {rejectedRelations.map((r) => (
+                  <li key={r.id}>{relationRow(doc, r, {})}</li>
+                ))}
+              </ul>
+            )}
 
             {/* 說法不同（#51）：新舊段落左右並列，附模型的差異說明（純文字）；待審分頁有三個處理按鈕，已處理分頁顯示決定 */}
             {docConflicts.length > 0 && <h3>{s.conflictSection}</h3>}
