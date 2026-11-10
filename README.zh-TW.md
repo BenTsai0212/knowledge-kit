@@ -70,7 +70,16 @@ npm run build
 npx wrangler dev
 ```
 
-執行 `npx wrangler dev` 前，在 `.dev.vars` 填入 `ANTHROPIC_API_KEY` 與自己的 `ACCESS_CODES`。`.dev.vars` 不進版本控制。與 `npm run dev` 併用等細節見 [worker/README.md](worker/README.md)。
+執行 `npx wrangler dev` 前，在 `.dev.vars` 填入 `ANTHROPIC_API_KEY` 與自己的 `ACCESS_CODES`。`.dev.vars` 不進版本控制。
+
+本機有兩種用法，要打開的網址不同：
+
+| 用法 | 指令 | 打開 |
+| --- | --- | --- |
+| 開發與試用 | `npm run dev`，另一個終端機執行 `npx wrangler dev` | `http://localhost:5173`（目前的程式碼；8787 只負責 `/api`） |
+| 檢查建置結果 | `npm run build` 後執行 `npx wrangler dev` | `http://localhost:8787` |
+
+8787 的畫面是上一次 `npm run build` 留下的 `dist/`，客戶也是當時 `KK_CLIENT` 選的那一個。`git pull` 或切換 `KK_CLIENT` 後要重新 build，否則看到的是舊版或其他客戶的畫面。細節見 [worker/README.md](worker/README.md)。
 
 其他指令（型別檢查、測試、客戶設定檢查、Playwright）見 [AGENTS.md](AGENTS.md) 第 2 節。
 

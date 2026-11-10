@@ -292,7 +292,7 @@ JSON Schema 無法參照另一個檔的值，以下由 `scripts/check-client.mjs
 
   | 工具 | `@client` 指向 |
   | --- | --- |
-  | `npm run dev`、`npm run build`（`vite.config.ts`） | `KK_CLIENT` 選定的客戶；`wrangler dev` 提供的 `dist/` 因此也是該客戶 |
+  | `npm run dev`、`npm run build`（`vite.config.ts`） | `KK_CLIENT` 選定的客戶；`wrangler dev` 提供的 `dist/` 因此是上一次 build 時的客戶，切換 `KK_CLIENT` 後要重新 build |
   | `npm run check:client`（沒有給資料夾時） | `KK_CLIENT` 選定的客戶 |
   | `npm run check:clients [名稱]`（`vitest.clients.config.ts`） | 參數指定的客戶（見[客戶檢查](#客戶檢查)） |
   | `npm run test:e2e`（`e2e/support/client.ts`） | `KK_CLIENT` 選定的客戶；build 要用同一個客戶，身分由 `access.json` 推算（[docs/testing.md](testing.md)「客戶」） |

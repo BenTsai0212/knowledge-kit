@@ -70,7 +70,16 @@ npm run build
 npx wrangler dev
 ```
 
-Fill in `ANTHROPIC_API_KEY` and your own `ACCESS_CODES` in `.dev.vars` before running `npx wrangler dev`. `.dev.vars` is not committed. Details, including using `npm run dev` together with the Worker, are in [worker/README.md](worker/README.md).
+Fill in `ANTHROPIC_API_KEY` and your own `ACCESS_CODES` in `.dev.vars` before running `npx wrangler dev`. `.dev.vars` is not committed.
+
+There are two ways to run it locally, each with its own URL:
+
+| Use | Commands | Open |
+| --- | --- | --- |
+| Develop and try it out | `npm run dev`, plus `npx wrangler dev` in another terminal | `http://localhost:5173` (the current code; 8787 only serves `/api`) |
+| Check the build | `npm run build`, then `npx wrangler dev` | `http://localhost:8787` |
+
+The page on 8787 is the `dist/` left by the last `npm run build`, for whichever client `KK_CLIENT` selected at the time. Rebuild after `git pull` or after switching `KK_CLIENT`; otherwise you see an old version or another client's page. Details are in [worker/README.md](worker/README.md).
 
 Other commands (type check, tests, client settings check, Playwright) are listed in [AGENTS.md](AGENTS.md) section 2.
 
