@@ -75,12 +75,13 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
 
 | 檔案 | 內容 |
 | --- | --- |
-| `ui/GraphPage.tsx` | 讀取圖譜；切換身分或語言時重新讀取，之後才回來的舊結果忽略（`ui/requests.ts`）；選取的節點已看不到時清除；從問答頁的「在圖譜中查看」打開時選取該實體（`initialSelected`，看不到時不選取，#195） |
+| `ui/GraphPage.tsx` | 讀取圖譜；切換身分或語言時重新讀取，之後才回來的舊結果忽略（`ui/requests.ts`）；逐步展開（見下方「逐步展開」）：已展開的路徑（「已展開：A → B」，每一段可點回到該層）與「回到全部」；從問答頁的「在圖譜中查看」打開時從該實體開始展開（`initialSelected`，看不到時顯示全部，#195、#199） |
 | `ui/GraphView.tsx`（鄰近圖） | 問答頁右側的實體面板也用它畫以實體為中心的小圖（`compact`，見 [docs/qa.md](qa.md)「回答提到」） |
-| `ui/GraphView.tsx` | 以 cytoscape 畫圖：節點帶實體類型、看得到的關聯數（大小），邊帶看得到的出處數（線粗）；標籤是 `names[介面語言]`，邊的標籤是關係類型的 `label` |
+| `ui/GraphView.tsx` | 以 cytoscape 畫圖：節點帶實體類型、看得到的關聯數（大小），邊帶看得到的出處數（線粗）；標籤是 `names[介面語言]`，邊的標籤是關係類型的 `label`，只在選取節點的相連關係顯示；傳入 `expansion` 時（圖譜頁）聚焦集合以外變灰並播放展開的動態 |
 | `ui/graph-style.ts` | cytoscape 的樣式（見下方「節點與線」）：從 `theme.json` 的 CSS 變數讀出顏色（找不到實體類型時用 `graphFallback` 與通用圖示），標籤加上背景色的外框；系統切換淺色／深色時由 `GraphView.tsx` 重新套用（[client-config.md](client-config.md)「`theme.json`」） |
 | `ui/entity-icons.ts`、`ui/EntityIcon.tsx` | 實體類型的固定圖示集（自畫的 24×24 SVG path，不使用圖示套件）：cytoscape 節點以 SVG data URI 當背景圖，圖例以同一份 path 畫 `<svg>`（`aria-hidden`，旁邊一律有類型名稱） |
-| `ui/EntityPanel.tsx` | 點節點時顯示類型、名稱、相關實體（可點）與出處段落；出處以 `readSource()` 打開原文 |
+| `ui/EntityPanel.tsx` | 點節點時顯示類型、名稱、「只看它」、相關實體（點了從它繼續展開）與出處段落；出處以 `readSource()` 打開原文 |
+| `graph/expansion.ts`、`ui/motion.ts` | 逐步展開的狀態（純函式）；動態的時間與「減少動態效果」的判斷 |
 | `ui/PathPanel.tsx` | 多跳路徑：選起點與終點，在圖上標示路徑，逐步列出每個關係與它的出處；找不到時顯示固定文字「找不到這兩個實體之間的路徑。」，不區分原因 |
 | `ui/TimelinePage.tsx` | 時間軸：依日期由新到舊列出介面語言的文件與看得到的段落，可依實體篩選；日期直接顯示 `YYYY-MM-DD` 字串，沒有日期時顯示「未註明日期」；本次工作階段上傳的文件加上「上傳」標籤，從上傳頁跳過來時捲動到該文件並標示後淡出（`animationend` 時結束；減少動態效果時不淡出）（[docs/upload.md](upload.md)） |
 | `ui/graph-labels.ts` | 實體、類型、關係類型的顯示文字與相關實體；出處的語言（`sourcesForLanguage()`，見下方）；下拉選單中顯示名稱相同的實體（兩位林志明）加上第一個相關實體的名稱以便區分 |
@@ -90,6 +91,18 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
   - 節點大小＝看得到的關聯數（`nodeSize()`：32px 起，每個關聯加 4px，最多 64px）；線粗＝看得到的出處數（`edgeWidth()`：1 個 1.75px，每多一個加 0.75px，最多 5 個）。
   - 選取的節點：類型色 14% 的淡色底、陰影（cytoscape 的 `underlay`），圖示改用 `text` 色（深色模式中類型色放在淡色底上不足 3:1）。對比由 `check:client` 檢查（[client-config.md](client-config.md)「對比度」）。
   - 類型不只靠顏色區分：同一個客戶內每種類型的圖示不同（`check:client` 檢查）。
+- **逐步展開**（#199）：狀態是已展開的路徑（`graph/expansion.ts`，例如 `[A, B]`），空陣列＝全部。
+  - 聚焦集合＝路徑上的節點＋它們的直接鄰居（不分方向），以及這些節點之間的關係；其他節點與線變灰（`dimmed`，不隱藏，保留整體輪廓）。變灰的節點縮小到 75%，外圈與圖示改用 `border`／`textMuted`；節點仍可點，所以不降低透明度，標籤維持可讀的對比。
+  - 點聚焦集合中的節點：接在路徑後面（已在路徑上時截到該處）；點變灰的節點＝「只看它」（路徑換成 `[它]`）；點空白處不清除，以「回到全部」清除。
+  - 關係名稱只在選取節點（路徑的最後一個）的相連關係顯示。
+  - 切換身分後，路徑截到第一個看不到的實體之前（後面的展開是從它出發的）。
+  - 全部在 `readGraph()` 的可見圖上計算，不新增查詢，所以聚焦與變灰只涉及看得到的實體與關係。
+- **版面不重排**：版面只在讀入圖時排一次；展開、變灰、回到全部都只改 cytoscape 的 class，節點位置不動。切換身分或語言時圖本身改變，才重新排版。
+- **動態**（`ui/motion.ts`，約 0.3–0.4 秒）：
+  - 新展開的節點以 cytoscape 樣式的 transition 由小、灰轉成正常大小與類型色。
+  - 新的線由關係的起點畫向終點：暫時改成虛線（線段與間隔都比線長），以 `animate()` 把 `line-dash-offset` 從線段長度動到 0，畫完後換回實線。從全部開始展開時，聚焦集合的線都算新的。
+  - 畫面平滑移動，讓選取的節點靠近中央（不改縮放）；聚焦集合放不進畫面時改為把聚焦集合整個放進畫面；回到全部時顯示全貌。
+  - 系統設定「減少動態效果」（`prefers-reduced-motion: reduce`）時，transition 為 0、不呼叫 `animate()`，直接套用最後的狀態；設定改變時即時更新。
 - **cytoscape**：以 `import("cytoscape")` 動態載入，build 時分成獨立的 chunk（約 435 KB，gzip 約 138 KB），只用問答的人不必下載。cytoscape 自帶型別，不安裝 `@types/cytoscape`（ADR 0001「修訂」）。
 - **版面**：內建的 `cose`（力導向）。節點先依順序排成一個圓作為起始位置，並設 `randomize: false`，所以同樣的資料每次的版面相同；不需要額外的版面套件。
 - **出處優先顯示介面語言**（#36）：節點詳細資訊與多跳路徑的出處，都以 `ui/graph-labels.ts` 的 `sourcesForLanguage()` 決定：

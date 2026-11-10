@@ -303,6 +303,10 @@ export interface UiStrings {
   legend: string;
   graphEmpty: string;
   selectEntity: string;
+  // 圖譜的逐步展開（#199）：已展開的路徑、回到全部、只看它
+  graphExpanded: string;
+  graphShowAll: string;
+  graphShowOnly: string;
   relatedEntities: string;
   entitySources: string;
   tabTimeline: string;

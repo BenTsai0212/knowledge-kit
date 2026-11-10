@@ -566,6 +566,33 @@ button.citation {
   gap: 1rem;
 }
 
+/* 已展開的路徑（#199）：A → B，每一段可點回到該層 */
+.graph-trail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.graph-trail ol {
+  display: flex;
+  flex-wrap: wrap;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.graph-trail li + li::before {
+  content: "→";
+  margin: 0 0.35rem;
+  color: var(--color-textMuted);
+}
+
+.graph-trail [aria-current] {
+  font-weight: 600;
+}
+
 .path-select {
   display: flex;
   flex-wrap: wrap;

@@ -1,6 +1,7 @@
 // cytoscape 的配色：從 CSS 變數（theme.json）讀出，淺色與深色切換時由 GraphView 重新套用。
 // 節點是白底（surface）圓形、實體類型色（knowledge-model.json 的 color）的外圈與圖示（icon，#199）；
 // 找不到類型時用 graphFallback 與通用圖示。節點大小＝關聯數，線粗＝出處數。
+// 逐步展開時，聚焦集合以外的節點與線變灰（dimmed，不隱藏）；關係名稱只在選取節點的相連關係（near）顯示。
 import type { StylesheetJson } from "cytoscape";
 import type { EntityType } from "../client/types";
 import { iconDataUri } from "./entity-icons";
@@ -31,10 +32,17 @@ export function mix(a: string, percent: number, b: string): string {
 
 type TypeStyle = Pick<EntityType, "id" | "color" | "icon">;
 
-// 選取時：類型色的淡色底，圖示改用 text（深色模式中類型色在淡色底上不足 3:1）
+// 變灰的節點縮小到原本的這個比例，展開時放大浮現
+export const DIMMED_NODE_SCALE = 0.75;
+
+// 選取時：類型色的淡色底，圖示改用 text（深色模式中類型色在淡色底上不足 3:1）；變灰時外圈與圖示變灰
 function typeRules(selector: string, color: string, icon: TypeStyle["icon"], v: (name: string) => string): StylesheetJson {
   return [
     { selector, style: { "border-color": color, "background-image": iconDataUri(icon, color) } },
+    {
+      selector: `${selector}.dimmed`,
+      style: { "border-color": v("--color-border"), "background-image": iconDataUri(icon, v("--color-textMuted")) },
+    },
     {
       selector: `${selector}.selected`,
       style: {
@@ -45,8 +53,10 @@ function typeRules(selector: string, color: string, icon: TypeStyle["icon"], v: 
   ];
 }
 
-export function graphStyle(read: ReadVariable, types: TypeStyle[]): StylesheetJson {
+// transitionMs：節點與線在變灰／展開之間的 transition 時間（減少動態效果時為 0，見 motion.ts）
+export function graphStyle(read: ReadVariable, types: TypeStyle[], transitionMs = 0): StylesheetJson {
   const v = (name: string) => read(name).trim();
+  const transition = { "transition-duration": transitionMs, "transition-timing-function": "ease-out" as const };
   // 標籤加上背景色的外框，讓文字在節點與邊上、淺色與深色背景都清楚可讀
   const outline = { "text-outline-color": v("--color-background"), "text-outline-width": 2 };
   return [
@@ -67,6 +77,8 @@ export function graphStyle(read: ReadVariable, types: TypeStyle[]): StylesheetJs
         "border-width": 3,
         "background-width": "55%",
         "background-height": "55%",
+        "transition-property": "width, height, border-color, background-color",
+        ...transition,
       },
     },
     ...typeRules("node", v("--color-graphFallback"), "generic", v),
@@ -79,12 +91,21 @@ export function graphStyle(read: ReadVariable, types: TypeStyle[]): StylesheetJs
         "target-arrow-color": v("--color-border"),
         "target-arrow-shape": "triangle",
         "curve-style": "bezier",
-        label: "data(label)",
         "font-size": 9,
         color: v("--color-textMuted"),
         ...outline,
+        "transition-property": "opacity, line-color",
+        ...transition,
       },
     },
+    // 關係名稱只在選取節點的相連關係顯示
+    { selector: "edge.near", style: { label: "data(label)" } },
+    // 變灰：不隱藏，保留整體輪廓。節點仍可點（點了只看它），所以不降低透明度，標籤維持可讀的對比
+    {
+      selector: "node.dimmed",
+      style: { width: "data(dimmedSize)", height: "data(dimmedSize)", color: v("--color-textMuted") },
+    },
+    { selector: "edge.dimmed", style: { opacity: 0.3 } },
     // 選取：淡色底（上面依類型設定）＋陰影
     {
       selector: "node.selected",

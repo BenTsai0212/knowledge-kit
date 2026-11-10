@@ -82,10 +82,11 @@ test("點「回答提到」的實體：右側面板顯示實體、鄰近圖、�
   await expect(page.getByPlaceholder(s.questionPlaceholder)).toHaveValue(question);
   await expect(page.locator("section.answer")).toHaveCount(1);
 
-  // 在圖譜中查看：切到圖譜頁並選取該實體
+  // 在圖譜中查看：切到圖譜頁，從該實體開始展開（#199）
   await next.getByRole("button", { name: s.viewInGraph }).click();
   await expect(tab(page, s.tabGraph)).toHaveAttribute("aria-current", "page");
   await expect(page.locator("section.entity").getByRole("heading", { level: 2 })).toContainText(center);
+  await expect(page.getByRole("navigation", { name: s.graphExpanded }).getByRole("listitem")).toHaveText([center]);
 });
 
 test("「回答提到」只列出目前身分看得到的實體，依身分不同", async ({ page }) => {

@@ -43,7 +43,7 @@ export function MentionPanel({ graph, entityId, language, onSelect, onFollowUp, 
           {s.closeSource}
         </button>
       </header>
-      <GraphView graph={nearby} language={language} selected={entityId} path={null} compact onSelect={(id) => id !== null && onSelect(id)} />
+      <GraphView graph={nearby} language={language} selected={entityId} path={null} compact onSelect={onSelect} />
       <h3>{s.relatedEntities}</h3>
       <ul>
         {relatedEntities(graph, entityId, language).map((r) => (
