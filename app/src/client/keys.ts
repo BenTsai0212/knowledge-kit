@@ -244,6 +244,10 @@ const uiStrings = {
   conflictWaiting: "required", conflictRunning: "required", conflictFound: "required",
   conflictDropped: "required", conflictUnchecked: "required", conflictUnrelated: "required",
   conflictFailed: "required", conflictRetry: "required",
+  reportButton: "required", reportCategory: "required", reportCategories: "required", reportNote: "required",
+  reportSubmit: "required", reportCancel: "required", reportSent: "required", reportFailed: "required",
+  reviewReportsTab: "required", reportsEmpty: "required", reportRefusal: "required", reportMeta: "required",
+  reportMarkNotError: "required", reportMarkRetracted: "required", reportRetractHint: "required", reportResolutions: "required",
   tabEvals: "required", evalSettings: "required", evalSetName: "required", evalTopK: "required",
   evalMinScore: "required", evalUseSetB: "required", evalModelGrading: "required", evalInvalidSettings: "required",
   evalUploaded: "required", evalStart: "required", evalPreparing: "required", evalStop: "required",
@@ -305,6 +309,20 @@ export const i18nManifests: ManifestEntry[] = [
     keys: {
       conflict: "required", superseded_by: "required", supersedes: "required",
     } satisfies KeyManifest<UiStrings["conflictMarks"]>,
+  },
+  {
+    schema: "i18n.schema.json",
+    pointer: "/properties/reportCategories",
+    keys: {
+      wrong_fact: "required", wrong_citation: "required", missing: "required", should_refuse: "required", should_answer: "required", other: "required",
+    } satisfies KeyManifest<UiStrings["reportCategories"]>,
+  },
+  {
+    schema: "i18n.schema.json",
+    pointer: "/properties/reportResolutions",
+    keys: {
+      not_error: "required", retracted: "required",
+    } satisfies KeyManifest<UiStrings["reportResolutions"]>,
   },
   {
     schema: "i18n.schema.json",

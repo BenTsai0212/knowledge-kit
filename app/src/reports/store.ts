@@ -9,6 +9,9 @@ export type ReportCategory = (typeof REPORT_CATEGORIES)[number];
 
 export type ReportResolution = "not_error" | "retracted";
 
+// 說明的字數上限（migration 0010 的 CHECK）；畫面的輸入框以此限制
+export const MAX_REPORT_NOTE_CHARS = 1000;
+
 export interface NewReport {
   category: ReportCategory;
   // 選填說明；空白視為沒有

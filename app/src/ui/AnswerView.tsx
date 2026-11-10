@@ -1,11 +1,13 @@
-import type { CSSProperties, Ref } from "react";
+import { useState, type CSSProperties, type Ref } from "react";
 import { clientConfig } from "../client/load";
 import type { Graph, GraphEntity } from "../graph/read";
 import type { Answer } from "../qa/answer";
 import { splitCitations } from "../qa/citations";
 import { errorMessage, strings } from "../client/i18n";
 import { entityOptionLabel, entityTypeLabel } from "./graph-labels";
+import { MAX_REPORT_NOTE_CHARS, REPORT_CATEGORIES, type ReportCategory } from "../reports/store";
 import { refusalNextSteps, type RefusalStep } from "./refusal-next-steps";
+import { canReport, defaultCategory } from "./report-helpers";
 
 export interface AnswerState {
   question: string;
@@ -35,11 +37,13 @@ interface Props {
   onGotoUpload(): void;
   onOpenEntity(graph: Graph, entityId: string): void;
   openEntity: OpenEntity | null;
+  // 「回報有錯」（ADR 0007 決定 7）：寫入失敗時 reject
+  onReport(category: ReportCategory, note: string): Promise<void>;
 }
 
 const { entityTypes } = clientConfig.knowledgeModel;
 
-export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, onGotoUpload, onOpenEntity, openEntity }: Props) {
+export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, onGotoUpload, onOpenEntity, openEntity, onReport }: Props) {
   const s = strings(language);
   const { answer } = state;
   const stepText: Record<RefusalStep, string> = {
@@ -107,7 +111,65 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
           )}
         </>
       )}
+      {canReport(state) && <ReportForm language={language} initial={defaultCategory(state)} onReport={onReport} />}
     </section>
+  );
+}
+
+// 「回報有錯」：按下後展開原因與選填說明；送出後只留下提示（同一題不再回報）
+function ReportForm({ language, initial, onReport }: { language: string; initial: ReportCategory; onReport: Props["onReport"] }) {
+  const s = strings(language);
+  const [open, setOpen] = useState(false);
+  const [category, setCategory] = useState(initial);
+  const [note, setNote] = useState("");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "failed">("idle");
+  if (status === "sent") return <p className="muted report-sent">{s.reportSent}</p>;
+  if (!open)
+    return (
+      <p className="report-open">
+        <button type="button" className="chip" onClick={() => setOpen(true)}>
+          {s.reportButton}
+        </button>
+      </p>
+    );
+  return (
+    <form
+      className="report-form"
+      aria-label={s.reportButton}
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (status === "sending") return;
+        setStatus("sending");
+        onReport(category, note).then(
+          () => setStatus("sent"),
+          () => setStatus("failed"),
+        );
+      }}
+    >
+      <label>
+        {s.reportCategory}
+        <select value={category} onChange={(e) => setCategory(e.target.value as ReportCategory)}>
+          {REPORT_CATEGORIES.map((c) => (
+            <option key={c} value={c}>
+              {s.reportCategories[c]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        {s.reportNote}
+        <textarea value={note} maxLength={MAX_REPORT_NOTE_CHARS} rows={2} onChange={(e) => setNote(e.target.value)} />
+      </label>
+      {status === "failed" && <p className="error">{s.reportFailed}</p>}
+      <div className="dialog-actions">
+        <button type="submit" disabled={status === "sending"}>
+          {s.reportSubmit}
+        </button>
+        <button type="button" className="secondary" disabled={status === "sending"} onClick={() => setOpen(false)}>
+          {s.reportCancel}
+        </button>
+      </div>
+    </form>
   );
 }
 

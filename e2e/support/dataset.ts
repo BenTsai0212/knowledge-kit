@@ -76,3 +76,9 @@ export function sameNameEntities(role: RoleId, language: string): { name: string
   for (const e of entities.filter((x) => seen.has(x.id))) groups.set(displayName(e, language), [...(groups.get(displayName(e, language)) ?? []), e.id]);
   return [...groups].filter(([, ids]) => ids.length > 1).map(([name, ids]) => ({ name, ids }));
 }
+
+// viewer 看得到 role 看得到的所有段落（role 的回報送出的段落都在其中，viewer 才看得到該回報，ADR 0007 決定 7）
+export function seesAllOf(viewer: RoleId, role: RoleId): boolean {
+  const shown = visible(viewer);
+  return [...visible(role)].every((id) => shown.has(id));
+}

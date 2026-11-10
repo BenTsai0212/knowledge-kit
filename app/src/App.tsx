@@ -14,6 +14,7 @@ import { readReview } from "./extraction/store";
 import { readGraph, type Graph } from "./graph/read";
 import { ask } from "./qa/answer";
 import { apiTransport } from "./qa/api";
+import { writeReport } from "./reports/store";
 import { createProvider, preparesModel, PROVIDERS, type ActiveProvider, type ProgressListener } from "./retrieval/providers";
 import { openRetriever } from "./retrieval/retrieve";
 import { readSource, type SourceDocument } from "./sources/source";
@@ -26,6 +27,7 @@ import { MentionPanel } from "./ui/MentionPanel";
 import { Conversation, type Turn } from "./ui/Conversation";
 import { QuestionPanel } from "./ui/QuestionPanel";
 import { RetrievalNotice } from "./ui/RetrievalNotice";
+import { reportOf } from "./ui/report-helpers";
 import { PREPARING, sameDisplay, type ProviderStatus } from "./ui/retrieval-notice";
 import { ReviewPage } from "./ui/ReviewPage";
 import { pendingCount } from "./ui/review-helpers";
@@ -323,6 +325,7 @@ export function App() {
               onOpenSource={onOpenSource}
               onChanged={() => setReviewVersion((v) => v + 1)}
               onGotoGraph={() => setView("graph")}
+              onViewInGraph={(id) => (setGraphFocus(id), setView("graph"))}
             />
           ) : view === "upload" ? (
             // 切換身分或語言時重建，清除表單、預覽與結果
@@ -403,6 +406,12 @@ export function App() {
               onGotoUpload={() => setView("upload")}
               onOpenEntity={onOpenEntity}
               openEntity={entity}
+              onReport={async (turn, category, note) => {
+                const report = reportOf(turn, category, note);
+                // 能回報的題目一定有資料庫與回報內容（AnswerView 只在 canReport() 時顯示）；否則當作失敗
+                if (db === null || report === null) throw new Error("not reportable");
+                await writeReport(db, identity, report);
+              }}
             />
             <QuestionPanel language={language} disabled={retriever === null || answering} text={draft} onText={setDraft} onAsk={onAsk} />
           </div>

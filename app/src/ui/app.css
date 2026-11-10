@@ -961,6 +961,26 @@ label.inline {
 }
 
 
+/* 「回報有錯」（ADR 0007 決定 7）：回答下方的次要按鈕與展開的表單；待審頁的回報說明保留換行 */
+.report-open {
+  margin: 0.75rem 0 0;
+}
+
+.report-form {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.report-form label {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.report-note {
+  white-space: pre-wrap;
+}
+
 /* 待審頁籤的筆數（#48） */
 .tab-count {
   display: inline-block;

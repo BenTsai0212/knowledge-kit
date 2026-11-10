@@ -37,6 +37,7 @@
     "conflictOld", "conflictDecisions", "conflictToast", "conflictMarks", "conflictTitle", "conflictWaiting",
     "conflictRunning", "conflictFound", "conflictDropped", "conflictUnchecked", "conflictUnrelated",
     "conflictFailed", "conflictRetry",
+    "reportButton", "reportCategory", "reportCategories", "reportNote", "reportSubmit", "reportCancel", "reportSent", "reportFailed", "reviewReportsTab", "reportsEmpty", "reportRefusal", "reportMeta", "reportMarkNotError", "reportMarkRetracted", "reportRetractHint", "reportResolutions",
     "tabEvals", "evalSettings", "evalSetName", "evalTopK", "evalMinScore", "evalUseSetB",
     "evalModelGrading", "evalInvalidSettings", "evalUploaded", "evalStart", "evalPreparing", "evalStop",
     "evalRunning", "evalProgress", "evalDone", "evalStopped", "evalAborted", "evalConfirmTitle",
@@ -304,6 +305,46 @@
     "conflictUnrelated": { "$ref": "#/definitions/Text" },
     "conflictFailed": { "$ref": "#/definitions/Text" },
     "conflictRetry": { "$ref": "#/definitions/Text" },
+    "reportButton": { "$ref": "#/definitions/Text" },
+    "reportCategory": { "$ref": "#/definitions/Text" },
+    "reportCategories": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "wrong_fact", "wrong_citation", "missing", "should_refuse", "should_answer", "other"
+      ],
+      "properties": {
+        "wrong_fact": { "$ref": "#/definitions/Text" },
+        "wrong_citation": { "$ref": "#/definitions/Text" },
+        "missing": { "$ref": "#/definitions/Text" },
+        "should_refuse": { "$ref": "#/definitions/Text" },
+        "should_answer": { "$ref": "#/definitions/Text" },
+        "other": { "$ref": "#/definitions/Text" }
+      }
+    },
+    "reportNote": { "$ref": "#/definitions/Text" },
+    "reportSubmit": { "$ref": "#/definitions/Text" },
+    "reportCancel": { "$ref": "#/definitions/Text" },
+    "reportSent": { "$ref": "#/definitions/Text" },
+    "reportFailed": { "$ref": "#/definitions/Text" },
+    "reviewReportsTab": { "$ref": "#/definitions/Text" },
+    "reportsEmpty": { "$ref": "#/definitions/Text" },
+    "reportRefusal": { "$ref": "#/definitions/Text" },
+    "reportMeta": { "$ref": "#/definitions/Text" },
+    "reportMarkNotError": { "$ref": "#/definitions/Text" },
+    "reportMarkRetracted": { "$ref": "#/definitions/Text" },
+    "reportRetractHint": { "$ref": "#/definitions/Text" },
+    "reportResolutions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "not_error", "retracted"
+      ],
+      "properties": {
+        "not_error": { "$ref": "#/definitions/Text" },
+        "retracted": { "$ref": "#/definitions/Text" }
+      }
+    },
     "tabEvals": { "$ref": "#/definitions/Text" },
     "evalSettings": { "$ref": "#/definitions/Text" },
     "evalSetName": { "$ref": "#/definitions/Text" },
