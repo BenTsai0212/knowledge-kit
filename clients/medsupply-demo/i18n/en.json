@@ -140,6 +140,7 @@
   "reviewExisting": "Already in the graph",
   "reviewNew": "New",
   "reviewConfirm": "Confirm",
+  "reviewConfirmWithRelations": "Confirm (with {count} relations)",
   "reviewSources": "Sources ({count})",
   "noticeParseTitle": "The document couldn't be read",
   "noticeWriteTitle": "Upload failed",

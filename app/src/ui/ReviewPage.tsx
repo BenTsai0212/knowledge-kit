@@ -27,6 +27,7 @@ import {
   reviewDocuments,
   reviewGroups,
   toastText,
+  waitingRelations,
   type EntityChoice,
 } from "./review-helpers";
 import { fill, strings } from "../client/i18n";
@@ -238,8 +239,12 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
       </button>
     );
   // 一筆實體一行（#189）：類型、標籤、名稱、合併選擇、出處的開關與動作。
-  // badge：「新增」「系統建議」；mergeHint：選擇合併時在下一行提示可見範圍；confirm：「確認」一組（沒有時只有退回）
-  const entityRow = (doc: ReviewDocument, e: ReviewEntity, opts: { badge?: string; mergeHint?: boolean; confirm?: () => void; confirmDisabled?: boolean }) => {
+  // badge：「新增」「系統建議」；mergeHint：選擇合併時在下一行提示可見範圍；confirm：「確認」一組（沒有時只有退回），confirmLabel 寫明一起核准的關係數
+  const entityRow = (
+    doc: ReviewDocument,
+    e: ReviewEntity,
+    opts: { badge?: string; mergeHint?: boolean; confirm?: () => void; confirmLabel?: string; confirmDisabled?: boolean },
+  ) => {
     const pending = e.status === "pending";
     const suggestion = suggestions[e.id];
     const choice = choiceOf(e);
@@ -317,7 +322,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
             <span className="review-actions">
               {opts.confirm !== undefined && (
                 <button type="button" disabled={busy || opts.confirmDisabled} onClick={opts.confirm}>
-                  {busy ? s.reviewWorking : s.reviewConfirm}
+                  {busy ? s.reviewWorking : (opts.confirmLabel ?? s.reviewConfirm)}
                 </button>
               )}
               <button type="button" className="secondary" disabled={busy} onClick={() => void rejectItems(doc.id, { entities: [e.id], relations: [] })}>
@@ -457,7 +462,9 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                 {g.groups.length > 0 && (
                   <ul className="review-list">
                     {g.groups.map((group) => {
-                      const plan = groupPlan(doc, group, allChoices, client.languages);
+                      const plan = groupPlan(doc, group, g.prepared.entities, suggestions, allChoices, client.languages);
+                      const waiting = waitingRelations(doc, group, g.prepared.entities, suggestions, allChoices, client.languages);
+                      const relationCount = plan === null ? 0 : plan.relations.length + plan.existingRelations.length;
                       return (
                         <li key={group.entity.id}>
                           {entityRow(doc, group.entity, {
@@ -466,15 +473,14 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                             confirm: () => {
                               if (plan) void approveItems(doc.id, plan);
                             },
+                            confirmLabel: relationCount > 0 ? fill(s.reviewConfirmWithRelations, { count: relationCount }) : s.reviewConfirm,
                             confirmDisabled: plan === null,
                           })}
                           {group.relations.length > 0 && (
                             <ul className="review-rows">
-                              {group.relations.map((x) => {
-                                const other = x.relation.from === group.entity.id ? x.relation.to : x.relation.from;
-                                const waiting = other !== group.entity.id && !doc.entities.some((e) => e.id === other && e.status === "approved");
-                                return <li key={x.relation.id}>{relationRow(doc, x.relation, { existing: x.existing, waiting })}</li>;
-                              })}
+                              {group.relations.map((x) => (
+                                <li key={x.relation.id}>{relationRow(doc, x.relation, { existing: x.existing, waiting: waiting.has(x.relation.id) })}</li>
+                              ))}
                             </ul>
                           )}
                         </li>

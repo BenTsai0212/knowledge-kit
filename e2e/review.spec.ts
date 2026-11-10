@@ -41,3 +41,25 @@ test("走查用的通知：第一個畫面看得到摘要、進度與需要確�
   // 這份文件沒有遺留待審：卡片消失
   await expect(card).toHaveCount(0);
 });
+
+test("走查用的通知：確認陳柏翰這組時，另一端已準備好的實體與這組的關係一起核准", async ({ page }) => {
+  test.skip(clientName !== "", "走查用的通知依參考情境的知識模型與圖譜（client/）");
+  await openApp(page);
+  await switchIdentity(page, reviewingUploader!.id);
+  await uploadAndReview(page, { file: "walkthrough-notice.md", title: WALKTHROUGH_TITLE, visibility: "internal", expected: "陳柏翰" });
+
+  const card = page.locator("section.review-doc").filter({ hasText: WALKTHROUGH_TITLE });
+  const progress = card.getByText(fill(s.reviewProgress, { count: 1 }));
+  await expect(progress).toBeVisible();
+  // 營運部、長堤專案是系統已準備的實體：一起核准，2 段關係都算在這次確認裡
+  await card.getByRole("button", { name: fill(s.reviewConfirmWithRelations, { count: 2 }) }).click();
+  // 陳柏翰、營運部、長堤專案與 2 段關係
+  await expect(page.getByRole("status")).toContainText(fill(s.reviewToastApproved, { count: 5 }));
+  await expect(progress).toHaveCount(0);
+  await expect(card.getByText(s.reviewProgressDone)).toBeVisible();
+  // 系統已準備剩下張雅婷、黃建宏與 4 段圖譜已有的關係；陳柏翰的關係不在其中
+  const prepared = card.locator("details.review-prepared");
+  await expect(prepared.locator("summary")).toContainText(fill(s.reviewPrepared, { count: 6 }));
+  await prepared.locator("summary").click();
+  await expect(prepared.getByText("陳柏翰")).toHaveCount(0);
+});

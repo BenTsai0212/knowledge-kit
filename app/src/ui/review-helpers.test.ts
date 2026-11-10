@@ -21,6 +21,8 @@ import {
   reviewDocuments,
   reviewGroups,
   toastText,
+  waitingRelations,
+  type EntityChoice,
 } from "./review-helpers";
 
 const entity = (id: string, status: ReviewEntity["status"] = "pending"): ReviewEntity => ({
@@ -182,6 +184,23 @@ describe("系統建議與分組：走查用的通知", () => {
     expect(plan.skipped).toBe(0);
   });
 
+  it("確認陳柏翰這組：另一端的營運部、長堤專案（系統已準備）一起核准，2 段關係不留待審（#189 修正要求）", () => {
+    const g = reviewGroups(walkthrough, suggestions, choices, graph, LANGS);
+    expect(waitingRelations(walkthrough, g.groups[0], g.prepared.entities, suggestions, choices, LANGS).size).toBe(0);
+    expect(groupPlan(walkthrough, g.groups[0], g.prepared.entities, suggestions, choices, LANGS)).toEqual({
+      entities: [{ id: "pe-chen" }, { id: "pe-ops", mergeInto: "team-ops" }, { id: "pe-longpier", mergeInto: "project-longpier" }],
+      relations: ["pr-chen-ops", "pr-chen-longpier"],
+      existingRelations: [],
+    });
+    // 另一端還沒選擇合併對象時，那段關係留在組裡，另一端也不一起核准
+    const unchosen = { ...choices, "pe-longpier": { mergeInto: undefined } };
+    expect(groupPlan(walkthrough, g.groups[0], g.prepared.entities, suggestions, unchosen, LANGS)).toEqual({
+      entities: [{ id: "pe-chen" }, { id: "pe-ops", mergeInto: "team-ops" }],
+      relations: ["pr-chen-ops"],
+      existingRelations: [],
+    });
+  });
+
   it("圖譜已有依目前的選擇計算：一端改成建立新實體後就不是；已核准的一端用核准時的合併對象", () => {
     const rel = walkthrough.relations[0];
     expect(existingRelation(walkthrough, rel, choices, graph)?.id).toBe("zhang-member-of-ops");
@@ -226,22 +245,27 @@ describe("reviewGroups：需要決定的組", () => {
   it("groupPlan：確認一組＝實體加上兩端都已核准或一起核准的關係；需要逐筆選擇的實體選擇後才能確認", () => {
     const g = reviewGroups(d, suggestions, {}, NO_GRAPH, LANGS);
     const [lin, created] = g.groups;
-    expect(groupPlan(d, lin, { "pe-lin": { mergeInto: undefined } }, LANGS)).toBeNull();
-    expect(groupPlan(d, lin, { "pe-lin": { mergeInto: "person-lin-zhiming-rd" } }, LANGS)).toEqual({
+    const plan = (group: typeof lin, choices: Record<string, EntityChoice>) => groupPlan(d, group, g.prepared.entities, suggestions, choices, LANGS);
+    expect(plan(lin, { "pe-lin": { mergeInto: undefined } })).toBeNull();
+    expect(plan(lin, { "pe-lin": { mergeInto: "person-lin-zhiming-rd" } })).toEqual({
       entities: [{ id: "pe-lin", mergeInto: "person-lin-zhiming-rd" }],
       relations: ["pr-lin-ops"],
       existingRelations: [],
     });
-    // pr-new-lin 的另一端（林志明）還待審：留在組裡，不送出
-    expect(groupPlan(d, created, {}, LANGS)).toEqual({ entities: [{ id: "pe-new" }], relations: [], existingRelations: [] });
-    expect(groupPlan(d, created, { "pe-new": { mergeInto: null, names: { "zh-TW": "甲", en: "" } } }, LANGS)).toBeNull();
+    // pr-new-lin 的另一端是兩位林志明（另一組）：選擇前後都留在組裡，不送出
+    for (const into of [undefined, "person-lin-zhiming-rd"]) {
+      const choices = { "pe-lin": { mergeInto: into } };
+      expect(plan(created, choices)).toEqual({ entities: [{ id: "pe-new" }], relations: [], existingRelations: [] });
+      expect(waitingRelations(d, created, g.prepared.entities, suggestions, choices, LANGS)).toEqual(new Set(["pr-new-lin"]));
+    }
+    expect(plan(created, { "pe-new": { mergeInto: null, names: { "zh-TW": "甲", en: "" } } })).toBeNull();
   });
 
   it("groupPlan：圖譜已有的關係只寫決定", () => {
     const graph = { relations: [{ id: "lin-member-of-ops", type: "member-of", from: "person-lin-zhiming-rd", to: "pe-ops", sources: [] }] };
     const choices = { "pe-lin": { mergeInto: "person-lin-zhiming-rd" } };
     const g = reviewGroups(d, suggestions, choices, graph, LANGS);
-    expect(groupPlan(d, g.groups[0], choices, LANGS)).toEqual({
+    expect(groupPlan(d, g.groups[0], g.prepared.entities, suggestions, choices, LANGS)).toEqual({
       entities: [{ id: "pe-lin", mergeInto: "person-lin-zhiming-rd" }],
       relations: [],
       existingRelations: ["pr-lin-ops"],

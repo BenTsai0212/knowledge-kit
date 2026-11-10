@@ -170,20 +170,58 @@ export function reviewGroups(
   };
 }
 
-// 確認一組（#189）：這組的實體，加上它底下兩端都已核准或一起核准的關係（需要逐筆選擇的實體也可以，選擇後才能確認）。
-// 還沒選擇合併對象或名稱不完整時回 null；另一端還待審的關係留在組裡
+// 確認一組時，關係的一端可以怎麼核准：這組的實體或已核准（"ready"）；系統已準備、待審、可以批次核准且名稱完整的實體，
+// 以目前的選擇一起核准（#189 修正要求）；其他（屬於其他需要確認的組、還沒選擇合併對象）為 null
+function groupEnd(
+  doc: ReviewDocument,
+  group: ReviewGroup,
+  prepared: readonly ReviewEntity[],
+  suggestions: Record<string, MergeSuggestion>,
+  choices: Record<string, EntityChoice>,
+  languages: readonly string[],
+  id: string,
+): "ready" | EntityApproval | null {
+  if (id === group.entity.id || doc.entities.some((e) => e.id === id && e.status === "approved")) return "ready";
+  if (!prepared.some((e) => e.id === id && e.status === "pending") || !canBatch(suggestions[id] ?? { mode: "new" })) return null;
+  return entityApproval(id, choices[id] ?? { mergeInto: null }, languages);
+}
+
+// 組裡不能隨這組一起核准的關係：另一端屬於其他需要確認的組、還沒選擇合併對象或名稱不完整（畫面標示「兩端的實體核准後才能核准」）
+export function waitingRelations(
+  doc: ReviewDocument,
+  group: ReviewGroup,
+  prepared: readonly ReviewEntity[],
+  suggestions: Record<string, MergeSuggestion>,
+  choices: Record<string, EntityChoice>,
+  languages: readonly string[],
+): Set<string> {
+  const end = (id: string) => groupEnd(doc, group, prepared, suggestions, choices, languages, id);
+  return new Set(group.relations.filter((g) => end(g.relation.from) === null || end(g.relation.to) === null).map((g) => g.relation.id));
+}
+
+// 確認一組（#189）：這組的實體，加上它底下的關係；關係的另一端是系統已準備的實體時一起核准（groupEnd）。
+// 需要逐筆選擇的實體也可以，選擇後才能確認；還沒選擇合併對象或名稱不完整時回 null。不能一起核准的關係留在組裡（waitingRelations）
 export function groupPlan(
   doc: ReviewDocument,
   group: ReviewGroup,
+  prepared: readonly ReviewEntity[],
+  suggestions: Record<string, MergeSuggestion>,
   choices: Record<string, EntityChoice>,
   languages: readonly string[],
 ): { entities: EntityApproval[]; relations: string[]; existingRelations: string[] } | null {
   const entity = entityApproval(group.entity.id, choices[group.entity.id] ?? { mergeInto: null }, languages);
   if (entity === null) return null;
-  const approved = (id: string) => id === entity.id || doc.entities.some((e) => e.id === id && e.status === "approved");
-  const ready = group.relations.filter((g) => approved(g.relation.from) && approved(g.relation.to));
+  const waiting = waitingRelations(doc, group, prepared, suggestions, choices, languages);
+  const ready = group.relations.filter((g) => !waiting.has(g.relation.id));
+  const entities = new Map([[entity.id, entity]]);
+  for (const { relation } of ready) {
+    for (const id of [relation.from, relation.to]) {
+      const end = groupEnd(doc, group, prepared, suggestions, choices, languages, id);
+      if (end !== null && end !== "ready" && !entities.has(id)) entities.set(id, end);
+    }
+  }
   return {
-    entities: [entity],
+    entities: [...entities.values()],
     relations: ready.filter((g) => !g.existing).map((g) => g.relation.id),
     existingRelations: ready.filter((g) => g.existing).map((g) => g.relation.id),
   };

@@ -140,6 +140,7 @@
   "reviewExisting": "圖譜已有",
   "reviewNew": "新增",
   "reviewConfirm": "確認",
+  "reviewConfirmWithRelations": "確認（含 {count} 段關係）",
   "reviewSources": "出處（{count}）",
   "noticeParseTitle": "無法讀取這份文件",
   "noticeWriteTitle": "上傳失敗",

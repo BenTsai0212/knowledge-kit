@@ -140,6 +140,7 @@
   "reviewExisting": "グラフに登録済み",
   "reviewNew": "新規",
   "reviewConfirm": "確認",
+  "reviewConfirmWithRelations": "確認（関係 {count} 件を含む）",
   "reviewSources": "出典（{count}）",
   "noticeParseTitle": "文書を読み込めませんでした",
   "noticeWriteTitle": "アップロードに失敗しました",

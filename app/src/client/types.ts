@@ -370,6 +370,8 @@ export interface UiStrings {
   reviewExisting: string;
   reviewNew: string;
   reviewConfirm: string;
+  // 「確認」一組時一起核准的關係數：{count}（#189 修正要求）
+  reviewConfirmWithRelations: string;
   reviewSources: string;
   // 提示框的標題與動作（#48）
   noticeParseTitle: string;
