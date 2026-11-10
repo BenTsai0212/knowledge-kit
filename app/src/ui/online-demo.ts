@@ -25,11 +25,19 @@ export function readPresentationMode(search: string): boolean {
 // 測試環境（Node）沒有 location，所以是關閉的
 export const presentationMode: boolean = readPresentationMode(globalThis.location?.search ?? "");
 
-// 頁籤：待審與評測台只給 canReview 的身分；線上 demo 隱藏評測台（一次會呼叫大量問答，#100 決定 4）；
+// 評測台（#192，docs/evals.md「開啟評測台」）：網址的 tools 參數是 "evals"（區分大小寫）時開啟，其他值或沒有參數時關閉。
+// 評測台是交付方的工具，客戶一般使用時不顯示。寫法與展示模式相同：只在載入時讀一次、不存進瀏覽器儲存、不是權限防線
+export function readEvalsMode(search: string): boolean {
+  return new URLSearchParams(search).get("tools") === "evals";
+}
+
+export const evalsMode: boolean = readEvalsMode(globalThis.location?.search ?? "");
+
+// 頁籤：待審只給 canReview 的身分；評測台另外要以 tools=evals 開啟（#192）。線上 demo 隱藏評測台（一次會呼叫大量問答，#100 決定 4）；
 // 展示模式只留問答與圖譜，所有身分相同（#129）。兩者同時開啟時取交集
-export function visibleViews(canReview: boolean, demo: Pick<OnlineDemo, "enabled">, presentation: boolean): View[] {
+export function visibleViews(canReview: boolean, demo: Pick<OnlineDemo, "enabled">, presentation: boolean, evals: boolean): View[] {
   const views: View[] = ["qa", "graph", "timeline", "upload"];
   if (canReview) views.push("review");
-  if (canReview && !demo.enabled) views.push("evals");
+  if (canReview && evals && !demo.enabled) views.push("evals");
   return presentation ? views.filter((v) => v === "qa" || v === "graph") : views;
 }

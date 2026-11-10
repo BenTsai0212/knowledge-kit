@@ -137,7 +137,7 @@
 
 評測台頁籤（`app/src/ui/EvalPage.tsx`；純函式在 `app/src/ui/eval-helpers.ts`）。
 
-- **誰看得到**：只有 `canReview` 的身分（`access.json`）。切換到沒有 `canReview` 的身分時回到問答頁，比照待審頁。需要邀請碼，沒有時顯示邀請碼輸入畫面；遇到 `invalid_access_code` 時與問答相同，清除邀請碼。
+- **誰看得到**：網址帶 `?tools=evals` 時（見下方「開啟評測台」），只有 `canReview` 的身分（`access.json`）。切換到沒有 `canReview` 的身分時回到問答頁，比照待審頁。需要邀請碼，沒有時顯示邀請碼輸入畫面；遇到 `invalid_access_code` 時與問答相同，清除邀請碼。
 - **設定**：設定 A、設定 B 各有 `topK`（1～20 的整數）與 `minScore`（0～1），只在這次評測有效。預設值是實際生效的檢索參數：一開始取自 `client.json` 的 `retrieval`，provider 準備好後換成 `ActiveProvider.options`；語意向量降級時 `minScore` 因此是 `keyword-hash` 的預設值（見 [retrieval.md「降級」](retrieval.md#降級)），沒有降級時與 `client.json` 相同。人改過的欄位不覆蓋。provider 準備好之前就按「開始評測」時，估算會等 provider 準備好，並以同樣的規則換掉沒改過的欄位，估算與執行用同一組設定（`effectiveForm()`，#178）。設定 B 預設不啟用（只跑一組）。「答案正確改用模型評分」預設不勾選。
 - **上傳的文件**：評測使用專用的記憶體資料庫，不納入上傳的文件；本次工作階段有上傳的文件時，畫面提示「目前有 N 份上傳的文件，不納入評測」。
 - **開始前確認**：按「開始評測」時開啟評測專用資料庫，以 `estimateCalls()` 算出預計次數，確認視窗顯示「最多 N 次呼叫（問答 a、模型評分 b）」，並提醒每日上限（`DAILY_LIMIT`）不夠時先在 `.dev.vars` 調高。取消時關閉資料庫。
@@ -149,6 +149,17 @@
 - **兩組比較**：兩組都完成、且任一指標（引用、答案、滲漏、拒答）的結果不同的題目標示「兩組不同」（`differs()`），可以只顯示這些題目。
 - **結果的保存**：最近一次的結果由 App 保存在記憶體，切換頁籤後仍可查看；重新整理頁面就會消失。「下載 JSON」（`evalReport()`）的內容是判定方式、狀態與停止原因、開始與結束時間、門檻，以及每組的設定、指標與每題結果；不含邀請碼。
 - 介面文字都在 `client/i18n/`（`tabEvals`、`eval*`）。
+
+### 開啟評測台
+
+評測台是交付方用來證明品質、調整 `topK`／`minScore` 的工具，畫面都是工程參數，所以客戶一般使用時不顯示（#192）。
+
+- **開啟方式**：網址加上 `?tools=evals`（例如 `/?tools=evals`，與其他參數併用時 `/?lang=ja&tools=evals`）。只有值完全是 `evals`（區分大小寫）時開啟；沒有參數或值不同時，`canReview` 的身分也只看到待審，看不到評測台。
+- **只在載入時讀一次**（`app/src/ui/online-demo.ts` 的 `evalsMode`），不寫入 `localStorage` 或 `sessionStorage`；要關閉時打開不帶參數的網址。畫面上沒有切換按鈕，也不提示這個參數。
+- **線上 demo 與展示模式維持不顯示**：帶了參數也一樣（`visibleViews()`，見 [docs/qa.md](qa.md)「線上 demo」「展示模式」）。
+- **不是權限防線**：知道參數的人都能打開。評測只用目前身分看得到的資料，權限仍由 RLS 執行（[docs/data-model.md](data-model.md)）。
+
+驗證：`online-demo.test.ts`（參數的各種值、與 `canReview`、線上 demo、展示模式的組合）；`e2e/access.spec.ts`（沒有參數時所有身分都看不到、帶參數時只給 `canReview` 的身分）、`e2e/demo.spec.ts`、`e2e/presentation.spec.ts`（帶參數也不顯示）。
 
 ## 模型評分
 

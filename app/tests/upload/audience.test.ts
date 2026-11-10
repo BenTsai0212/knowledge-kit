@@ -1,9 +1,10 @@
 // 上傳頁的「誰看得到」（#42）：對每種「可見等級 × 專案（含無專案）」，與 oracle.ts 對一份該條件的文件算出的可見範圍一致。
 import { describe, expect, it } from "vitest";
 import { clientConfig } from "../../src/client/load";
-import { audienceRoles, formatBytes, todayIso } from "../../src/ui/upload-helpers";
+import { audienceRoles, defaultVisibility, formatBytes, todayIso } from "../../src/ui/upload-helpers";
 import { expectedVisible } from "../db/oracle";
 import type { Sample } from "../db/sample";
+import type { AccessFile } from "../../src/client/types";
 
 const access = clientConfig.access;
 const LEVELS = access.visibilityLevels.map((l) => l.id);
@@ -25,6 +26,38 @@ describe("audienceRoles", () => {
     expect(audienceRoles(access, "confidential", null).map((r) => r.id)).toEqual(["manager"]);
     expect(audienceRoles(access, "internal", "bluewing").map((r) => r.id)).toEqual(["staff", "manager"]);
     expect(audienceRoles(access, "public", null).map((r) => r.id)).toEqual(["guest", "staff", "manager"]);
+  });
+});
+
+describe("defaultVisibility", () => {
+  const rank = new Map(access.visibilityLevels.map((l) => [l.id, l.rank]));
+
+  it.each(access.roles.map((r) => [r.id, r] as const))("%s：預設為自己能選的最嚴格等級", (_, role) => {
+    const level = defaultVisibility(access, role.id);
+    const choosable = access.visibilityLevels.filter((l) => l.rank <= rank.get(role.visibility)!);
+    expect(choosable.map((l) => l.id)).toContain(level);
+    expect(rank.get(level)).toBe(Math.max(...choosable.map((l) => l.rank)));
+  });
+
+  it("參考情境：主管預設機密、一般員工預設內部，能上傳的身分都不預設公開", () => {
+    expect(defaultVisibility(access, "manager")).toBe("confidential");
+    expect(defaultVisibility(access, "staff")).toBe("internal");
+    expect(defaultVisibility(access, "guest")).toBe("public");
+    for (const role of access.roles.filter((r) => r.canUpload)) expect(defaultVisibility(access, role.id)).not.toBe("public");
+  });
+
+  it("同 rank 時取 access.json 中較前面的；身分不存在時為空字串", () => {
+    const tied: AccessFile = {
+      ...access,
+      visibilityLevels: [
+        { ...access.visibilityLevels[0], id: "low", rank: 0 },
+        { ...access.visibilityLevels[0], id: "high-a", rank: 1 },
+        { ...access.visibilityLevels[0], id: "high-b", rank: 1 },
+      ],
+      roles: [{ ...access.roles[0], id: "r", visibility: "high-b" }],
+    };
+    expect(defaultVisibility(tied, "r")).toBe("high-a");
+    expect(defaultVisibility(access, "nobody")).toBe("");
   });
 });
 

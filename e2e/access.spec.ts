@@ -1,7 +1,7 @@
 // 畫面層的越權測試（#66）：切換身分後，畫面上不殘留新身分看不到的內容。
 // 看不到的段落以 app/src/evals/oracle.ts 算出（support/dataset.ts），不以畫面或資料庫的結果為準。
 import { expect, test, type Page } from "@playwright/test";
-import { language, openApp, openTab, presetQuestions, s, sourcePanel, switchIdentity, tab, type RoleId } from "./support/app";
+import { EVALS_PATH, language, openApp, openTab, presetQuestions, s, sourcePanel, switchIdentity, tab, type RoleId } from "./support/app";
 import { access, NO_NON_REVIEWER, NO_REVIEWER, nonReviewer, reviewer } from "./support/client";
 import { hiddenDocument, leakedPassages } from "./support/dataset";
 import { askStreamCancelled, askStreamOpen, event, holdAskStream, pushAskStream } from "./support/fake-ask";
@@ -62,8 +62,18 @@ test("串流回答中切換身分：回答不再出現，之後到的內容也�
   await expect(page.getByText(s.emptyAnswer)).toBeVisible();
 });
 
-test("待審與評測台的頁籤只給 canReview 的身分", async ({ page }) => {
+test("待審只給 canReview 的身分；沒有 tools=evals 時，所有身分都看不到評測台", async ({ page }) => {
   await openApp(page);
+  for (const role of access.roles) {
+    await switchIdentity(page, role.id);
+    await expect(tab(page, s.tabQa)).toBeVisible();
+    await expect(tab(page, s.tabReview)).toHaveCount(role.canReview ? 1 : 0);
+    await expect(tab(page, s.tabEvals)).toHaveCount(0);
+  }
+});
+
+test("tools=evals 時，待審與評測台的頁籤只給 canReview 的身分", async ({ page }) => {
+  await openApp(page, EVALS_PATH);
   for (const role of access.roles) {
     await switchIdentity(page, role.id);
     await expect(tab(page, s.tabQa)).toBeVisible();
@@ -74,7 +84,7 @@ test("待審與評測台的頁籤只給 canReview 的身分", async ({ page }) =
 test("在評測台切換成沒有 canReview 的身分：回到問答，頁籤消失", async ({ page }) => {
   test.skip(reviewer === undefined, NO_REVIEWER);
   test.skip(nonReviewer === undefined, NO_NON_REVIEWER);
-  await openApp(page);
+  await openApp(page, EVALS_PATH);
   await switchIdentity(page, reviewer!.id);
   await openTab(page, s.tabEvals);
   await expect(page.getByRole("button", { name: s.evalStart })).toBeVisible();

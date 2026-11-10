@@ -1,13 +1,14 @@
 // 互動的邊角（#66）：上傳寫入中按 Esc、評測執行中離開頁籤、深色模式。/api/ask 一律是假的回應（support/fake-ask.ts）。
 import { expect, test } from "@playwright/test";
-import { openApp, openTab, s, switchIdentity } from "./support/app";
+import { EVALS_PATH, openApp, openTab, s, switchIdentity } from "./support/app";
 import { NO_REVIEWER, NO_UPLOADER, reviewer, theme, uploader } from "./support/client";
 
 // #RRGGBB → getComputedStyle 的 rgb(r, g, b)
 const rgb = (hex: string) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(", ")})`;
 
+// 評測執行中離開頁籤的測試要用評測台，以開啟評測台的網址打開
 test.beforeEach(async ({ page }) => {
-  await openApp(page);
+  await openApp(page, EVALS_PATH);
 });
 
 test("上傳寫入中按 Esc：寫入不中斷、只寫入一次；完成後 Esc 可以關閉", async ({ page }) => {

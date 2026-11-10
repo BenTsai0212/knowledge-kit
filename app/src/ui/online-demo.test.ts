@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { onlineDemo, presentationMode, readOnlineDemo, readPresentationMode, visibleViews } from "./online-demo";
+import { evalsMode, onlineDemo, presentationMode, readEvalsMode, readOnlineDemo, readPresentationMode, visibleViews } from "./online-demo";
 
 describe("readOnlineDemo", () => {
   it("預設關閉：未設定或不是 \"1\" 時都關閉，也不帶公開碼", () => {
@@ -37,32 +37,62 @@ describe("readPresentationMode", () => {
   });
 });
 
+describe("readEvalsMode", () => {
+  it("只有 tools=evals 時開啟", () => {
+    expect(readEvalsMode("?tools=evals")).toBe(true);
+    expect(readEvalsMode("tools=evals")).toBe(true);
+    expect(readEvalsMode("?lang=ja&tools=evals")).toBe(true);
+    expect(readEvalsMode("?mode=presentation&tools=evals")).toBe(true);
+  });
+
+  it("沒有參數、其他值或大小寫不同時關閉", () => {
+    for (const search of ["", "?", "?tools", "?tools=", "?tools=eval", "?tools=Evals", "?tools=EVALS", "?TOOLS=evals", "?tools=evals%20", "?evals", "?mode=evals"]) {
+      expect(readEvalsMode(search)).toBe(false);
+    }
+  });
+
+  it("測試環境沒有網址，所以是關閉的", () => {
+    expect(evalsMode).toBe(false);
+  });
+});
+
 describe("visibleViews", () => {
   const off = { enabled: false };
   const on = { enabled: true };
 
-  it("待審與評測台只給 canReview 的身分", () => {
-    expect(visibleViews(false, off, false)).toEqual(["qa", "graph", "timeline", "upload"]);
-    expect(visibleViews(true, off, false)).toEqual(["qa", "graph", "timeline", "upload", "review", "evals"]);
+  it("待審只給 canReview 的身分；沒有 tools=evals 時，canReview 的身分也看不到評測台", () => {
+    expect(visibleViews(false, off, false, false)).toEqual(["qa", "graph", "timeline", "upload"]);
+    expect(visibleViews(true, off, false, false)).toEqual(["qa", "graph", "timeline", "upload", "review"]);
   });
 
-  it("線上 demo 只隱藏評測台，上傳與待審保留", () => {
-    expect(visibleViews(false, on, false)).toEqual(["qa", "graph", "timeline", "upload"]);
-    expect(visibleViews(true, on, false)).toEqual(["qa", "graph", "timeline", "upload", "review"]);
+  it("tools=evals 時評測台只給 canReview 的身分", () => {
+    expect(visibleViews(false, off, false, true)).toEqual(["qa", "graph", "timeline", "upload"]);
+    expect(visibleViews(true, off, false, true)).toEqual(["qa", "graph", "timeline", "upload", "review", "evals"]);
   });
 
-  it("展示模式只有問答與圖譜，canReview 的身分也一樣", () => {
-    expect(visibleViews(false, off, true)).toEqual(["qa", "graph"]);
-    expect(visibleViews(true, off, true)).toEqual(["qa", "graph"]);
+  it("線上 demo 只隱藏評測台（tools=evals 也一樣），上傳與待審保留", () => {
+    for (const evals of [false, true]) {
+      expect(visibleViews(false, on, false, evals)).toEqual(["qa", "graph", "timeline", "upload"]);
+      expect(visibleViews(true, on, false, evals)).toEqual(["qa", "graph", "timeline", "upload", "review"]);
+    }
+  });
+
+  it("展示模式只有問答與圖譜，canReview 的身分與 tools=evals 也一樣", () => {
+    for (const evals of [false, true]) {
+      expect(visibleViews(false, off, true, evals)).toEqual(["qa", "graph"]);
+      expect(visibleViews(true, off, true, evals)).toEqual(["qa", "graph"]);
+    }
   });
 
   it("與線上 demo 同時開啟時取兩者的交集", () => {
     for (const canReview of [false, true]) {
-      const both = visibleViews(canReview, on, true);
-      expect(both).toEqual(["qa", "graph"]);
-      const demoOnly = visibleViews(canReview, on, false);
-      const presentationOnly = visibleViews(canReview, off, true);
-      expect(both).toEqual(demoOnly.filter((v) => presentationOnly.includes(v)));
+      for (const evals of [false, true]) {
+        const both = visibleViews(canReview, on, true, evals);
+        expect(both).toEqual(["qa", "graph"]);
+        const demoOnly = visibleViews(canReview, on, false, evals);
+        const presentationOnly = visibleViews(canReview, off, true, evals);
+        expect(both).toEqual(demoOnly.filter((v) => presentationOnly.includes(v)));
+      }
     }
   });
 });
