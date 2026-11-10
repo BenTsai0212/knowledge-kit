@@ -35,11 +35,16 @@ export async function switchIdentity(page: Page, id: RoleId): Promise<void> {
   await page.getByRole("banner").getByLabel(s.identity).selectOption({ label: role.label[language] });
 }
 
+// 以 label 開頭比對的正規表示式
+const startsWith = (label: string) => new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
+
 // 頁籤的按鈕；待審頁籤的名稱後面接著筆數，所以比對開頭
 export function tab(page: Page, label: string): Locator {
-  const name = new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
-  return page.getByRole("navigation", { name: s.views }).getByRole("button", { name });
+  return page.getByRole("navigation", { name: s.views }).getByRole("button", { name: startsWith(label) });
 }
+
+// 包在 <label> 裡的欄位：無障礙名稱含有欄位目前的值（例如下拉選單選中的項目），所以以 label 文字的開頭找
+const field = (page: Page, label: string, tag: "input" | "select") => page.locator("label").filter({ hasText: startsWith(label) }).locator(tag);
 
 // 切換頁籤
 export async function openTab(page: Page, label: string): Promise<void> {
@@ -48,10 +53,20 @@ export async function openTab(page: Page, label: string): Promise<void> {
 
 export const sourcePanel = (page: Page) => page.getByRole("complementary", { name: s.sourceTitle });
 
-// 以目前的身分上傳 fixtures/upload-note.md，等萃取的實體出現在待審（目前的身分要能上傳也能審查）
-export async function uploadAndReview(page: Page): Promise<void> {
+// 以目前的身分上傳 fixtures 的檔案（預設 upload-note.md），等萃取的實體出現在待審（目前的身分要能上傳也能審查）。
+// title：文件標題（沒有時用檔名）；visibility：可見等級的 id（沒有時用上傳頁的預設）；expected：待審頁中要出現的實體名稱
+export async function uploadAndReview(
+  page: Page,
+  options: { file?: string; title?: string; visibility?: string; expected?: string } = {},
+): Promise<void> {
+  const { file = "upload-note.md", title, visibility, expected = FAKE_ENTITY_NAME } = options;
   await openTab(page, s.tabUpload);
-  await page.getByLabel(s.uploadFile).setInputFiles("e2e/fixtures/upload-note.md");
+  await page.getByLabel(s.uploadFile).setInputFiles(`e2e/fixtures/${file}`);
+  if (title !== undefined) await field(page, s.uploadDocTitle, "input").fill(title);
+  if (visibility !== undefined) {
+    const level = access.visibilityLevels.find((l) => l.id === visibility)!;
+    await field(page, s.uploadVisibility, "select").selectOption({ label: level.label[language] });
+  }
   await page.getByRole("button", { name: s.uploadPreview }).click();
 
   const dialog = page.getByRole("dialog", { name: s.uploadConfirmTitle });
@@ -63,7 +78,7 @@ export async function uploadAndReview(page: Page): Promise<void> {
 
   // 萃取在背景執行；結束前打開待審頁時看不到，按重新整理再讀一次
   await openTab(page, s.tabReview);
-  const item = page.getByRole("checkbox", { name: FAKE_ENTITY_NAME });
+  const item = page.locator(".review-page").getByText(expected, { exact: true }).first();
   await expect(async () => {
     await page.getByRole("button", { name: s.reviewRefresh }).first().click();
     await expect(item).toBeVisible({ timeout: 2_000 });

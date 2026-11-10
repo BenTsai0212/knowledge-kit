@@ -10,6 +10,28 @@ const FAKE_ENTITY_NAMES = Object.fromEntries(client.languages.map((l) => [l, FAK
 export const FAKE_ANSWER_LEAD = "這是測試用的回答";
 const FAKE_ANSWER = `${FAKE_ANSWER_LEAD} [1]。`;
 
+// 走查用的通知（#189，fixtures/walkthrough-notice.md，虛構）：萃取時回傳 5 個實體與 6 段關係（與 app/src/ui/review-helpers.test.ts 相同），
+// 以參考情境的知識模型與圖譜為準；只有參考情境（client/）上傳這份檔案
+export const WALKTHROUGH_TITLE = "長堤專案第二階段啟動通知";
+const walkthroughEntity = (key: string, type: string, zh: string, en: string) => ({ key, type, names: { "zh-TW": zh, en }, sources: [1] });
+const WALKTHROUGH = {
+  entities: [
+    walkthroughEntity("e1", "person", "張雅婷", "Yating Chang"),
+    walkthroughEntity("e2", "team", "營運部", "Operations"),
+    walkthroughEntity("e3", "project", "長堤專案", "Project Longpier"),
+    walkthroughEntity("e4", "person", "陳柏翰", "Bohan Chen"),
+    walkthroughEntity("e5", "person", "黃建宏", "Jianhong Huang"),
+  ],
+  relations: [
+    { type: "member-of", from: "e1", to: "e2", sources: [1] },
+    { type: "leads", from: "e1", to: "e2", sources: [1] },
+    { type: "member-of", from: "e4", to: "e2", sources: [1] },
+    { type: "leads", from: "e4", to: "e3", sources: [1] },
+    { type: "works-on", from: "e2", to: "e3", sources: [1] },
+    { type: "works-on", from: "e5", to: "e3", sources: [1] },
+  ],
+};
+
 interface AskBody {
   system?: string;
   messages?: { content: string }[];
@@ -20,6 +42,8 @@ export function fakeReply(body: AskBody): string | null {
   const system = body.system ?? "";
   if (system.startsWith("You answer questions")) return FAKE_ANSWER;
   if (system.startsWith("You extract entities")) {
+    // 以段落的內容辨認（標題不一定在段落中）
+    if (body.messages?.some((m) => m.content.includes("長堤專案第二階段"))) return JSON.stringify(WALKTHROUGH);
     return JSON.stringify({
       entities: [{ key: "e1", type: knowledgeModel.entityTypes[0].id, names: FAKE_ENTITY_NAMES, sources: [1] }],
       relations: [],
