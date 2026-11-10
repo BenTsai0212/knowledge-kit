@@ -214,6 +214,14 @@ describe("runEvals：模型評分", () => {
     expect(summarize(sample, scores, evals.thresholds, "model", grades).answer).toMatchObject({ passed: 3, total: 3, ungradable: 0 });
   });
 
+  it("每題記下實際呼叫的次數（問答＋模型評分；本機拒答為 0），合計與送出的次數相同（#210）", async () => {
+    const { ctx, transport } = context();
+    const run = await runEvals(ctx, { sets: [DEFAULT], mode: "model" });
+    const calls = Object.fromEntries(run.sets[0].results.map((r) => [r.question, r.calls]));
+    expect(calls).toEqual({ "annual-leave-staff": 2, "weather-staff": 0, "bluewing-launch-staff-en": 2, "bluewing-cost-manager": 2 });
+    expect(run.sets[0].results.reduce((n, r) => n + r.calls!, 0)).toBe(transport.bodies.length);
+  });
+
   it("輸出格式錯誤時記為無法評分，不當成正確", async () => {
     const { ctx } = context(sample, reply("Correct!"));
     const run = await runEvals(ctx, { sets: [DEFAULT], mode: "model" });

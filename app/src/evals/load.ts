@@ -1,5 +1,6 @@
 // 在 build 時讀入選定客戶的 evals/（@client 別名）。Schema 由 npm run check:client（ajv）在 CI 檢查；需要資料集的規則由 validate.ts 檢查。
 import questions from "@client/evals/questions.json";
+import questionsSource from "@client/evals/questions.json?raw";
 import type { Widen } from "../client/load";
 import type { QuestionsFile } from "./types";
 
@@ -10,3 +11,6 @@ export const EVALS_ROOT = "evals/";
 const checked: Widen<QuestionsFile> = questions;
 
 export const evalQuestions: QuestionsFile = checked as QuestionsFile;
+
+// 檔案內容（題庫版本的雜湊用，report.ts 的 questionBank()）
+export const evalQuestionsSource: string = questionsSource;
