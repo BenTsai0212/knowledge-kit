@@ -26,7 +26,9 @@ Using `clients/<name>/`; `<code>` is a BCP 47 language code (for example `ja`, `
 3. **Localized text in the settings files**: display name, roles, visibility levels, projects, entity and relation types, scenario names, and so on must be filled in for every language. `check:client` only checks that the default language is filled in, so check the other languages one by one.
 4. **Entity names**: add the new language to the `names` of every entity in `data/entities.json`. For people's names without a standard translation, keep the original name; do not transliterate.
 5. **Documents**: add documents in this language with `language` set to `<code>`. Passage length is counted in characters, the same as other languages (`passageMaxChars`).
-6. **Default questions**: in `scenarios.json`, add question text in this language to every question, with same-language answer passages in `answerPassages`. `keyword-hash` does not support cross-language retrieval, so every question needs answer passages in the new language; if there is no matching passage, write more documents.
+6. **Default questions**: in `scenarios.json`, add question text in this language to every question, with answer passages in `answerPassages`. The requirement depends on `retrieval.provider` (step 3 of [New client setup](new-client-setup.md)):
+   - `keyword-hash` does not support cross-language retrieval, so every question needs same-language answer passages in the new language; if there is no matching passage, write more documents.
+   - With semantic vectors (`multilingual-e5-small`), a fact may be written in only one language, and each question needs same-language answer passages in at least one language. The two questions Playwright uses need answer passages in the default language (see "Playwright" in [docs/testing.md](../../testing.md)). Example: `clients/kestrova-demo/` (Traditional Chinese, English, and Japanese, each fact in only one language, #175).
 7. **Evaluation question bank**: add questions in the new language following [Building the evaluation question bank](eval-question-bank.md), including at least permission and out-of-scope questions. Cross-language questions (with `passageLanguage` setting the passage language) are always marked `requires: "semantic"` and are left out of the denominator under `keyword-hash` ([docs/evals.md](../../evals.md), section "跨語言、同義詞與完全無關的題目").
 
 No changes needed for: language names in the question-answering prompt (generated with `Intl.DisplayNames`), asking for names in every language during extraction, the language filter in retrieval, comparing only same-language passages for conflicting information, and the timeline language. These all work from the language list in `client.json`.
@@ -35,6 +37,7 @@ No changes needed for: language names in the question-answering prompt (generate
 
 - `npm run check:clients <name>` passes. It includes `app/src/retrieval/scenarios.target.test.ts`, which retrieves each default question in every language and requires the same-language answer passages in the top K.
 - The client's Playwright cell passes (`gh workflow run e2e.yml --ref <branch>`).
+- For semantic-vector clients, both of these check with `keyword-hash` and do not download the model (see "客戶檢查" in [docs/client-config.md](../../client-config.md)); cross-language retrieval is confirmed by the evaluation in the next item.
 - In the evaluation with a real key ([Acceptance metrics](acceptance-metrics.md)), the new language's questions also meet the thresholds.
 
 ## 2. Space-separated languages: confirm retrieval quality
@@ -90,6 +93,7 @@ Common notes:
 
 **Adopted approach**: the small multilingual browser model `multilingual-e5-small` (#163), selected with `retrieval.provider` in `client.json` ([docs/client-config.md](../../client-config.md), [docs/retrieval.md](../../retrieval.md), section "語意向量").
 
-- The first load downloads a model of about 135 MB, and if preparation fails the app falls back to `keyword-hash` with a notice, so it is still safer to fill in the new language's passages as in section 1.
+- The first load downloads a model of about 135 MB, and if preparation fails the app falls back to `keyword-hash` with a notice; facts written only in other languages then cannot be found. If the client's network may block the model download, it is still safer to fill in the new language's passages as in section 1.
+- A trial relying on cross-language retrieval alone (each fact in only one language): `clients/kestrova-demo/` (#175). Its 18 cross-language questions across six directions between Traditional Chinese, English, and Japanese scored 18/18 for both citations and answers ([evaluation results](../../../clients/kestrova-demo/evals/README.md#驗收結果)).
 - Rely on cross-language retrieval alone only for languages listed in the model card (including `th`); quality may drop for low-resource languages, so evaluate with the question bank's cross-language questions first.
 - Before choosing it, you can try and evaluate it with a local `clients/local-<name>/` ([docs/retrieval.md](../../retrieval.md), section "瀏覽器量測").

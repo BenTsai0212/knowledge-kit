@@ -55,7 +55,10 @@ Based on sections B and C of the requirements checklist and the data inventory.
 - Relation types: per B3.
 - Merge strategy: `review` by default; use `auto` only for types whose names are known to be unique within the client (for example departments) (B5).
 
-**Demo scenario design**: per A3 and A4, design 3–5 scenarios (one role per scenario, 2–4 default questions each). Write them as a list first; answer passages are filled in at step 5. At least one scenario must show "the same question gives different answers for different roles". Every default question needs question text and same-language answer passages in every language in `client.json`, so a document that exists in only one language cannot be the answer source for a default question (it can still be used in the question bank).
+**Demo scenario design**: per A3 and A4, design 3–5 scenarios (one role per scenario, 2–4 default questions each). Write them as a list first; answer passages are filled in at step 5. At least one scenario must show "the same question gives different answers for different roles" (each scenario has one role, so you can design one high-privilege scenario and switch roles during the demo). Every default question needs question text in every language in `client.json`; what it needs for answer passages depends on `retrieval.provider` (checked by `npm run check:clients`; see "客戶檢查" in [docs/client-config.md](../../client-config.md)):
+
+- **`keyword-hash`**: same-language answer passages in every language, so a document that exists in only one language cannot be the answer source for a default question (it can still be used in the question bank).
+- **Semantic vectors** (`multilingual-e5-small`): a fact may be written in only one language, and asking in another language is cross-language retrieval; each question needs same-language answer passages in at least one language. CI and Playwright do not download the model and check with `keyword-hash`, so the two questions Playwright uses (the first question of the first scenario, and the first question whose role is not the first role in `access.json`) need answer passages in the default language (see "Playwright" in [docs/testing.md](../../testing.md)). Example: `clients/kestrova-demo/` (#175).
 
 **Acceptance**: `npm run check:client -- clients/<name>/` reports no errors for `access.json` or `knowledge-model.json`.
 
@@ -83,18 +86,21 @@ The format is in [docs/dataset.md](../../dataset.md). Write the documents confir
   - Old and new information: when the client needs it, one pair of passages that disagree, with different dates
   - Same name: when the client mentioned people or things with the same name (B5), one such pair
 - **Entities and relations**: every entity's `names` covers all languages; every entity and relation has source passages.
-- **Phase 1 does not support cross-language retrieval**: every default question needs answer passages in every language; question bank questions may use only one language, but their answer passages must be in the question's language.
+- **Cross-language retrieval depends on `retrieval.provider`**:
+  - `keyword-hash` has no cross-language retrieval: every default question needs answer passages in every language; question bank questions may use only one language, but their answer passages must be in the question's language.
+  - Semantic vectors support cross-language retrieval: a fact may be written in only one language (for example, one language per site); default questions follow the rules in step 3.
+- **Languages the maintainer does not read**: give a Traditional Chinese explanation (what each question asks, the answer facts) at the checkpoints, and have someone who reads the language review its wording separately; state in `data/README.md` whether a native speaker reviewed it (the Japanese in #175).
 
 **Acceptance**: the settings check and dataset check of `npm run check:clients <name>` pass.
 
 ## 5. Demo scenarios and question bank
 
-1. **`scenarios.json`**: fill in the scenarios confirmed at Checkpoint 1, listing answer passages for each default question (visible to the scenario's role). `npm run check:clients` retrieves each default question in every language and requires the same-language answer passages in the top K (`app/src/retrieval/scenarios.target.test.ts`).
+1. **`scenarios.json`**: fill in the scenarios confirmed at Checkpoint 1, listing answer passages for each default question (visible to the scenario's role). `npm run check:clients` retrieves each default question in every language and requires the same-language answer passages in the top K (`app/src/retrieval/scenarios.target.test.ts`); it always retrieves with `keyword-hash`, and for semantic-vector clients it checks only the languages that have same-language answer passages.
 2. **`evals/questions.json`**: write questions following [Building the evaluation question bank](eval-question-bank.md):
    - 8 or more scenario questions and 15 or more questions that expect an answer (`expect: "answer"`);
    - at least 4 permission pairs (the same question: one role answers, another refuses);
    - 3 or more out-of-scope, 2 or more extraction-attempt, and at least 1 old-versus-new question per language (when needed);
-   - no cross-language questions;
+   - cross-language questions only for semantic-vector clients: mark them `requires: "semantic"` following [Building the evaluation question bank](eval-question-bank.md), several per language direction; none for `keyword-hash` clients;
    - answer passages list **every** related passage a good answer could reasonably cite; forbidden content lists only data the role cannot see.
 
 **Acceptance**: `npm run check:clients <name>` passes in full (including question bank and oracle visibility checks, and the build).
@@ -122,6 +128,8 @@ Ask a person to confirm that the content fits this client and the questions are 
 
 After pushing the branch, run Playwright (`gh workflow run e2e.yml --ref <branch>`); the selected client's cell must pass. If any test is skipped, list the reasons on the Issue and explain whether they are acceptable; usually the role design is missing a kind of role, so go back to step 3.
 
+For semantic-vector clients, Playwright blocks the model download, so the page falls back to `keyword-hash` and shows the fallback notice (see "Playwright" in [docs/testing.md](../../testing.md)). Find the cause of any test that fails after the fallback: in #175 it was the evaluation page keeping the semantic `minScore` after the fallback (#178). If `app/` or `e2e/` needs to change, stop, report, and open a separate Issue; do not pass by skipping tests.
+
 **Acceptance**: the client's Playwright cell passes, and every skipped test has an acceptable reason.
 
 ## 8. Evaluation with a real key (run by a person)
@@ -129,9 +137,9 @@ After pushing the branch, run Playwright (`gh workflow run e2e.yml --ref <branch
 This step needs the real key and is run by a person locally; the agent prepares the commands and a results table, then stops.
 
 1. Raise `DAILY_LIMIT` in `.dev.vars` to enough calls (about "number of questions × 2 settings × 2").
-2. Run `KK_CLIENT=<name> npm run build`, then `npx wrangler dev`, and open the evaluation page as a `canReview` role.
+2. Run `KK_CLIENT=<name> npm run build`, then `npx wrangler dev`, and open the evaluation page as a `canReview` role. With semantic vectors, wait until the "downloading model" notice ends and confirm there is no fallback notice (item 6 of [Acceptance metrics](acceptance-metrics.md)).
 3. Following [Acceptance metrics](acceptance-metrics.md), run twice: default settings with key-point scoring, then two retrieval settings side by side with model grading.
-4. Record the four metrics, the number of calls and the cost, and why each failed question failed.
+4. Record the four metrics, the number of calls and the cost, and why each failed question failed. After Checkpoint 3 passes, record the results in the client's `evals/README.md` (for example "驗收結果" in `clients/kestrova-demo/evals/README.md`).
 
 If a threshold is not met, fix it using the table in [Building the evaluation question bank](eval-question-bank.md) (add answer passages, add synonyms, rewrite the question, or change the dataset's wording), **without loosening the standard**, and run again.
 
@@ -142,5 +150,6 @@ Post the results of both runs, the fixes made, and screenshots (light and dark) 
 ## Done
 
 - Open a PR after step 7 (`Refs` the client's Issue, not `Closes`) with the records of Checkpoints 1 and 2, the `check:clients` and Playwright results, and the commands and results table for step 8. Merge the PR and close the Issue only after Checkpoint 3 passes.
+- When shared checks need to change, or the data is too large for one PR, propose a split in the plan and follow the decision. #175 used 4 PRs: shared checks, client data (steps 1–4 and the default questions), the full question bank, and documentation with the evaluation results. The first three used `Refs` and were merged early by a person's decision; only the last used `Closes`, after Checkpoint 3 passed.
 - Deployment is decided separately (`worker/README.md`, section "正式部署"); these steps end with a demo that runs locally.
 - In a client's own fork, `SENSITIVE_NAMES` is set by that fork; do not put names the client has agreed to use on the list.
