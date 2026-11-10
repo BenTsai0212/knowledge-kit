@@ -20,7 +20,7 @@ A fixed set of questions measures the demo's answer quality and confirms that no
 
 **Write at least 15 questions that expect an answer.** With too few, one wrong answer moves the rate a lot (for example, 1 wrong out of 10 is 90%, exactly at the threshold), and you cannot tell a quality problem from chance.
 
-Every language needs questions. If cross-language search is needed, add questions asked in language A whose answer is in a language B document.
+Every language needs questions. If cross-language search is needed, add questions asked in language A whose answer is in a language B document: `category: "cross-language"`, with `passageLanguage` naming the passage language, and marked `requires: "semantic"` (with `keyword-hash` they are not counted in the denominator; see "跨語言、同義詞與完全無關的題目" in [docs/evals.md](../../evals.md)).
 
 ## 3. What to fill in for each question
 
@@ -53,3 +53,37 @@ Every language needs questions. If cross-language search is needed, add question
 ## 5. Confirm with the client
 
 Put the question bank (question, role, expected result, reference answer) in a table and ask the client to confirm it, especially the permission questions: does "this role should not see this answer" match the client's real rules?
+
+## 6. Maintaining the question bank after delivery
+
+The question bank at delivery is the quality baseline. After delivery, the data, settings, and usage all change, so the question bank must be maintained, but "changing questions" must not become a way to make the scores look good.
+
+### Three kinds of questions
+
+- **Core question bank**: the questions used for acceptance at delivery; they stay fixed. The quality report shows which file it used through the question bank version (a hash of the contents of `questions.json`). Changing a single character changes the version, so results before and after cannot be compared as the same question bank. When core questions need fixing (for example, the dataset was revised or a question itself is wrong), fix them as a batch and record why; do not quietly adjust them one by one.
+- **Added questions**: questions added after delivery, a few per batch (for example 5–10), appended to the end of the file without reordering existing questions so the core question numbers stay the same. Sources:
+  - **Error reports**: after a "Report a problem" from Q&A ("回報有錯" in [docs/qa.md](../../qa.md)) has been handled and the data or settings fixed, turn that question into a test question to confirm it stays fixed. In the demo, reports exist only in the browser and disappear on reload, so write them down while handling them.
+  - **Candidate questions for important documents**: important documents not covered by the coverage figure (in the quality report's test conditions); add questions by the categories in step 2.
+  - **Frequent questions**: questions users actually ask often.
+  - The system may propose candidates, but **a person decides** whether to add them. Fill in each question as in step 3 and check it as in step 4.
+- **Monitoring without reference answers** (long-term direction, for the production stage): instead of a question bank, keep watching signals from actual use, such as the refusal rate and the number and reasons of reports. Not done at the demo stage.
+
+### Who does what
+
+| Role | Responsible for |
+| --- | --- |
+| Delivery team | Maintains the question bank file, runs evaluations, generates quality reports, and fills in the cause and action for failed questions |
+| Knowledge owner | Confirms questions and answers match the real content; proposes added questions; fixes the dataset |
+| Permission administrator | Confirms the expected results of permission questions ("this role should not see this answer") match the real rules |
+| Decision maker | Reads the first page of the quality report and decides whether to deliver or keep using the demo; approves fixes to the core question bank |
+
+**The person who writes the exam is not the only one who changes it**: the delivery team writes questions and runs evaluations, but changes to questions and expected results need confirmation from the knowledge owner or the permission administrator, especially when a failed question is changed or removed.
+
+### When to run again
+
+- **At delivery**: at least twice, with a quality report attached ("Attach a quality report at delivery" in [Acceptance metrics](acceptance-metrics.md)).
+- **After a large data import**: new data can change retrieval results, or give an answer to a question that should have been refused.
+- **After changing settings or the model**: when the retrieval settings (`topK`, `minScore`), provider, or model change.
+- **Periodically**: for example once a quarter, even without the changes above.
+
+Generate and keep a quality report for every run; when comparing with the previous one, first check the question bank version and test conditions.
