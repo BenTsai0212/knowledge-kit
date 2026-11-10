@@ -59,6 +59,11 @@
   "askAboutEntity": "What do we know about {name}?",
   "relatedEntities": "Related entities",
   "entitySources": "Appears in",
+  "graphRetract": "Withdraw this document's approval",
+  "graphRetractWillRemove": "After withdrawing, these will disappear from the graph:",
+  "graphRetractNoChange": "Other documents also mention these, so they stay in the graph without this document as a source.",
+  "graphRetractConfirm": "Withdraw",
+  "graphRetractCancel": "Cancel",
   "tabTimeline": "Timeline",
   "pathTitle": "Find a path between two entities",
   "pathFrom": "From",
@@ -175,6 +180,8 @@
   "reviewToastRejectedOne": "Rejected: {name}",
   "reviewToastRejected": "{count} rejected",
   "reviewGotoGraph": "View in graph",
+  "reviewUndo": "Undo",
+  "reviewToastUndone": "Undone; the items are pending again",
   "reviewErrors": {
     "denied": "You don't have permission to handle this item.",
     "conflict": "This item has already been handled. Please refresh."

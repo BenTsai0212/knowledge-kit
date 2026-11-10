@@ -272,17 +272,20 @@ async function decide(tx: Transaction, itemId: string, decision: "approve" | "re
 
 // 在一個交易中核准：先實體（寫決定，再建立新實體或把出處加到合併對象），再關係（兩端都已核准）。任何一列被拒絕就全部不寫入。
 // 圖譜已有的關係只寫決定，不建立關係與出處（#189 決定 1）：existingRelations 是畫面算出的圖譜已有，寫入前在同一個交易再查一次，
-// 已經不存在時整筆不寫入（conflict）；relations 查到相同的既有關係時（例如舊的分頁、同時開兩個分頁）也只寫決定
+// 已經不存在時整筆不寫入（conflict）；relations 查到相同的既有關係時（例如舊的分頁、同時開兩個分頁）也只寫決定。
+// 回傳寫入的決定 id（「撤銷」時交給 retract()，ADR 0007 決定 4）
 export async function approve(
   db: Database,
   identityId: string | null,
   items: { entities: EntityApproval[]; relations: string[]; existingRelations?: string[] },
   options: { defaultLanguage: LanguageCode },
-): Promise<void> {
+): Promise<string[]> {
   try {
-    await db.withIdentity(identityId, async (tx) => {
+    return await db.withIdentity(identityId, async (tx) => {
+      const written: string[] = [];
       for (const e of items.entities) {
         const decisionId = await decide(tx, e.id, "approve", { names: e.names, mergeInto: e.mergeInto });
+        written.push(decisionId);
         if (e.mergeInto !== undefined) {
           // 合併：既有實體的名稱不變，只加上出處（#44 決定 5）
           await tx.query(
@@ -309,11 +312,12 @@ export async function approve(
         );
       }
       for (const id of items.existingRelations ?? []) {
-        await decide(tx, id, "approve");
+        written.push(await decide(tx, id, "approve"));
         if ((await tx.query(EXISTING_RELATION, [id])).rows.length === 0) throw new ReviewError("conflict");
       }
       for (const id of items.relations) {
         const decisionId = await decide(tx, id, "approve");
+        written.push(decisionId);
         if ((await tx.query(EXISTING_RELATION, [id])).rows.length > 0) continue;
         await tx.query(
           `INSERT INTO kk.relations (id, relation_type, from_entity_id, to_entity_id)
@@ -328,22 +332,25 @@ export async function approve(
           [id, decisionId],
         );
       }
+      return written;
     });
   } catch (e) {
     mapError(e);
   }
 }
 
-// 退回：寫 reject 決定。退回實體時，依附它、還沒有決定的待審關係一併退回（#44 決定 2）
-export async function reject(db: Database, identityId: string | null, items: { entities: string[]; relations: string[] }): Promise<void> {
+// 退回：寫 reject 決定。退回實體時，依附它、還沒有決定的待審關係一併退回（#44 決定 2）。
+// 回傳寫入的決定 id，含一併退回的關係（「撤銷」時全部交給 retract()，實體與關係才會一起回到待審）
+export async function reject(db: Database, identityId: string | null, items: { entities: string[]; relations: string[] }): Promise<string[]> {
   try {
-    await db.withIdentity(identityId, async (tx) => {
+    return await db.withIdentity(identityId, async (tx) => {
       // 同一個交易中已退回的項目（例如依附實體而一併退回的關係），不再重複寫入
       const rejected = new Set<string>();
+      const written: string[] = [];
       const rejectOnce = async (id: string) => {
         if (rejected.has(id)) return;
         rejected.add(id);
-        await decide(tx, id, "reject");
+        written.push(await decide(tx, id, "reject"));
       };
       for (const id of items.entities) {
         await rejectOnce(id);
@@ -355,10 +362,24 @@ export async function reject(db: Database, identityId: string | null, items: { e
         for (const r of dependents.rows) await rejectOnce(r.id);
       }
       for (const id of items.relations) await rejectOnce(id);
+      return written;
     });
   } catch (e) {
     mapError(e);
   }
+}
+
+// 撤回實體的核准時連帶撤回的關係決定：端點是這個待審實體、已核准且未撤回（#209 決定 6）
+async function cascaded(tx: Transaction, decisionId: string): Promise<string[]> {
+  const rows = await tx.query<{ id: string }>(
+    `SELECT rd.id FROM kk.review_decisions ed
+       JOIN kk.pending_relations r ON r.from_pending_id = ed.item_id OR r.to_pending_id = ed.item_id
+       JOIN kk.review_decisions rd ON rd.item_id = r.id AND rd.decision = 'approve' AND ${ACTIVE("rd")}
+      WHERE ed.id = $1 AND ed.decision = 'approve'
+      ORDER BY rd.id`,
+    [decisionId],
+  );
+  return rows.rows.map((r) => r.id);
 }
 
 // 撤回決定（ADR 0007）：寫入撤回紀錄，項目回到待審，這個決定寫入的出處不再算數。
@@ -385,18 +406,73 @@ export async function retract(db: Database, identityId: string | null, decisionI
       };
       for (const id of decisionIds) {
         await retractOne(id, null);
-        const dependents = await tx.query<{ id: string }>(
-          `SELECT rd.id FROM kk.review_decisions ed
-             JOIN kk.pending_relations r ON r.from_pending_id = ed.item_id OR r.to_pending_id = ed.item_id
-             JOIN kk.review_decisions rd ON rd.item_id = r.id AND rd.decision = 'approve' AND ${ACTIVE("rd")}
-            WHERE ed.id = $1 AND ed.decision = 'approve'
-            ORDER BY rd.id`,
-          [id],
-        );
-        for (const r of dependents.rows) await retractOne(r.id, id);
+        for (const r of await cascaded(tx, id)) await retractOne(r, id);
       }
     });
   } catch (e) {
     mapError(e);
   }
+}
+
+// 圖譜面板的「撤回這份文件的核准」（ADR 0007）：實體在某份文件的出處由哪些決定寫入，以及撤回後目前身分的圖譜中會消失的實體與關係
+export interface DocumentRetraction {
+  documentId: string;
+  // 交給 retract() 的決定（連帶撤回的關係由 retract() 處理）
+  decisionIds: string[];
+  entities: string[];
+  relations: string[];
+}
+
+// 出處列：owner 是實體或關係，decision 為 null 的是參考情境與資料集的出處（撤回不了）
+export interface SourceOf {
+  owner: string;
+  decision: string | null;
+}
+
+// 扣掉 removed 的決定寫入的出處後，沒有出處的實體與關係；一端消失的關係也算（docs/data-model.md「權限規則」）
+export function vanishing(
+  entitySources: SourceOf[],
+  relationSources: (SourceOf & { from: string; to: string })[],
+  removed: ReadonlySet<string>,
+): { entities: string[]; relations: string[] } {
+  const kept = (r: SourceOf) => r.decision === null || !removed.has(r.decision);
+  const remaining = new Set(entitySources.filter(kept).map((r) => r.owner));
+  const entities = [...new Set(entitySources.map((r) => r.owner))].filter((id) => !remaining.has(id)).sort();
+  const remainingRelations = new Set(relationSources.filter((r) => kept(r) && remaining.has(r.from) && remaining.has(r.to)).map((r) => r.owner));
+  const relations = [...new Set(relationSources.map((r) => r.owner))].filter((id) => !remainingRelations.has(id)).sort();
+  return { entities, relations };
+}
+
+// 實體經審核進來的出處，依文件列出可以撤回的決定與撤回後會消失的內容。決定只有 canReview、看得到文件的身分讀得到（0006），
+// 其他身分回傳空陣列；參考情境與資料集的出處沒有決定，不列出
+export function readRetractions(db: Database, identityId: string | null, entityId: string): Promise<DocumentRetraction[]> {
+  return db.withIdentity(identityId, async (tx) => {
+    const decisions = (
+      await tx.query<{ document_id: string; decision_id: string }>(
+        `SELECT DISTINCT p.document_id, s.decision_id FROM kk.entity_sources s
+           JOIN kk.passages p ON p.id = s.passage_id JOIN kk.review_decisions d ON d.id = s.decision_id
+          WHERE s.entity_id = $1 ORDER BY p.document_id, s.decision_id`,
+        [entityId],
+      )
+    ).rows;
+    if (decisions.length === 0) return [];
+    const entitySources = (await tx.query<SourceOf>("SELECT entity_id AS owner, decision_id AS decision FROM kk.entity_sources")).rows;
+    const relationSources = (
+      await tx.query<SourceOf & { from: string; to: string }>(
+        `SELECT relation_id AS owner, decision_id AS decision, from_entity_id AS "from", to_entity_id AS "to" FROM kk.relation_sources`,
+      )
+    ).rows;
+    const out: DocumentRetraction[] = [];
+    for (const d of decisions) {
+      let doc = out.find((x) => x.documentId === d.document_id);
+      if (doc === undefined) out.push((doc = { documentId: d.document_id, decisionIds: [], entities: [], relations: [] }));
+      doc.decisionIds.push(d.decision_id);
+    }
+    for (const doc of out) {
+      const removed = new Set(doc.decisionIds);
+      for (const id of doc.decisionIds) for (const r of await cascaded(tx, id)) removed.add(r);
+      Object.assign(doc, vanishing(entitySources, relationSources, removed));
+    }
+    return out;
+  });
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clientConfig } from "../client/load";
 import type { Database } from "../db/database";
+import { readRetractions, retract, ReviewError, type DocumentRetraction } from "../extraction/store";
 import { ALL, expand, keepVisible as keepVisiblePath, only, selectedOf, type Expansion } from "../graph/expansion";
 import { shortestPath } from "../graph/path";
 import { readGraph, type Graph } from "../graph/read";
@@ -21,6 +22,9 @@ interface Props {
   onOpenSource(passageId: string): void;
   // 在問答中問（#199）：把問句填進問答頁的輸入框並切到問答頁，不送出
   onAskAbout(question: string): void;
+  // 能審核的身分可以從實體面板撤回文件的核准（ADR 0007）；撤回後通知 App 更新待審筆數
+  canReview: boolean;
+  onRetracted(): void;
   // 從問答頁的「在圖譜中查看」打開時，從該實體開始展開（#195、#199）；看不到時顯示全部
   initialSelected?: string | null;
 }
@@ -33,7 +37,7 @@ const keepVisible = (graph: Graph) => (id: string | null) => (id !== null && gra
 // 圖譜頁：切換身分或語言時重新讀取；之後才回來的舊結果忽略；已展開的路徑截到第一個看不到的實體之前，路徑的兩端已看不到時清除。
 // 逐步展開（#199）：點節點從它展開，已展開的路徑累積；「回到全部」顯示全貌。
 // 中間是搜尋框、類型篩選（圖例）與圖，右側是實體面板（沒有選取時列出關聯最多的實體當起點）與多跳路徑
-export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, initialSelected = null }: Props) {
+export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, canReview, onRetracted, initialSelected = null }: Props) {
   const s = strings(language);
   const [graph, setGraph] = useState<Graph | null>(null);
   const [expansion, setExpansion] = useState<Expansion>(initialSelected === null ? ALL : only(initialSelected));
@@ -41,6 +45,10 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, in
   // 類型篩選：勾選的類型（預設全選）
   const [types, setTypes] = useState<ReadonlySet<string>>(() => new Set(entityTypes.map((t) => t.id)));
   const reads = useRef(createRequestGate());
+  // 撤回後重新讀取圖譜
+  const [version, setVersion] = useState(0);
+  // 選取的實體可以撤回的文件（沒有 canReview 時不讀取）
+  const [retractions, setRetractions] = useState<{ entityId: string; list: DocumentRetraction[] } | null>(null);
 
   useEffect(() => {
     const ticket = reads.current.begin();
@@ -53,9 +61,19 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, in
       setEnds(({ from, to }) => ({ from: keep(from), to: keep(to) }));
     });
     return () => reads.current.cancel();
-  }, [db, identity, language]);
+  }, [db, identity, language, version]);
 
   const selected = selectedOf(expansion);
+  useEffect(() => {
+    if (!canReview || selected === null || graph === null) return;
+    let cancelled = false;
+    void readRetractions(db, identity, selected).then((list) => {
+      if (!cancelled) setRetractions({ entityId: selected, list });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [db, identity, canReview, selected, graph]);
   // 多跳路徑的起點預設為目前選取的實體
   const from = ends.from ?? selected;
   // 路徑由目前的可見圖算出，切換身分後一律重新計算
@@ -158,6 +176,8 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, in
           </section>
         ) : (
           <EntityPanel
+            // 換選取的實體時清除撤回的確認
+            key={selected}
             graph={graph}
             entityId={selected}
             language={language}
@@ -165,6 +185,17 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, in
             onShowOnly={(id) => setExpansion(only(id))}
             onAskAbout={(id) => onAskAbout(fill(s.askAboutEntity, { name: nameOf(id) }))}
             onOpenSource={onOpenSource}
+            retractions={canReview && retractions?.entityId === selected ? retractions.list : []}
+            onRetract={async (r) => {
+              try {
+                await retract(db, identity, r.decisionIds);
+              } catch (e) {
+                return e instanceof ReviewError ? s.reviewErrors[e.reason] : s.unknownError;
+              }
+              setVersion((v) => v + 1);
+              onRetracted();
+              return null;
+            }}
           />
         )}
         <PathPanel

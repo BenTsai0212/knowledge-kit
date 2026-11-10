@@ -693,6 +693,14 @@ button.citation {
   margin-top: 0.75rem;
 }
 
+/* 撤回這份文件的核准前的確認（ADR 0007）：列出撤回後會消失的實體與關係 */
+.retract-confirm {
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+}
+
 .graph-start ol {
   padding-left: 1.25rem;
 }

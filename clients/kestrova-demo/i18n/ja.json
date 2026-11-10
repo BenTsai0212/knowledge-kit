@@ -59,6 +59,11 @@
   "askAboutEntity": "{name}について分かっていることを教えてください。",
   "relatedEntities": "関連するエンティティ",
   "entitySources": "登場する文書",
+  "graphRetract": "この文書の承認を取り消す",
+  "graphRetractWillRemove": "取り消すと、次の内容が関係図から消えます：",
+  "graphRetractNoChange": "ほかの文書にも記載があるため、取り消しても関係図には残ります（この文書の出典だけがなくなります）。",
+  "graphRetractConfirm": "取り消す",
+  "graphRetractCancel": "キャンセル",
   "tabTimeline": "タイムライン",
   "pathTitle": "2 つのエンティティ間の経路",
   "pathFrom": "起点",
@@ -175,6 +180,8 @@
   "reviewToastRejectedOne": "却下しました：{name}",
   "reviewToastRejected": "{count} 件を却下しました",
   "reviewGotoGraph": "関係図で表示",
+  "reviewUndo": "元に戻す",
+  "reviewToastUndone": "元に戻しました。項目は審査待ちに戻りました",
   "reviewErrors": {
     "denied": "この項目を処理する権限がありません。",
     "conflict": "この項目はすでに処理されています。更新してください。"

@@ -298,6 +298,8 @@ export function App() {
               onOpenSource={onOpenSource}
               // 在問答中問（#199）：填進輸入框並切到問答頁，不送出
               onAskAbout={(question) => (setDraft(question), setView("qa"))}
+              canReview={canReview}
+              onRetracted={() => setReviewVersion((v) => v + 1)}
               initialSelected={graphFocus}
             />
           ) : view === "evals" ? (

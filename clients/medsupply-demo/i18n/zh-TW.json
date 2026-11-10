@@ -59,6 +59,11 @@
   "askAboutEntity": "{name}的相關資訊有哪些？",
   "relatedEntities": "相關實體",
   "entitySources": "出現的文件",
+  "graphRetract": "撤回這份文件的核准",
+  "graphRetractWillRemove": "撤回後，以下內容會從圖譜消失：",
+  "graphRetractNoChange": "其他文件也提到這些內容，撤回後圖譜中仍看得到，只少了這份文件的出處。",
+  "graphRetractConfirm": "撤回",
+  "graphRetractCancel": "取消",
   "tabTimeline": "時間軸",
   "pathTitle": "找兩個實體之間的路徑",
   "pathFrom": "起點",
@@ -175,6 +180,8 @@
   "reviewToastRejectedOne": "已退回：{name}",
   "reviewToastRejected": "已退回 {count} 筆",
   "reviewGotoGraph": "到圖譜查看",
+  "reviewUndo": "撤銷",
+  "reviewToastUndone": "已撤銷，項目回到待審",
   "reviewErrors": {
     "denied": "沒有權限處理這個項目。",
     "conflict": "這個項目已經被處理過，請重新整理。"
