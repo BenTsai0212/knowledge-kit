@@ -50,13 +50,85 @@
     }
   ],
   "relationTypes": [
-    { "id": "located-at", "label": { "zh-TW": "位於", "en": "Located at", "ja": "所在" }, "from": ["team"], "to": ["site"] },
-    { "id": "member-of", "label": { "zh-TW": "隸屬", "en": "Member of", "ja": "所属" }, "from": ["person"], "to": ["team"] },
-    { "id": "leads", "label": { "zh-TW": "負責", "en": "Leads", "ja": "責任者" }, "from": ["person"], "to": ["team", "project"] },
-    { "id": "works-on", "label": { "zh-TW": "參與", "en": "Works on", "ja": "参加" }, "from": ["person", "team"], "to": ["project"] },
-    { "id": "develops", "label": { "zh-TW": "開發", "en": "Develops", "ja": "開発" }, "from": ["project"], "to": ["product"] },
-    { "id": "produces", "label": { "zh-TW": "生產", "en": "Produces", "ja": "生産" }, "from": ["site"], "to": ["product"] },
-    { "id": "distributes", "label": { "zh-TW": "經銷", "en": "Distributes", "ja": "販売代理" }, "from": ["partner"], "to": ["product"] },
-    { "id": "supplies", "label": { "zh-TW": "供應", "en": "Supplies", "ja": "供給" }, "from": ["partner"], "to": ["site"] }
+    {
+      "id": "located-at",
+      "label": { "zh-TW": "位於", "en": "Located at", "ja": "所在" },
+      "from": ["team"],
+      "to": ["site"],
+      "questions": {
+        "outgoing": { "zh-TW": "{name}位於哪個{type}？", "en": "Where is {name} located?", "ja": "{name}はどの拠点にありますか？" },
+        "incoming": { "zh-TW": "哪些{type}位於{name}？", "en": "Which teams are based at {name}?", "ja": "{name}にある部署は？" }
+      }
+    },
+    {
+      "id": "member-of",
+      "label": { "zh-TW": "隸屬", "en": "Member of", "ja": "所属" },
+      "from": ["person"],
+      "to": ["team"],
+      "questions": {
+        "outgoing": { "zh-TW": "{name}隸屬哪些{type}？", "en": "Which teams is {name} a member of?", "ja": "{name}が所属している部署は？" },
+        "incoming": { "zh-TW": "哪些{type}隸屬{name}？", "en": "Who are the members of {name}?", "ja": "{name}に所属している人は？" }
+      }
+    },
+    {
+      "id": "leads",
+      "label": { "zh-TW": "負責", "en": "Leads", "ja": "責任者" },
+      "from": ["person"],
+      "to": ["team", "project"],
+      "questions": {
+        "outgoing": { "zh-TW": "{name}負責哪些{type}？", "en": "What does {name} lead?", "ja": "{name}が責任者を務めているのは？" },
+        "incoming": { "zh-TW": "誰負責{name}？", "en": "Who leads {name}?", "ja": "{name}の責任者は？" }
+      }
+    },
+    {
+      "id": "works-on",
+      "label": { "zh-TW": "參與", "en": "Works on", "ja": "参加" },
+      "from": ["person", "team"],
+      "to": ["project"],
+      "questions": {
+        "outgoing": { "zh-TW": "{name}參與哪些{type}？", "en": "Which projects does {name} work on?", "ja": "{name}が参加しているプロジェクトは？" },
+        "incoming": { "zh-TW": "哪些{type}參與{name}？", "en": "Who works on {name}?", "ja": "{name}に参加している{type}は？" }
+      }
+    },
+    {
+      "id": "develops",
+      "label": { "zh-TW": "開發", "en": "Develops", "ja": "開発" },
+      "from": ["project"],
+      "to": ["product"],
+      "questions": {
+        "outgoing": { "zh-TW": "{name}開發哪些{type}？", "en": "Which products does {name} develop?", "ja": "{name}で開発している製品は？" },
+        "incoming": { "zh-TW": "哪些{type}開發{name}？", "en": "Which projects develop {name}?", "ja": "{name}を開発しているプロジェクトは？" }
+      }
+    },
+    {
+      "id": "produces",
+      "label": { "zh-TW": "生產", "en": "Produces", "ja": "生産" },
+      "from": ["site"],
+      "to": ["product"],
+      "questions": {
+        "outgoing": { "zh-TW": "{name}生產哪些{type}？", "en": "Which products are made at {name}?", "ja": "{name}で生産している製品は？" },
+        "incoming": { "zh-TW": "{name}在哪些{type}生產？", "en": "Where is {name} made?", "ja": "{name}はどの拠点で生産されていますか？" }
+      }
+    },
+    {
+      "id": "distributes",
+      "label": { "zh-TW": "經銷", "en": "Distributes", "ja": "販売代理" },
+      "from": ["partner"],
+      "to": ["product"],
+      "questions": {
+        "outgoing": { "zh-TW": "{name}經銷哪些{type}？", "en": "Which products does {name} distribute?", "ja": "{name}が販売代理している製品は？" },
+        "incoming": { "zh-TW": "哪些{type}經銷{name}？", "en": "Who distributes {name}?", "ja": "{name}の販売代理店は？" }
+      }
+    },
+    {
+      "id": "supplies",
+      "label": { "zh-TW": "供應", "en": "Supplies", "ja": "供給" },
+      "from": ["partner"],
+      "to": ["site"],
+      "questions": {
+        "outgoing": { "zh-TW": "{name}供應哪些{type}？", "en": "Which sites does {name} supply?", "ja": "{name}の供給先の拠点は？" },
+        "incoming": { "zh-TW": "哪些{type}供應{name}？", "en": "Who supplies {name}?", "ja": "{name}の供給元は？" }
+      }
+    }
   ]
 }

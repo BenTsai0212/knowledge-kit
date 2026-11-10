@@ -1,6 +1,8 @@
 // 「回答提到」的實體與右側實體面板（#195，docs/qa.md「回答提到」）。
 // 輸入一律是送出當下身分的 readGraph() 結果（RLS 已篩選）；本模組不另外判斷權限，看不到的實體不會出現在候選中。
 import { fill, strings } from "../client/i18n";
+import { clientConfig } from "../client/load";
+import type { RelationType } from "../client/types";
 import type { Graph, GraphEntity } from "../graph/read";
 import type { Answer } from "../qa/answer";
 import { entityName, entityTypeLabel, relationTypeLabel } from "./graph-labels";
@@ -38,9 +40,15 @@ export function neighborhood(graph: Graph, entityId: string): Graph {
   return { entities: graph.entities.filter((e) => ids.has(e.id)), relations };
 }
 
-// 「接著問」（#195 決定 2）：關係的名稱加上另一端的實體類型，依方向分兩種範本（followUpOutgoing：中心是起點；followUpIncoming：中心是終點）。
-// 關係類型、方向與另一端的類型相同的只留一題，最多 MAX_FOLLOW_UPS 題，依關係 id 的順序
-export function followUps(graph: Graph, entityId: string, language: string): string[] {
+// 「接著問」（#195 決定 2、#198）：關係類型有該方向、介面語言的問句範本（knowledge-model.json 的 questions）時用範本，
+// 否則退回翻譯檔的通用範本（關係的名稱加上另一端的實體類型；followUpOutgoing：中心是起點；followUpIncoming：中心是終點）。
+// 關係類型、方向與另一端的類型相同的只留一題，產生的問句相同的也只留一題（不含 {type} 的範本），最多 MAX_FOLLOW_UPS 題，依關係 id 的順序
+export function followUps(
+  graph: Graph,
+  entityId: string,
+  language: string,
+  relationTypes: RelationType[] = clientConfig.knowledgeModel.relationTypes,
+): string[] {
   const s = strings(language);
   const center = graph.entities.find((e) => e.id === entityId);
   if (center === undefined) return [];
@@ -55,14 +63,15 @@ export function followUps(graph: Graph, entityId: string, language: string): str
     const key = `${outgoing}|${r.type}|${other?.type}`;
     if (other === undefined || seen.has(key)) continue;
     seen.add(key);
-    questions.push(
-      fill(outgoing ? s.followUpOutgoing : s.followUpIncoming, {
-        name: entityName(center, language),
-        relation: relationTypeLabel(r.type, language),
-        // 類型放在句中：英文等有大小寫的語言改成小寫（「Which project …」）；中文、日文不受影響
-        type: entityTypeLabel(other.type, language).toLocaleLowerCase(language),
-      }),
-    );
+    const templates = relationTypes.find((t) => t.id === r.type)?.questions;
+    const template = (outgoing ? templates?.outgoing : templates?.incoming)?.[language];
+    const question = fill(template ?? (outgoing ? s.followUpOutgoing : s.followUpIncoming), {
+      name: entityName(center, language),
+      relation: relationTypeLabel(r.type, language),
+      // 類型放在句中：英文等有大小寫的語言改成小寫（「Which project …」）；中文、日文不受影響
+      type: entityTypeLabel(other.type, language).toLocaleLowerCase(language),
+    });
+    if (!questions.includes(question)) questions.push(question);
   }
   return questions;
 }

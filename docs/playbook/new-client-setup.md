@@ -52,7 +52,7 @@
 **`knowledge-model.json`**
 
 - 實體類型：依 B2，通常 3～6 種。每種選一個顏色，淺色與深色背景的對比都要 ≥ 3:1（`check:client` 會檢查）。
-- 關係類型：依 B3。
+- 關係類型：依 B3。每種關係寫上「接著問」的問句範本（`questions.outgoing`、`questions.incoming`，每種語言一句），寫成該語言自然的問句；參數只有 `{name}`（必填）與 `{type}`，規則見 [docs/client-config.md](../client-config.md)「問句範本」。
 - 合併策略：預設 `review`；只有名稱在客戶內部確定唯一的類型（例如部門）才用 `auto`（B5）。
 
 **示範情境設計**：依 A3、A4，設計 3～5 個情境（每個情境一個角色、2～4 個預設問題），先寫成清單，答案段落在第 5 步才填。至少一個情境要能示範「同一個問題，不同身分看到不同答案」（每個情境只有一個角色，可以設計一個高權限的情境，示範時切換身分）。預設問題在 `client.json` 的每種語言都要有問題文字；答案段落的要求依 `retrieval.provider` 而不同（`npm run check:clients` 檢查，[docs/client-config.md](../client-config.md)「客戶檢查」）：

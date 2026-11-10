@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { clientConfig } from "../client/load";
 import type { Graph, GraphEntity, SourcePassage } from "../graph/read";
 import type { Answer } from "../qa/answer";
 import { followUps, MAX_FOLLOW_UPS, mentionedEntities, neighborhood } from "./mentions";
@@ -85,14 +86,36 @@ describe("neighborhood", () => {
 });
 
 describe("followUps", () => {
-  it("依方向使用不同的範本（#195 決定 2）", () => {
+  it("有問句範本時用範本（#198，client/knowledge-model.json）", () => {
     expect(followUps(GRAPH, "wang", "zh-TW")).toEqual(["王小明負責哪些專案？", "王小明隸屬哪些部門？", "王小明負責哪些部門？"]);
-    expect(followUps(GRAPH, "bluewing", "zh-TW")).toEqual(["哪些人員負責青翼專案？", "哪些部門參與青翼專案？", "哪些人員參與青翼專案？"]);
+    expect(followUps(GRAPH, "bluewing", "zh-TW")).toEqual(["誰負責青翼專案？", "哪些部門參與青翼專案？", "哪些人員參與青翼專案？"]);
   });
 
-  it("英文是英文的語序，類型改成小寫", () => {
-    expect(followUps(GRAPH, "wang", "en")[0]).toBe("Which project does Ming Wang have a “Leads” relationship with?");
-    expect(followUps(GRAPH, "bluewing", "en")[0]).toBe("Which person has a “Leads” relationship with Project Bluewing?");
+  it("英文是自然的問句；不含 {type} 的範本產生相同問句時只留一題", () => {
+    // leads 對到 project 與 team，都是「What does Ming Wang lead?」
+    expect(followUps(GRAPH, "wang", "en")).toEqual(["What does Ming Wang lead?", "Which teams is Ming Wang a member of?"]);
+    expect(followUps(GRAPH, "bluewing", "en")).toEqual(["Who leads Project Bluewing?", "Who works on Project Bluewing?"]);
+  });
+
+  it("沒有範本時退回通用範本，依方向使用不同的範本，類型在英文中改成小寫（#195 決定 2）", () => {
+    expect(followUps(GRAPH, "wang", "zh-TW", [])).toEqual(["王小明負責哪些專案？", "王小明隸屬哪些部門？", "王小明負責哪些部門？"]);
+    expect(followUps(GRAPH, "bluewing", "zh-TW", [])).toEqual(["哪些人員負責青翼專案？", "哪些部門參與青翼專案？", "哪些人員參與青翼專案？"]);
+    expect(followUps(GRAPH, "wang", "en", [])[0]).toBe("Which project does Ming Wang have a “Leads” relationship with?");
+    expect(followUps(GRAPH, "bluewing", "en", [])[0]).toBe("Which person has a “Leads” relationship with Project Bluewing?");
+  });
+
+  it("缺方向或缺介面語言的範本時，只有那一題退回通用範本；{type} 帶入另一端的類型", () => {
+    const leads = clientConfig.knowledgeModel.relationTypes.find((t) => t.id === "leads")!;
+    const partial = [{ ...leads, questions: { outgoing: { "zh-TW": "{name}帶領哪個{type}？", en: "What does {name} lead ({type})?" } } }];
+    expect(followUps(GRAPH, "wang", "en", partial)).toEqual([
+      "What does Ming Wang lead (project)?",
+      "Which team does Ming Wang have a “Member of” relationship with?",
+      "What does Ming Wang lead (team)?",
+    ]);
+    expect(followUps(GRAPH, "bluewing", "zh-TW", partial)[0]).toBe("哪些人員負責青翼專案？");
+    const zhOnly = [{ ...leads, questions: { outgoing: { "zh-TW": "{name}帶領哪個{type}？" } } }];
+    expect(followUps(GRAPH, "wang", "en", zhOnly)[0]).toBe("Which project does Ming Wang have a “Leads” relationship with?");
+    expect(followUps(GRAPH, "wang", "zh-TW", zhOnly)[0]).toBe("王小明帶領哪個專案？");
   });
 
   it("關係類型、方向與另一端的類型相同的只留一題，最多 MAX_FOLLOW_UPS 題", () => {
@@ -101,7 +124,7 @@ describe("followUps", () => {
       relations: [...GRAPH.relations, ...["a", "b", "c", "d"].map((x) => relation(`r-${x}`, "member-of", x, "rd"))],
     };
     // rd：← member-of 人員（多位只留一題）、works-on → 專案、← leads 人員
-    expect(followUps(many, "rd", "zh-TW")).toEqual(["哪些人員隸屬研發部？", "研發部參與哪些專案？", "哪些人員負責研發部？"]);
+    expect(followUps(many, "rd", "zh-TW")).toEqual(["哪些人員隸屬研發部？", "研發部參與哪些專案？", "誰負責研發部？"]);
     const fan: Graph = {
       entities: GRAPH.entities,
       relations: ["leads", "member-of", "works-on", "other"].flatMap((type, i) => [relation(`x${i}`, type, "wang", "rd")]),

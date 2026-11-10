@@ -181,6 +181,14 @@ npm run check:client
 | `label` | 是 | `LocalizedText` | 顯示名稱 |
 | `from` | 是 | 實體類型 `id` 陣列，至少 1 個 | 關係的起點可以是哪些類型；必須存在於 `entityTypes` |
 | `to` | 是 | 實體類型 `id` 陣列，至少 1 個 | 關係的終點可以是哪些類型；必須存在於 `entityTypes` |
+| `questions` | 否 | `{ outgoing?, incoming? }`，至少一個，值為 `LocalizedText` | 實體面板「接著問」的問句範本（#198）：`outgoing` 用於面板中心是關係的起點（`from`）時，`incoming` 用於中心是終點（`to`）時 |
+
+**問句範本**（`questions`，[docs/qa.md](qa.md)「回答提到」的接著問）：
+
+- 參數只有兩個：`{name}` 是面板中心實體的名稱（**必填**；同名的實體以搜尋結果的方式區分），`{type}` 是另一端的實體類型名稱（選填；英文等有大小寫的語言改成小寫）。
+- 不認得的參數（例如 `{relation}`、拼錯的 `{nmae}`）、不成對的大括號與缺少 `{name}` 由 `check:client`／`check:clients` 報錯，路徑例如 `knowledge-model.json /relationTypes/2/questions/outgoing/en`。
+- 寫成該語言自然的問句，例如 `leads`：`outgoing` 為 `{ "zh-TW": "{name}負責哪些{type}？", "en": "What does {name} lead?" }`、`incoming` 為 `{ "zh-TW": "誰負責{name}？", "en": "Who leads {name}?" }`。`to`（或 `from`）有多種類型時，英文等有單複數的語言優先寫不含 `{type}` 的範本，避免 “Which team or project”；不含 `{type}` 的範本產生相同的問句時只留一題。
+- 省略 `questions`、缺該方向或缺介面語言的範本時，退回翻譯檔的通用範本（`followUpOutgoing`／`followUpIncoming`，以關係名稱加上另一端類型組成）。現有客戶不填也能運作，但英文、日文的通用範本讀起來生硬，新客戶建議每種關係、兩個方向、每種語言都寫。
 
 ## `access.json`
 
@@ -260,6 +268,7 @@ JSON Schema 無法參照另一個檔的值，以下由 `scripts/check-client.mjs
 - `LocalizedText` 的語言（見「共用格式」）、`defaultLanguage` 必須在 `languages` 內
 - 同一個清單內 `id` 不重複；`visibilityLevels` 的 `rank` 不重複
 - 關係類型的 `from`、`to` → `entityTypes`
+- 關係類型的問句範本（`questions`）：參數只有 `{name}`（必填）與 `{type}`，大括號成對（見「問句範本」）
 - 角色的 `visibility` → `visibilityLevels`；角色的 `projects` → `projects`
 - 情境的 `role` → `roles`
 - 評測題庫的 `id` 不重複、`role` → `roles`、`language` → `languages`，以及 `expect` 與其他欄位的對應；答案段落的存在與可見範圍由 `app/src/evals/validate.ts` 檢查，只有 `npm test` 會執行，換客戶後兩者都要跑（[docs/evals.md](evals.md)「檢查」）
