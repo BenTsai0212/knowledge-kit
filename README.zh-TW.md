@@ -121,7 +121,7 @@ npx wrangler dev
 ## 狀態與規劃
 
 - **v1**：上面的功能（[RFC 0001](docs/rfcs/0001-project-charter.md) 第 1 階段）與線上 demo。見[變更紀錄](CHANGELOG.md)。
-- **v2**：跨語言檢索，可選用瀏覽器內的語意向量（`multilingual-e5-small`），以虛構的多語言客戶 `clients/kestrova-demo/`（繁中、英文、日文，每個事實只寫在一種語言）實測：跨語言題六個方向共 18 題，引用與答案都 18/18（[評測結果](clients/kestrova-demo/evals/README.md#驗收結果)、[RFC 0002](docs/rfcs/0002-public-release.md)）。
+- **v2**：跨語言檢索，可選用瀏覽器內的語意向量（`multilingual-e5-small`），以虛構的多語言客戶 `clients/kestrova-demo/`（繁中、英文、日文，每個事實只寫在一種語言）實測：跨語言題六個方向共 18 題，引用與答案都 18/18（[評測結果](clients/kestrova-demo/evals/README.md#驗收結果)、[RFC 0002](docs/rfcs/0002-public-release.md)）。見[變更紀錄](CHANGELOG.md)。
 
 ## 授權
 
