@@ -102,11 +102,13 @@ describe("verdicts／differs", () => {
 });
 
 describe("evalReport", () => {
-  it("包含設定、門檻、每組的指標與結果、時間；不含邀請碼", () => {
+  const meta = { model: clientConfig.client.model, questionBank: { hash: "0123456789ab", questions: 58 } };
+
+  it("包含模型、題庫版本、設定、門檻、每組的指標與結果、時間；不含邀請碼", () => {
     const set: SetRun = { settings: { topK: 5, minScore: 0.1 }, results: [result({ id: questions[0].id })] };
     const run: EvalRun = { mode: "keyPoints", providerId: "keyword-hash", sets: [set], status: "stopped", stopReason: "daily_limit", startedAt: "2026-10-30T00:00:00.000Z" };
-    const report = evalReport(run, questions, thresholds);
-    expect(report).toMatchObject({ mode: "keyPoints", provider: "keyword-hash", notApplicable: [], status: "stopped", stopReason: "daily_limit", finishedAt: null, thresholds: { ...thresholds, leakage: 0 } });
+    const report = evalReport(run, questions, thresholds, meta);
+    expect(report).toMatchObject({ mode: "keyPoints", provider: "keyword-hash", model: meta.model, questionBank: meta.questionBank, notApplicable: [], status: "stopped", stopReason: "daily_limit", finishedAt: null, thresholds: { ...thresholds, leakage: 0 } });
     expect(report.sets[0].settings).toEqual(set.settings);
     expect(report.sets[0].summary).toEqual(setSummary(questions, set, thresholds, "keyPoints"));
     expect(report.sets[0].summary.complete).toBe(false);
@@ -118,10 +120,10 @@ describe("evalReport", () => {
     const all = [...questions, semantic];
     const set: SetRun = { settings: { topK: 5, minScore: 0.1 }, results: questions.map((q) => result({ id: q.id })) };
     const run = (providerId: EvalRun["providerId"]): EvalRun => ({ mode: "keyPoints", providerId, sets: [set], status: "done", startedAt: "2026-10-30T00:00:00.000Z" });
-    const keyword = evalReport(run("keyword-hash"), all, thresholds);
+    const keyword = evalReport(run("keyword-hash"), all, thresholds, meta);
     expect(keyword.notApplicable).toEqual(["semantic-only"]);
     expect(keyword.sets[0].summary).toMatchObject({ done: 2, total: 2, complete: true });
-    const e5 = evalReport(run("multilingual-e5-small"), all, thresholds);
+    const e5 = evalReport(run("multilingual-e5-small"), all, thresholds, meta);
     expect(e5.notApplicable).toEqual([]);
     expect(e5.sets[0].summary).toMatchObject({ done: 2, total: 3, complete: false });
   });

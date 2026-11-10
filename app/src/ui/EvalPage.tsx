@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { errorMessage, fill, strings, taskErrorMessage } from "../client/i18n";
 import { clientConfig } from "../client/load";
 import { dataset } from "../dataset/load";
-import { evalQuestions } from "../evals/load";
+import { evalQuestions, evalQuestionsSource } from "../evals/load";
+import { questionBank } from "../evals/report";
 import { applies, applicableQuestions, estimateCalls, openEvalDatabase, runEvals, type EvalContext, type EvalRun, type EvalSettings, type QuestionResult } from "../evals/run";
 import { LEAKAGE_LIMIT, type AnswerMode, type Metric, type Summary } from "../evals/score";
 import type { EvalQuestion } from "../evals/types";
@@ -18,6 +19,8 @@ import type { ProviderStatus } from "./retrieval-notice";
 
 const { client, access } = clientConfig;
 const questions = evalQuestions.questions;
+// 題庫版本（下載 JSON 用）；載入時算一次
+const bank = questionBank(evalQuestionsSource, questions.length);
 const { thresholds } = client.evals;
 const METRICS = ["citation", "answer", "leakage", "refusal"] as const;
 const SET_NAMES = ["A", "B"];
@@ -135,9 +138,10 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
     }
   }
 
-  function download() {
+  async function download() {
     if (run === null) return;
-    const blob = new Blob([JSON.stringify(evalReport(run, questions, thresholds), null, 2)], { type: "application/json" });
+    const meta = { model: client.model, questionBank: await bank };
+    const blob = new Blob([JSON.stringify(evalReport(run, questions, thresholds, meta), null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = `evals-${run.startedAt.replace(/[:.]/g, "-")}.json`;
