@@ -2,7 +2,12 @@
 
 每個客戶一個資料夾 `clients/<名稱>/`，結構與參考情境 `client/` 相同（`client.json` 等設定檔、`i18n/`、`data/`、`evals/`），但**不含 `schema/`**：Schema 一律用 `client/schema/`。名稱只能用小寫英文字母、數字與 `-`。
 
-本 repo（template）不放任何客戶，只有這份說明（#77 決定 7）。`client/` 是參考情境與測試基準，換客戶時不修改。
+本 repo（template）只放**虛構的示範客戶**，真實客戶與給特定對象的 pitch demo 放在各自的 fork（#77 決定 7）。`client/` 是參考情境與測試基準，換客戶時不修改。
+
+| 客戶 | 內容 | Issue |
+| --- | --- | --- |
+| `medsupply-demo` | 虛構的醫療器材代理商，`keyword-hash` | #88 |
+| `kestrova-demo` | 虛構的跨國感測器製造商，繁中、英文、日文，每個事實只寫在一種語言，以語意向量（`multilingual-e5-small`）跨語言檢索 | #175 |
 
 ## 用法
 

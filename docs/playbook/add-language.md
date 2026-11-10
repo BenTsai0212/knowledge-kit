@@ -26,7 +26,9 @@
 3. **各設定檔的多語文字**：顯示名稱、角色、可見等級、專案、實體與關係類型、情境名稱等，每種語言都要填。`check:client` 只檢查預設語言有沒有填，其他語言的缺漏要逐一確認。
 4. **實體名稱**：`data/entities.json` 每個實體的 `names` 加上新語言。人名沒有公認譯名時沿用原文，不要自行音譯。
 5. **文件**：新增這個語言的文件，`language` 設為 `<代碼>`。段落長度以字元計算，與其他語言相同（`passageMaxChars`）。
-6. **預設問題**：`scenarios.json` 每題加上這個語言的問題文字，`answerPassages` 列出同語言的答案段落。`keyword-hash` 不支援跨語言檢索，所以每題在新語言都要有答案段落；沒有對應段落時補寫文件。
+6. **預設問題**：`scenarios.json` 每題加上這個語言的問題文字，`answerPassages` 列出答案段落。要求依 `retrieval.provider` 而不同（[落地新客戶步驟](new-client-setup.md)第 3 步）：
+   - `keyword-hash` 不支援跨語言檢索，所以每題在新語言都要有同語言的答案段落；沒有對應段落時補寫文件。
+   - 語意向量（`multilingual-e5-small`）時，事實可以只寫在一種語言，每題至少一種語言有同語言的答案段落即可。Playwright 用到的兩題要有預設語言的答案段落（[docs/testing.md](../testing.md)「Playwright」）。範例：`clients/kestrova-demo/`（繁中、英文、日文，每個事實只寫在一種語言，#175）。
 7. **評測題庫**：依[評測題庫建立步驟](eval-question-bank.md)加入新語言的題目，至少包含權限題與題庫外的題目。跨語言題（以 `passageLanguage` 指定段落的語言）一律標記 `requires: "semantic"`，`keyword-hash` 時不計入分母（[docs/evals.md](../evals.md)「跨語言、同義詞與完全無關的題目」）。
 
 不需要修改：問答 prompt 的語言名稱（以 `Intl.DisplayNames` 產生）、萃取時要求每種語言的名稱、檢索的語言篩選、說法不同只比對同語言、時間軸的語言，這些都依 `client.json` 的語言清單運作。
@@ -35,6 +37,7 @@
 
 - `npm run check:clients <名稱>` 通過。其中 `app/src/retrieval/scenarios.target.test.ts` 會以每種語言檢索預設問題，同語言的答案段落要在前 K 名內。
 - Playwright 的客戶格通過（`gh workflow run e2e.yml --ref <分支>`）。
+- 選用語意向量的客戶，這兩項都以 `keyword-hash` 檢查，不下載模型（[docs/client-config.md](../client-config.md)「客戶檢查」）；跨語言要靠下一項的評測確認。
 - 真實金鑰評測（[驗收指標](acceptance-metrics.md)）中，新語言的題目也要達到門檻。
 
 ## 2. 以空白分詞的語言：確認檢索品質
@@ -90,6 +93,7 @@
 
 **已導入的做法**：瀏覽器內的小型多語模型 `multilingual-e5-small`（#163），在 `client.json` 的 `retrieval.provider` 選用（[docs/client-config.md](../client-config.md)、[docs/retrieval.md](../retrieval.md)「語意向量」）。
 
-- 首次載入要下載約 135 MB 的模型，準備失敗時改用 `keyword-hash` 並提示，所以新語言的段落仍以第 1 節的方式補齊較穩。
+- 首次載入要下載約 135 MB 的模型，準備失敗時改用 `keyword-hash` 並提示；這時只寫在其他語言的事實檢索不到。客戶的網路可能擋下模型下載時，新語言的段落仍以第 1 節的方式補齊較穩。
+- 只靠跨語言（每個事實只寫在一種語言）的實測：`clients/kestrova-demo/`（#175），繁中、英文、日文的跨語言題六個方向共 18 題，引用與答案都 18/18（[評測結果](../../clients/kestrova-demo/evals/README.md#驗收結果)）。
 - model card 列出的語言（含 `th`）才考慮只靠跨語言；低資源語言的品質可能下降，先以題庫的跨語言題評測。
 - 選用前可先以本機的 `clients/local-<名稱>/` 試用與評測（[docs/retrieval.md](../retrieval.md)「瀏覽器量測」）。

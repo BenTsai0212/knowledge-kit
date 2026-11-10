@@ -30,7 +30,7 @@ Node 22 以上，先 `npm install`（CI 用 `npm ci`）。CI 的 job 見 `docs/t
 ## 3. 結構
 
 - `app/src/` 依模組分資料夾（`retrieval/`、`qa/`、`graph/`、`upload/`、`extraction/`、`conflicts/`、`evals/`、`db/`、`ui/` 等），說明在 `docs/` 的對應文件；`app/tests/` 放越權測試
-- `worker/`（Cloudflare Worker）、`client/`（參考情境）、`clients/`（本 repo 不放客戶）、`e2e/`（Playwright）、`scripts/`（專案腳本）
+- `worker/`（Cloudflare Worker）、`client/`（參考情境）、`clients/`（虛構的示範客戶，真實客戶放在各自的 fork）、`e2e/`（Playwright）、`scripts/`（專案腳本）
 - `docs/`、`tools/workflow/`、`templates/`、`.claude/`、`.github/`
 - **改 `app/`、`worker/`、`client/` 前先讀 `docs/structure.md`**：每個路徑的職責與結構測試守的界線
 
