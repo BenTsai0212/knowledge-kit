@@ -548,13 +548,17 @@ button.citation {
   margin: 0 0 0.5rem;
 }
 
-.swatch {
-  display: inline-block;
-  width: 0.8rem;
-  height: 0.8rem;
-  border-radius: 50%;
-  margin-right: 0.35rem;
-  vertical-align: middle;
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* 實體類型的圖示（#199），旁邊一律有類型名稱 */
+.entity-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex: none;
 }
 
 .graph-page {

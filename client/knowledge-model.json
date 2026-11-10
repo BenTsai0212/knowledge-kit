@@ -4,6 +4,7 @@
       "id": "person",
       "label": { "zh-TW": "人員", "en": "Person" },
       "color": "#3D7AB8",
+      "icon": "person",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
       "mergeStrategy": "review"
     },
@@ -11,6 +12,7 @@
       "id": "team",
       "label": { "zh-TW": "部門", "en": "Team" },
       "color": "#2E7D5B",
+      "icon": "team",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
       "mergeStrategy": "auto"
     },
@@ -18,6 +20,7 @@
       "id": "project",
       "label": { "zh-TW": "專案", "en": "Project" },
       "color": "#B26A00",
+      "icon": "folder",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": false }
     }
   ],

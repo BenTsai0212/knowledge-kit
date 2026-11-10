@@ -116,7 +116,7 @@ describe("深色模式", () => {
       graphStyle((name) => {
         read.add(name);
         return { ...themeVariables(clientConfig.theme), ...Object.fromEntries(Object.entries(colors).map(([k, v]) => [`--color-${k}`, v])) }[name] ?? "";
-      });
+      }, clientConfig.knowledgeModel.entityTypes);
     const [lightStyle, darkStyle] = [style({}), style({ ...clientConfig.theme.darkColors })];
     const defined = new Set(Object.keys(themeVariables(clientConfig.theme)));
     expect([...read].filter((name) => !defined.has(name))).toEqual([]);

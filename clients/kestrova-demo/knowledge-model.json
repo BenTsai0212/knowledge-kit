@@ -4,6 +4,7 @@
       "id": "site",
       "label": { "zh-TW": "據點", "en": "Site", "ja": "拠点" },
       "color": "#0E7C86",
+      "icon": "factory",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
       "mergeStrategy": "auto"
     },
@@ -11,6 +12,7 @@
       "id": "team",
       "label": { "zh-TW": "部門", "en": "Team", "ja": "部署" },
       "color": "#2E7D5B",
+      "icon": "team",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
       "mergeStrategy": "auto"
     },
@@ -18,6 +20,7 @@
       "id": "person",
       "label": { "zh-TW": "人員", "en": "Person", "ja": "人物" },
       "color": "#C2410C",
+      "icon": "person",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
       "mergeStrategy": "review"
     },
@@ -25,6 +28,7 @@
       "id": "product",
       "label": { "zh-TW": "產品", "en": "Product", "ja": "製品" },
       "color": "#3D7AB8",
+      "icon": "box",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
       "mergeStrategy": "review"
     },
@@ -32,6 +36,7 @@
       "id": "project",
       "label": { "zh-TW": "專案", "en": "Project", "ja": "プロジェクト" },
       "color": "#B26A00",
+      "icon": "folder",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": false },
       "mergeStrategy": "review"
     },
@@ -39,6 +44,7 @@
       "id": "partner",
       "label": { "zh-TW": "合作廠商", "en": "Partner", "ja": "取引先" },
       "color": "#8A5CC2",
+      "icon": "handshake",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
       "mergeStrategy": "review"
     }

@@ -37,7 +37,11 @@ export function normalizeClient(raw: ClientFiles): ClientConfig {
     },
     knowledgeModel: {
       ...raw.knowledgeModel,
-      entityTypes: raw.knowledgeModel.entityTypes.map((t) => ({ ...t, mergeStrategy: t.mergeStrategy ?? "review" })),
+      entityTypes: raw.knowledgeModel.entityTypes.map((t) => ({
+        ...t,
+        icon: t.icon ?? "generic",
+        mergeStrategy: t.mergeStrategy ?? "review",
+      })),
     },
   };
 }

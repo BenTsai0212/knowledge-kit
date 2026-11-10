@@ -114,11 +114,27 @@ export interface AliasRules {
 
 export type MergeStrategy = "review" | "auto";
 
+// 圖譜節點與圖例的圖示（固定圖示集，畫法在 app/src/ui/entity-icons.ts）
+export type EntityIconName =
+  | "person"
+  | "team"
+  | "building"
+  | "folder"
+  | "box"
+  | "factory"
+  | "handshake"
+  | "hospital"
+  | "gavel"
+  | "document"
+  | "generic";
+
 export interface EntityTypeFile {
   id: Id;
   label: LocalizedText;
   // 圖譜中節點的顏色（#RRGGBB）
   color: string;
+  // 省略時為 generic
+  icon?: EntityIconName;
   aliasRules: AliasRules;
   mergeStrategy?: MergeStrategy;
 }
@@ -193,7 +209,8 @@ export interface ClientFiles {
 
 // app 讀取端拿到的形狀：省略的欄位已補上預設值
 
-export interface EntityType extends Omit<EntityTypeFile, "mergeStrategy"> {
+export interface EntityType extends Omit<EntityTypeFile, "mergeStrategy" | "icon"> {
+  icon: EntityIconName;
   mergeStrategy: MergeStrategy;
 }
 

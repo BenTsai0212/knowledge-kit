@@ -3,6 +3,7 @@ import { clientConfig } from "../client/load";
 import type { Database } from "../db/database";
 import { shortestPath } from "../graph/path";
 import { readGraph, type Graph } from "../graph/read";
+import { EntityIcon } from "./EntityIcon";
 import { EntityPanel } from "./EntityPanel";
 import { GraphView } from "./GraphView";
 import { PathPanel } from "./PathPanel";
@@ -57,7 +58,7 @@ export function GraphPage({ db, identity, language, onOpenSource, initialSelecte
         <ul className="legend" aria-label={s.legend}>
           {clientConfig.knowledgeModel.entityTypes.map((t) => (
             <li key={t.id}>
-              <span className="swatch" style={{ background: t.color }} />
+              <EntityIcon icon={t.icon} color={t.color} />
               {t.label[language]}
             </li>
           ))}

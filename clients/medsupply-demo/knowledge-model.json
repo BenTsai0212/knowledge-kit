@@ -4,6 +4,7 @@
       "id": "product",
       "label": { "zh-TW": "產品", "en": "Product" },
       "color": "#3D7AB8",
+      "icon": "box",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
       "mergeStrategy": "review"
     },
@@ -11,6 +12,7 @@
       "id": "manufacturer",
       "label": { "zh-TW": "原廠", "en": "Manufacturer" },
       "color": "#8A5CC2",
+      "icon": "building",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
       "mergeStrategy": "review"
     },
@@ -18,6 +20,7 @@
       "id": "hospital",
       "label": { "zh-TW": "醫院", "en": "Hospital" },
       "color": "#2E7D5B",
+      "icon": "hospital",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
       "mergeStrategy": "review"
     },
@@ -25,6 +28,7 @@
       "id": "person",
       "label": { "zh-TW": "人員", "en": "Person" },
       "color": "#C2410C",
+      "icon": "person",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
       "mergeStrategy": "review"
     },
@@ -32,6 +36,7 @@
       "id": "tender",
       "label": { "zh-TW": "標案", "en": "Tender" },
       "color": "#B26A00",
+      "icon": "gavel",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": false },
       "mergeStrategy": "review"
     },
@@ -39,6 +44,7 @@
       "id": "policy",
       "label": { "zh-TW": "規章", "en": "Policy" },
       "color": "#0E7C86",
+      "icon": "document",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
       "mergeStrategy": "review"
     }

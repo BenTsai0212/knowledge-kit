@@ -10,6 +10,11 @@ describe("normalizeClient", () => {
     expect(byId).toEqual({ person: "review", team: "auto", project: "review" });
   });
 
+  it("icon 省略時為 generic，有填時保留", () => {
+    const byId = Object.fromEntries(clientConfig.knowledgeModel.entityTypes.map((t) => [t.id, t.icon]));
+    expect(byId).toEqual({ person: "person", team: "team", project: "folder" });
+  });
+
   it("不修改傳入的設定", () => {
     const raw = {
       client: { retrieval: { topK: 3 } },
@@ -20,7 +25,9 @@ describe("normalizeClient", () => {
     } as unknown as ClientFiles;
     const config = normalizeClient(raw);
     expect(config.knowledgeModel.entityTypes[0].mergeStrategy).toBe("review");
+    expect(config.knowledgeModel.entityTypes[0].icon).toBe("generic");
     expect(raw.knowledgeModel.entityTypes[0]).not.toHaveProperty("mergeStrategy");
+    expect(raw.knowledgeModel.entityTypes[0]).not.toHaveProperty("icon");
     expect(raw.client.retrieval).toEqual({ topK: 3 });
   });
 
