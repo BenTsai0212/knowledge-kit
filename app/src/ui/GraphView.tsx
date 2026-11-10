@@ -182,8 +182,7 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
       const instance = cytoscape({
         container: container.current,
         elements: elements(graph, language, labelGraph),
-        // 排版時把標籤算進節點大小，長標籤不互相重疊（#207）
-        layout: { name: "cose", randomize: false, animate: false, nodeDimensionsIncludeLabels: true },
+        layout: { name: "cose", randomize: false, animate: false },
         style: currentStyle(reduced.current),
       });
       // 點空白處不清除選取（避免誤觸），圖譜頁以「回到全部」清除

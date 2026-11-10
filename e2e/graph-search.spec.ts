@@ -2,9 +2,9 @@
 // 在問答中問（填進輸入框、不送出）；類型篩選；多跳路徑；手機寬度。圖譜不呼叫模型，不點畫布（展開從搜尋與面板操作）。
 import { expect, test, type Page } from "@playwright/test";
 import { openApp, openTab, s, switchIdentity, tab } from "./support/app";
-import { access, knowledgeModel, language, nonReviewer, reviewer } from "./support/client";
+import { access, clientName, knowledgeModel, language, nonReviewer, reviewer } from "./support/client";
 import { sameNameEntities } from "./support/dataset";
-import type { Cy } from "./support/graph";
+import { waitForGraphIdle, type Cy } from "./support/graph";
 
 const CANVAS = ".graph-page .graph-canvas";
 
@@ -228,6 +228,19 @@ test("多跳路徑：起點預設為選取的實體，終點以搜尋選擇，�
   await searchAndPick(page, data.labels[b], s.pathTo);
   const steps = page.locator("details.path > ol > li > strong");
   await expect(steps).toHaveText([data.labels[a], data.labels[b]]);
+});
+
+// #207：排版不把標籤算進節點大小，fit 後整張圖不會縮到標籤看不清（標籤 12px × 縮放）
+test.describe("1280×720", () => {
+  test.use({ viewport: { width: 1280, height: 720 } });
+
+  test("打開圖譜（全部）時，節點標籤的實際字級至少 10px", async ({ page }) => {
+    test.skip(clientName !== "", "只檢查參考情境（client/）");
+    await openGraph(page, reviewer?.id);
+    await waitForGraphIdle(page, CANVAS);
+    const zoom = await page.evaluate((selector) => document.querySelector<HTMLElement & { _cyreg?: { cy?: Cy } }>(selector)!._cyreg!.cy!.zoom(), CANVAS);
+    expect(12 * zoom).toBeGreaterThanOrEqual(10);
+  });
 });
 
 test.describe("手機寬度", () => {

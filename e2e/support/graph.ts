@@ -14,6 +14,7 @@ type CyNode = {
 };
 export type Cy = {
   animated(): boolean;
+  zoom(): number;
   nodes(): { length: number; map<T>(fn: (n: CyNode) => T): T[] };
   elements(): { some(fn: (e: { animated(): boolean }) => boolean): boolean };
   $id(id: string): CyNode;
