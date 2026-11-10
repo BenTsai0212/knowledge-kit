@@ -111,6 +111,7 @@ Opus 5.5 的 thinking 無法關閉，thinking 的 token 也算在 `max_tokens` �
 4. 要以 `npm run dev`（Vite，`http://localhost:5173`）開發前端時，另開一個終端機執行 `npx wrangler dev`。
    - Vite 會把 `/api/*` 轉給 `http://localhost:8787`（`vite.config.ts`），瀏覽器看到的都是同一個 origin，不需要 CORS。
    - Worker 收到的 `Origin` 是 Vite 的網址，所以 `.dev.vars` 要設 `ALLOWED_ORIGINS=http://localhost:5173`。
+   - 此時打開 `http://localhost:5173`，畫面是目前的程式碼。8787 的畫面是上一次 `npm run build` 留下的 `dist/`（客戶是當時 `KK_CLIENT` 選的那一個）；`git pull` 或切換 `KK_CLIENT` 後沒有重新 build，看到的就是舊版或其他客戶的畫面。
 
 ### 正式部署
 
