@@ -235,7 +235,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   const sourcesToggle = (itemId: string, count: number) =>
     count > 0 && (
       <button type="button" className="link" aria-expanded={openSources.has(itemId)} onClick={() => setOpenSources((cur) => flip(cur, itemId))}>
-        {fill(s.reviewSources, { count })}
+        {fill(s.reviewSources, { count }, language)}
       </button>
     );
   // 一筆實體一行（#189）：類型、標籤、名稱、合併選擇、出處的開關與動作。
@@ -449,14 +449,14 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                     relations: g.summary.newRelations,
                     merged: g.summary.mergedEntities,
                     existing: g.summary.existingRelations,
-                  })}
+                  }, language)}
                 </p>
                 <div className="dialog-actions review-progress">
-                  <strong>{g.summary.toConfirm > 0 ? fill(s.reviewProgress, { count: g.summary.toConfirm }) : s.reviewProgressDone}</strong>
+                  <strong>{g.summary.toConfirm > 0 ? fill(s.reviewProgress, { count: g.summary.toConfirm }, language) : s.reviewProgressDone}</strong>
                   <button type="button" disabled={busy} onClick={() => approveBatch(doc.id, batchPlan(doc, suggestions, allChoices, client.languages, graph))}>
                     {busy ? s.reviewWorking : s.reviewApproveDocument}
                   </button>
-                  {decideLeft > 0 && <span className="muted">{fill(s.reviewDecideLeft, { count: decideLeft })}</span>}
+                  {decideLeft > 0 && <span className="muted">{fill(s.reviewDecideLeft, { count: decideLeft }, language)}</span>}
                 </div>
                 {/* 需要你確認的組：一組一個實體，關係掛在它底下；「確認」一併核准已經可以核准的關係 */}
                 {g.groups.length > 0 && (
@@ -473,7 +473,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                             confirm: () => {
                               if (plan) void approveItems(doc.id, plan);
                             },
-                            confirmLabel: relationCount > 0 ? fill(s.reviewConfirmWithRelations, { count: relationCount }) : s.reviewConfirm,
+                            confirmLabel: relationCount > 0 ? fill(s.reviewConfirmWithRelations, { count: relationCount }, language) : s.reviewConfirm,
                             confirmDisabled: plan === null,
                           })}
                           {group.relations.length > 0 && (
@@ -492,7 +492,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                 {preparedCount > 0 && (
                   <details className="review-prepared">
                     <summary>
-                      {fill(s.reviewPrepared, { count: preparedCount })}
+                      {fill(s.reviewPrepared, { count: preparedCount }, language)}
                       {preparedMerges && <span className="muted"> {s.reviewPreparedMergeHint}</span>}
                     </summary>
                     <ul className="review-rows">

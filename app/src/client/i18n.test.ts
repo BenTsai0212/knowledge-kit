@@ -68,6 +68,42 @@ describe("fill", () => {
     expect(fill("{toString}", {})).toBe("{toString}");
   });
 
+  it("單複數：依語言的 Intl.PluralRules 選寫法，# 換成數字（#207）", () => {
+    const groups = "{count, plural, one {# group needs} other {# groups need}} your confirmation";
+    expect(fill(groups, { count: 1 }, "en")).toBe("1 group needs your confirmation");
+    expect(fill(groups, { count: 2 }, "en")).toBe("2 groups need your confirmation");
+    expect(fill(groups, { count: 0 }, "en")).toBe("0 groups need your confirmation");
+    // 只有 other 的語言（例如日文）一律用 other；確切數字優先於類別
+    expect(fill(groups, { count: 1 }, "ja")).toBe("1 groups need your confirmation");
+    expect(fill("{n, plural, =0 {none} one {# item} other {# items}}", { n: 0 }, "en")).toBe("none");
+    // 同一句有多個數字與一般參數
+    const summary = "Adds {a, plural, one {# entity} other {# entities}} and {b, plural, one {# relation} other {# relations}} to {name}.";
+    expect(fill(summary, { a: 1, b: 3, name: "#1" }, "en")).toBe("Adds 1 entity and 3 relations to #1.");
+    // 沒有給值或不是數字時保留原樣
+    expect(fill(groups, {}, "en")).toBe(groups);
+    expect(fill(groups, { count: "1" }, "en")).toBe(groups);
+  });
+
+  it("待審頁的英文依數量用單數或複數；繁中不變（#207）", () => {
+    const en = strings("en");
+    expect(fill(en.reviewSummary, { entities: 1, relations: 1, merged: 1, existing: 1 }, "en")).toBe(
+      "Approving adds 1 entity and 1 relation; 1 entity merges into an existing one and 1 relation is already in the graph.",
+    );
+    expect(fill(en.reviewSummary, { entities: 2, relations: 0, merged: 3, existing: 4 }, "en")).toBe(
+      "Approving adds 2 entities and 0 relations; 3 entities merge into existing ones and 4 relations are already in the graph.",
+    );
+    expect(fill(en.reviewProgress, { count: 1 }, "en")).toBe("1 group needs your confirmation");
+    expect(fill(en.reviewProgress, { count: 2 }, "en")).toBe("2 groups need your confirmation");
+    expect(fill(en.reviewDecideLeft, { count: 1 }, "en")).toBe("1 group needs your decision and will remain after approving everything");
+    expect(fill(en.reviewDecideLeft, { count: 3 }, "en")).toBe("3 groups need your decision and will remain after approving everything");
+    expect(fill(en.reviewPrepared, { count: 1 }, "en")).toBe("The system prepared 1 item — show");
+    expect(fill(en.reviewPrepared, { count: 5 }, "en")).toBe("The system prepared 5 items — show");
+    expect(fill(en.reviewConfirmWithRelations, { count: 1 }, "en")).toBe("Confirm (with 1 relation)");
+    expect(fill(en.reviewConfirmWithRelations, { count: 2 }, "en")).toBe("Confirm (with 2 relations)");
+    const zh = strings("zh-TW");
+    expect(fill(zh.reviewProgress, { count: 1 }, "zh-TW")).toBe(zh.reviewProgress.replace("{count}", "1"));
+  });
+
   it("每種語言的標示範本都有 {title}", () => {
     for (const s of Object.values(TRANSLATIONS)) for (const t of Object.values(s.conflictMarks)) expect(t).toContain("{title}");
   });

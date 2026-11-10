@@ -33,8 +33,9 @@ export const EVALS_FILES = {
 // 翻譯檔：client/i18n/<語言>.json，每種語言一份（docs/client-config.md「翻譯檔」）
 export const I18N_DIR = "i18n/";
 const I18N_SCHEMA = "i18n.schema.json";
-// 帶參數文字的參數：{camelCase}
-const PARAM = /\{([A-Za-z]+)\}/g;
+// 帶參數文字的參數：{camelCase}，或單複數寫法 {camelCase, plural, one {…} other {…}} 的參數（#207，與 app/src/client/i18n.ts 相同）
+const PARAM = /\{([A-Za-z]+)(?:\}|, plural,)/g;
+const PLURAL = /\{([A-Za-z]+), plural,((?:\s*(?:=\d+|zero|one|two|few|many|other)\s*\{[^{}]*\})+)\s*\}/g;
 const DOCUMENT_PATH = /^documents\/[^/]+\.json$/;
 
 function readJson(url) {
@@ -207,10 +208,22 @@ function validateI18n(ajv, i18n, languages, defaultLanguage) {
     }
   }
   const base = valid.includes(defaultLanguage) ? defaultLanguage : valid[0];
-  const params = (text) => [...new Set([...text.matchAll(PARAM)].map((m) => `{${m[1]}}`))].sort();
+  // 單複數寫法只算它的參數，寫法中的文字（例如 one {item}）不算
+  const params = (text) => [...new Set([...text.replace(PLURAL, "{$1}").matchAll(PARAM)].map((m) => `{${m[1]}}`))].sort();
   const show = (list) => (list.length > 0 ? list.join("、") : "（無）");
   const texts = (data, path = "") =>
     Object.entries(data).flatMap(([k, v]) => (typeof v === "string" ? [[`${path}/${k}`, v]] : texts(v, `${path}/${k}`)));
+  // 單複數寫法：每個都要有 other（其他類別找不到時使用）；寫錯的（例如類別拼錯、少了大括號）不會被代入
+  for (const language of valid) {
+    for (const [path, text] of texts(i18n[language])) {
+      for (const m of text.matchAll(PLURAL)) {
+        if (!/(^|\s)other\s*\{/.test(m[2])) errors.push({ file: label(language), path, message: `單複數寫法 {${m[1]}, plural, …} 缺少 other` });
+      }
+      if (/\{[A-Za-z]+, plural,/.test(text.replace(PLURAL, ""))) {
+        errors.push({ file: label(language), path, message: "單複數寫法有誤，格式是 {count, plural, one {# item} other {# items}}" });
+      }
+    }
+  }
   const expected = base ? Object.fromEntries(texts(i18n[base])) : {};
   for (const language of valid.filter((l) => l !== base)) {
     for (const [path, text] of texts(i18n[language])) {

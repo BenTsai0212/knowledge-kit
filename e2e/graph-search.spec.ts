@@ -159,6 +159,43 @@ test("同名的實體：節點標籤與實體面板的標題分得出來", async
   }
 });
 
+// #207：面板「出現在」的連結換行時靠左、每一行與第一行文字對齊，第一行與項目符號同高；節點標籤換行並有不透明的襯底
+test("面板的長連結換行時靠左對齊；節點標籤換行並以底色襯底", async ({ page }) => {
+  const data = await openGraph(page, reviewer?.id);
+  const found = pair(data);
+  test.skip(found === null, "圖中沒有名稱不重複的節點");
+  const { a } = found!;
+  await searchAndPick(page, data.labels[a]);
+  const sources = page.getByRole("region", { name: data.labels[a] }).locator("h3 + ul").last();
+  await expect(sources.getByRole("button").first()).toBeVisible();
+  // 把連結變窄，讓標題一定換行；量每一行文字的左緣與連結左緣、連結上緣與項目的上緣
+  const lines = await sources.getByRole("button").first().evaluate((button) => {
+    button.style.width = "1em";
+    const range = document.createRange();
+    range.selectNodeContents(button);
+    const box = button.getBoundingClientRect();
+    return {
+      textAlign: getComputedStyle(button).textAlign,
+      lefts: [...range.getClientRects()].map((r) => r.left - box.left),
+      top: box.top - button.closest("li")!.getBoundingClientRect().top,
+    };
+  });
+  expect(["start", "left"]).toContain(lines.textAlign);
+  expect(lines.lefts.length).toBeGreaterThan(1);
+  for (const left of lines.lefts) expect(Math.abs(left)).toBeLessThan(1);
+  expect(Math.abs(lines.top)).toBeLessThan(1);
+
+  const label = await page.evaluate(
+    ({ selector, id }) => {
+      const cy = document.querySelector<HTMLElement & { _cyreg?: { cy?: { $id(id: string): { style(name: string): string } } } }>(selector)!._cyreg!.cy!;
+      const node = cy.$id(id);
+      return { wrap: node.style("text-wrap"), opacity: Number(node.style("text-background-opacity")) };
+    },
+    { selector: CANVAS, id: a },
+  );
+  expect(label).toEqual({ wrap: "wrap", opacity: 1 });
+});
+
 test("類型篩選：沒勾的類型變灰，搜尋不到", async ({ page }) => {
   const data = await openGraph(page, reviewer?.id);
   const found = pair(data);

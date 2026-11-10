@@ -246,14 +246,16 @@ npm run check:client
 - 鍵與 `app/src/client/types.ts` 的 `UiStrings` 相同，是巢狀的物件：大部分是頂層的字串，錯誤訊息等依類型分組（`errors`、`uploadErrors`、`extractErrors`、`reviewErrors`、`conflictDecisions`、`conflictMarks`），例如 `errors.daily_limit`。鍵的正本是 `client/schema/i18n.schema.json`。
 - 值是非空字串（不能只有空白）。
 - 帶參數的文字以 `{camelCase}` 標示，例如 `"已核准 {count} 筆"`、`"已由〈{title}〉取代"`、`"{done}／{total}"`；程式以 `fill(template, { count: 3 })` 代入（一次掃過，值中的 `{…}`、`$&` 不再解讀）。各語言的參數必須相同，順序可以不同。
-- 翻譯檔中不放邏輯：數量不同要換句子時（例如單複數）拆成多個鍵，比照 `reviewToastApprovedOne`／`reviewToastApproved`。
+- **單複數**（#207）：數字的單複數寫成 `{count, plural, one {# group needs} other {# groups need}}`，依介面語言的 `Intl.PluralRules` 選 `zero`／`one`／`two`／`few`／`many`／`other`（`=0` 這類確切數字優先），`#` 換成數字，找不到的類別用 `other`。一句有多個數字時各寫一個，例如英文的 `reviewSummary`。寫法中不能再有大括號（參數放在寫法外）；不分單複數的語言（繁中、日文）照常寫 `{count}`。程式以 `fill(template, values, language)` 代入，有單複數寫法的文字要傳 `language`。
+- 數量不同時要換成不含數字的句子（例如只有一筆時顯示名稱）仍拆成多個鍵，比照 `reviewToastApprovedOne`／`reviewToastApproved`。
 - 標點與括號依語言而定，也放在翻譯檔（`colon`、`listSeparator`、`progress`、`parenthetical`）。
 
 ### 檢查（`npm run check:client`）
 
 - `languages` 的每一種都要有翻譯檔，缺少就失敗；不在 `languages` 內的翻譯檔也失敗。
 - 依 `i18n.schema.json` 驗證：缺少的鍵、多出來的鍵（含巢狀物件中）、空字串都會失敗。
-- 每個鍵的參數集合與預設語言（預設語言的檔有誤時，用第一個通過 Schema 的語言）相同，例如 `i18n/en.json /reviewToastApproved：參數 （無） 與 zh-TW 的 {count} 不同`。
+- 每個鍵的參數集合與預設語言（預設語言的檔有誤時，用第一個通過 Schema 的語言）相同，例如 `i18n/en.json /reviewToastApproved：參數 （無） 與 zh-TW 的 {count} 不同`。單複數寫法 `{count, plural, …}` 算作參數 `{count}`。
+- 單複數寫法缺少 `other`，或格式有誤（例如類別拼錯、少了大括號）會失敗。
 
 ### 程式如何讀取
 

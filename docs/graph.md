@@ -79,7 +79,7 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
 | `ui/GraphPage.tsx` | 中間是搜尋框、圖例兼類型篩選與圖，右側是實體面板與多跳路徑（見下方「找起點與右側面板」）；讀取圖譜；切換身分或語言時重新讀取，之後才回來的舊結果忽略（`ui/requests.ts`）；逐步展開（見下方「逐步展開」）：已展開的路徑（「已展開：A → B」，每一段可點回到該層）與「回到全部」；從問答頁的「在圖譜中查看」打開時從該實體開始展開（`initialSelected`，看不到時顯示全部，#195、#199） |
 | `ui/GraphView.tsx`（鄰近圖） | 問答頁右側的實體面板也用它畫以實體為中心的小圖（`compact`，見 [docs/qa.md](qa.md)「回答提到」） |
 | `ui/GraphView.tsx` | 以 cytoscape 畫圖：節點帶實體類型、看得到的關聯數（大小），邊帶看得到的出處數（線粗）；標籤是 `names[介面語言]`，邊的標籤是關係類型的 `label`，只在選取節點的相連關係顯示；傳入 `expansion` 時（圖譜頁）聚焦集合以外變灰並播放展開的動態 |
-| `ui/graph-style.ts` | cytoscape 的樣式（見下方「節點與線」）：從 `theme.json` 的 CSS 變數讀出顏色（找不到實體類型時用 `graphFallback` 與通用圖示），標籤加上背景色的外框；系統切換淺色／深色時由 `GraphView.tsx` 重新套用（[client-config.md](client-config.md)「`theme.json`」） |
+| `ui/graph-style.ts` | cytoscape 的樣式（見下方「節點與線」）：從 `theme.json` 的 CSS 變數讀出顏色（找不到實體類型時用 `graphFallback` 與通用圖示），標籤加上背景色的外框與 `surface` 襯底、長標籤換行；系統切換淺色／深色時由 `GraphView.tsx` 重新套用（[client-config.md](client-config.md)「`theme.json`」） |
 | `ui/entity-icons.ts`、`ui/EntityIcon.tsx` | 實體類型的固定圖示集（自畫的 24×24 SVG path，不使用圖示套件）：cytoscape 節點以 SVG data URI 當背景圖，圖例以同一份 path 畫 `<svg>`（`aria-hidden`，旁邊一律有類型名稱） |
 | `ui/EntityPanel.tsx` | 圖譜頁的右側面板：名稱、類型（圖示＋文字）、關聯數與文件數；「在問答中問」「只看它」；關係清單（方向、關係名稱、對方、出處數，點對方從它繼續展開）；出現的文件（點了以 `readSource()` 打開原文） |
 | `graph/search.ts`、`ui/EntitySearch.tsx` | 搜尋、類型篩選與「關聯最多」（純函式）；以名稱搜尋實體的輸入框（`combobox`＋`listbox`，圖譜上方與多跳路徑的兩端共用） |
@@ -93,6 +93,7 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
   - 節點大小＝看得到的關聯數（`nodeSize()`：32px 起，每個關聯加 4px，最多 64px）；線粗＝看得到的出處數（`edgeWidth()`：1 個 1.75px，每多一個加 0.75px，最多 5 個）。
   - 選取的節點：類型色 14% 的淡色底、陰影（cytoscape 的 `underlay`），圖示改用 `text` 色（深色模式中類型色放在淡色底上不足 3:1）。對比由 `check:client` 檢查（[client-config.md](client-config.md)「對比度」）。
   - 類型不只靠顏色區分：同一個客戶內每種類型的圖示不同（`check:client` 檢查）。
+  - 節點標籤（#207）：超過 140px（`NODE_LABEL_MAX_WIDTH`）在空白處換行，以不透明的 `surface` 襯底（畫布在面板內），不壓到經過的連線；排版（cose）把標籤算進節點大小（`nodeDimensionsIncludeLabels`），長標籤不互相重疊。不截斷，完整名稱也在實體面板與搜尋結果中。
 - **逐步展開**（#199）：狀態是已展開的路徑（`graph/expansion.ts`，例如 `[A, B]`），空陣列＝全部。
   - 聚焦集合＝路徑上的節點＋它們的直接鄰居（不分方向），以及這些節點之間的關係；其他節點與線變灰（`dimmed`，不隱藏，保留整體輪廓）。變灰的節點縮小到 75%，外圈與圖示改用 `border`／`textMuted`；節點仍可點，所以不降低透明度，標籤維持可讀的對比。
   - 點聚焦集合中的節點：接在路徑後面（已在路徑上時截到該處）；點變灰的節點＝「只看它」（路徑換成 `[它]`）；點空白處不清除，以「回到全部」清除。

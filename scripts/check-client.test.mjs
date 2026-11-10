@@ -357,6 +357,20 @@ describe("翻譯檔", () => {
     ]);
   });
 
+  it("單複數寫法：參數與一般參數一樣比對，缺少 other 或格式有誤會失敗（#207）", () => {
+    const data = i18n();
+    data.en.reviewToastApproved = "{count, plural, =1 {approved} other {# approved}}";
+    expect(check(data)).toEqual([]);
+    data.en.reviewToastRejected = "{total, plural, one {# rejected} other {# rejected}}";
+    data.en.reviewProgress = "{count, plural, one {# group needs}} your confirmation";
+    data.en.reviewDecideLeft = "{count, plural, one {# group} othr {# groups}} left";
+    expect(check(data)).toEqual([
+      { file: "i18n/en.json", path: "/reviewProgress", message: "單複數寫法 {count, plural, …} 缺少 other" },
+      { file: "i18n/en.json", path: "/reviewDecideLeft", message: "單複數寫法有誤，格式是 {count, plural, one {# item} other {# items}}" },
+      { file: "i18n/en.json", path: "/reviewToastRejected", message: "參數 {total} 與 zh-TW 的 {count} 不同" },
+    ]);
+  });
+
   it("預設語言的翻譯檔有誤時，以其他語言為準比對參數", () => {
     const data = i18n();
     delete data["zh-TW"].loading;

@@ -14,9 +14,28 @@ export function strings(language: LanguageCode): UiStrings {
   return TRANSLATIONS[language];
 }
 
-// 範本中的 {key} 換成值，一次掃過，值中的 {…} 與 $& 不再解讀（名稱、標題以文字顯示）；沒有給值的參數保留原樣
-export const fill = (template: string, values: Record<string, string | number>) =>
-  template.replace(/\{([A-Za-z]+)\}/g, (match, key: string) => (Object.hasOwn(values, key) ? String(values[key]) : match));
+// 單複數（#207）：{key, plural, one {# group} other {# groups}}，依 Intl.PluralRules 的類別（或 =0 這類確切數字）選一個寫法，
+// # 換成數字；寫法中不能再有大括號。格式與 check-client.mjs 的 PLURAL 相同（那裡檢查各語言的參數與 other）
+const PLURAL = /\{([A-Za-z]+), plural,((?:\s*(?:=\d+|zero|one|two|few|many|other)\s*\{[^{}]*\})+)\s*\}/;
+const TEMPLATE = new RegExp(`${PLURAL.source}|\\{([A-Za-z]+)\\}`, "g");
+const FORM = /(=\d+|[a-z]+)\s*\{([^{}]*)\}/g;
+
+function plural(language: LanguageCode | undefined, value: number, forms: string): string | undefined {
+  const byKey = new Map([...forms.matchAll(FORM)].map((m) => [m[1], m[2]]));
+  const form = byKey.get(`=${value}`) ?? byKey.get(new Intl.PluralRules(language).select(value)) ?? byKey.get("other");
+  return form?.replaceAll("#", String(value));
+}
+
+// 範本中的 {key} 換成值，一次掃過，值中的 {…} 與 $& 不再解讀（名稱、標題以文字顯示）；沒有給值的參數保留原樣。
+// 有單複數寫法的文字要傳 language（介面語言），否則依執行環境的語言選寫法
+export const fill = (template: string, values: Record<string, string | number>, language?: LanguageCode) =>
+  template.replace(TEMPLATE, (match, pluralKey: string | undefined, forms: string | undefined, key: string | undefined) => {
+    if (pluralKey !== undefined) {
+      const value = Object.hasOwn(values, pluralKey) ? values[pluralKey] : undefined;
+      return typeof value === "number" ? (plural(language, value, forms!) ?? match) : match;
+    }
+    return Object.hasOwn(values, key!) ? String(values[key!]) : match;
+  });
 
 // 錯誤類型 → 使用者看得懂的訊息；不認得的類型用通用訊息
 export function errorMessage(language: LanguageCode, error: string): string {
