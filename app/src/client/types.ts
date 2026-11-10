@@ -328,6 +328,12 @@ export interface UiStrings {
   askAboutEntity: string;
   relatedEntities: string;
   entitySources: string;
+  // 撤回此文件對這個實體的核准（ADR 0007，只撤回這個實體與連帶的關係，不是整份文件）：按鈕、確認時列出會消失的內容的說明、沒有內容會消失時的說明、確認與取消
+  graphRetract: string;
+  graphRetractWillRemove: string;
+  graphRetractNoChange: string;
+  graphRetractConfirm: string;
+  graphRetractCancel: string;
   tabTimeline: string;
   pathTitle: string;
   pathFrom: string;
@@ -442,6 +448,9 @@ export interface UiStrings {
   reviewToastRejectedOne: string;
   reviewToastRejected: string;
   reviewGotoGraph: string;
+  // 核准或退回後短提示的「撤銷」與撤銷後的提示（ADR 0007 決定 4）
+  reviewUndo: string;
+  reviewToastUndone: string;
   reviewErrors: Record<"denied" | "conflict", string>;
   // 說法不同（#51）：待審頁的並列與處理、已處理分頁、處理後的短提示（{name} 換成處理方式）
   reviewDecidedTab: string;

@@ -693,6 +693,22 @@ button.citation {
   margin-top: 0.75rem;
 }
 
+/* 「出現的文件」的撤回（ADR 0007）：小型的淺色外框按鈕，與文件標題的連結區分 */
+button.chip.retract {
+  margin-left: 0.5rem;
+  padding: 0 0.5rem;
+  font-size: 0.8rem;
+  vertical-align: middle;
+}
+
+/* 撤回此文件對實體的核准前的確認（ADR 0007）：列出撤回後會消失的實體與關係 */
+.retract-confirm {
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+}
+
 .graph-start ol {
   padding-left: 1.25rem;
 }

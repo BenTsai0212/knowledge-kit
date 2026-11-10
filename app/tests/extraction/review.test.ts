@@ -7,7 +7,7 @@ import { dataset } from "../../src/dataset/load";
 import { seedDataset } from "../../src/dataset/seed";
 import { openDatabase, type Database } from "../../src/db/database";
 import { suggestMerge } from "../../src/extraction/merge";
-import { approve, readReview, reject, retract, ReviewError, writePending, type PendingInput } from "../../src/extraction/store";
+import { approve, readRetractions, readReview, reject, retract, ReviewError, writePending, type PendingInput } from "../../src/extraction/store";
 import { shortestPath } from "../../src/graph/path";
 import { readGraph } from "../../src/graph/read";
 import { readTimeline } from "../../src/graph/timeline";
@@ -482,6 +482,41 @@ describe("撤回（ADR 0007）", { timeout: 60_000 }, () => {
     await retract(w.db, "manager", ["pe-s1", "pr-s1"]);
     expect(await status(w, w.ds.documentId)).toMatchObject({ "pe-s1": ["pending", null], "pr-s1": ["pending", null] });
     await approve(w.db, "manager", { entities: [{ id: "pe-s1", mergeInto: "person-lin-zhiming-rd" }], relations: [] }, DEFAULT);
+    await w.db.close();
+  });
+
+  it("撤銷：核准與退回回傳寫入的決定，交給 retract() 後全部回到待審；退回的撤銷含一併退回的關係", async () => {
+    const w = await setup();
+    const approved = await approve(w.db, "manager", { entities: [{ id: "pe-m1" }, { id: "pe-m2", mergeInto: "team-ops" }], relations: ["pr-m1"] }, DEFAULT);
+    expect(approved).toEqual(["pe-m1", "pe-m2", "pr-m1"]);
+    await retract(w.db, "manager", approved);
+    await graphMatchesOracle(w, "撤銷核准後");
+    expect(await status(w, w.dm.documentId)).toEqual({ "pe-m1": ["pending", null], "pe-m2": ["pending", null], "pr-m1": ["pending", null] });
+
+    // 退回實體時關係一併退回；撤銷時兩者都回到待審（#209 留言：關係的決定也要交給 retract()）
+    const rejected = await reject(w.db, "manager", { entities: ["pe-m1"], relations: [] });
+    expect(rejected).toEqual(["pe-m1~2", "pr-m1~2"]);
+    await retract(w.db, "manager", rejected);
+    expect(await status(w, w.dm.documentId)).toEqual({ "pe-m1": ["pending", null], "pe-m2": ["pending", null], "pr-m1": ["pending", null] });
+    await w.db.close();
+  });
+
+  it("圖譜面板的撤回：依文件列出決定與撤回後會消失的實體與關係；沒有 canReview 的身分與資料集的出處沒有", async () => {
+    const w = await setup();
+    await approve(w.db, "manager", { entities: [{ id: "pe-m1" }, { id: "pe-m2", mergeInto: "team-ops" }], relations: ["pr-m1"] }, DEFAULT);
+    const dm = w.dm.documentId;
+    // 新建的實體：實體與它的關係都會消失
+    expect(await readRetractions(w.db, "manager", "pe-m1")).toEqual([{ documentId: dm, decisionIds: ["pe-m1"], entities: ["pe-m1"], relations: ["pr-m1"] }]);
+    // 合併到的既有實體：資料集的出處還在，只有連帶撤回的關係消失；資料集的文件不列出
+    expect(await readRetractions(w.db, "manager", "team-ops")).toEqual([{ documentId: dm, decisionIds: ["pe-m2"], entities: [], relations: ["pr-m1"] }]);
+    for (const id of ["staff", "guest", null]) expect(await readRetractions(w.db, id, "team-ops"), `${id}`).toEqual([]);
+
+    await retract(w.db, "manager", ["pe-m2"]);
+    const graph = await readGraph(w.db, "manager");
+    expect(graph.entities.map((e) => e.id)).toContain("pe-m1");
+    expect(graph.relations.map((r) => r.id)).not.toContain("pr-m1");
+    expect(await readRetractions(w.db, "manager", "team-ops")).toEqual([]);
+    expect(await readRetractions(w.db, "manager", "pe-m1")).toEqual([{ documentId: dm, decisionIds: ["pe-m1"], entities: ["pe-m1"], relations: [] }]);
     await w.db.close();
   });
 

@@ -163,7 +163,7 @@ policy 中的子查詢同樣受 RLS 限制，所以「段落看得到」已包�
 
 ### 撤回
 
-核准或退回之後可以撤回（ADR 0007，migration 0009）。撤回寫成 `review_retractions`，**只用 INSERT**；撤回後項目回到待審（沒有有效的決定），可以再決定一次，所有決定與撤回都保留。寫入集中在 `store.ts` 的 `retract()`。
+核准或退回之後可以撤回（ADR 0007，migration 0009）。撤回寫成 `review_retractions`，**只用 INSERT**；撤回後項目回到待審（沒有有效的決定），可以再決定一次，所有決定與撤回都保留。寫入集中在 `store.ts` 的 `retract()`；畫面上的入口是待審頁短提示的「撤銷」與圖譜頁右側面板的「撤回此文件對它的核准」（[docs/extraction.md](extraction.md)「畫面」）。
 
 | 資料表 | 權限 | 寫入（`WITH CHECK`） | 讀取（`USING`） |
 | --- | --- | --- | --- |

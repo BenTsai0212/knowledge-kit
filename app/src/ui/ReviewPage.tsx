@@ -1,7 +1,7 @@
 // 待審頁（#44，docs/extraction.md「畫面」）：只有 canReview 的身分看得到。依文件列出待審的實體與關係，
 // 每份文件開頭是摘要與進度，需要確認的組在最上面，系統已準備的收合成一行（#189，分組在 review-helpers.ts 的 reviewGroups()）；
 // 可以修改名稱、選擇合併對象、確認一組、核准整份文件、退回；另有「已退回」分頁。
-// 每筆一行，按「編輯名稱」才可以修改；出處點開才顯示，預設 2 行、標出實體名稱；核准或退回後顯示短提示（#48）。
+// 每筆一行，按「編輯名稱」才可以修改；出處點開才顯示，預設 2 行、標出實體名稱；核准或退回後顯示短提示（#48），附「撤銷」（ADR 0007 決定 4）。
 // 每份文件另有「說法不同」區塊（#51）：新舊段落並列、三選一處理；已處理的在「已處理的說法不同」分頁。
 // 讀取與寫入都經 store.ts、conflicts/store.ts（RLS 決定看得到、能核准什麼）；模型輸出一律以文字節點顯示。
 import { Fragment, useEffect, useRef, useState } from "react";
@@ -10,7 +10,7 @@ import type { LocalizedText } from "../client/types";
 import { decideConflict, readConflicts, type ConflictDecision, type ConflictItem, type ConflictPassage } from "../conflicts/store";
 import type { Database } from "../db/database";
 import { suggestMerge, type MergeSuggestion } from "../extraction/merge";
-import { approve, readReview, reject, ReviewError, type EntityApproval, type ReviewDocument, type ReviewEntity, type ReviewRelation } from "../extraction/store";
+import { approve, readReview, reject, retract, ReviewError, type EntityApproval, type ReviewDocument, type ReviewEntity, type ReviewRelation } from "../extraction/store";
 import { readGraph, type Graph } from "../graph/read";
 import { AccessBadges } from "./AccessBadges";
 import { entityOptionLabel, entityTypeLabel, relationTypeLabel } from "./graph-labels";
@@ -72,9 +72,9 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   // 點開出處的項目 id（#189：每筆一行，出處點開才顯示）
   const [openSources, setOpenSources] = useState<ReadonlySet<string>>(new Set());
-  // graph：附「到圖譜查看」（只有核准；退回的項目不會出現在圖譜）。
+  // graph：附「到圖譜查看」（只有核准；退回的項目不會出現在圖譜）。undo：這次寫入的決定，附「撤銷」（ADR 0007 決定 4）。
   // id 每次遞增，當作 key：文字與上一次相同時也重新掛載，重新播放進場動畫（#48 審查第 2 次）
-  const [toast, setToast] = useState<{ id: number; text: string; graph: boolean } | null>(null);
+  const [toast, setToast] = useState<{ id: number; text: string; graph: boolean; undo?: { docId: string; decisions: string[] } } | null>(null);
   const toastId = useRef(0);
   const toastTimer = useRef<ToastTimer | null>(null);
   // 連點時 state 還沒更新，以 ref 確保同時只有一個核准或退回在進行（比照 #42）
@@ -123,16 +123,17 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   };
   const languageNames = new Intl.DisplayNames([language], { type: "language" });
 
-  // done：成功後的短提示
-  async function run(docId: string, action: () => Promise<void>, done: { text: string; graph: boolean }, skipped = 0) {
+  // done：成功後的短提示；undoable 時 action 回傳的決定 id 交給「撤銷」
+  async function run(docId: string, action: () => Promise<string[] | void>, done: { text: string; graph: boolean; undoable?: boolean }, skipped = 0) {
     if (working.current) return;
     working.current = true;
     setBusy(true);
     setNotice(skipped > 0 ? { docId, skipped } : null);
     setToast(null);
     try {
-      await action();
-      setToast({ ...done, id: ++toastId.current });
+      const decisions = await action();
+      const undo = done.undoable && Array.isArray(decisions) && decisions.length > 0 ? { docId, decisions } : undefined;
+      setToast({ text: done.text, graph: done.graph, undo, id: ++toastId.current });
     } catch (e) {
       setNotice({ docId, skipped, error: e instanceof ReviewError ? s.reviewErrors[e.reason] : s.unknownError });
     } finally {
@@ -152,6 +153,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
           itemLabels(docId, items.entities.map((e) => e.id), [...items.relations, ...(items.existingRelations ?? [])]),
         ),
         graph: true,
+        undoable: true,
       },
       skippedCount,
     );
@@ -161,7 +163,11 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
     run(docId, () => reject(db, identity, items), {
       text: toastText({ one: s.reviewToastRejectedOne, many: s.reviewToastRejected }, itemLabels(docId, items.entities, items.relations)),
       graph: false,
+      undoable: true,
     });
+  // 撤銷：撤回剛寫入的每一筆決定（退回時含一併退回的關係），項目回到待審
+  const undo = (target: { docId: string; decisions: string[] }) =>
+    void run(target.docId, () => retract(db, identity, target.decisions), { text: s.reviewToastUndone, graph: false });
 
   const nameOf = (doc: ReviewDocument, id: string) => {
     const e = doc.entities.find((x) => x.id === id);
@@ -392,6 +398,11 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
             }}
           >
             <span>{toast.text}</span>
+            {toast.undo !== undefined && (
+              <button type="button" className="link" disabled={busy} onClick={() => undo(toast.undo!)}>
+                {s.reviewUndo}
+              </button>
+            )}
             {toast.graph && (
               <button type="button" className="link" onClick={onGotoGraph}>
                 {s.reviewGotoGraph}
