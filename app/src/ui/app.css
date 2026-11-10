@@ -116,10 +116,47 @@ main.qa.with-panel {
   padding: 0.75rem;
 }
 
-main.qa > .source {
+main.qa > .source,
+main.qa > .mention-panel {
   min-height: 0;
   overflow-y: auto;
   margin: 1rem 1rem 1rem 0;
+}
+
+/* 回答下方的「回答提到」（#195）：依類型分組的按鈕 */
+.mentions {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+}
+
+.mentions p {
+  margin: 0;
+}
+
+.mention-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.mention-panel header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+}
+
+.follow-ups {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.follow-ups button {
+  text-align: left;
 }
 
 .session-questions h2 {
@@ -358,7 +395,8 @@ button.citation {
     flex-wrap: wrap;
   }
 
-  main.qa > .source {
+  main.qa > .source,
+  main.qa > .mention-panel {
     margin: 0 1rem 1rem;
   }
 }
@@ -494,6 +532,11 @@ button.citation {
   height: 480px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-medium);
+}
+
+/* 右側實體面板的鄰近圖（#195） */
+.graph-canvas.compact {
+  height: 240px;
 }
 
 .legend {

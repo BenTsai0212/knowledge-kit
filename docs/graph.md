@@ -75,7 +75,8 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
 
 | 檔案 | 內容 |
 | --- | --- |
-| `ui/GraphPage.tsx` | 讀取圖譜；切換身分或語言時重新讀取，之後才回來的舊結果忽略（`ui/requests.ts`）；選取的節點已看不到時清除 |
+| `ui/GraphPage.tsx` | 讀取圖譜；切換身分或語言時重新讀取，之後才回來的舊結果忽略（`ui/requests.ts`）；選取的節點已看不到時清除；從問答頁的「在圖譜中查看」打開時選取該實體（`initialSelected`，看不到時不選取，#195） |
+| `ui/GraphView.tsx`（鄰近圖） | 問答頁右側的實體面板也用它畫以實體為中心的小圖（`compact`，見 [docs/qa.md](qa.md)「回答提到」） |
 | `ui/GraphView.tsx` | 以 cytoscape 畫圖：節點依實體類型著色（`knowledge-model.json` 的 `color`），標籤是 `names[介面語言]`，邊的標籤是關係類型的 `label` |
 | `ui/graph-style.ts` | cytoscape 的樣式：從 `theme.json` 的 CSS 變數讀出顏色（找不到實體類型時用 `graphFallback`），標籤加上背景色的外框；系統切換淺色／深色時由 `GraphView.tsx` 重新套用（[client-config.md](client-config.md)「`theme.json`」） |
 | `ui/EntityPanel.tsx` | 點節點時顯示類型、名稱、相關實體（可點）與出處段落；出處以 `readSource()` 打開原文 |

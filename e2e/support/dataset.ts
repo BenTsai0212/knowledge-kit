@@ -12,10 +12,11 @@ const PREFIX_LENGTH = 20;
 const documents = readdirSync(DOCUMENTS_DIR)
   .filter((f) => f.endsWith(".json"))
   .map((f) => JSON.parse(readFileSync(`${DOCUMENTS_DIR}/${f}`, "utf8")) as DatasetDocument);
+const entities = readClientJson<EntitiesFile>("data/entities.json").entities;
 const sample = datasetSample({
   root: "data/",
   documents: Object.fromEntries(documents.map((d) => [d.id, d])),
-  entities: readClientJson<EntitiesFile>("data/entities.json"),
+  entities: { entities },
   relations: readClientJson<RelationsFile>("data/relations.json"),
 });
 
@@ -47,4 +48,23 @@ export function hiddenDocument(role: RoleId, viewer: RoleId, language: string): 
   const seen = visible(role);
   const shown = visible(viewer);
   return documents.find((d) => d.language === language && d.passages.every((p) => !seen.has(p.id) && shown.has(p.id)))?.id;
+}
+
+// 「回答提到」用（#195）：實體在介面語言的顯示名稱（與 app/src/ui/graph-labels.ts 的 entityName() 相同）
+const displayName = (e: (typeof entities)[number], language: string) => e.names[language] || e.name;
+
+// 所有實體的顯示名稱（假的回答寫出全部名稱，包括看不到的）
+export const allEntityNames = (language: string): string[] => [...new Set(entities.map((e) => displayName(e, language)))];
+
+// 該身分看得到的實體名稱；看不到的實體中，名稱與看得到的實體都不同的名稱；
+// 以及看得到、名稱不與其他實體重複、而且有看得到的關係的實體名稱（點了之後實體面板有關係與接著問）
+export function entityNames(role: RoleId, language: string): { visible: string[]; hidden: string[]; connected: string[] } {
+  const v = expectedVisible(access, sample, role);
+  const seen = new Set(v.entities);
+  const visible = [...new Set(entities.filter((e) => seen.has(e.id)).map((e) => displayName(e, language)))];
+  const hidden = [...new Set(entities.filter((e) => !seen.has(e.id)).map((e) => displayName(e, language)))].filter((n) => !visible.includes(n));
+  const related = new Set(sample.relations.filter((r) => v.relations.includes(r.id)).flatMap((r) => [r.from, r.to]));
+  const count = (name: string) => entities.filter((e) => displayName(e, language) === name).length;
+  const connected = entities.filter((e) => related.has(e.id) && count(displayName(e, language)) === 1).map((e) => displayName(e, language));
+  return { visible, hidden, connected };
 }

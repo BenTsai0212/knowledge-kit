@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { clientConfig } from "../client/load";
 import { MAX_QUESTION_CHARS } from "../qa/prompt";
 import { strings } from "../client/i18n";
@@ -7,15 +6,17 @@ interface Props {
   language: string;
   // 資料庫載入完成前、回答串流中不能送出（#195 決定 3：不以新提問中斷前一題）
   disabled: boolean;
+  // 輸入框的文字由 App 保存：右側面板的「接著問」填進來（#195）
+  text: string;
+  onText(text: string): void;
   onAsk(question: string): void;
 }
 
 const roleLabel = (id: string, language: string) => clientConfig.access.roles.find((r) => r.id === id)?.label[language] ?? id;
 
 // 固定在問答頁下方的輸入區（#195）：一行可橫向捲動的預設問題（依情境分組）、自由提問、「每題獨立回答」的說明
-export function QuestionPanel({ language, disabled, onAsk }: Props) {
+export function QuestionPanel({ language, disabled, text, onText, onAsk }: Props) {
   const s = strings(language);
-  const [text, setText] = useState("");
   return (
     <section className="card composer">
       <div className="presets" role="group" aria-label={s.presetQuestions}>
@@ -40,7 +41,7 @@ export function QuestionPanel({ language, disabled, onAsk }: Props) {
           e.preventDefault();
           if (disabled || text.trim() === "") return;
           onAsk(text);
-          setText("");
+          onText("");
         }}
       >
         <label>
@@ -50,7 +51,7 @@ export function QuestionPanel({ language, disabled, onAsk }: Props) {
             maxLength={MAX_QUESTION_CHARS}
             rows={2}
             placeholder={s.questionPlaceholder}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => onText(e.target.value)}
           />
         </label>
         <button type="submit" disabled={disabled || text.trim() === ""}>

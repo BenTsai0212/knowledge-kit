@@ -1,7 +1,10 @@
 import type { Ref } from "react";
+import { clientConfig } from "../client/load";
+import type { Graph, GraphEntity } from "../graph/read";
 import type { Answer } from "../qa/answer";
 import { splitCitations } from "../qa/citations";
 import { errorMessage, strings } from "../client/i18n";
+import { entityOptionLabel, entityTypeLabel } from "./graph-labels";
 import { refusalNextSteps, type RefusalStep } from "./refusal-next-steps";
 
 export interface AnswerState {
@@ -10,6 +13,8 @@ export interface AnswerState {
   streaming: string;
   // 結束後的結果
   answer?: Answer;
+  // 回答提到的實體（#195）：以送出當下的身分讀出的圖譜，與從中挑出的實體（mentions.ts）
+  mentions?: { graph: Graph; entities: GraphEntity[] };
 }
 
 interface Props {
@@ -22,9 +27,12 @@ interface Props {
   canUpload: boolean;
   onOpenSource(passageId: string): void;
   onGotoUpload(): void;
+  onOpenEntity(graph: Graph, entityId: string): void;
 }
 
-export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, onGotoUpload }: Props) {
+const { entityTypes } = clientConfig.knowledgeModel;
+
+export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, onGotoUpload, onOpenEntity }: Props) {
   const s = strings(language);
   const { answer } = state;
   const stepText: Record<RefusalStep, string> = {
@@ -87,8 +95,36 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
               {answer.error !== undefined && `${s.colon}${errorMessage(language, answer.error)}`}
             </p>
           )}
+          {state.mentions !== undefined && state.mentions.entities.length > 0 && (
+            <Mentions language={language} {...state.mentions} onOpenEntity={onOpenEntity} />
+          )}
         </>
       )}
     </section>
+  );
+}
+
+// 「回答提到」：依 knowledge-model.json 的類型順序分組；同名的實體加上第一個相關實體的名稱以便區分
+function Mentions({ language, graph, entities, onOpenEntity }: { language: string; graph: Graph; entities: GraphEntity[]; onOpenEntity: Props["onOpenEntity"] }) {
+  const s = strings(language);
+  const types = [...new Set([...entityTypes.map((t) => t.id), ...entities.map((e) => e.type)])];
+  return (
+    <div className="mentions" role="group" aria-label={s.answerMentions}>
+      <p className="muted">{s.answerMentions}</p>
+      {types.map((type) => {
+        const ofType = entities.filter((e) => e.type === type);
+        if (ofType.length === 0) return null;
+        return (
+          <div key={type} className="mention-group">
+            <span className="badge">{entityTypeLabel(type, language)}</span>
+            {ofType.map((e) => (
+              <button key={e.id} type="button" onClick={() => onOpenEntity(graph, e.id)}>
+                {entityOptionLabel(graph, e, language)}
+              </button>
+            ))}
+          </div>
+        );
+      })}
+    </div>
   );
 }

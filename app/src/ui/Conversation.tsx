@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import type { Graph } from "../graph/read";
 import { strings } from "../client/i18n";
 import { AnswerView, type AnswerState } from "./AnswerView";
 
@@ -13,10 +14,11 @@ interface Props {
   canUpload: boolean;
   onOpenSource(passageId: string): void;
   onGotoUpload(): void;
+  onOpenEntity(graph: Graph, entityId: string): void;
 }
 
 // 問答依序往下累積（#195）；新的一題出現時捲到該題
-export function Conversation({ language, turns, canUpload, onOpenSource, onGotoUpload }: Props) {
+export function Conversation({ language, turns, canUpload, onOpenSource, onGotoUpload, onOpenEntity }: Props) {
   const s = strings(language);
   const latest = turns.at(-1)?.id;
   const latestRef = useRef<HTMLElement>(null);
@@ -40,6 +42,7 @@ export function Conversation({ language, turns, canUpload, onOpenSource, onGotoU
             canUpload={canUpload}
             onOpenSource={onOpenSource}
             onGotoUpload={onGotoUpload}
+            onOpenEntity={onOpenEntity}
           />
         ))
       )}
