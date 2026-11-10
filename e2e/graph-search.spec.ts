@@ -148,6 +148,8 @@ test("類型篩選：沒勾的類型變灰，搜尋不到", async ({ page }) => 
   await expect.poll(async () => (await graphData(page))!.dimmed).toContain(found!.a);
   await search(page).fill(name);
   await expect(option(page, name)).toHaveCount(0);
+  // 搜尋結果浮在下方，可能蓋住圖例：以 Esc 關閉後再勾回
+  await search(page).press("Escape");
   await checkbox.check();
   await expect.poll(async () => (await graphData(page))!.dimmed).toEqual([]);
 });
