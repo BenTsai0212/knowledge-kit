@@ -51,7 +51,7 @@
 
 **`knowledge-model.json`**
 
-- 實體類型：依 B2，通常 3～6 種。每種選一個顏色，淺色與深色背景的對比都要 ≥ 3:1（`check:client` 會檢查）。
+- 實體類型：依 B2，通常 3～6 種。每種選一個顏色，淺色與深色背景的對比都要 ≥ 3:1（`check:client` 會檢查），並從固定圖示集選一個圖示（`icon`，同一個客戶內不重複，`check:client` 會檢查；[docs/client-config.md](../client-config.md)「`entityTypes[]`」）。
 - 關係類型：依 B3。每種關係寫上「接著問」的問句範本（`questions.outgoing`、`questions.incoming`，每種語言一句），寫成該語言自然的問句；參數只有 `{name}`（必填）與 `{type}`，規則見 [docs/client-config.md](../client-config.md)「問句範本」。
 - 合併策略：預設 `review`；只有名稱在客戶內部確定唯一的類型（例如部門）才用 `auto`（B5）。
 

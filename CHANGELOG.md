@@ -3,6 +3,43 @@
 All notable changes to this project are recorded in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [2.1.0]
+
+Product experience: the Q&A, graph, and review pages were redesigned so that a first-time visitor can follow an answer to its sources and related entities, and the review page asks a person only about what needs a decision.
+
+### Added
+
+- **Mentioned entities**: below each answer, "Mentioned in this answer" lists the entities that are in the cited passages and named in the answer, only those visible to the role that asked. Clicking one opens an entity panel on the right with its type, a small neighborhood graph, its relations, and "View in graph" ([docs/qa.md](docs/qa.md)) (#195).
+- **Ask next**: the entity panel suggests up to three follow-up questions per entity, filled into the input box without sending. Each relation type can define natural question templates per direction and language with the new optional `relationTypes[].questions` field in `knowledge-model.json`; without them, a generic template from the translation files is used ([docs/client-config.md](docs/client-config.md)) (#195, #198).
+- **Step-by-step graph expansion**: start from one entity and expand to its neighbors; everything outside the focus is grayed out instead of hidden, with "Show only this", "Show all", and the expanded path as breadcrumbs. Newly expanded nodes and lines are animated, except when the system asks for reduced motion ([docs/graph.md](docs/graph.md)) (#199).
+- **Graph search, type filter, and "Most connected"**: find a starting entity by name, gray out entity types with the legend's checkboxes, or pick from the five most connected entities. The right panel shows relation and document counts, relations, the documents the entity appears in, and "Ask about it", which fills a question into the Q&A input (#199).
+- **Entity type icons**: the new optional `entityTypes[].icon` field in `knowledge-model.json` picks an icon from a fixed set (default `generic`); `check:client` checks that icons are unique within a client ([docs/client-config.md](docs/client-config.md)) (#199).
+- **Next steps after a refusal**: a fixed "You can try" list below every refusal (rephrase, ask the responsible person or department, and, for roles that can upload, upload a document and ask again). It is the same whether the answer is missing or not visible to the role, so it reveals nothing about permissions ([docs/qa.md](docs/qa.md)) (#192).
+- **System suggestions on the review page**: an entity with exactly one candidate of the same name is suggested as a merge and can be approved in bulk; a relation that is already in the graph records only the decision instead of being created again ([docs/extraction.md](docs/extraction.md)) (#189).
+
+### Changed
+
+- **Three-column Q&A page**: the toolbar and top tabs moved into a left navigation bar, which also lists the questions asked in this session. Questions and answers accumulate in the middle, with the input and preset questions fixed at the bottom; each question is still answered on its own. The source passage or entity panel opens on the right. On narrow screens the columns stack ([docs/qa.md](docs/qa.md)) (#195).
+- **Graph nodes**: white icon cards with a type-colored ring; node size is the number of visible relations and line width is the number of visible sources. Relation names are shown only for the selected node. The shortest path moved into a collapsible section below the right panel, with search boxes for both ends ([docs/graph.md](docs/graph.md)) (#199).
+- **Review page layout**: each document starts with a one-sentence summary and "N groups need your confirmation"; groups that need a decision come first, with relations under their entity, and everything the system prepared is collapsed into one line ([docs/extraction.md](docs/extraction.md)) (#189).
+- **Evaluation page**: shown only when the URL has `?tools=evals`, and only to roles with `canReview` ([docs/evals.md](docs/evals.md#開啟評測台)) (#192).
+- **Upload visibility**: defaults to the most restrictive level the current role can choose, so a forgotten setting shares the document with fewer people, not more ([docs/upload.md](docs/upload.md)) (#192).
+- **Same-name entities**: two entities with the same name (such as the two people named 林志明) are told apart by their first related entity in node labels, search results, panel titles, relation lists, and follow-up questions (#198).
+- "Mentioned in this answer" and "Ask next" are light outlined buttons, with the entity in the panel shown as selected (#198).
+
+### Removed
+
+- The review page's checkboxes, "Select all", and "Approve selected items"; use "Confirm" per group or "Approve everything in this document" (#189).
+- The graph's details area below the canvas and the drop-down lists for the path's ends, replaced by the right panel and search boxes (#199).
+
+### Online demo
+
+- Still has no evaluation page, even with `?tools=evals`.
+
+### Docs
+
+- The README, the docs, and the playbook were updated for the changes above, with new README screenshots of the Q&A page, the step-by-step graph, the review page, the timeline, and cross-language retrieval (#205).
+
 ## [2.0.0]
 
 Cross-language retrieval: ask in one language and find documents written in another ([RFC 0002](docs/rfcs/0002-public-release.md)).

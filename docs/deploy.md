@@ -76,7 +76,7 @@ npm run check:client && npm test
 以訪客的身分（無痕視窗）確認：
 
 - [ ] `https://knowledge-kit-demo.<帳號子網域>.workers.dev/api/health` 回 `{"ok":true}`
-- [ ] 工具列有「虛構資料」「展示用權限」；邀請碼表單已填入公開碼，並說明所有訪客共用每日次數
+- [ ] 左側導覽有「虛構資料」「展示用權限」；邀請碼表單已填入公開碼，並說明所有訪客共用每日次數
 - [ ] 問一題預設問題，得到附引用的回答；問答頁有「請勿輸入個人或機密資料」的提醒
 - [ ] 沒有「評測台」頁籤（網址加上 `?tools=evals` 也沒有）；「上傳」「待審」可用，上傳頁有內容會傳給模型供應商的提醒
 - [ ] 全站上限的畫面：在 Cloudflare 主控台把 `GLOBAL_DAILY_LIMIT` 暫時改為 `1`（Workers & Pages → `knowledge-kit-demo` → Settings → Variables and Secrets），再問一題，看到「今天的線上試用額度已用完」；之後以 `npx wrangler deploy --env demo` 恢復 repo 的值（計數不會歸零，當天已用的次數照算）

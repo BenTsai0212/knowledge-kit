@@ -182,7 +182,7 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 
 `clear model cache` 刪除模型的 Cache Storage，用來量首次載入。
 
-**本機的 A1 客戶設定**：人工以評測台跑語意向量的題目時，把參考情境複製到 `clients/local-<名稱>/`（`.gitignore` 排除 `clients/local-*/`，不進版本控制），把 `client.json` 的 `retrieval.provider` 改成 `multilingual-e5-small`，再以 `KK_CLIENT=local-<名稱> npm run dev` 啟動。
+**本機的 A1 客戶設定**：人工以評測台跑語意向量的題目時，把參考情境複製到 `clients/local-<名稱>/`（`.gitignore` 排除 `clients/local-*/`，不進版本控制），把 `client.json` 的 `retrieval.provider` 改成 `multilingual-e5-small`，再以 `KK_CLIENT=local-<名稱> npm run dev` 啟動，打開 `/?tools=evals`（[docs/evals.md](evals.md)「開啟評測台」）。
 
 ## 向量快取
 

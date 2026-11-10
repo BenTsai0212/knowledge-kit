@@ -72,7 +72,7 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
 
 ## 畫面
 
-工具列下的頁籤切換「問答／圖譜／時間軸」，沿用身分與語言切換、「虛構資料」「展示用權限」標示。圖譜與時間軸不呼叫模型，不需要邀請碼。
+左側導覽的頁籤切換「問答／圖譜／時間軸」，沿用左側導覽的身分與語言切換、「虛構資料」「展示用權限」標示（[docs/qa.md](qa.md)「畫面」）。圖譜與時間軸不呼叫模型，不需要邀請碼。
 
 | 檔案 | 內容 |
 | --- | --- |
@@ -86,7 +86,7 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
 | `graph/expansion.ts`、`ui/motion.ts` | 逐步展開的狀態（純函式）；動態的時間與「減少動態效果」的判斷 |
 | `ui/PathPanel.tsx` | 多跳路徑（右側面板下方的可收合區塊，#199）：以搜尋框選起點與終點（起點預設為目前選取的實體），在圖上標示路徑、其他變灰，逐步列出每個關係與它的出處；找不到時顯示固定文字「找不到這兩個實體之間的路徑。」，不區分原因 |
 | `ui/TimelinePage.tsx` | 時間軸：依日期由新到舊列出介面語言的文件與看得到的段落，可依實體篩選；日期直接顯示 `YYYY-MM-DD` 字串，沒有日期時顯示「未註明日期」；本次工作階段上傳的文件加上「上傳」標籤，從上傳頁跳過來時捲動到該文件並標示後淡出（`animationend` 時結束；減少動態效果時不淡出）（[docs/upload.md](upload.md)） |
-| `ui/graph-labels.ts` | 實體、類型、關係類型的顯示文字與相關實體；出處的語言（`sourcesForLanguage()`，見下方）；下拉選單中顯示名稱相同的實體（兩位林志明）加上第一個相關實體的名稱以便區分 |
+| `ui/graph-labels.ts` | 實體、類型、關係類型的顯示文字與相關實體；出處的語言（`sourcesForLanguage()`，見下方）；顯示名稱相同的實體（兩位林志明）加上第一個相關實體的名稱以便區分（`entityOptionLabel()`、`nodeLabels()`，見「限制」的同名實體） |
 
 - **節點與線**（#199）：
   - 節點是白底（`surface`，深色模式是深色底）圓形，外圈與圖示是實體類型的 `color`，圖示是 `knowledge-model.json` 的 `icon`（[client-config.md](client-config.md)「`entityTypes[]`」）；圖例是圖示＋類型名稱。
@@ -117,7 +117,7 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
   - 系統設定「減少動態效果」（`prefers-reduced-motion: reduce`）時，transition 為 0、不呼叫 `animate()`，直接套用最後的狀態；設定改變時即時更新。
 - **cytoscape**：以 `import("cytoscape")` 動態載入，build 時分成獨立的 chunk（約 435 KB，gzip 約 138 KB），只用問答的人不必下載。cytoscape 自帶型別，不安裝 `@types/cytoscape`（ADR 0001「修訂」）。
 - **版面**：內建的 `cose`（力導向）。節點先依順序排成一個圓作為起始位置，並設 `randomize: false`，所以同樣的資料每次的版面相同；不需要額外的版面套件。
-- **出處優先顯示介面語言**（#36）：節點詳細資訊與多跳路徑的出處，都以 `ui/graph-labels.ts` 的 `sourcesForLanguage()` 決定：
+- **出處優先顯示介面語言**（#36）：右側實體面板（關係清單與出現的文件）與多跳路徑的出處，都以 `ui/graph-labels.ts` 的 `sourcesForLanguage()` 決定：
   1. 有介面語言的出處時，只顯示這些。
   2. 沒有時，顯示其他語言的出處，並在每段前標示語言（以 `Intl.DisplayNames` 依介面語言產生，例如英文介面顯示「Chinese (Taiwan)」、繁中介面顯示「英文」），不讓關係看起來沒有出處。
 

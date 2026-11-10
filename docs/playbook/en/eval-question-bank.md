@@ -36,7 +36,7 @@ Every language needs questions. If cross-language search is needed, add question
 ## 4. Check and run
 
 1. For a client folder, run `npm run check:clients <name>` (for the reference scenario `client/`, run `npm test`). It checks that answer passages exist, that the role can see them, and the retrieval of default questions.
-2. Run the evaluation page once with the default settings (key-point scoring).
+2. Run the evaluation page once with the default settings (key-point scoring). The evaluation page appears only when you add `?tools=evals` to the URL ("開啟評測台" in [docs/evals.md](../../evals.md)).
 3. Look at why each failed question failed:
 
 | Symptom | Usual cause | What to do |
