@@ -184,7 +184,7 @@ If nothing can be extracted, reply {"entities":[],"relations":[]}.
 寫入待審、核准與退回的規則都由資料庫的 RLS 執行，見 [docs/data-model.md](data-model.md)「待審與核准」：
 
 - 只有 `canUpload` 的身分能為自己上傳的文件寫入待審資料；只有 `canReview` 的身分看得到待審區，而且只看得到文件看得到的項目。
-- 只用 INSERT：核准與退回寫成 `review_decisions`，每個項目一筆；正式的實體、關係與出處必須對應到目前身分寫的核准決定。
+- 只用 INSERT：核准與退回寫成 `review_decisions`，每個項目同時最多一筆有效的決定（撤回後可以再決定，見 [docs/data-model.md](data-model.md)「撤回」）；正式的實體、關係與出處必須對應到目前身分寫的核准決定。
 - 待審與已退回的內容不會出現在檢索、問答、圖譜、路徑、時間軸、原文中。
 
 ## 測試

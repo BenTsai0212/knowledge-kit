@@ -6,7 +6,8 @@ import type { ClientConfig } from "../../src/client/types";
 import { dataset } from "../../src/dataset/load";
 import { seedDataset } from "../../src/dataset/seed";
 import { openDatabase, type Database } from "../../src/db/database";
-import { approve, readReview, reject, ReviewError, writePending, type PendingInput } from "../../src/extraction/store";
+import { suggestMerge } from "../../src/extraction/merge";
+import { approve, readReview, reject, retract, ReviewError, writePending, type PendingInput } from "../../src/extraction/store";
 import { shortestPath } from "../../src/graph/path";
 import { readGraph } from "../../src/graph/read";
 import { readTimeline } from "../../src/graph/timeline";
@@ -16,7 +17,7 @@ import { openRetriever } from "../../src/retrieval/retrieve";
 import { readSource } from "../../src/sources/source";
 import { uploadDocument } from "../../src/upload/write";
 import { datasetSample } from "../db/dataset-sample";
-import { approvedSample, canDecide, expectedReviewVisible, expectedVisible, REVIEW_KEY_SQL, type ReviewSample } from "../db/oracle";
+import { approvedSample, canDecide, canRetract, expectedReviewVisible, expectedVisible, REVIEW_KEY_SQL, type ReviewSample } from "../db/oracle";
 import type { Sample } from "../db/sample";
 
 const IDENTITIES = ["guest", "staff", "manager", null, "nobody"];
@@ -93,6 +94,7 @@ async function setup(config: ClientConfig = clientConfig): Promise<World> {
       ...fromDs.relations.map((r) => ({ id: r.id, doc: ds.documentId, from: r.from, to: r.to, sources: r.sources })),
     ],
     decisions: [],
+    retractions: [],
   };
   return { db, config, sample, review, dm, ds };
 }
@@ -166,15 +168,23 @@ describe.each([
   ["參考設定（只有主管審核）", clientConfig],
   ["一般員工也能審核", STAFF_REVIEWS],
 ])("待審項目的可見範圍：%s", { timeout: 30_000 }, (_name, config) => {
-  it("每個身分看得到的待審項目與決定，正好等於 oracle", async () => {
+  it("每個身分看得到的待審項目、決定與撤回，正好等於 oracle", async () => {
     const w = await setup(config);
     await reject(w.db, "manager", { entities: ["pe-m2"], relations: [] });
     w.review.decisions.push({ item: "pe-m2", decision: "reject" }, { item: "pr-m1", decision: "reject" });
+    // 撤回後再決定一次（pe-m2~2）；一般員工看得到的文件也撤回一筆：沒有 canReview 也看得到撤回紀錄，看不到決定
+    await retract(w.db, "manager", ["pe-m2"]);
+    await approve(w.db, "manager", { entities: [{ id: "pe-m2", mergeInto: "team-ops" }, { id: "pe-s1", mergeInto: "person-lin-zhiming-rd" }], relations: [] }, DEFAULT);
+    await retract(w.db, "manager", ["pe-s1"]);
+    w.review.decisions.push({ item: "pe-m2", decision: "approve", mergeInto: "team-ops" }, { item: "pe-s1", decision: "approve", mergeInto: "person-lin-zhiming-rd" });
+    w.review.retractions.push("pe-m2", "pe-s1");
     for (const id of IDENTITIES) {
       expect(await queryReview(w.db, id), String(id)).toEqual(sorted(expectedReviewVisible(config.access, w.sample, w.review, id)));
     }
     // 防止以全部看不到而通過
     expect(expectedReviewVisible(config.access, w.sample, w.review, "manager").pending_entities).toHaveLength(4);
+    expect(expectedReviewVisible(config.access, w.sample, w.review, "manager").review_decisions).toEqual(["pe-m2", "pr-m1", "pe-m2~2", "pe-s1"]);
+    expect(expectedReviewVisible(config.access, w.sample, w.review, "staff").review_retractions).toEqual(["pe-s1"]);
     await w.db.close();
   });
 
@@ -424,6 +434,147 @@ describe("核准前後的可見範圍", () => {
     // 核准後，主管的時間軸中這份文件的段落帶出新實體；一般員工看不到這份文件
     const manager = await readTimeline(w.db, "manager", { language: "zh-TW" });
     expect(manager.find((e) => e.documentId === w.dm.documentId)!.passages[0].entityIds).toEqual(expect.arrayContaining(["pe-m1", "team-ops"]));
+    await w.db.close();
+  });
+});
+
+describe("撤回（ADR 0007）", { timeout: 60_000 }, () => {
+  const graphMatchesOracle = async (w: World, label: string) => {
+    for (const id of IDENTITIES) expect(await graphKeys(w.db, id), `${label} ${id}`).toEqual(expectedGraph(w, id));
+  };
+  const status = async (w: World, documentId: string) => {
+    const doc = (await readReview(w.db, "manager")).find((d) => d.id === documentId)!;
+    return Object.fromEntries([...doc.entities, ...doc.relations].map((x) => [x.id, [x.status, x.decisionId]]));
+  };
+
+  it("撤回後看不到；實體連帶撤回同一份文件的關係；回到待審後可以再核准，所有決定與撤回都保留", async () => {
+    const w = await setup();
+    await approve(w.db, "manager", { entities: [{ id: "pe-m1" }, { id: "pe-m2", mergeInto: "team-ops" }], relations: ["pr-m1"] }, DEFAULT);
+    w.review.decisions.push({ item: "pe-m1", decision: "approve" }, { item: "pe-m2", decision: "approve", mergeInto: "team-ops" }, { item: "pr-m1", decision: "approve" });
+    // 「撤銷」全部核准時，清單中也有連帶撤回的關係：不重複寫入
+    await retract(w.db, "manager", ["pe-m1", "pr-m1"]);
+    w.review.retractions.push("pe-m1", "pr-m1");
+    await graphMatchesOracle(w, "撤回後");
+    const graph = await readGraph(w.db, "manager");
+    expect(graph.entities.map((e) => e.id)).not.toContain("pe-m1");
+    expect(graph.relations.map((r) => r.id)).not.toContain("pr-m1");
+    expect(await status(w, w.dm.documentId)).toEqual({ "pe-m1": ["pending", null], "pe-m2": ["approved", "pe-m2"], "pr-m1": ["pending", null] });
+    const cascade = await w.db.withIdentity("manager", async (tx) =>
+      (await tx.query<{ decision_id: string; cascade_of: string | null }>("SELECT decision_id, cascade_of FROM kk.review_retractions ORDER BY 1")).rows,
+    );
+    expect(cascade).toEqual([
+      { decision_id: "pe-m1", cascade_of: null },
+      { decision_id: "pr-m1", cascade_of: "pe-m1" },
+    ]);
+    // 已撤回的決定不能再撤回
+    await expect(retract(w.db, "manager", ["pe-m1"])).rejects.toMatchObject({ reason: "conflict" });
+
+    await approve(w.db, "manager", { entities: [{ id: "pe-m1" }], relations: ["pr-m1"] }, DEFAULT);
+    w.review.decisions.push({ item: "pe-m1", decision: "approve" }, { item: "pr-m1", decision: "approve" });
+    await graphMatchesOracle(w, "再核准後");
+    expect((await readGraph(w.db, "manager")).relations.find((r) => r.id === "pr-m1~2")).toMatchObject({ from: "pe-m1~2", to: "team-ops" });
+    expect(await status(w, w.dm.documentId)).toMatchObject({ "pe-m1": ["approved", "pe-m1~2"], "pr-m1": ["approved", "pr-m1~2"] });
+    const kept = await w.db.withIdentity("manager", async (tx) => (await tx.query<{ id: string }>("SELECT id FROM kk.review_decisions ORDER BY id")).rows.map((r) => r.id));
+    expect(kept).toEqual(["pe-m1", "pe-m1~2", "pe-m2", "pr-m1", "pr-m1~2"]);
+
+    // 撤回退回：回到待審，可以再決定
+    await reject(w.db, "manager", { entities: ["pe-s1"], relations: [] });
+    await retract(w.db, "manager", ["pe-s1", "pr-s1"]);
+    expect(await status(w, w.ds.documentId)).toMatchObject({ "pe-s1": ["pending", null], "pr-s1": ["pending", null] });
+    await approve(w.db, "manager", { entities: [{ id: "pe-s1", mergeInto: "person-lin-zhiming-rd" }], relations: [] }, DEFAULT);
+    await w.db.close();
+  });
+
+  it("只撤回實體、不連帶撤回關係時，關係也看不到（一端看不到）", async () => {
+    const w = await setup();
+    await approve(w.db, "manager", { entities: [{ id: "pe-m1" }, { id: "pe-m2", mergeInto: "team-ops" }], relations: ["pr-m1"] }, DEFAULT);
+    await w.db.withIdentity("manager", (tx) =>
+      tx.query("INSERT INTO kk.review_retractions (decision_id, document_id, retracted_by) VALUES ('pe-m1', $1, 'manager')", [w.dm.documentId]),
+    );
+    const graph = await readGraph(w.db, "manager");
+    expect(graph.entities.map((e) => e.id)).not.toContain("pe-m1");
+    expect(graph.relations.map((r) => r.id)).not.toContain("pr-m1");
+    await w.db.close();
+  });
+
+  it("其他文件的出處不受影響；重新核准時系統建議合併到仍存在的實體，不會出現兩個同名實體（#209 決定 1）", async () => {
+    const w = await setup();
+    const up = await uploadDocument(
+      w.db,
+      "manager",
+      { title: "第二廠會議紀錄（虛構）", language: "zh-TW", visibility: "confidential", project: null, date: "2026-10-03", passages: ["測試人員甲報告第二廠的進度。"] },
+      OPTIONS,
+    );
+    await writePending(w.db, "manager", up.documentId, {
+      entities: [{ id: "pe-n1", type: "person", names: { "zh-TW": "測試人員甲", en: "Test Person A" }, sources: [up.passageIds[0]] }],
+      relations: [],
+    });
+    w.sample.docs.push({ id: up.documentId, level: "confidential", project: null });
+    w.sample.passages.push({ id: up.passageIds[0], doc: up.documentId, level: "confidential", project: null });
+    w.review.pendingEntities.push({ id: "pe-n1", doc: up.documentId, type: "person", sources: up.passageIds });
+
+    // 文件 1 新建實體、文件 2 合併進來
+    await approve(w.db, "manager", { entities: [{ id: "pe-m1" }], relations: [] }, DEFAULT);
+    await approve(w.db, "manager", { entities: [{ id: "pe-n1", mergeInto: "pe-m1" }], relations: [] }, DEFAULT);
+    w.review.decisions.push({ item: "pe-m1", decision: "approve" }, { item: "pe-n1", decision: "approve", mergeInto: "pe-m1" });
+    // 撤回文件 1：實體因文件 2 的出處仍然存在
+    await retract(w.db, "manager", ["pe-m1"]);
+    w.review.retractions.push("pe-m1");
+    await graphMatchesOracle(w, "撤回文件 1 後");
+    const graph = await readGraph(w.db, "manager");
+    expect(graph.entities.find((e) => e.id === "pe-m1")!.sources.map((s) => s.documentId)).toEqual([up.documentId]);
+
+    const pending = (await readReview(w.db, "manager")).find((d) => d.id === w.dm.documentId)!.entities.find((e) => e.id === "pe-m1")!;
+    expect(suggestMerge(pending, graph.entities, w.config.knowledgeModel.entityTypes)).toMatchObject({ candidates: ["pe-m1"] });
+    await approve(w.db, "manager", { entities: [{ id: "pe-m1", mergeInto: "pe-m1" }], relations: [] }, DEFAULT);
+    w.review.decisions.push({ item: "pe-m1", decision: "approve", mergeInto: "pe-m1" });
+    await graphMatchesOracle(w, "重新核准後");
+    expect((await readGraph(w.db, "manager")).entities.filter((e) => e.name === "測試人員甲").map((e) => e.id)).toEqual(["pe-m1"]);
+    await w.db.close();
+  });
+
+  it("撤回合併的核准後，合併造成的可見範圍擴大隨之收回", async () => {
+    const w = await setup();
+    // 長堤專案一般員工看不到；合併一般員工看得到的青翼文件後，一般員工就看得到
+    await approve(w.db, "manager", { entities: [{ id: "pe-s2", mergeInto: "project-longpier" }], relations: [] }, DEFAULT);
+    w.review.decisions.push({ item: "pe-s2", decision: "approve", mergeInto: "project-longpier" });
+    expect((await readGraph(w.db, "staff")).entities.map((e) => e.id)).toContain("project-longpier");
+    await graphMatchesOracle(w, "合併後");
+    await retract(w.db, "manager", ["pe-s2"]);
+    w.review.retractions.push("pe-s2");
+    expect((await readGraph(w.db, "staff")).entities.map((e) => e.id)).not.toContain("project-longpier");
+    await graphMatchesOracle(w, "撤回後");
+    // 時間軸也不再把這份文件的段落連到長堤專案
+    const timeline = await readTimeline(w.db, "staff", { language: "zh-TW" });
+    expect(timeline.find((e) => e.documentId === w.ds.documentId)!.passages[0].entityIds).not.toContain("project-longpier");
+    await w.db.close();
+  });
+
+  it("看不到文件或沒有 canReview 的身分不能撤回；參考情境的內容沒有決定，撤回不了（一般員工也能審核的設定）", async () => {
+    const w = await setup(STAFF_REVIEWS);
+    const access = STAFF_REVIEWS.access;
+    await approve(w.db, "manager", { entities: [{ id: "pe-m1" }, { id: "pe-s1", mergeInto: "person-lin-zhiming-rd" }], relations: [] }, DEFAULT);
+    w.review.decisions.push({ item: "pe-m1", decision: "approve" }, { item: "pe-s1", decision: "approve", mergeInto: "person-lin-zhiming-rd" });
+    for (const [id, decision, allowed] of [
+      ["staff", "pe-m1", false],
+      ["guest", "pe-s1", false],
+      [null, "pe-s1", false],
+      ["nobody", "pe-s1", false],
+      ["staff", "team-ops", false],
+      ["staff", "pe-s1", true],
+    ] as const) {
+      expect(canRetract(access, w.sample, w.review, id, decision), `${id} ${decision}`).toBe(allowed);
+      if (!allowed) await expect(retract(w.db, id, [decision]), `${id} ${decision}`).rejects.toMatchObject({ reason: "denied" });
+    }
+    await retract(w.db, "staff", ["pe-s1"]);
+    // 偽造：撤回者寫成別人、文件寫成別的文件
+    const forge = (sql: string, params: string[] = []) => w.db.withIdentity("manager", (tx) => tx.query(sql, params));
+    const INSERT = "INSERT INTO kk.review_retractions (decision_id, document_id, retracted_by) VALUES ('pe-m1', $1, $2)";
+    await expect(forge(INSERT, [w.dm.documentId, "staff"])).rejects.toThrow(/row-level security/);
+    await expect(forge(INSERT, [w.ds.documentId, "manager"])).rejects.toThrow(/row-level security/);
+    // 撤回紀錄只能新增
+    await expect(forge("UPDATE kk.review_retractions SET cascade_of = NULL")).rejects.toThrow(/permission denied/);
+    await expect(forge("DELETE FROM kk.review_retractions")).rejects.toThrow(/permission denied/);
     await w.db.close();
   });
 });

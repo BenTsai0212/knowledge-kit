@@ -42,13 +42,14 @@ interface SourceRow {
   content: string;
 }
 
-// 出處表（entity_sources／relation_sources）只回傳看得到的段落；JOIN 的段落與文件同樣受 RLS 篩選
+// 出處表（entity_sources／relation_sources）只回傳看得到、未撤回的段落；JOIN 的段落與文件同樣受 RLS 篩選。
+// 同一段落可能由不同的決定各寫一筆（0009），所以去除重複
 const sourcesSql = (table: string, ownerColumn: string) => `
-  SELECT s.${ownerColumn} AS owner_id, p.id, p.document_id, d.title AS document_title, p.language, p.content
+  SELECT DISTINCT s.${ownerColumn} AS owner_id, p.id, p.document_id, d.title AS document_title, p.language, p.content, p.ordinal
     FROM kk.${table} s
     JOIN kk.passages p ON p.id = s.passage_id
     JOIN kk.documents d ON d.id = p.document_id
-   ORDER BY s.${ownerColumn}, d.id, p.ordinal`;
+   ORDER BY s.${ownerColumn}, p.document_id, p.ordinal`;
 
 function groupSources(rows: SourceRow[]): Map<string, SourcePassage[]> {
   const byOwner = new Map<string, SourcePassage[]>();
