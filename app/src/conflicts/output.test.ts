@@ -18,7 +18,7 @@ describe("parseConflicts", () => {
     });
   });
 
-  it("沒有矛盾時回傳空陣列；去掉 ``` 圍欄", () => {
+  it("沒有說法不同時回傳空陣列；去掉 ``` 圍欄", () => {
     expect(parseConflicts('```json\n{"conflicts":[]}\n```', NEW, EXISTING, "d-new")).toEqual({ conflicts: [], dropped: {} });
   });
 

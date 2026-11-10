@@ -192,9 +192,9 @@
   "conflictNew": "New statement",
   "conflictOld": "Existing statement",
   "conflictDecisions": {
-    "coexist": "A real conflict; keep both",
+    "coexist": "They do differ; keep both",
     "supersede": "The new statement replaces the old one",
-    "not_conflict": "Not a conflict"
+    "not_conflict": "They don't actually differ"
   },
   "conflictToast": "Marked: {name}",
   "conflictMarks": {
@@ -296,7 +296,7 @@
     "scenario": "Scenario",
     "permission": "Permission",
     "out-of-scope": "Out of scope",
-    "conflict": "Conflict",
+    "conflict": "Differing statements",
     "extraction-attempt": "Extraction attempt",
     "cross-language": "Cross-language",
     "synonym": "Synonym",

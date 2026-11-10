@@ -38,7 +38,7 @@ const UPLOADS = {
 type Doc = keyof typeof UPLOADS;
 
 // 上班時間被三段取代（公開的兩段、機密的一段）；公司簡介被機密段落取代、與公開段落並存；
-// 機密段落再被更新的機密段落取代；另有「不是矛盾」與未處理的組合（都不標示）
+// 機密段落再被更新的機密段落取代；另有「不算說法不同」與未處理的組合（都不標示）
 const PAIRS: { id: string; doc: Doc; newIndex: number; old: string | [Doc, number]; decision: ConflictDecision | null }[] = [
   { id: "pc-1", doc: "dp", newIndex: 0, old: HOURS, decision: "supersede" },
   { id: "pc-2", doc: "dq", newIndex: 0, old: HOURS, decision: "supersede" },
@@ -116,7 +116,7 @@ async function sourceMarks(database: Database, id: string | null, passages: read
 const asKeys = (rows: (readonly [string, PassageMark[]])[]) => Object.fromEntries(rows.map(([id, marks]) => [id, keys(marks)]));
 
 describe("時間軸與原文的標示", () => {
-  it("測試資料的前提：主管與一般員工看到的標示不同，未處理與「不是矛盾」不標示", () => {
+  it("測試資料的前提：主管與一般員工看到的標示不同，未處理與「不算說法不同」不標示", () => {
     const manager = expectedMarks(access, sample, conflicts, "manager", dates);
     const staff = expectedMarks(access, sample, conflicts, "staff", dates);
     expect(manager.get(HOURS)).toEqual([`superseded_by|${ids.dm.passageIds[0]}`]);

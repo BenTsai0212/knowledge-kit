@@ -38,7 +38,7 @@ A production system would keep data on a server and send to the browser only wha
 ## What is sent to the AI model
 
 - For each question, only the question and the few passages that are most relevant *and* visible to the current role are sent to the model. Passages the role cannot see are never sent.
-- After a document is uploaded, extraction and conflict checking send that document's passages to the model.
+- After a document is uploaded, extraction and the check for differing statements send that document's passages to the model.
 - How the model provider stores and uses API data is governed by its commercial terms at the time of signing or use. Before adopting a production system, please have your legal or security team confirm them.
 
 ## Usage and cost limits

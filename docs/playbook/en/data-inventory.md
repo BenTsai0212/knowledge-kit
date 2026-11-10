@@ -41,5 +41,5 @@ Each row is a *type* of document (e.g., "weekly project status report"). You do 
 
 1. Use "Document type" and "Purpose" to choose the set of fictional documents for the demo, 1–3 per type.
 2. Use "Confidentiality level", "Project only", and "Readers" to set visibility levels, projects, and roles, and to plan the permission demonstration (the same question gives different answers for different roles).
-3. Use "Update frequency" and "Notes" to plan the demonstration of conflicting old and new information.
+3. Use "Update frequency" and "Notes" to plan the demonstration of old and new information that differs.
 4. Use "Language" to decide the demo's languages and whether cross-language questions are needed.

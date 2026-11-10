@@ -101,7 +101,7 @@ describe("內容涵蓋", () => {
     expect(bilingual.length).toBeGreaterThanOrEqual(5);
   });
 
-  it("矛盾：青翼桌的上市時間，中文與英文都由較新的另一份文件改口（docs/dataset.md）", () => {
+  it("說法不同：青翼桌的上市時間，中文與英文都由較新的另一份文件改口（docs/dataset.md）", () => {
     const question = scenarios.scenarios.flatMap((s) => s.questions).find((q) => q.id === "bluewing-launch")!;
     const sources = question.answerPassages.map((id) => passages.find((p) => p.id === id)!);
     const quarter = (text: string) =>

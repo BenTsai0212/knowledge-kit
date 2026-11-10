@@ -23,7 +23,7 @@ Each answer maps to a settings file in `client/` (right column). We organize the
 | B3 | Which relationships between them matter? (e.g., who is responsible for which project, which product uses which part) | Relation types in `knowledge-model.json` |
 | B4 | Is the same thing often called by different names? (e.g., Chinese and English names, abbreviations, code names) | Alias rules |
 | B5 | Are there different people or things with the same name? | Merge strategy (confirmed by a person by default) |
-| B6 | Does information go out of date? When old and new versions disagree, which one is authoritative? | Conflicts |
+| B6 | Does information go out of date? When old and new versions disagree, which one is authoritative? | Show differing statements side by side |
 
 ## C. Permissions and confidentiality
 

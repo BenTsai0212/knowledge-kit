@@ -31,7 +31,7 @@ Using `clients/<name>/`; `<code>` is a BCP 47 language code (for example `ja`, `
    - With semantic vectors (`multilingual-e5-small`), a fact may be written in only one language, and each question needs same-language answer passages in at least one language. The two questions Playwright uses need answer passages in the default language (see "Playwright" in [docs/testing.md](../../testing.md)). Example: `clients/kestrova-demo/` (Traditional Chinese, English, and Japanese, each fact in only one language, #175).
 7. **Evaluation question bank**: add questions in the new language following [Building the evaluation question bank](eval-question-bank.md), including at least permission and out-of-scope questions. Cross-language questions (with `passageLanguage` setting the passage language) are always marked `requires: "semantic"` and are left out of the denominator under `keyword-hash` ([docs/evals.md](../../evals.md), section "跨語言、同義詞與完全無關的題目").
 
-No changes needed for: language names in the question-answering prompt (generated with `Intl.DisplayNames`), asking for names in every language during extraction, the language filter in retrieval, comparing only same-language passages for conflicting information, and the timeline language. These all work from the language list in `client.json`.
+No changes needed for: language names in the question-answering prompt (generated with `Intl.DisplayNames`), asking for names in every language during extraction, the language filter in retrieval, comparing only same-language passages for differing statements, and the timeline language. These all work from the language list in `client.json`.
 
 **Acceptance**:
 

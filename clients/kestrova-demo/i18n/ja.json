@@ -192,9 +192,9 @@
   "conflictNew": "新しい記載",
   "conflictOld": "既存の記載",
   "conflictDecisions": {
-    "coexist": "実際に矛盾しているため、両方を残す",
+    "coexist": "記載が異なるため、両方を残す",
     "supersede": "新しい記載が古い記載に代わる",
-    "not_conflict": "矛盾ではない"
+    "not_conflict": "記載の相違ではない"
   },
   "conflictToast": "設定しました：{name}",
   "conflictMarks": {

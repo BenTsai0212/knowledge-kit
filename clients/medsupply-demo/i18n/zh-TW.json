@@ -192,9 +192,9 @@
   "conflictNew": "新說法",
   "conflictOld": "既有說法",
   "conflictDecisions": {
-    "coexist": "是矛盾，兩者並存",
+    "coexist": "確實說法不同，兩者並存",
     "supersede": "新說法取代舊說法",
-    "not_conflict": "不是矛盾"
+    "not_conflict": "不算說法不同"
   },
   "conflictToast": "已標記：{name}",
   "conflictMarks": {
@@ -296,7 +296,7 @@
     "scenario": "情境",
     "permission": "權限",
     "out-of-scope": "題庫外",
-    "conflict": "矛盾",
+    "conflict": "說法不同",
     "extraction-attempt": "套取機密",
     "cross-language": "跨語言",
     "synonym": "同義詞",
