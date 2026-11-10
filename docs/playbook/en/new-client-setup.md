@@ -136,9 +136,9 @@ For semantic-vector clients, Playwright blocks the model download, so the page f
 
 This step needs the real key and is run by a person locally; the agent prepares the commands and a results table, then stops.
 
-1. Raise `DAILY_LIMIT` in `.dev.vars` to enough calls (about "number of questions × 2 settings × 2").
+1. Raise `DAILY_LIMIT` in `.dev.vars` to cover both runs combined. Use the evaluation page's confirmation dialog ("Up to N calls", shown when you press "Start evaluation"; you can check the number and cancel) for the calls each run needs; adding setting B or model grading needs more calls. Restart `npx wrangler dev` after changing `.dev.vars`.
 2. Run `KK_CLIENT=<name> npm run build`, then `npx wrangler dev`, and open the evaluation page as a `canReview` role. With semantic vectors, wait until the "downloading model" notice ends and confirm there is no fallback notice (item 6 of [Acceptance metrics](acceptance-metrics.md)).
-3. Following [Acceptance metrics](acceptance-metrics.md), run twice: default settings with key-point scoring, then two retrieval settings side by side with model grading.
+3. Following items 2 and 3 of [Acceptance metrics](acceptance-metrics.md), run twice: first with default settings and key-point scoring; then run it again, or once with model grading. Both runs must meet the thresholds. To compare retrieval settings, you can add setting B side by side in the second run ("Differences between two retrieval settings" in Acceptance metrics); this is optional.
 4. Record the four metrics, the number of calls and the cost, and why each failed question failed. After Checkpoint 3 passes, record the results in the client's `evals/README.md` (for example "驗收結果" in `clients/kestrova-demo/evals/README.md`).
 
 If a threshold is not met, fix it using the table in [Building the evaluation question bank](eval-question-bank.md) (add answer passages, add synonyms, rewrite the question, or change the dataset's wording), **without loosening the standard**, and run again.
