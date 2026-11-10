@@ -3,6 +3,7 @@
 // 可以修改名稱、選擇合併對象、確認一組、核准整份文件、退回；另有「已退回」分頁。
 // 每筆一行，按「編輯名稱」才可以修改；出處點開才顯示，預設 2 行、標出實體名稱；核准或退回後顯示短提示（#48），附「撤銷」（ADR 0007 決定 4）。
 // 每份文件另有「說法不同」區塊（#51）：新舊段落並列、三選一處理；已處理的在「已處理的說法不同」分頁。
+// 「回報」分頁是問答的回答錯誤回報（ADR 0007 決定 7，ReportList.tsx）。
 // 讀取與寫入都經 store.ts、conflicts/store.ts（RLS 決定看得到、能核准什麼）；模型輸出一律以文字節點顯示。
 import { Fragment, useEffect, useRef, useState } from "react";
 import { clientConfig } from "../client/load";
@@ -12,9 +13,11 @@ import type { Database } from "../db/database";
 import { suggestMerge, type MergeSuggestion } from "../extraction/merge";
 import { approve, readReview, reject, retract, ReviewError, type EntityApproval, type ReviewDocument, type ReviewEntity, type ReviewRelation } from "../extraction/store";
 import { readGraph, type Graph } from "../graph/read";
+import { readReports, type AnswerReport } from "../reports/store";
 import { AccessBadges } from "./AccessBadges";
 import { entityOptionLabel, entityTypeLabel, relationTypeLabel } from "./graph-labels";
 import { Notice } from "./Notice";
+import { ReportList } from "./ReportList";
 import { createRequestGate } from "./requests";
 import {
   batchPlan,
@@ -43,6 +46,8 @@ interface Props {
   // 核准、退回或重新整理後通知 App 更新頁籤的待審筆數
   onChanged(): void;
   onGotoGraph(): void;
+  // 回報中的實體：切到圖譜頁並選取該實體
+  onViewInGraph(entityId: string): void;
 }
 
 // 短提示自動消失的時間；滑鼠停在提示上或焦點在提示內時暫停（toast-timer.ts，#48 審查）
@@ -56,12 +61,13 @@ const CONFLICT_DECISIONS: readonly ConflictDecision[] = ["coexist", "supersede",
 // 待審實體沒有主要名稱（name），依介面語言取 names
 const pendingName = (e: ReviewEntity, language: string) => e.names[language] || Object.values(e.names)[0] || e.id;
 
-export function ReviewPage({ db, identity, language, extracting, onOpenSource, onChanged, onGotoGraph }: Props) {
+export function ReviewPage({ db, identity, language, extracting, onOpenSource, onChanged, onGotoGraph, onViewInGraph }: Props) {
   const s = strings(language);
-  // decided：已處理的說法不同（#51）
-  const [tab, setTab] = useState<"pending" | "rejected" | "decided">("pending");
+  // decided：已處理的說法不同（#51）；reports：回答錯誤回報（ADR 0007）
+  const [tab, setTab] = useState<"pending" | "rejected" | "decided" | "reports">("pending");
   const [docs, setDocs] = useState<ReviewDocument[] | null>(null);
   const [conflicts, setConflicts] = useState<ConflictItem[]>([]);
+  const [reports, setReports] = useState<AnswerReport[]>([]);
   const [graph, setGraph] = useState<Graph | null>(null);
   const [choices, setChoices] = useState<Record<string, EntityChoice>>({});
   // 核准或退回的錯誤、批次核准時因名稱不完整而略過的筆數；顯示在該文件的卡片上方（#48）
@@ -84,11 +90,12 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
 
   useEffect(() => {
     const ticket = reads.current.begin();
-    void Promise.all([readReview(db, identity), readGraph(db, identity), readConflicts(db, identity)]).then(([d, g, c]) => {
+    void Promise.all([readReview(db, identity), readGraph(db, identity), readConflicts(db, identity), readReports(db, identity)]).then(([d, g, c, r]) => {
       if (!ticket.isCurrent()) return;
       setDocs(reviewDocuments(d, c));
       setConflicts(c);
       setGraph(g);
+      setReports(r);
     });
     return () => reads.current.cancel();
   }, [db, identity, version]);
@@ -121,6 +128,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
     setVersion((v) => v + 1);
     onChanged();
   };
+  const unresolved = reports.filter((r) => r.resolution === null).length;
   const languageNames = new Intl.DisplayNames([language], { type: "language" });
 
   // done：成功後的短提示；undoable 時 action 回傳的決定 id 交給「撤銷」
@@ -214,6 +222,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   const conflictsOf = (docId: string) =>
     conflicts.filter((c) => c.documentId === docId && (tab === "pending" ? c.decision === null : tab === "decided" && c.decision !== null));
   const itemStatus = tab === "pending" ? "pending" : tab === "rejected" ? "rejected" : null;
+  // 回報分頁沒有文件：itemStatus 是 null，conflictsOf() 也是空的
   const visibleDocs = docs.filter((d) => [...d.entities, ...d.relations].some((x) => x.status === itemStatus) || conflictsOf(d.id).length > 0);
   const decide = (docId: string, conflictId: string, decision: ConflictDecision) =>
     void run(docId, () => decideConflict(db, identity, conflictId, decision), {
@@ -379,6 +388,11 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
           <button type="button" aria-pressed={tab === "decided"} onClick={() => setTab("decided")}>
             {s.reviewDecidedTab}
           </button>
+          {/* 回報：後面接著未處理的筆數 */}
+          <button type="button" aria-pressed={tab === "reports"} onClick={() => setTab("reports")}>
+            {s.reviewReportsTab}
+            {unresolved > 0 && <span className="tab-count">{unresolved}</span>}
+          </button>
         </div>
         <button type="button" className="icon-button" aria-label={s.reviewRefresh} title={s.reviewRefresh} disabled={busy} onClick={refresh}>
           ↻
@@ -415,7 +429,19 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
         )}
       </div>
       {extracting && <Notice kind="info" title={s.reviewExtracting} action={{ label: s.reviewRefresh, onClick: refresh, disabled: busy }} />}
-      {visibleDocs.length === 0 && (
+      {tab === "reports" && (
+        <ReportList
+          db={db}
+          identity={identity}
+          language={language}
+          reports={reports}
+          graph={graph}
+          onOpenSource={onOpenSource}
+          onViewInGraph={onViewInGraph}
+          onResolved={refresh}
+        />
+      )}
+      {tab !== "reports" && visibleDocs.length === 0 && (
         <p className="card muted">{tab === "pending" ? s.reviewEmpty : tab === "rejected" ? s.reviewRejectedEmpty : s.reviewDecidedEmpty}</p>
       )}
 

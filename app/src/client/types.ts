@@ -5,6 +5,7 @@ import type { PassageMarkKind } from "../conflicts/marks";
 import type { ConflictDecision } from "../conflicts/store";
 import type { Leak, ModelGrade } from "../evals/score";
 import type { EvalCategory, EvalExpect } from "../evals/types";
+import type { ReportCategory, ReportResolution } from "../reports/store";
 import type { FallbackReason } from "../retrieval/providers";
 import type { ParseFailure } from "../upload/parse";
 
@@ -472,6 +473,24 @@ export interface UiStrings {
   conflictUnrelated: string;
   conflictFailed: string;
   conflictRetry: string;
+  // 回答錯誤回報（ADR 0007 決定 7）：問答的「回報有錯」與表單（原因、選填說明、送出後的提示），
+  // 待審頁的「回報」分頁（{name} 換成回報者的角色，{date} 換成日期）、處理按鈕與處理後的標示、撤回的說明
+  reportButton: string;
+  reportCategory: string;
+  reportCategories: Record<ReportCategory, string>;
+  reportNote: string;
+  reportSubmit: string;
+  reportCancel: string;
+  reportSent: string;
+  reportFailed: string;
+  reviewReportsTab: string;
+  reportsEmpty: string;
+  reportRefusal: string;
+  reportMeta: string;
+  reportMarkNotError: string;
+  reportMarkRetracted: string;
+  reportRetractHint: string;
+  reportResolutions: Record<ReportResolution, string>;
   tabEvals: string;
   evalSettings: string;
   evalSetName: string;

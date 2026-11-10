@@ -202,7 +202,7 @@ policy 中的子查詢同樣受 RLS 限制，所以「段落看得到」已包�
 
 ## 回答錯誤回報
 
-問答的回答可以回報「有錯」（ADR 0007 決定 7，migration 0010）。回報寫入 `answer_reports`，處理（「不是錯誤」或已撤回）寫入 `answer_report_resolutions`，**都只用 INSERT**。寫入與讀取集中在 `app/src/reports/store.ts`（`writeReport()`、`readReports()`、`resolveReport()`），一律經 `withIdentity()`。畫面在 #209 的下一個 PR。
+問答的回答可以回報「有錯」（ADR 0007 決定 7，migration 0010）。回報寫入 `answer_reports`，處理（「不是錯誤」或已撤回）寫入 `answer_report_resolutions`，**都只用 INSERT**。寫入與讀取集中在 `app/src/reports/store.ts`（`writeReport()`、`readReports()`、`resolveReport()`），一律經 `withIdentity()`。畫面見 [docs/qa.md](qa.md)「回報有錯」。
 
 | 資料表 | 權限 | 寫入（`WITH CHECK`） | 讀取（`USING`） |
 | --- | --- | --- | --- |
