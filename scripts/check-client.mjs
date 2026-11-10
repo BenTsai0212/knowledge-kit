@@ -224,6 +224,19 @@ function validateI18n(ajv, i18n, languages, defaultLanguage) {
   return errors;
 }
 
+// 「接著問」的問句範本（#198）：參數只有 {name}（必填）與 {type}，大括號要成對
+const QUESTION_PARAMS = ["name", "type"];
+function questionTemplateProblems(template) {
+  const problems = [];
+  const params = [...template.matchAll(/\{([^{}]*)\}/g)].map((m) => m[1]);
+  for (const param of params) {
+    if (!QUESTION_PARAMS.includes(param)) problems.push(`不認得的參數 {${param}}，只能用 {name}、{type}`);
+  }
+  if (/[{}]/.test(template.replace(/\{[^{}]*\}/g, ""))) problems.push("大括號不成對");
+  if (!params.includes("name")) problems.push("缺少 {name}");
+  return problems;
+}
+
 // 跨檔規則：同一清單內 id 不重複、可見等級的 rank 不重複、參照的 id 必須存在。
 function checkReferences(valid) {
   const errors = [];
@@ -261,6 +274,12 @@ function checkReferences(valid) {
     model.relationTypes.forEach((rel, i) => {
       exists(file, `/relationTypes/${i}/from`, rel.from, entityTypes, "實體類型");
       exists(file, `/relationTypes/${i}/to`, rel.to, entityTypes, "實體類型");
+      for (const [direction, texts] of Object.entries(rel.questions ?? {})) {
+        for (const [language, template] of Object.entries(texts)) {
+          const path = `/relationTypes/${i}/questions/${direction}/${language}`;
+          for (const message of questionTemplateProblems(template)) errors.push({ file, path, message });
+        }
+      }
     });
   }
   if (access) {

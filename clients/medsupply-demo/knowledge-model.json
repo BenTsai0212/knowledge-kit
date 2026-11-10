@@ -50,9 +50,45 @@
     }
   ],
   "relationTypes": [
-    { "id": "supplies", "label": { "zh-TW": "供應", "en": "Supplies" }, "from": ["manufacturer"], "to": ["product"] },
-    { "id": "responsible-for", "label": { "zh-TW": "負責", "en": "Responsible for" }, "from": ["person"], "to": ["hospital", "tender"] },
-    { "id": "uses", "label": { "zh-TW": "使用", "en": "Uses" }, "from": ["hospital"], "to": ["product"] },
-    { "id": "involves", "label": { "zh-TW": "涉及", "en": "Involves" }, "from": ["tender"], "to": ["product"] }
+    {
+      "id": "supplies",
+      "label": { "zh-TW": "供應", "en": "Supplies" },
+      "from": ["manufacturer"],
+      "to": ["product"],
+      "questions": {
+        "outgoing": { "zh-TW": "{name}供應哪些{type}？", "en": "Which products does {name} supply?" },
+        "incoming": { "zh-TW": "{name}由哪些{type}供應？", "en": "Which manufacturers supply {name}?" }
+      }
+    },
+    {
+      "id": "responsible-for",
+      "label": { "zh-TW": "負責", "en": "Responsible for" },
+      "from": ["person"],
+      "to": ["hospital", "tender"],
+      "questions": {
+        "outgoing": { "zh-TW": "{name}負責哪些{type}？", "en": "What is {name} responsible for?" },
+        "incoming": { "zh-TW": "誰負責{name}？", "en": "Who is responsible for {name}?" }
+      }
+    },
+    {
+      "id": "uses",
+      "label": { "zh-TW": "使用", "en": "Uses" },
+      "from": ["hospital"],
+      "to": ["product"],
+      "questions": {
+        "outgoing": { "zh-TW": "{name}使用哪些{type}？", "en": "Which products does {name} use?" },
+        "incoming": { "zh-TW": "哪些{type}使用{name}？", "en": "Which hospitals use {name}?" }
+      }
+    },
+    {
+      "id": "involves",
+      "label": { "zh-TW": "涉及", "en": "Involves" },
+      "from": ["tender"],
+      "to": ["product"],
+      "questions": {
+        "outgoing": { "zh-TW": "{name}涉及哪些{type}？", "en": "Which products does {name} cover?" },
+        "incoming": { "zh-TW": "哪些{type}涉及{name}？", "en": "Which tenders cover {name}?" }
+      }
+    }
   ]
 }

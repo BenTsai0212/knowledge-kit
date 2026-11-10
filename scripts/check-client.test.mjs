@@ -209,6 +209,48 @@ describe("check-client", () => {
     }
   });
 
+  it("關係的問句範本只能用 {name}、{type}，{name} 必填，大括號要成對（#198）", () => {
+    const files = example();
+    const rel = files["knowledge-model.json"].relationTypes;
+    rel[0].questions = { outgoing: { "zh-TW": "{name}的{relation}？", en: "Which {type}?" }, incoming: { "zh-TW": "誰{nmae}？{name}" } };
+    rel[1].questions = { outgoing: { "zh-TW": "{name}參與哪些{type？", en: "Who works on {name}}?" } };
+    expect(validateClient(files)).toEqual([
+      { file: "knowledge-model.json", path: "/relationTypes/0/questions/outgoing/zh-TW", message: "不認得的參數 {relation}，只能用 {name}、{type}" },
+      { file: "knowledge-model.json", path: "/relationTypes/0/questions/outgoing/en", message: "缺少 {name}" },
+      { file: "knowledge-model.json", path: "/relationTypes/0/questions/incoming/zh-TW", message: "不認得的參數 {nmae}，只能用 {name}、{type}" },
+      { file: "knowledge-model.json", path: "/relationTypes/1/questions/outgoing/zh-TW", message: "大括號不成對" },
+      { file: "knowledge-model.json", path: "/relationTypes/1/questions/outgoing/en", message: "大括號不成對" },
+    ]);
+  });
+
+  it("問句範本的方向與語言：只接受 outgoing、incoming，不能是空物件，語言同 LocalizedText；省略時通過", () => {
+    const files = example();
+    const rel = files["knowledge-model.json"].relationTypes;
+    rel[0].questions = { both: { "zh-TW": "{name}？" } };
+    rel[1].questions = {};
+    rel[2].questions = { outgoing: { en: "What does {name} lead?" } };
+    expect(validateClient(files).map((e) => `${e.path} ${e.message}`)).toEqual([
+      "/relationTypes/0/questions 不允許的欄位 both",
+      expect.stringMatching(/^\/relationTypes\/1\/questions /),
+      "/relationTypes/2/questions/outgoing 缺少預設語言 zh-TW",
+    ]);
+    for (const r of rel) delete r.questions;
+    expect(validateClient(files)).toEqual([]);
+  });
+
+  it("client/ 與 clients/ 的每種關係都有兩個方向、每種語言的問句範本（#198）", () => {
+    const root = new URL("../", import.meta.url);
+    const dirs = ["client/", ...readdirSync(new URL("clients/", root), { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => `clients/${d.name}/`)];
+    for (const dir of dirs) {
+      const { languages } = readJson(new URL(`${dir}client.json`, root));
+      const model = readJson(new URL(`${dir}knowledge-model.json`, root));
+      const missing = model.relationTypes.flatMap((r) =>
+        ["outgoing", "incoming"].flatMap((d) => languages.filter((l) => !r.questions?.[d]?.[l]).map((l) => `${dir} ${r.id} ${d} ${l}`)),
+      );
+      expect(missing).toEqual([]);
+    }
+  });
+
   it("可見等級的顏色必填，格式為 #RRGGBB", () => {
     const files = example();
     files["access.json"].visibilityLevels[0].color = "green";

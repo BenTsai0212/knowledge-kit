@@ -25,8 +25,35 @@
     }
   ],
   "relationTypes": [
-    { "id": "member-of", "label": { "zh-TW": "隸屬", "en": "Member of" }, "from": ["person"], "to": ["team"] },
-    { "id": "works-on", "label": { "zh-TW": "參與", "en": "Works on" }, "from": ["person", "team"], "to": ["project"] },
-    { "id": "leads", "label": { "zh-TW": "負責", "en": "Leads" }, "from": ["person"], "to": ["team", "project"] }
+    {
+      "id": "member-of",
+      "label": { "zh-TW": "隸屬", "en": "Member of" },
+      "from": ["person"],
+      "to": ["team"],
+      "questions": {
+        "outgoing": { "zh-TW": "{name}隸屬哪些{type}？", "en": "Which teams is {name} a member of?" },
+        "incoming": { "zh-TW": "哪些{type}隸屬{name}？", "en": "Who are the members of {name}?" }
+      }
+    },
+    {
+      "id": "works-on",
+      "label": { "zh-TW": "參與", "en": "Works on" },
+      "from": ["person", "team"],
+      "to": ["project"],
+      "questions": {
+        "outgoing": { "zh-TW": "{name}參與哪些{type}？", "en": "Which projects does {name} work on?" },
+        "incoming": { "zh-TW": "哪些{type}參與{name}？", "en": "Who works on {name}?" }
+      }
+    },
+    {
+      "id": "leads",
+      "label": { "zh-TW": "負責", "en": "Leads" },
+      "from": ["person"],
+      "to": ["team", "project"],
+      "questions": {
+        "outgoing": { "zh-TW": "{name}負責哪些{type}？", "en": "What does {name} lead?" },
+        "incoming": { "zh-TW": "誰負責{name}？", "en": "Who leads {name}?" }
+      }
+    }
   ]
 }

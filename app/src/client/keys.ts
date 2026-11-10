@@ -12,6 +12,7 @@ import type {
   PathRef,
   Project,
   Question,
+  RelationQuestions,
   RelationType,
   RetrievalFile,
   UploadFile,
@@ -143,7 +144,12 @@ export const manifests: ManifestEntry[] = [
   {
     schema: "knowledge-model.schema.json",
     pointer: "/properties/relationTypes/items",
-    keys: { id: "required", label: "required", from: "required", to: "required" } satisfies KeyManifest<RelationType>,
+    keys: { id: "required", label: "required", from: "required", to: "required", questions: "optional" } satisfies KeyManifest<RelationType>,
+  },
+  {
+    schema: "knowledge-model.schema.json",
+    pointer: "/properties/relationTypes/items/properties/questions",
+    keys: { outgoing: "optional", incoming: "optional" } satisfies KeyManifest<RelationQuestions>,
   },
   {
     schema: "access.schema.json",

@@ -55,7 +55,17 @@
           "id": { "$ref": "common.schema.json#/definitions/Id" },
           "label": { "$ref": "common.schema.json#/definitions/LocalizedText" },
           "from": { "$ref": "#/definitions/EntityTypeRefs" },
-          "to": { "$ref": "#/definitions/EntityTypeRefs" }
+          "to": { "$ref": "#/definitions/EntityTypeRefs" },
+          "questions": {
+            "description": "「接著問」的問句範本：outgoing 是面板中心為起點（from）時、incoming 是中心為終點（to）時。參數只有 {name}（中心實體的名稱，必填）與 {type}（另一端的實體類型）；缺方向或缺介面語言時退回翻譯檔的通用範本",
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "properties": {
+              "outgoing": { "$ref": "common.schema.json#/definitions/LocalizedText" },
+              "incoming": { "$ref": "common.schema.json#/definitions/LocalizedText" }
+            }
+          }
         }
       }
     }

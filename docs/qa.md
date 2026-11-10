@@ -214,7 +214,7 @@ Rules:
 
   只用 1 會列出引用段落中回答沒提到的實體；只用 2 會列進同名的另一個實體（兩位林志明）或與這題無關的實體。拒答、錯誤、未附出處的回答不列，也不讀圖譜。
   - **權限**：候選只來自 `readGraph()` 的結果，看不到的實體不會出現，即使模型的回答寫出了它的名稱；實體面板的關係清單、鄰近圖與接著問也只用這份圖譜。`app/tests/graph/mentions.test.ts` 以引用所有段落、寫出所有名稱的回答，對每個身分檢查列出的實體正好是 `oracle.ts` 算出的可見實體。
-  - **接著問**（#195 決定 2）：翻譯檔的通用範本，不改 Schema。以關係的名稱加上另一端的實體類型組成，依方向分兩種：中心是起點用 `followUpOutgoing`（「王小明負責哪些專案？」），中心是終點用 `followUpIncoming`（「哪些人員參與青翼專案？」）。關係類型、方向與另一端類型相同的只留一題，每個實體最多 3 題。英文、日文寫成該語言的語序，關係名稱加引號（例如「Which project does Ming Wang have a “Leads” relationship with?」），類型在英文中改成小寫。
+  - **接著問**（#195 決定 2、#198）：依方向分兩種，中心是關係的起點用 `outgoing`，中心是終點用 `incoming`。關係類型在 `knowledge-model.json` 有該方向、介面語言的問句範本（`questions`，[docs/client-config.md](client-config.md)「問句範本」）時用範本（「What does Ming Wang lead?」「Who works on Project Bluewing?」）；否則退回翻譯檔的通用範本 `followUpOutgoing`／`followUpIncoming`，以關係的名稱加上另一端的實體類型組成（「王小明負責哪些專案？」；英文、日文把關係名稱加引號，例如「Which project does Ming Wang have a “Leads” relationship with?」）。類型在英文中改成小寫。關係類型、方向與另一端類型相同的只留一題，產生的問句相同的也只留一題（不含 `{type}` 的範本對到多種類型時），每個實體最多 3 題。
 - **原文**（`app/src/sources/source.ts`）：`readSource(db, identityId, passageId)` 經 `withIdentity()` 讀取段落所屬的文件，以及其中該身分看得到的段落（依順序）；看不到時回 `null`。文件中看不到的段落直接省略，不標示「有段落被隱藏」。`app/tests/sources/source.test.ts` 以 `oracle.ts` 對每個身分 × 每段段落測試。
 - **介面文字**：都在翻譯檔 `client/i18n/<語言>.json`，只透過 `app/src/client/i18n.ts` 讀取（[docs/client-config.md](client-config.md)「翻譯檔」）；角色、情境、公司名稱來自 `client/`；語言名稱以 `Intl.DisplayNames` 用該語言自己的名稱顯示。
 - **線上 demo**（#100）：見下方「線上 demo」。

@@ -144,6 +144,16 @@ export interface RelationType {
   label: LocalizedText;
   from: Id[];
   to: Id[];
+  // 「接著問」的問句範本（#198）；省略時用翻譯檔的通用範本
+  questions?: RelationQuestions;
+}
+
+// 參數：{name} 中心實體的名稱（必填）、{type} 另一端的實體類型
+export interface RelationQuestions {
+  // 中心是關係的起點（from）
+  outgoing?: LocalizedText;
+  // 中心是關係的終點（to）
+  incoming?: LocalizedText;
 }
 
 export interface KnowledgeModelFile {
