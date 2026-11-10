@@ -107,7 +107,7 @@ describe("failedMetrics", () => {
 describe("qualityReport：一次", () => {
   it("全部通過：標題的題數、滲漏 0、沒有未達的指標；四個指標對照門檻", () => {
     const r = qualityReport(input(source(allPass())));
-    expect(r.headline).toEqual({ questions: questions.length, leaked: 0, unmet: [], second: null });
+    expect(r.headline).toEqual({ questions: questions.length, leaked: 0, complete: true, unmet: [], second: null });
     expect(r.metrics.map((m) => [m.key, m.meets, m.second, m.bothMeet])).toEqual([
       ["citation", true, null, null],
       ["answer", true, null, null],
@@ -170,7 +170,7 @@ describe("qualityReport：一次", () => {
   it("沒有跑完時不判定", () => {
     const r = qualityReport(input(source(allPass().slice(0, 10), { status: "stopped" })));
     expect(r.metrics.every((m) => m.meets === null)).toBe(true);
-    expect(r.headline.unmet).toEqual([]);
+    expect(r.headline).toMatchObject({ complete: false, unmet: [] });
   });
 });
 

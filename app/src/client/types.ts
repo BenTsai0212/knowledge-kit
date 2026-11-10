@@ -262,6 +262,18 @@ export type UploadFailure = ParseFailure | "denied" | "invalid" | "no_input";
 // 萃取的失敗原因（run.ts 之外，以及畫面自己的 no_access_code）；/api/ask 的錯誤類型用 errors
 export type ExtractFailure = "format" | "truncated" | "write" | "no_access_code";
 
+// 品質報告的文字鍵（UiStrings.evalReport）
+export type EvalReportText =
+  | "download" | "previous" | "previousInvalid" | "set" | "title" | "editNote" | "headline" | "headlineMet"
+  | "headlineUnmet" | "headlineIncomplete" | "headlineBothMet" | "headlineSecondUnmet" | "unmetItem" | "metricsTitle" | "result" | "meets"
+  | "second" | "bothMeet" | "yes" | "no" | "undetermined" | "stabilityTitle" | "stabilityWith" | "stabilityDiffering"
+  | "noteBankDiffers" | "noteBankUnknown" | "noteIncomplete" | "noteSettingsDiffer" | "noteCurrentIncomplete" | "rolesTitle" | "roleLine" | "leakExplain"
+  | "limitsTitle" | "limitQuestions" | "limitAccess" | "limitScope" | "appendixTitle" | "matrixTitle" | "matrixCell" | "role"
+  | "category" | "restrictedNote" | "failuresTitle" | "number" | "failed" | "reason" | "action" | "noFailures"
+  | "numberNote" | "conditionsTitle" | "bank" | "bankValue" | "unknown" | "coverage" | "coverageValue" | "coverageLevel"
+  | "settings" | "retrieval" | "notApplicable" | "mode" | "modeKeyPoints" | "modeModel" | "model" | "date"
+  | "dateValue" | "calls" | "callsValue" | "scope";
+
 // client/i18n/<語言>.json（i18n.schema.json）。帶參數的文字以 {camelCase} 標示，由 i18n.ts 的 fill() 代入
 export interface UiStrings {
   loading: string;
@@ -548,6 +560,8 @@ export interface UiStrings {
   evalVerdicts: Record<ModelGrade["verdict"], string>;
   // 滲漏的原因：{id} 是段落或文件 id，{term} 是命中的禁止說法
   evalLeaks: Record<Leak["kind"], string>;
+  // 品質報告（#210）：評測台的按鈕與報告的文字（docs/evals.md「品質報告」）
+  evalReport: Record<EvalReportText, string>;
   // 標籤與內容之間的分隔（繁中用全形冒號）
   colon: string;
   // 進度（{done}、{total}）與括號附註（{text}、{note}）：符號依語言而定，不寫死在元件中

@@ -75,6 +75,8 @@ export interface QualityReport {
   headline: {
     questions: number;
     leaked: number;
+    // 這次的評測跑完（沒跑完時不判定是否達到門檻）
+    complete: boolean;
     // 這次未達門檻的指標
     unmet: MetricKey[];
     // 兩次都達到所有門檻，或第二次有指標未達；不能比較時為 null
@@ -229,6 +231,7 @@ export function qualityReport(input: ReportInput): QualityReport {
     headline: {
       questions: results.length,
       leaked: rows.filter((r) => r.failed.includes("leakage")).length,
+      complete,
       unmet: metrics.filter((m) => m.meets === false).map((m) => m.key),
       second,
     },
