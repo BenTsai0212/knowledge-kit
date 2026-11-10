@@ -160,6 +160,20 @@ textarea {
   white-space: pre-wrap;
 }
 
+/* 拒答下方的「可以試試」（#192） */
+.refusal-next p {
+  margin-bottom: 0.25rem;
+}
+
+.refusal-next ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.refusal-next li {
+  margin: 0.25rem 0;
+}
+
 button.citation {
   font-size: 0.75rem;
   padding: 0 0.35rem;

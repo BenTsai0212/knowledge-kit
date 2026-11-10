@@ -3,8 +3,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import { EVALS_PATH, language, openApp, openTab, presetQuestions, s, sourcePanel, switchIdentity, tab, type RoleId } from "./support/app";
 import { access, NO_NON_REVIEWER, NO_REVIEWER, nonReviewer, reviewer } from "./support/client";
-import { hiddenDocument, leakedPassages } from "./support/dataset";
-import { askStreamCancelled, askStreamOpen, event, holdAskStream, pushAskStream } from "./support/fake-ask";
+import { hiddenDocument, hiddenPassages, leakedPassages } from "./support/dataset";
+import { askStreamCancelled, askStreamOpen, event, holdAskStream, pushAskStream, sseBody } from "./support/fake-ask";
 
 const roles = access.roles.map((r) => r.id);
 // 切換前看得最多的身分：能審查的身分中 rank 最高者（參考情境是 manager）；沒有時用第一個身分
@@ -94,3 +94,43 @@ test("在評測台切換成沒有 canReview 的身分：回到問答，頁籤消
   await expect(tab(page, s.tabEvals)).toHaveCount(0);
   await expect(tab(page, s.tabQa)).toHaveAttribute("aria-current", "page");
 });
+
+// 查不到時的下一步（#192）：「資料沒寫」與「看不到的資料」的拒答區塊完全相同，不透露是哪一種。
+// 問答一律回拒答標記（app/src/qa/prompt.ts 的 REFUSAL_MARKER），檢索到看得到的段落而送出 /api/ask 時也拒答
+const REFUSAL_MARKER = "[[NO_ANSWER]]";
+
+for (const role of lessPrivileged) {
+  test(`${role} 查不到時：資料沒寫與看不到的資料，拒答與下一步相同`, async ({ page }) => {
+    const hidden = hiddenPassages(role)[0];
+    test.skip(hidden === undefined, `資料集中沒有 ${role} 看不到的段落`);
+    await openApp(page);
+    await page.route("**/api/ask", async (route) => {
+      const body = route.request().postDataJSON() as { system?: string };
+      if (!(body.system ?? "").startsWith("You answer questions")) return route.fallback();
+      await route.fulfill({ status: 200, headers: { "Content-Type": "text/event-stream" }, body: sseBody(REFUSAL_MARKER) });
+    });
+    await switchIdentity(page, role);
+
+    const answer = page.locator("section.answer");
+    const ask = async (question: string) => {
+      await page.getByPlaceholder(s.questionPlaceholder).fill(question);
+      await page.getByRole("button", { name: s.askButton, exact: true }).click();
+      await expect(answer.getByRole("heading", { name: question })).toBeVisible();
+      await expect(answer.locator(".refusal-next")).toBeVisible();
+      return answer.locator(".answer-text, .refusal-next").allInnerTexts();
+    };
+    // 資料沒寫：資料集中沒有的詞；看不到的資料：該身分看不到的段落開頭（問題本身含有這段文字，所以不做滲漏比對）
+    const notWritten = await ask("E2E qzxv wkjp");
+    const notVisible = await ask(hidden.prefix);
+    expect(notVisible).toEqual(notWritten);
+    expect(notWritten[0]).toBe(s.refusal);
+
+    const canUpload = access.roles.find((r) => r.id === role)!.canUpload;
+    const gotoUpload = answer.getByRole("button", { name: s.refusalGotoUpload });
+    await expect(gotoUpload).toHaveCount(canUpload ? 1 : 0);
+    if (canUpload) {
+      await gotoUpload.click();
+      await expect(tab(page, s.tabUpload)).toHaveAttribute("aria-current", "page");
+    }
+  });
+}

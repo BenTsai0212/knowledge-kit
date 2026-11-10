@@ -1,6 +1,7 @@
 import type { Answer } from "../qa/answer";
 import { splitCitations } from "../qa/citations";
 import { errorMessage, strings } from "../client/i18n";
+import { refusalNextSteps, type RefusalStep } from "./refusal-next-steps";
 
 export interface AnswerState {
   question: string;
@@ -13,13 +14,21 @@ export interface AnswerState {
 interface Props {
   language: string;
   state: AnswerState | null;
+  // 目前身分能上傳、且上傳頁籤看得到時，拒答下方多一項上傳與「到上傳頁」按鈕
+  canUpload: boolean;
   onOpenSource(passageId: string): void;
+  onGotoUpload(): void;
 }
 
-export function AnswerView({ language, state, onOpenSource }: Props) {
+export function AnswerView({ language, state, canUpload, onOpenSource, onGotoUpload }: Props) {
   const s = strings(language);
   if (state === null) return <section className="card muted">{s.emptyAnswer}</section>;
   const { answer } = state;
+  const stepText: Record<RefusalStep, string> = {
+    rephrase: s.refusalNextRephrase,
+    askPerson: s.refusalNextAskPerson,
+    upload: s.refusalNextUpload,
+  };
 
   return (
     <section className="card answer" aria-live="polite">
@@ -30,7 +39,30 @@ export function AnswerView({ language, state, onOpenSource }: Props) {
           <p className="muted">{s.answering}</p>
         </>
       )}
-      {answer?.kind === "refusal" && <p className="answer-text">{answer.text}</p>}
+      {answer?.kind === "refusal" && (
+        <>
+          <p className="answer-text">{answer.text}</p>
+          {/* 下一步只依上傳能力決定，「資料沒寫」與「沒有權限」相同（docs/qa.md「拒答」） */}
+          <div className="refusal-next">
+            <p className="muted">{s.refusalNextTitle}</p>
+            <ul>
+              {refusalNextSteps({ canUpload }).map((step) => (
+                <li key={step}>
+                  {stepText[step]}
+                  {step === "upload" && (
+                    <>
+                      {" "}
+                      <button type="button" onClick={onGotoUpload}>
+                        {s.refusalGotoUpload}
+                      </button>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </>
+      )}
       {answer?.kind === "error" && <p className="error">{errorMessage(language, answer.error)}</p>}
       {answer?.kind === "answer" && (
         <>

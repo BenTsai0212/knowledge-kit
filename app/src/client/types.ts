@@ -478,6 +478,12 @@ export interface UiStrings {
   parenthetical: string;
   // 拒答：「沒有資料」與「沒有權限」相同，不透露是否有看不到的文件
   refusal: string;
+  // 拒答下方的「可以試試」（#192）：所有拒答共用，只依能不能上傳決定是否顯示上傳那一項；不提權限
+  refusalNextTitle: string;
+  refusalNextRephrase: string;
+  refusalNextAskPerson: string;
+  refusalNextUpload: string;
+  refusalGotoUpload: string;
   // 不是拒答、但沒有任何有效引用的回答
   uncited: string;
   // 串流中斷或被截斷，保留已收到的內容

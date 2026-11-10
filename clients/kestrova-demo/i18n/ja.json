@@ -271,6 +271,11 @@
   "progress": "{done}/{total}",
   "parenthetical": "{text}（{note}）",
   "refusal": "この質問に回答できる情報が見つかりませんでした。",
+  "refusalNextTitle": "次のことを試せます",
+  "refusalNextRephrase": "言い方を変えるか、文書に出てきそうな言葉で聞き直してください。",
+  "refusalNextAskPerson": "担当の人や部署に聞いてください。",
+  "refusalNextUpload": "関連する文書があれば、アップロードしてから聞き直してください。",
+  "refusalGotoUpload": "アップロードへ",
   "uncited": "出典の引用なし",
   "incomplete": "回答が途中で終わっています",
   "errors": {
