@@ -1,11 +1,12 @@
 // 冒煙測試（#66）：各頁籤能打開並完成基本操作。/api/ask 一律是假的回應（support/fake-ask.ts）。
 import { expect, test } from "@playwright/test";
-import { openApp, openTab, presetQuestions, s, sourcePanel, switchIdentity, uploadAndReview } from "./support/app";
-import { NO_REVIEWER, NO_REVIEWING_UPLOADER, reviewer, reviewingUploader } from "./support/client";
+import { EVALS_PATH, openApp, openTab, presetQuestions, s, sourcePanel, switchIdentity, uploadAndReview } from "./support/app";
+import { access, language, NO_REVIEWER, NO_REVIEWING_UPLOADER, NO_UPLOADER, reviewer, reviewingUploader, uploader } from "./support/client";
 import { FAKE_ANSWER_LEAD } from "./support/fake-ask";
 
+// 冒煙測試要打開所有頁籤，以開啟評測台的網址打開
 test.beforeEach(async ({ page }) => {
-  await openApp(page);
+  await openApp(page, EVALS_PATH);
 });
 
 test("問答：回答附出處，點出處打開原文", async ({ page }) => {
@@ -58,6 +59,31 @@ test("上傳與待審：上傳 Markdown，萃取的實體出現在待審", async
   test.skip(reviewingUploader === undefined, NO_REVIEWING_UPLOADER);
   await switchIdentity(page, reviewingUploader!.id);
   await uploadAndReview(page);
+});
+
+// 正規表示式中照字面比對的文字
+const literal = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+test("上傳：可見等級預設為各身分能選的最嚴格等級，不指定等級時等級較低的身分不在「哪些身分看得到」", async ({ page }) => {
+  test.skip(uploader === undefined, NO_UPLOADER);
+  const rank = new Map(access.visibilityLevels.map((l) => [l.id, l.rank]));
+  for (const role of access.roles.filter((r) => r.canUpload)) {
+    await switchIdentity(page, role.id);
+    await openTab(page, s.tabUpload);
+    // 預設等級：該身分能選的等級中 rank 最高的（同 rank 時取 access.json 中較前面的）
+    const max = rank.get(role.visibility)!;
+    const level = access.visibilityLevels.find((l) => l.rank === max)!;
+    await expect(page.locator("label").filter({ hasText: new RegExp(`^${literal(s.uploadVisibility)}`) }).locator("select")).toHaveValue(level.id);
+
+    await page.getByLabel(s.uploadFile).setInputFiles("e2e/fixtures/upload-note.md");
+    await page.getByRole("button", { name: s.uploadPreview }).click();
+    const dialog = page.getByRole("dialog", { name: s.uploadConfirmTitle });
+    const audience = dialog.locator("dt").filter({ hasText: new RegExp(`^${literal(s.uploadAudience)}$`) }).locator("xpath=following-sibling::dd");
+    const expected = access.roles.filter((r) => rank.get(r.visibility)! >= max).map((r) => r.label[language]);
+    await expect(audience).toHaveText(expected.join(s.listSeparator));
+    await dialog.getByRole("button", { name: s.uploadBack }).click();
+    await expect(dialog).toBeHidden();
+  }
 });
 
 test("評測台：估算後執行到完成", async ({ page }) => {

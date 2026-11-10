@@ -16,6 +16,17 @@ test("每個身分都只有問答與圖譜兩個頁籤", async ({ page }) => {
   }
 });
 
+test("與 tools=evals 併用：仍只有問答與圖譜", async ({ page }) => {
+  // beforeEach 已輸入邀請碼（存在 sessionStorage），重新載入時不再要求輸入
+  await page.goto("/?mode=presentation&tools=evals");
+  await expect(page.getByRole("button", { name: presetQuestions[0].text, exact: true })).toBeEnabled();
+  const tabs = page.getByRole("navigation", { name: s.views }).getByRole("button");
+  for (const role of access.roles.filter((r) => r.canReview)) {
+    await switchIdentity(page, role.id);
+    await expect(tabs).toHaveText([s.tabQa, s.tabGraph]);
+  }
+});
+
 test("問答：回答附出處，點出處打開原文；圖譜：畫出畫布", async ({ page }) => {
   const question = presetQuestions[0];
   await switchIdentity(page, question.role);

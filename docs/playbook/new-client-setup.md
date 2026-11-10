@@ -137,7 +137,7 @@
 這一步需要真實金鑰，由人在本機執行；agent 準備好指令與記錄表格後停下。
 
 1. `.dev.vars` 的 `DAILY_LIMIT` 調到兩次評測合計需要的次數。每次需要的次數以評測台確認視窗的「最多 N 次呼叫」為準（按「開始評測」時顯示，可以先看次數再取消）；加上設定 B 或模型評分時次數較多。改了 `.dev.vars` 要重新啟動 `npx wrangler dev`。
-2. `KK_CLIENT=<名稱> npm run build`，再 `npx wrangler dev`，以 `canReview` 的角色打開評測台。選用語意向量時，等「模型下載中」的提示結束，確認沒有降級提示（[驗收指標](acceptance-metrics.md)第 6 點）。
+2. `KK_CLIENT=<名稱> npm run build`，再 `npx wrangler dev`，打開 `/?tools=evals`（沒有這個參數時不顯示評測台，[docs/evals.md](../evals.md)「開啟評測台」），以 `canReview` 的角色打開評測台。選用語意向量時，等「模型下載中」的提示結束，確認沒有降級提示（[驗收指標](acceptance-metrics.md)第 6 點）。
 3. 依[驗收指標](acceptance-metrics.md)第 2、3 點跑兩次：第 1 次預設設定＋關鍵重點評分；第 2 次再跑一次，或改用模型評分跑一次，兩次都要達到門檻。要比較檢索設定時，可以在第 2 次加上設定 B 並排（驗收指標「兩組檢索設定的差異」），不是必要。
 4. 記錄四個指標、呼叫次數與費用，以及每題未通過的原因。檢查點 3 通過後，結果回填到客戶的 `evals/README.md`（例如 `clients/kestrova-demo/evals/README.md`「驗收結果」）。
 

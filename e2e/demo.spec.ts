@@ -43,6 +43,15 @@ test("評測台隱藏，待審保留", async ({ page }) => {
   await expect(tab(page, s.tabEvals)).toHaveCount(0);
 });
 
+test("網址帶 tools=evals 時評測台仍然隱藏", async ({ page }) => {
+  test.skip(reviewer === undefined, NO_REVIEWER);
+  await page.goto("/?tools=evals");
+  await start(page);
+  await switchIdentity(page, reviewer!.id);
+  await expect(tab(page, s.tabReview)).toBeVisible();
+  await expect(tab(page, s.tabEvals)).toHaveCount(0);
+});
+
 test("上傳頁提醒內容會傳給模型供應商；上傳後萃取的實體出現在待審", async ({ page }) => {
   test.skip(reviewingUploader === undefined, NO_REVIEWING_UPLOADER);
   await start(page);

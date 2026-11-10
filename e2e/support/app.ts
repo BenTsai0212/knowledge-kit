@@ -19,6 +19,9 @@ export async function blockModelDownload(page: Page): Promise<void> {
   await page.route("https://huggingface.co/**", (route) => route.abort());
 }
 
+// 開啟評測台的網址（#192，docs/evals.md「開啟評測台」）：沒有這個參數時，canReview 的身分也看不到評測台
+export const EVALS_PATH = "/?tools=evals";
+
 // 打開首頁（path 可帶網址參數，例如展示模式的 /?mode=presentation）、輸入邀請碼，等資料庫載入完成（預設問題的按鈕可以按）
 export async function openApp(page: Page, path = "/"): Promise<void> {
   await blockModelDownload(page);

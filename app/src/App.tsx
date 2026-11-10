@@ -26,7 +26,7 @@ import { PREPARING, sameDisplay, type ProviderStatus } from "./ui/retrieval-noti
 import { ReviewPage } from "./ui/ReviewPage";
 import { pendingCount } from "./ui/review-helpers";
 import { createExtractionRunner } from "./ui/extraction-runner";
-import { onlineDemo, presentationMode, visibleViews, type View } from "./ui/online-demo";
+import { evalsMode, onlineDemo, presentationMode, visibleViews, type View } from "./ui/online-demo";
 import { createRequestGate } from "./ui/requests";
 import { SourcePanel } from "./ui/SourcePanel";
 import { strings } from "./client/i18n";
@@ -42,8 +42,8 @@ let sharedProvider: Promise<ActiveProvider> | null = null;
 let onModelProgress: ProgressListener = () => {};
 const activeProvider = () => (sharedProvider ??= createProvider(client.retrieval, PROVIDERS, (progress) => onModelProgress(progress)));
 
-// 頁籤：導覽列與切換身分時的判斷用同一份結果（線上 demo、展示模式都在載入時決定）
-const views = (canReview: boolean) => visibleViews(canReview, onlineDemo, presentationMode);
+// 頁籤：導覽列與切換身分時的判斷用同一份結果（線上 demo、展示模式、評測台的網址參數都在載入時決定）
+const views = (canReview: boolean) => visibleViews(canReview, onlineDemo, presentationMode, evalsMode);
 
 
 export function App() {

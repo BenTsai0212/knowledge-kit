@@ -209,7 +209,7 @@ npm run check:client
 | `visibility` | 是 | 可見等級 `id` | 此角色最高可看到的等級；必須存在於 `visibilityLevels` |
 | `projects` | 是 | 專案 `id` 陣列，可為空、不重複 | 此角色可看到的專案；必須存在於 `projects` |
 | `canUpload` | 是 | boolean | 能否上傳文件。可上傳的可見等級與專案同樣限於此角色看得到的範圍，由資料庫的 RLS 執行（`docs/data-model.md`「寫入規則」） |
-| `canReview` | 是 | boolean | 能否核准或退回上傳文件的萃取結果（待審區）。只能審核自己看得到的文件，由資料庫的 RLS 執行（`docs/data-model.md`「待審與核准」）。也決定是否看得到評測台頁籤（[docs/evals.md](evals.md)「畫面」） |
+| `canReview` | 是 | boolean | 能否核准或退回上傳文件的萃取結果（待審區）。只能審核自己看得到的文件，由資料庫的 RLS 執行（`docs/data-model.md`「待審與核准」）。也決定網址帶 `?tools=evals` 時是否看得到評測台頁籤（[docs/evals.md](evals.md)「開啟評測台」） |
 
 ## `scenarios.json`
 

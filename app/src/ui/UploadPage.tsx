@@ -17,7 +17,7 @@ import { onlineDemo } from "./online-demo";
 import { createRequestGate } from "./requests";
 import { fill, strings } from "../client/i18n";
 import type { UploadFailure } from "../client/types";
-import { audienceRoles, formatBytes, todayIso } from "./upload-helpers";
+import { audienceRoles, defaultVisibility, formatBytes, todayIso } from "./upload-helpers";
 
 interface Props {
   db: Database;
@@ -70,7 +70,7 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
   const [pasted, setPasted] = useState("");
   const [title, setTitle] = useState("");
   const [docLanguage, setDocLanguage] = useState(language);
-  const [visibility, setVisibility] = useState(levels[0]?.id ?? "");
+  const [visibility, setVisibility] = useState(() => defaultVisibility(access, identity));
   const [project, setProject] = useState("");
   const [date, setDate] = useState(todayIso);
   const [parsing, setParsing] = useState(false);
@@ -118,7 +118,7 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
     setPasted("");
     setTitle("");
     setDocLanguage(language);
-    setVisibility(levels[0]?.id ?? "");
+    setVisibility(defaultVisibility(access, identity));
     setProject("");
     setDate(todayIso());
   }
