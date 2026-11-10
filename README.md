@@ -17,7 +17,7 @@ The demo is a prototype for demonstration, not a production system.
 - **Upload and extraction**: uploaded documents are split into passages, and extracted entities and relations are written only after review ([docs/upload.md](docs/upload.md), [docs/extraction.md](docs/extraction.md)).
 - **Conflicting information**: detects when an uploaded document says something different from existing passages ([docs/conflicts.md](docs/conflicts.md)).
 - **Evaluation page**: runs a question bank and scores citations, key points, refusals, and leaks ([docs/evals.md](docs/evals.md)).
-- **Multilingual interface and retrieval**: interface text comes from translation files, and retrieval handles each language's script ([docs/client-config.md](docs/client-config.md), [docs/retrieval.md](docs/retrieval.md)).
+- **Multilingual interface and retrieval**: interface text comes from translation files, and retrieval handles each language's script ([docs/client-config.md](docs/client-config.md), [docs/retrieval.md](docs/retrieval.md)). Optionally, in-browser semantic vectors (`multilingual-e5-small`) enable cross-language retrieval: ask in one language and retrieve documents written in another ([docs/retrieval.md](docs/retrieval.md#語意向量multilingual-e5-small), section "語意向量").
 - **Theme colors and dark mode**: colors come from the settings, with a dark palette for `prefers-color-scheme: dark` ([docs/client-config.md](docs/client-config.md)).
 
 An answer to a preset question, with its citation and the source passage opened:
@@ -32,6 +32,10 @@ The first screen of the timeline, seen as a manager:
 
 ![Timeline listing visible documents and passages by date, as a manager](docs/images/timeline-en.png)
 
+Cross-language retrieval in the fictional multilingual client `clients/kestrova-demo/`, seen as an employee: a question asked in Japanese is answered in Japanese, citing an employee handbook passage written in Traditional Chinese:
+
+![Japanese interface as an employee: the question 病気休暇は年に何日まで取れますか？ answered in Japanese with a citation, and the source passage panel showing the Traditional Chinese employee handbook passage](docs/images/cross-language-ja.png)
+
 ## Online demo
 
 **Try it:** <https://knowledge-kit-demo.bentsai0212.workers.dev>
@@ -41,6 +45,7 @@ The first screen of the timeline, seen as a manager:
 - Questions and uploaded content are sent to the model provider. **Don't enter or upload personal or confidential information.**
 - Uploaded documents exist only in your browser and disappear when you reload the page.
 - **Presentation mode**: add `?mode=presentation` to the URL to show only Q&A and the graph, which suits showing the demo to others ([docs/qa.md](docs/qa.md#展示模式)).
+- The online demo uses the reference scenario with `keyword-hash` retrieval and downloads no model. To try cross-language retrieval, run `clients/kestrova-demo/` locally with `KK_CLIENT=kestrova-demo` ([clients/README.md](clients/README.md)).
 - To request your own access code, open an Issue in this repo with the "Access code request" template. The code is never posted in the public Issue.
 
 ## Quick start
@@ -116,7 +121,7 @@ Most documents in `docs/`, as well as `AGENTS.md` and the code comments, are in 
 ## Status and roadmap
 
 - **v1**: the features above (phase 1 of [RFC 0001](docs/rfcs/0001-project-charter.md)) and the online demo. See [CHANGELOG.md](CHANGELOG.md).
-- **v2 (planned)**: cross-language retrieval, tested with a fictional multilingual scenario ([RFC 0002](docs/rfcs/0002-public-release.md)).
+- **v2**: cross-language retrieval with optional in-browser semantic vectors (`multilingual-e5-small`), tested with the fictional multilingual client `clients/kestrova-demo/` (Traditional Chinese, English, and Japanese, each fact written in only one language). Its 18 cross-language questions across six directions scored 18/18 for both citations and answers ([evaluation results](clients/kestrova-demo/evals/README.md#驗收結果), [RFC 0002](docs/rfcs/0002-public-release.md)).
 
 ## License
 

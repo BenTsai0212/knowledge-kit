@@ -17,7 +17,7 @@ demo 是展示用的原型，不是正式系統。
 - **上傳與萃取**：上傳的文件切成段落，萃取出的實體與關係經過審核才寫入（[docs/upload.md](docs/upload.md)、[docs/extraction.md](docs/extraction.md)）。
 - **說法不同的偵測**：上傳的文件與既有段落說法不同時標示出來（[docs/conflicts.md](docs/conflicts.md)）。
 - **評測台**：執行題庫，為引用、關鍵重點、拒答與滲漏評分（[docs/evals.md](docs/evals.md)）。
-- **多語言介面與檢索**：介面文字來自翻譯檔，檢索依各語言的文字處理（[docs/client-config.md](docs/client-config.md)、[docs/retrieval.md](docs/retrieval.md)）。
+- **多語言介面與檢索**：介面文字來自翻譯檔，檢索依各語言的文字處理（[docs/client-config.md](docs/client-config.md)、[docs/retrieval.md](docs/retrieval.md)）。可選用瀏覽器內的語意向量（`multilingual-e5-small`）跨語言檢索：以一種語言發問，檢索另一種語言的文件（[docs/retrieval.md](docs/retrieval.md#語意向量multilingual-e5-small)「語意向量」）。
 - **主題色與深色模式**：顏色來自設定，`prefers-color-scheme: dark` 時改用深色配色（[docs/client-config.md](docs/client-config.md)）。
 
 預設問題的回答，附引用並打開原文面板：
@@ -32,6 +32,10 @@ demo 是展示用的原型，不是正式系統。
 
 ![依日期列出看得到的文件與段落的時間軸（主管身分）](docs/images/timeline-zh-TW.png)
 
+虛構的多語言客戶 `clients/kestrova-demo/` 的跨語言檢索（一般員工身分）：以日文發問，以日文回答，引用繁中的員工手冊段落：
+
+![日文介面、一般員工身分，以日文問「病気休暇は年に何日まで取れますか？」，日文回答附引用，原文面板顯示繁中的員工手冊段落](docs/images/cross-language-ja.png)
+
 ## 線上 demo
 
 **試用：**<https://knowledge-kit-demo.bentsai0212.workers.dev>
@@ -41,6 +45,7 @@ demo 是展示用的原型，不是正式系統。
 - 問題與上傳的內容會傳給模型供應商。**不要輸入或上傳個人或機密資料。**
 - 上傳的文件只存在你的瀏覽器，重新整理即消失。
 - **展示模式**：網址加上 `?mode=presentation` 時只顯示問答與圖譜，適合對外展示（[docs/qa.md](docs/qa.md#展示模式)）。
+- 線上 demo 使用參考情境與 `keyword-hash` 檢索，不下載模型。跨語言檢索可在本機以 `KK_CLIENT=kestrova-demo` 啟動 `clients/kestrova-demo/` 試用（[clients/README.md](clients/README.md)）。
 - 想要自己的邀請碼時，以本 repo 的「索取邀請碼」Issue 範本提出。邀請碼不會貼在公開的 Issue。
 
 ## 本機快速開始
@@ -116,7 +121,7 @@ npx wrangler dev
 ## 狀態與規劃
 
 - **v1**：上面的功能（[RFC 0001](docs/rfcs/0001-project-charter.md) 第 1 階段）與線上 demo。見[變更紀錄](CHANGELOG.md)。
-- **v2（規劃中）**：跨語言檢索，以虛構的多語言情境實測（[RFC 0002](docs/rfcs/0002-public-release.md)）。
+- **v2**：跨語言檢索，可選用瀏覽器內的語意向量（`multilingual-e5-small`），以虛構的多語言客戶 `clients/kestrova-demo/`（繁中、英文、日文，每個事實只寫在一種語言）實測：跨語言題六個方向共 18 題，引用與答案都 18/18（[評測結果](clients/kestrova-demo/evals/README.md#驗收結果)、[RFC 0002](docs/rfcs/0002-public-release.md)）。
 
 ## 授權
 
