@@ -4,33 +4,42 @@ import type { Database } from "../db/database";
 import { ALL, expand, keepVisible as keepVisiblePath, only, selectedOf, type Expansion } from "../graph/expansion";
 import { shortestPath } from "../graph/path";
 import { readGraph, type Graph } from "../graph/read";
+import { excludedEntities, topConnected } from "../graph/search";
 import { EntityIcon } from "./EntityIcon";
 import { EntityPanel } from "./EntityPanel";
+import { EntitySearch } from "./EntitySearch";
 import { entityName } from "./graph-labels";
 import { GraphView } from "./GraphView";
 import { PathPanel } from "./PathPanel";
 import { createRequestGate } from "./requests";
-import { strings } from "../client/i18n";
+import { fill, strings } from "../client/i18n";
 
 interface Props {
   db: Database;
   identity: string;
   language: string;
   onOpenSource(passageId: string): void;
+  // 在問答中問（#199）：把問句填進問答頁的輸入框並切到問答頁，不送出
+  onAskAbout(question: string): void;
   // 從問答頁的「在圖譜中查看」打開時，從該實體開始展開（#195、#199）；看不到時顯示全部
   initialSelected?: string | null;
 }
+
+const { entityTypes } = clientConfig.knowledgeModel;
 
 // 新的圖譜中已看不到的實體一律清除
 const keepVisible = (graph: Graph) => (id: string | null) => (id !== null && graph.entities.some((e) => e.id === id) ? id : null);
 
 // 圖譜頁：切換身分或語言時重新讀取；之後才回來的舊結果忽略；已展開的路徑截到第一個看不到的實體之前，路徑的兩端已看不到時清除。
-// 逐步展開（#199）：點節點從它展開，已展開的路徑累積；「回到全部」顯示全貌
-export function GraphPage({ db, identity, language, onOpenSource, initialSelected = null }: Props) {
+// 逐步展開（#199）：點節點從它展開，已展開的路徑累積；「回到全部」顯示全貌。
+// 中間是搜尋框、類型篩選（圖例）與圖，右側是實體面板（沒有選取時列出關聯最多的實體當起點）與多跳路徑
+export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, initialSelected = null }: Props) {
   const s = strings(language);
   const [graph, setGraph] = useState<Graph | null>(null);
   const [expansion, setExpansion] = useState<Expansion>(initialSelected === null ? ALL : only(initialSelected));
   const [ends, setEnds] = useState<{ from: string | null; to: string | null }>({ from: null, to: null });
+  // 類型篩選：勾選的類型（預設全選）
+  const [types, setTypes] = useState<ReadonlySet<string>>(() => new Set(entityTypes.map((t) => t.id)));
   const reads = useRef(createRequestGate());
 
   useEffect(() => {
@@ -46,33 +55,55 @@ export function GraphPage({ db, identity, language, onOpenSource, initialSelecte
     return () => reads.current.cancel();
   }, [db, identity, language]);
 
+  const selected = selectedOf(expansion);
+  // 多跳路徑的起點預設為目前選取的實體
+  const from = ends.from ?? selected;
   // 路徑由目前的可見圖算出，切換身分後一律重新計算
   const path = useMemo(
-    () => (graph === null || ends.from === null || ends.to === null ? null : shortestPath(graph, ends.from, ends.to)),
-    [graph, ends],
+    () => (graph === null || from === null || ends.to === null ? null : shortestPath(graph, from, ends.to)),
+    [graph, from, ends.to],
   );
+  // 只有 knowledge-model.json 中的類型可以篩選；其他類型（例如之後萃取的）一律保留
+  const filter = useMemo(() => {
+    const unknown = (graph?.entities ?? []).map((e) => e.type).filter((t) => !entityTypes.some((x) => x.id === t));
+    return new Set([...types, ...unknown]);
+  }, [graph, types]);
+  const excluded = useMemo(() => (graph === null ? new Set<string>() : excludedEntities(graph, filter)), [graph, filter]);
 
   if (graph === null) return <p className="card muted">{s.loading}</p>;
   if (graph.entities.length === 0) return <p className="card muted">{s.graphEmpty}</p>;
 
-  const selected = selectedOf(expansion);
   const onExpand = (id: string) => setExpansion((current) => expand(graph, current, id));
   const nameOf = (id: string) => {
     const entity = graph.entities.find((e) => e.id === id);
     return entity === undefined ? id : entityName(entity, language);
   };
+  const toggleType = (id: string) =>
+    setTypes((current) => {
+      const next = new Set(current);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+  const top = topConnected(graph, language, filter);
 
   return (
     <div className="graph-page">
-      <section className="card">
-        <ul className="legend" aria-label={s.legend}>
-          {clientConfig.knowledgeModel.entityTypes.map((t) => (
-            <li key={t.id}>
-              <EntityIcon icon={t.icon} color={t.color} />
-              {t.label[language]}
-            </li>
-          ))}
-        </ul>
+      <section className="card graph-main">
+        <div className="graph-tools">
+          <EntitySearch graph={graph} language={language} label={s.graphSearch} types={filter} onPick={(id) => setExpansion(only(id))} />
+          {/* 圖例兼類型篩選：沒勾的類型變灰，並排除在搜尋與起點清單外 */}
+          <ul className="legend" aria-label={s.legend}>
+            {entityTypes.map((t) => (
+              <li key={t.id}>
+                <label>
+                  <input type="checkbox" checked={types.has(t.id)} onChange={() => toggleType(t.id)} />
+                  <EntityIcon icon={t.icon} color={t.color} />
+                  {t.label[language]}
+                </label>
+              </li>
+            ))}
+          </ul>
+        </div>
         {/* 這一列沒有展開時也保留高度：出現或消失時畫布不移動 */}
         <div className="graph-trail">
           {expansion.length > 0 && (
@@ -102,29 +133,50 @@ export function GraphPage({ db, identity, language, onOpenSource, initialSelecte
             </nav>
           )}
         </div>
-        <GraphView graph={graph} language={language} selected={selected} path={path} expansion={expansion} onSelect={onExpand} />
+        <GraphView graph={graph} language={language} selected={selected} path={path} expansion={expansion} excluded={excluded} onSelect={onExpand} />
       </section>
-      <PathPanel
-        graph={graph}
-        language={language}
-        from={ends.from}
-        to={ends.to}
-        path={path}
-        onChange={(from, to) => setEnds({ from, to })}
-        onOpenSource={onOpenSource}
-      />
-      {selected === null ? (
-        <p className="card muted">{s.selectEntity}</p>
-      ) : (
-        <EntityPanel
+      <div className="graph-side">
+        {selected === null ? (
+          <section className="card graph-start" aria-label={s.graphTopConnected}>
+            <p className="muted">{s.selectEntity}</p>
+            <h2>{s.graphTopConnected}</h2>
+            <ol>
+              {top.map(({ entity, count }) => {
+                const type = entityTypes.find((t) => t.id === entity.type);
+                return (
+                  <li key={entity.id}>
+                    <button type="button" className="link" onClick={() => setExpansion(only(entity.id))}>
+                      {type !== undefined && <EntityIcon icon={type.icon} color={type.color} />}
+                      {entityName(entity, language)}
+                    </button>{" "}
+                    <span className="muted">{fill(s.graphRelationCount, { count })}</span>
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
+        ) : (
+          <EntityPanel
+            graph={graph}
+            entityId={selected}
+            language={language}
+            onSelect={onExpand}
+            onShowOnly={(id) => setExpansion(only(id))}
+            onAskAbout={(id) => onAskAbout(fill(s.askAboutEntity, { name: nameOf(id) }))}
+            onOpenSource={onOpenSource}
+          />
+        )}
+        <PathPanel
           graph={graph}
-          entityId={selected}
           language={language}
-          onSelect={onExpand}
-          onShowOnly={(id) => setExpansion(only(id))}
+          from={from}
+          to={ends.to}
+          path={path}
+          // 起點沒改時保留「預設為選取的實體」，之後選取別的實體時起點跟著改
+          onChange={(nextFrom, to) => setEnds({ from: nextFrom === from ? ends.from : nextFrom, to })}
           onOpenSource={onOpenSource}
         />
-      )}
+      </div>
     </div>
   );
 }

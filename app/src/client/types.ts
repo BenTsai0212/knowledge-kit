@@ -307,6 +307,15 @@ export interface UiStrings {
   graphExpanded: string;
   graphShowAll: string;
   graphShowOnly: string;
+  // 找起點與右側面板（#199）：搜尋、關聯最多、關聯數、文件數、出處數（{count}）、在問答中問與它填進輸入框的問句（{name}）
+  graphSearch: string;
+  graphSearchNone: string;
+  graphTopConnected: string;
+  graphRelationCount: string;
+  graphDocumentCount: string;
+  graphSourceCount: string;
+  graphAskAbout: string;
+  askAboutEntity: string;
   relatedEntities: string;
   entitySources: string;
   tabTimeline: string;

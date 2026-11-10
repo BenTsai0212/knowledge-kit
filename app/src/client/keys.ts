@@ -200,6 +200,8 @@ const uiStrings = {
   openSource: "required", sourceTitle: "required", closeSource: "required", views: "required", tabQa: "required",
   tabGraph: "required", legend: "required", graphEmpty: "required", selectEntity: "required",
   graphExpanded: "required", graphShowAll: "required", graphShowOnly: "required",
+  graphSearch: "required", graphSearchNone: "required", graphTopConnected: "required", graphRelationCount: "required",
+  graphDocumentCount: "required", graphSourceCount: "required", graphAskAbout: "required", askAboutEntity: "required",
   relatedEntities: "required", entitySources: "required", tabTimeline: "required", pathTitle: "required",
   pathFrom: "required", pathTo: "required", pathChoose: "required", pathNotFound: "required",
   timelineFilter: "required", timelineAll: "required", timelineEmpty: "required", undated: "required",

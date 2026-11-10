@@ -1,6 +1,7 @@
 import type { PathStep } from "../graph/path";
 import type { Graph } from "../graph/read";
-import { entityName, entityOptionLabel, relationTypeLabel, sourcesForLanguage } from "./graph-labels";
+import { EntitySearch } from "./EntitySearch";
+import { entityName, relationTypeLabel, sourcesForLanguage } from "./graph-labels";
 import { strings } from "../client/i18n";
 
 interface Props {
@@ -14,34 +15,21 @@ interface Props {
   onOpenSource(passageId: string): void;
 }
 
-// 多跳路徑：選兩個實體，逐步列出路徑上的關係與出處；找不到時顯示固定文字，不透露原因
+// 多跳路徑（#199：右側面板下方的可收合區塊，兩端用與搜尋框相同的元件）：逐步列出路徑上的關係與出處；找不到時顯示固定文字，不透露原因
 export function PathPanel({ graph, language, from, to, path, onChange, onOpenSource }: Props) {
   const s = strings(language);
   const byId = new Map(graph.entities.map((e) => [e.id, e]));
   const relations = new Map(graph.relations.map((r) => [r.id, r]));
-  const options = graph.entities
-    .map((e) => ({ id: e.id, label: entityOptionLabel(graph, e, language) }))
-    .sort((a, b) => a.label.localeCompare(b.label, language));
-  const select = (value: string | null, onSelect: (id: string | null) => void, label: string) => (
-    <label>
-      {label}
-      <select value={value ?? ""} onChange={(e) => onSelect(e.target.value === "" ? null : e.target.value)}>
-        <option value="">—</option>
-        {options.map((o) => (
-          <option key={o.id} value={o.id}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </label>
+  const end = (value: string | null, onSelect: (id: string | null) => void, label: string) => (
+    <EntitySearch graph={graph} language={language} label={label} value={value} onPick={onSelect} onClear={() => onSelect(null)} />
   );
 
   return (
-    <section className="card path">
-      <h2>{s.pathTitle}</h2>
+    <details className="card path">
+      <summary>{s.pathTitle}</summary>
       <div className="path-select">
-        {select(from, (id) => onChange(id, to), s.pathFrom)}
-        {select(to, (id) => onChange(from, id), s.pathTo)}
+        {end(from, (id) => onChange(id, to), s.pathFrom)}
+        {end(to, (id) => onChange(from, id), s.pathTo)}
       </div>
       {from === null || to === null ? (
         <p className="muted">{s.pathChoose}</p>
@@ -78,6 +66,6 @@ export function PathPanel({ graph, language, from, to, path, onChange, onOpenSou
           })}
         </ol>
       )}
-    </section>
+    </details>
   );
 }
