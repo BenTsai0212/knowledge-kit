@@ -1,6 +1,6 @@
 // 主畫面：PGlite 在瀏覽器中載入並匯入資料集；左側導覽切換身分、語言與頁籤；問答（需要邀請碼）、圖譜、時間軸、上傳（後三者不呼叫模型）四個頁籤，
 // canReview 的身分另有待審與評測台（需要邀請碼；線上 demo 不顯示評測台）；展示模式（?mode=presentation）只顯示問答與圖譜；引用跳回原文。
-// 問答頁是左導覽、中間對話、右側原文的三欄（#195，docs/qa.md「畫面」）。
+// 問答頁是左導覽、中間對話、右側面板（原文或回答提到的實體）的三欄（#195，docs/qa.md「畫面」）。
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clientConfig } from "./client/load";
 import { planConflicts, runConflicts, shouldDetectConflicts, type ConflictState } from "./conflicts/run";
@@ -11,6 +11,7 @@ import { openDatabase, type Database } from "./db/database";
 import type { EvalRun } from "./evals/run";
 import { planExtraction, runExtraction, type ExtractionState } from "./extraction/run";
 import { readReview } from "./extraction/store";
+import { readGraph, type Graph } from "./graph/read";
 import { ask } from "./qa/answer";
 import { apiTransport } from "./qa/api";
 import { createProvider, preparesModel, PROVIDERS, type ActiveProvider, type ProgressListener } from "./retrieval/providers";
@@ -20,6 +21,8 @@ import { clearAccessCode, loadAccessCode, saveAccessCode } from "./ui/access-cod
 import { AccessCodeForm } from "./ui/AccessCodeForm";
 import { EvalPage } from "./ui/EvalPage";
 import { GraphPage } from "./ui/GraphPage";
+import { mentionedEntities } from "./ui/mentions";
+import { MentionPanel } from "./ui/MentionPanel";
 import { Conversation, type Turn } from "./ui/Conversation";
 import { QuestionPanel } from "./ui/QuestionPanel";
 import { RetrievalNotice } from "./ui/RetrievalNotice";
@@ -59,6 +62,11 @@ export function App() {
   const [turns, setTurns] = useState<readonly Turn[]>([]);
   const nextTurn = useRef(0);
   const [source, setSource] = useState<SourceDocument | null>(null);
+  // 右側面板一次顯示原文或實體其中一個；實體面板只用該題送出當下的圖譜（#195）
+  const [entity, setEntity] = useState<{ graph: Graph; id: string } | null>(null);
+  // 輸入框的文字（「接著問」填進來），與「在圖譜中查看」要選取的實體
+  const [draft, setDraft] = useState("");
+  const [graphFocus, setGraphFocus] = useState<string | null>(null);
   // 本次工作階段上傳的文件（時間軸加上「上傳」標籤），以及從上傳頁跳到時間軸時要捲動到的文件（#42）
   const [uploaded, setUploaded] = useState<ReadonlySet<string>>(new Set());
   const [focusDocument, setFocusDocument] = useState<string | null>(null);
@@ -139,12 +147,15 @@ export function App() {
 
   const retriever = useMemo(() => (db === null ? null : openRetriever(db, client.retrieval, activeProvider())), [db]);
 
-  // 切換身分或語言：清掉對話與原文，之後才到的結果一律忽略
+  // 切換身分或語言：清掉對話、右側面板與輸入框（可能有「接著問」填入的實體名稱），之後才到的結果一律忽略
   function discard() {
     questions.current.cancel();
     sources.current.cancel();
     setTurns([]);
     setSource(null);
+    setEntity(null);
+    setDraft("");
+    setGraphFocus(null);
   }
 
   // 邀請碼被拒：清除，回到輸入畫面（#26 決定 3）
@@ -174,7 +185,11 @@ export function App() {
       setTurns((all) => all.filter((t) => t.id !== id));
       return;
     }
-    update({ id, question, streaming: "", answer: result });
+    // 回答提到的實體：以送出當下的身分讀圖譜（RLS 篩選），讀完才結束這一題，期間仍停用送出；讀取失敗時不列
+    const graph = result.kind === "answer" && !result.uncited && db !== null ? await readGraph(db, identity).catch(() => null) : null;
+    if (!ticket.isCurrent()) return;
+    const mentions = graph === null ? undefined : { graph, entities: mentionedEntities(graph, result) };
+    update({ id, question, streaming: "", answer: result, mentions });
   }
 
   // 以上傳時記錄的身分寫入待審；邀請碼用開始（或重試）當下的碼，沒有碼時記為失敗，輸入後可以重試
@@ -229,7 +244,13 @@ export function App() {
     if (db === null) return;
     const ticket = sources.current.begin();
     const document = await readSource(db, identity, passageId);
-    if (ticket.isCurrent()) setSource(document);
+    if (ticket.isCurrent()) (setEntity(null), setSource(document));
+  }
+
+  function onOpenEntity(graph: Graph, id: string) {
+    sources.current.cancel();
+    setSource(null);
+    setEntity({ graph, id });
   }
 
   return (
@@ -256,7 +277,7 @@ export function App() {
         }
         views={views(canReview)}
         view={view}
-        onView={setView}
+        onView={(next) => (setGraphFocus(null), setView(next))}
         tabExtra={{ review: pending?.identity === identity && <span className="tab-count">{pending.count}</span> }}
         questions={turns}
         onQuestion={(id) => void document.getElementById(id)?.scrollIntoView({ block: "start" })}
@@ -270,7 +291,7 @@ export function App() {
           {db === null ? (
             <p className="card muted">{s.loading}</p>
           ) : view === "graph" ? (
-            <GraphPage db={db} identity={identity} language={language} onOpenSource={onOpenSource} />
+            <GraphPage db={db} identity={identity} language={language} onOpenSource={onOpenSource} initialSelected={graphFocus} />
           ) : view === "evals" ? (
             <EvalPage
               language={language}
@@ -357,8 +378,8 @@ export function App() {
           />
         </main>
       ) : (
-        // 中間是對話與固定在下方的輸入區，右側是原文面板（關閉時中間欄變寬）
-        <main className={source === null ? "qa" : "qa with-panel"}>
+        // 中間是對話與固定在下方的輸入區，右側是原文或實體面板（關閉時中間欄變寬）
+        <main className={source === null && entity === null ? "qa" : "qa with-panel"}>
           <div className="qa-center">
             {db === null && <p className="card muted">{s.loading}</p>}
             {/* 線上 demo：提問會傳給模型供應商（#100 計畫第 8 項） */}
@@ -370,10 +391,22 @@ export function App() {
               canUpload={canUpload}
               onOpenSource={onOpenSource}
               onGotoUpload={() => setView("upload")}
+              onOpenEntity={onOpenEntity}
             />
-            <QuestionPanel language={language} disabled={retriever === null || answering} onAsk={onAsk} />
+            <QuestionPanel language={language} disabled={retriever === null || answering} text={draft} onText={setDraft} onAsk={onAsk} />
           </div>
           {source !== null && <SourcePanel language={language} source={source} onOpenSource={onOpenSource} onClose={() => (sources.current.cancel(), setSource(null))} />}
+          {entity !== null && (
+            <MentionPanel
+              graph={entity.graph}
+              entityId={entity.id}
+              language={language}
+              onSelect={(id) => setEntity({ graph: entity.graph, id })}
+              onFollowUp={setDraft}
+              onViewInGraph={(id) => (setGraphFocus(id), setView("graph"))}
+              onClose={() => setEntity(null)}
+            />
+          )}
         </main>
       )}
     </div>

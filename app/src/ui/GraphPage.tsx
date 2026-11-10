@@ -14,16 +14,18 @@ interface Props {
   identity: string;
   language: string;
   onOpenSource(passageId: string): void;
+  // 從問答頁的「在圖譜中查看」打開時選取的實體（#195）；看不到時不選取
+  initialSelected?: string | null;
 }
 
 // 新的圖譜中已看不到的實體一律清除
 const keepVisible = (graph: Graph) => (id: string | null) => (id !== null && graph.entities.some((e) => e.id === id) ? id : null);
 
 // 圖譜頁：切換身分或語言時重新讀取；之後才回來的舊結果忽略；選取的節點與路徑的兩端已看不到時清除
-export function GraphPage({ db, identity, language, onOpenSource }: Props) {
+export function GraphPage({ db, identity, language, onOpenSource, initialSelected = null }: Props) {
   const s = strings(language);
   const [graph, setGraph] = useState<Graph | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(initialSelected);
   const [ends, setEnds] = useState<{ from: string | null; to: string | null }>({ from: null, to: null });
   const reads = useRef(createRequestGate());
 

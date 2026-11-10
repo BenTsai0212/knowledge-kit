@@ -15,6 +15,8 @@ interface Props {
   // 標示在圖上的路徑（多跳路徑）
   path: PathStep[] | null;
   onSelect(entityId: string | null): void;
+  // 右側實體面板的小型鄰近圖（#195）：高度較低
+  compact?: boolean;
 }
 
 const { entityTypes, relationTypes } = clientConfig.knowledgeModel;
@@ -53,7 +55,7 @@ function markPath(cy: Core, path: PathStep[] | null) {
   }
 }
 
-export function GraphView({ graph, language, selected, path, onSelect }: Props) {
+export function GraphView({ graph, language, selected, path, onSelect, compact = false }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const cy = useRef<Core | null>(null);
   // tap 事件在 cytoscape 實例建立時註冊，以 ref 取得最新的 onSelect
@@ -100,5 +102,5 @@ export function GraphView({ graph, language, selected, path, onSelect }: Props) 
     if (cy.current !== null) markPath(cy.current, path);
   }, [path]);
 
-  return <div ref={container} className="graph-canvas" />;
+  return <div ref={container} className={compact ? "graph-canvas compact" : "graph-canvas"} />;
 }
