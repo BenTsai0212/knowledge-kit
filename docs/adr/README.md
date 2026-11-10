@@ -45,3 +45,4 @@ ADR（Architecture Decision Record）記錄「決定了什麼、為什麼、放�
 | [0004](0004-e2e-and-secret-scanning.md) | Playwright（`@playwright/test`，只用 Chromium）與 gitleaks（固定版本＋SHA-256）的版本與來源 | Accepted |
 | [0005](0005-online-demo.md) | 線上 demo 的部署方式（同一個 Worker、`env.demo`、由人手動部署）與費用上限 | Accepted |
 | [0006](0006-semantic-retrieval.md) | 語意向量檢索（瀏覽器內的 `multilingual-e5-small`，可選；`keyword-hash` 保留為預設） | Accepted |
+| [0007](0007-retraction-and-answer-reports.md) | 使用中修正（撤回待審項目的決定、只能新增的撤回紀錄；回答錯誤回報以送出的段落判斷可見範圍） | Proposed |
