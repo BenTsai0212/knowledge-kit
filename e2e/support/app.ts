@@ -35,11 +35,16 @@ export async function switchIdentity(page: Page, id: RoleId): Promise<void> {
   await page.getByRole("banner").getByLabel(s.identity).selectOption({ label: role.label[language] });
 }
 
+// 以 label 開頭比對的正規表示式
+const startsWith = (label: string) => new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
+
 // 頁籤的按鈕；待審頁籤的名稱後面接著筆數，所以比對開頭
 export function tab(page: Page, label: string): Locator {
-  const name = new RegExp(`^${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
-  return page.getByRole("navigation", { name: s.views }).getByRole("button", { name });
+  return page.getByRole("navigation", { name: s.views }).getByRole("button", { name: startsWith(label) });
 }
+
+// 包在 <label> 裡的欄位：無障礙名稱含有欄位目前的值（例如下拉選單選中的項目），所以以 label 文字的開頭找
+const field = (page: Page, label: string, tag: "input" | "select") => page.locator("label").filter({ hasText: startsWith(label) }).locator(tag);
 
 // 切換頁籤
 export async function openTab(page: Page, label: string): Promise<void> {
@@ -57,10 +62,10 @@ export async function uploadAndReview(
   const { file = "upload-note.md", title, visibility, expected = FAKE_ENTITY_NAME } = options;
   await openTab(page, s.tabUpload);
   await page.getByLabel(s.uploadFile).setInputFiles(`e2e/fixtures/${file}`);
-  if (title !== undefined) await page.getByLabel(s.uploadDocTitle, { exact: true }).fill(title);
+  if (title !== undefined) await field(page, s.uploadDocTitle, "input").fill(title);
   if (visibility !== undefined) {
     const level = access.visibilityLevels.find((l) => l.id === visibility)!;
-    await page.getByLabel(s.uploadVisibility, { exact: true }).selectOption({ label: level.label[language] });
+    await field(page, s.uploadVisibility, "select").selectOption({ label: level.label[language] });
   }
   await page.getByRole("button", { name: s.uploadPreview }).click();
 
