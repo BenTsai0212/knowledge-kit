@@ -68,3 +68,11 @@ export function entityNames(role: RoleId, language: string): { visible: string[]
   const connected = entities.filter((e) => related.has(e.id) && count(displayName(e, language)) === 1).map((e) => displayName(e, language));
   return { visible, hidden, connected };
 }
+
+// 同名的實體（#198）：該身分看得到、顯示名稱相同的實體 id，每組至少兩個（參考情境是兩位林志明）
+export function sameNameEntities(role: RoleId, language: string): { name: string; ids: string[] }[] {
+  const seen = new Set(expectedVisible(access, sample, role).entities);
+  const groups = new Map<string, string[]>();
+  for (const e of entities.filter((x) => seen.has(x.id))) groups.set(displayName(e, language), [...(groups.get(displayName(e, language)) ?? []), e.id]);
+  return [...groups].filter(([, ids]) => ids.length > 1).map(([name, ids]) => ({ name, ids }));
+}

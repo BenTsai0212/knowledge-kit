@@ -135,4 +135,4 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
 - **路徑不考慮關係的方向與類型**：例如「A 負責 B」與「B 負責 A」視為相同的連結。
 - **時間軸以文件日期為準**：段落沒有自己的日期；文件沒有日期時排在最後。
 - **實體沒有日期**：無法呈現「某人何時加入專案」這類實體層級的時間軸。
-- **同名實體**：兩位林志明的顯示名稱相同，畫面以所屬部門區分；合併策略見 `knowledge-model.json` 的 `mergeStrategy`（萃取與合併在 Epic 第 9 項）。
+- **同名實體**：兩位林志明的顯示名稱相同，畫面以第一個相關實體區分（`entityOptionLabel()`，#198）：搜尋結果、節點標籤（`ui/graph-labels.ts` 的 `nodeLabels()`）、實體面板的標題與關係清單、已展開的路徑與「關聯最多」都相同，不同名時只顯示名稱；合併策略見 `knowledge-model.json` 的 `mergeStrategy`（萃取與合併在 Epic 第 9 項）。

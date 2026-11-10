@@ -66,6 +66,23 @@ describe("主題的結構", () => {
     for (const name of Object.keys(clientConfig.theme.colors)) expect(defined.has(`--color-${name}`)).toBe(true);
   });
 
+  // 「回答提到」與「接著問」（#198）：文字與底色只用 check:client 檢查過對比的組合
+  // （text 在 surface 上；選取時 text 在主色 12% 的淡色底上，外框是 primary）
+  it("淺色外框按鈕只用檢查過對比的顏色組合", () => {
+    const rule = (selector: string) => {
+      const block = cssText.match(new RegExp(`(?:^|\\n)${selector.replace(/[.[\]"=]/g, "\\$&")}\\s*\\{([^}]*)\\}`))?.[1];
+      expect(block, selector).toBeDefined();
+      return Object.fromEntries(declarations(`${block};`));
+    };
+    expect(rule("button.chip")).toMatchObject({ color: "var(--color-text)", background: "var(--color-surface)" });
+    expect(rule('button.chip[aria-pressed="true"]')).toMatchObject({
+      border: "2px solid var(--color-primary)",
+      background: "color-mix(in srgb, var(--color-primary) 12%, var(--color-surface))",
+    });
+    // 色點的顏色來自 knowledge-model.json 的 color（與 surface 的對比 ≥ 3:1 由 check:client 檢查）
+    expect(rule(".type-dot")).toMatchObject({ background: "var(--type-color)" });
+  });
+
   it("元件與模組沒有寫死的顏色值或色名", () => {
     expect(sources.map(([p]) => p)).toContain("../ui/GraphView.tsx");
     const found = sources

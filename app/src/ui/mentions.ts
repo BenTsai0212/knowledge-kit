@@ -5,7 +5,7 @@ import { clientConfig } from "../client/load";
 import type { RelationType } from "../client/types";
 import type { Graph, GraphEntity } from "../graph/read";
 import type { Answer } from "../qa/answer";
-import { entityName, entityTypeLabel, relationTypeLabel } from "./graph-labels";
+import { entityOptionLabel, entityTypeLabel, relationTypeLabel } from "./graph-labels";
 
 // 每個實體的「接著問」最多幾題（#195 決定 2）
 export const MAX_FOLLOW_UPS = 3;
@@ -42,7 +42,8 @@ export function neighborhood(graph: Graph, entityId: string): Graph {
 
 // 「接著問」（#195 決定 2、#198）：關係類型有該方向、介面語言的問句範本（knowledge-model.json 的 questions）時用範本，
 // 否則退回翻譯檔的通用範本（關係的名稱加上另一端的實體類型；followUpOutgoing：中心是起點；followUpIncoming：中心是終點）。
-// 關係類型、方向與另一端的類型相同的只留一題，產生的問句相同的也只留一題（不含 {type} 的範本），最多 MAX_FOLLOW_UPS 題，依關係 id 的順序
+// 關係類型、方向與另一端的類型相同的只留一題，產生的問句相同的也只留一題（不含 {type} 的範本），最多 MAX_FOLLOW_UPS 題，依關係 id 的順序。
+// {name} 與搜尋結果相同：同名的實體加上第一個相關實體的名稱（entityOptionLabel()）
 export function followUps(
   graph: Graph,
   entityId: string,
@@ -66,7 +67,7 @@ export function followUps(
     const templates = relationTypes.find((t) => t.id === r.type)?.questions;
     const template = (outgoing ? templates?.outgoing : templates?.incoming)?.[language];
     const question = fill(template ?? (outgoing ? s.followUpOutgoing : s.followUpIncoming), {
-      name: entityName(center, language),
+      name: entityOptionLabel(graph, center, language),
       relation: relationTypeLabel(r.type, language),
       // 類型放在句中：英文等有大小寫的語言改成小寫（「Which project …」）；中文、日文不受影響
       type: entityTypeLabel(other.type, language).toLocaleLowerCase(language),

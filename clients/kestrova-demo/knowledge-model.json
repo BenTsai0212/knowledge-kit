@@ -56,7 +56,7 @@
       "from": ["team"],
       "to": ["site"],
       "questions": {
-        "outgoing": { "zh-TW": "{name}位於哪個{type}？", "en": "Where is {name} located?", "ja": "{name}はどの拠点にありますか？" },
+        "outgoing": { "zh-TW": "{name}位於哪個{type}？", "en": "Where is {name} located?", "ja": "{name}がある拠点は？" },
         "incoming": { "zh-TW": "哪些{type}位於{name}？", "en": "Which teams are based at {name}?", "ja": "{name}にある部署は？" }
       }
     },
@@ -87,7 +87,7 @@
       "to": ["project"],
       "questions": {
         "outgoing": { "zh-TW": "{name}參與哪些{type}？", "en": "Which projects does {name} work on?", "ja": "{name}が参加しているプロジェクトは？" },
-        "incoming": { "zh-TW": "哪些{type}參與{name}？", "en": "Who works on {name}?", "ja": "{name}に参加している{type}は？" }
+        "incoming": { "zh-TW": "哪些{type}參與{name}？", "en": "Who works on {name}?", "ja": "{name}に参加している人は？" }
       }
     },
     {
@@ -107,7 +107,7 @@
       "to": ["product"],
       "questions": {
         "outgoing": { "zh-TW": "{name}生產哪些{type}？", "en": "Which products are made at {name}?", "ja": "{name}で生産している製品は？" },
-        "incoming": { "zh-TW": "{name}在哪些{type}生產？", "en": "Where is {name} made?", "ja": "{name}はどの拠点で生産されていますか？" }
+        "incoming": { "zh-TW": "{name}在哪些{type}生產？", "en": "Where is {name} made?", "ja": "{name}を生産している拠点は？" }
       }
     },
     {

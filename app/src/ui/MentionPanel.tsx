@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import type { Graph } from "../graph/read";
 import { strings } from "../client/i18n";
-import { entityName, entityTypeLabel, relatedEntities } from "./graph-labels";
+import { entityOptionLabel, entityTypeLabel, relatedEntities } from "./graph-labels";
 import { GraphView } from "./GraphView";
 import { followUps, neighborhood } from "./mentions";
 
@@ -18,7 +18,8 @@ interface Props {
   onClose(): void;
 }
 
-// 右側的實體面板（#195）：名稱、類型、以它為中心的鄰近圖、關係清單、接著問、在圖譜中查看
+// 右側的實體面板（#195）：名稱、類型、以它為中心的鄰近圖、關係清單、接著問、在圖譜中查看。
+// 名稱與搜尋結果相同，同名的實體加上第一個相關實體的名稱（#198）；鄰近圖只畫小圖，同名以完整的 graph 判斷
 export function MentionPanel({ graph, entityId, language, onSelect, onFollowUp, onViewInGraph, onClose }: Props) {
   const s = strings(language);
   const panel = useRef<HTMLElement>(null);
@@ -30,7 +31,7 @@ export function MentionPanel({ graph, entityId, language, onSelect, onFollowUp, 
   }, [entityId]);
   const entity = graph.entities.find((e) => e.id === entityId);
   if (entity === undefined) return null;
-  const name = entityName(entity, language);
+  const name = entityOptionLabel(graph, entity, language);
   const questions = followUps(graph, entityId, language);
 
   return (
@@ -43,14 +44,14 @@ export function MentionPanel({ graph, entityId, language, onSelect, onFollowUp, 
           {s.closeSource}
         </button>
       </header>
-      <GraphView graph={nearby} language={language} selected={entityId} path={null} compact onSelect={onSelect} />
+      <GraphView graph={nearby} labelGraph={graph} language={language} selected={entityId} path={null} compact onSelect={onSelect} />
       <h3>{s.relatedEntities}</h3>
       <ul>
         {relatedEntities(graph, entityId, language).map((r) => (
           <li key={r.relationId}>
             {r.outgoing ? `${r.label} → ` : `← ${r.label} `}
             <button type="button" className="link" onClick={() => onSelect(r.entity.id)}>
-              {entityName(r.entity, language)}
+              {entityOptionLabel(graph, r.entity, language)}
             </button>
           </li>
         ))}
@@ -61,7 +62,7 @@ export function MentionPanel({ graph, entityId, language, onSelect, onFollowUp, 
           <ul className="follow-ups">
             {questions.map((q) => (
               <li key={q}>
-                <button type="button" onClick={() => onFollowUp(q)}>
+                <button type="button" className="chip" onClick={() => onFollowUp(q)}>
                   {q}
                 </button>
               </li>

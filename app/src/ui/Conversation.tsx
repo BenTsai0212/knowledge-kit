@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { Graph } from "../graph/read";
 import { strings } from "../client/i18n";
-import { AnswerView, type AnswerState } from "./AnswerView";
+import { AnswerView, type AnswerState, type OpenEntity } from "./AnswerView";
 
 // 一題問答；id 也是畫面上的元素 id（左側「這次的問題」捲到該題）
 export interface Turn extends AnswerState {
@@ -15,10 +15,12 @@ interface Props {
   onOpenSource(passageId: string): void;
   onGotoUpload(): void;
   onOpenEntity(graph: Graph, entityId: string): void;
+  // 目前在右側實體面板中的實體（#198）
+  openEntity: OpenEntity | null;
 }
 
 // 問答依序往下累積（#195）；新的一題出現時捲到該題
-export function Conversation({ language, turns, canUpload, onOpenSource, onGotoUpload, onOpenEntity }: Props) {
+export function Conversation({ language, turns, canUpload, onOpenSource, onGotoUpload, onOpenEntity, openEntity }: Props) {
   const s = strings(language);
   const latest = turns.at(-1)?.id;
   const latestRef = useRef<HTMLElement>(null);
@@ -43,6 +45,7 @@ export function Conversation({ language, turns, canUpload, onOpenSource, onGotoU
             onOpenSource={onOpenSource}
             onGotoUpload={onGotoUpload}
             onOpenEntity={onOpenEntity}
+            openEntity={openEntity}
           />
         ))
       )}

@@ -2,7 +2,7 @@ import { clientConfig } from "../client/load";
 import type { Graph } from "../graph/read";
 import { relationCounts } from "../graph/search";
 import { EntityIcon } from "./EntityIcon";
-import { entityName, entityTypeLabel, relatedEntities, sourcesForLanguage } from "./graph-labels";
+import { entityOptionLabel, entityTypeLabel, relatedEntities, sourcesForLanguage } from "./graph-labels";
 import { fill, strings } from "../client/i18n";
 
 interface Props {
@@ -19,12 +19,13 @@ interface Props {
 }
 
 // 圖譜頁右側的實體面板（#199）：名稱、類型、關聯數與文件數；在問答中問、只看它；
-// 關係清單（方向、關係名稱、對方、出處數，點對方從它展開）；出現在哪些文件（點了打開原文）。全部只用可見圖
+// 關係清單（方向、關係名稱、對方、出處數，點對方從它展開）；出現在哪些文件（點了打開原文）。全部只用可見圖。
+// 名稱與搜尋結果相同，同名的實體加上第一個相關實體的名稱（#198）
 export function EntityPanel({ graph, entityId, language, onSelect, onShowOnly, onAskAbout, onOpenSource }: Props) {
   const s = strings(language);
   const entity = graph.entities.find((e) => e.id === entityId);
   if (entity === undefined) return null;
-  const name = entityName(entity, language);
+  const name = entityOptionLabel(graph, entity, language);
   const type = clientConfig.knowledgeModel.entityTypes.find((t) => t.id === entity.type);
   const relations = new Map(graph.relations.map((r) => [r.id, r]));
   // 同一份文件的段落只列一次，點了打開第一段；出處優先顯示介面語言（#36）
@@ -56,7 +57,7 @@ export function EntityPanel({ graph, entityId, language, onSelect, onShowOnly, o
           <li key={r.relationId}>
             {r.outgoing ? `${r.label} → ` : `← ${r.label} `}
             <button type="button" className="link" onClick={() => onSelect(r.entity.id)}>
-              {entityName(r.entity, language)}
+              {entityOptionLabel(graph, r.entity, language)}
             </button>{" "}
             <span className="muted">{fill(s.graphSourceCount, { count: relations.get(r.relationId)?.sources.length ?? 0 })}</span>
           </li>

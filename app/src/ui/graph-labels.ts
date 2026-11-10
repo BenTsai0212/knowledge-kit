@@ -40,6 +40,13 @@ export function entityOptionLabel(graph: Graph, entity: GraphEntity, language: s
   return fill(strings(language).parenthetical, { text: name, note: first ? entityName(first.entity, language) : entity.id });
 }
 
+// 圖上節點的標籤（#198）：與搜尋結果相同，同名的實體以 entityOptionLabel() 區分。
+// 鄰近圖只畫小圖，同名的另一位可能不在小圖中，所以同名與相關實體以 labelGraph（完整的可見圖）比對
+export function nodeLabels(graph: Graph, language: string, labelGraph: Graph = graph): Map<string, string> {
+  const byId = new Map(labelGraph.entities.map((e) => [e.id, e]));
+  return new Map(graph.entities.map((e) => [e.id, entityOptionLabel(labelGraph, byId.get(e.id) ?? e, language)]));
+}
+
 export interface DisplaySource extends SourcePassage {
   // 不是介面語言的出處才有：該段語言的名稱，依介面語言顯示（例如英文介面的 zh-TW → Chinese (Taiwan)）
   languageLabel?: string;
