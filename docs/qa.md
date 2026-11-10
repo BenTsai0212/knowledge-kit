@@ -108,6 +108,10 @@ Rules:
   - 繁中：找不到可以回答這個問題的資料。
   - 英文：I couldn't find information to answer this question.
 - **不透露是否有看不到的文件**：看不到的段落在 RLS 就被濾掉，「沒有資料」與「沒有權限」走同一條路；拒答文字也不提權限。`answer.test.ts` 確認一般員工問調薪、主管問題庫外的問題、本機拒答三者的結果完全相同。
+- **查不到時的下一步**（#192）：畫面在拒答文字下方顯示固定的「可以試試」清單：換個說法或改用文件中的用詞、改問負責的人或部門；目前身分能上傳且上傳頁籤看得到時（展示模式沒有），多一項「有相關文件時上傳後再問」與「到上傳頁」按鈕。
+  - 清單只依目前身分的上傳能力決定（`ui/refusal-next-steps.ts` 的 `refusalNextSteps({ canUpload })`），不讀問題、檢索結果或拒答原因，所以「資料沒寫」與「沒有權限」永遠相同；文字不提權限、等級、專案或身分。`ask()` 回的拒答（`answer.text`）不變。
+  - 文字在翻譯檔的 `refusalNextTitle`、`refusalNextRephrase`、`refusalNextAskPerson`、`refusalNextUpload`、`refusalGotoUpload`。
+  - 測試：`refusal-next-steps.test.ts`（輸入只有上傳能力、各語言的文字不提權限與等級等名稱）；E2E `access.spec.ts` 以同一身分問「資料沒寫」與「看不到的段落」，比對兩次的拒答區塊完全相同。
 - 串流時，在能確定開頭不是拒答標記之前先不顯示文字，避免畫面先閃出標記。
 
 ## 引用
@@ -182,7 +186,7 @@ Rules:
 | `ui/AccessCodeForm.tsx` | 輸入邀請碼（`type="password"`）；碼被拒時顯示原因 |
 | `ui/Toolbar.tsx` | 身分切換（`access.json` 的角色，標示「展示用權限」）、語言切換、「虛構資料」標示、更換邀請碼 |
 | `ui/QuestionPanel.tsx` | 依情境分組的預設問題（標示情境的角色）、自由提問（500 字元上限） |
-| `ui/AnswerView.tsx` | 串流文字；結束後引用顯示成可點的編號；標示拒答、未附出處、不完整與錯誤訊息 |
+| `ui/AnswerView.tsx` | 串流文字；結束後引用顯示成可點的編號；標示拒答（下方附「可以試試」的下一步，見「拒答」）、未附出處、不完整與錯誤訊息 |
 | `ui/SourcePanel.tsx` | 原文：文件標題與該身分看得到的段落，標示被引用的段落並捲動到該處；段落旁有說法不同與取代的標示（`ui/PassageMarks.tsx`，點擊後打開另一段，見 [docs/conflicts.md](conflicts.md)「畫面」） |
 
 - **資料庫**：頁面載入時在瀏覽器中以 PGlite 建立記憶體資料庫，執行 migration 並匯入資料集（與測試相同的 `openDatabase()`＋`seedDataset()`）。載入完成前預設問題不能按。

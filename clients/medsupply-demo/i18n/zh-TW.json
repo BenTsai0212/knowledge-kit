@@ -271,6 +271,11 @@
   "progress": "{done}／{total}",
   "parenthetical": "{text}（{note}）",
   "refusal": "找不到可以回答這個問題的資料。",
+  "refusalNextTitle": "可以試試",
+  "refusalNextRephrase": "換個說法，或改用文件中可能出現的用詞再問一次。",
+  "refusalNextAskPerson": "改問負責這件事的人或部門。",
+  "refusalNextUpload": "有相關的文件時，上傳後再問一次。",
+  "refusalGotoUpload": "到上傳頁",
   "uncited": "未附出處",
   "incomplete": "回答不完整",
   "errors": {

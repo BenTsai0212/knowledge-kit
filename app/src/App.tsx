@@ -79,6 +79,8 @@ export function App() {
   // 核准、退回、處理、重新整理（reviewVersion）與萃取、比對結束（activeExtractions、activeConflicts）後重新讀取。
   // 記下讀取時的身分，切換身分後不顯示前一個身分的筆數
   const canReview = access.roles.find((r) => r.id === identity)?.canReview ?? false;
+  // 拒答的下一步是否列出上傳（#192）：能上傳、且上傳頁籤看得到（展示模式沒有上傳頁籤）
+  const canUpload = (access.roles.find((r) => r.id === identity)?.canUpload ?? false) && views(canReview).includes("upload");
   const [reviewVersion, setReviewVersion] = useState(0);
   const [pending, setPending] = useState<{ identity: string; count: number } | null>(null);
   // 評測台最近一次的結果（#62）：只在記憶體，切換頁籤後仍可查看與下載
@@ -363,7 +365,13 @@ export function App() {
           {onlineDemo.enabled && <p className="badge warning">{s.demoQaNotice}</p>}
           <RetrievalNotice language={language} preparesModel={preparesModel(client.retrieval)} status={providerStatus} />
           <QuestionPanel language={language} disabled={retriever === null} onAsk={onAsk} />
-          <AnswerView language={language} state={answer} onOpenSource={onOpenSource} />
+          <AnswerView
+            language={language}
+            state={answer}
+            canUpload={canUpload}
+            onOpenSource={onOpenSource}
+            onGotoUpload={() => setView("upload")}
+          />
           {source !== null && <SourcePanel language={language} source={source} onOpenSource={onOpenSource} onClose={() => (sources.current.cancel(), setSource(null))} />}
         </main>
       )}

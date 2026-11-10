@@ -45,7 +45,8 @@
     "evalResults", "evalOnlyDiff", "evalDiffers", "evalQuestion", "evalNotRun", "evalRequiresSemantic", "evalPassageLanguage", "evalAnswerText",
     "evalCitations", "evalNoCitations", "evalDropped", "evalKeyPoints", "evalGrade", "evalMetrics",
     "evalCategories", "evalExpect", "evalVerdicts", "evalLeaks",
-    "colon", "progress", "parenthetical", "refusal", "uncited", "incomplete",
+    "colon", "progress", "parenthetical", "refusal",
+    "refusalNextTitle", "refusalNextRephrase", "refusalNextAskPerson", "refusalNextUpload", "refusalGotoUpload", "uncited", "incomplete",
     "errors", "unknownError"
   ],
   "properties": {
@@ -398,6 +399,11 @@
     "progress": { "$ref": "#/definitions/Text" },
     "parenthetical": { "$ref": "#/definitions/Text" },
     "refusal": { "$ref": "#/definitions/Text" },
+    "refusalNextTitle": { "$ref": "#/definitions/Text" },
+    "refusalNextRephrase": { "$ref": "#/definitions/Text" },
+    "refusalNextAskPerson": { "$ref": "#/definitions/Text" },
+    "refusalNextUpload": { "$ref": "#/definitions/Text" },
+    "refusalGotoUpload": { "$ref": "#/definitions/Text" },
     "uncited": { "$ref": "#/definitions/Text" },
     "incomplete": { "$ref": "#/definitions/Text" },
     "errors": {

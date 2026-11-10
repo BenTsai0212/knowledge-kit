@@ -244,7 +244,8 @@ const uiStrings = {
   evalDropped: "required", evalKeyPoints: "required", evalGrade: "required", evalMetrics: "required",
   evalCategories: "required", evalExpect: "required", evalVerdicts: "required", evalLeaks: "required",
   colon: "required", progress: "required",
-  parenthetical: "required", refusal: "required", uncited: "required", incomplete: "required",
+  parenthetical: "required", refusal: "required", refusalNextTitle: "required", refusalNextRephrase: "required",
+  refusalNextAskPerson: "required", refusalNextUpload: "required", refusalGotoUpload: "required", uncited: "required", incomplete: "required",
   errors: "required", unknownError: "required",
 } satisfies KeyManifest<UiStrings>;
 
