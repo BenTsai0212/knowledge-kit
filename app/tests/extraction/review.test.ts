@@ -64,7 +64,8 @@ async function setup(config: ClientConfig = clientConfig): Promise<World> {
       { id: "pe-s1", type: "person", names: { "zh-TW": "林志明", en: "Zhiming Lin" }, sources: [ds.passageIds[0]] },
       { id: "pe-s2", type: "project", names: { "zh-TW": "青翼專案", en: "Project Bluewing" }, sources: [ds.passageIds[0]] },
     ],
-    relations: [{ id: "pr-s1", type: "works-on", from: "pe-s1", to: "pe-s2", sources: [ds.passageIds[0]] }],
+    // 類型用 leads：合併到研發部的林志明與青翼專案後，不和既有的 lin-rd-works-on-bluewing 相同（相同時只寫決定、不建立，#189）
+    relations: [{ id: "pr-s1", type: "leads", from: "pe-s1", to: "pe-s2", sources: [ds.passageIds[0]] }],
   };
   await writePending(db, "manager", dm.documentId, fromDm);
   await writePending(db, "staff", ds.documentId, fromDs);
@@ -303,6 +304,63 @@ describe("核准與退回", () => {
       reason: "denied",
     });
     expect((await readReview(w.db, "manager")).find((d) => d.id === w.ds.documentId)!.entities[1].status).toBe("pending");
+    await w.db.close();
+  });
+});
+
+describe("圖譜已有的關係（#189 決定 1）", { timeout: 30_000 }, () => {
+  // 主管上傳走查用的通知（虛構），兩端合併到既有實體後，和參考情境的「張雅婷 隸屬 營運部」「張雅婷 負責 營運部」相同
+  async function walkthrough() {
+    const w = await setup();
+    const up = await uploadDocument(
+      w.db,
+      "manager",
+      { title: "長堤專案第二階段啟動通知（虛構）", language: "zh-TW", visibility: "internal", project: null, date: "2026-11-01", passages: ["營運部經理張雅婷宣布第二階段啟動。"] },
+      OPTIONS,
+    );
+    const p = up.passageIds[0];
+    await writePending(w.db, "manager", up.documentId, {
+      entities: [
+        { id: "pe-w-zhang", type: "person", names: { "zh-TW": "張雅婷", en: "Yating Chang" }, sources: [p] },
+        { id: "pe-w-ops", type: "team", names: { "zh-TW": "營運部", en: "Operations" }, sources: [p] },
+      ],
+      relations: [
+        { id: "pr-w-member", type: "member-of", from: "pe-w-zhang", to: "pe-w-ops", sources: [p] },
+        { id: "pr-w-leads", type: "leads", from: "pe-w-zhang", to: "pe-w-ops", sources: [p] },
+      ],
+    });
+    const merged = [
+      { id: "pe-w-zhang", mergeInto: "person-zhang-yating" },
+      { id: "pe-w-ops", mergeInto: "team-ops" },
+    ];
+    return { ...w, documentId: up.documentId, merged };
+  }
+  const relationCount = (db: Database) => db.withIdentity("manager", async (tx) => (await tx.query("SELECT id FROM kk.relations")).rows.length);
+
+  it("只寫核准決定，不新增關係與出處；用舊的計畫（放在 relations）送出也不重複", async () => {
+    const w = await walkthrough();
+    const before = await relationCount(w.db);
+    await approve(w.db, "manager", { entities: w.merged, relations: ["pr-w-leads"], existingRelations: ["pr-w-member"] }, DEFAULT);
+    expect(await relationCount(w.db)).toBe(before);
+    const graph = await readGraph(w.db, "manager");
+    expect(graph.relations.map((r) => r.id)).not.toContain("pr-w-member");
+    expect(graph.relations.find((r) => r.id === "zhang-member-of-ops")!.sources.map((s) => s.documentId)).not.toContain(w.documentId);
+    const doc = (await readReview(w.db, "manager")).find((d) => d.id === w.documentId)!;
+    expect(doc.relations.map((r) => [r.id, r.status])).toEqual([
+      ["pr-w-leads", "approved"],
+      ["pr-w-member", "approved"],
+    ]);
+    await w.db.close();
+  });
+
+  it("畫面算出的圖譜已有在交易中已經不成立時，整筆不寫入", async () => {
+    const w = await walkthrough();
+    // 張雅婷改成建立新實體：兩端不再和既有關係相同
+    await expect(
+      approve(w.db, "manager", { entities: [{ id: "pe-w-zhang" }, w.merged[1]], relations: [], existingRelations: ["pr-w-member"] }, DEFAULT),
+    ).rejects.toMatchObject({ reason: "conflict" });
+    const doc = (await readReview(w.db, "manager")).find((d) => d.id === w.documentId)!;
+    expect([...doc.entities, ...doc.relations].map((x) => x.status)).toEqual(["pending", "pending", "pending", "pending"]);
     await w.db.close();
   });
 });
