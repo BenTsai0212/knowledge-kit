@@ -128,6 +128,31 @@ function animateFocus(cy: Core, graph: Graph, previous: Expansion, next: Expansi
   else fit(eles, 40);
 }
 
+// cytoscape 快取容器在畫面上的位置，只在視窗大小改變、捲動與容器本身的大小改變時重新計算；
+// 上方的內容出現或換行讓容器移動時，滑鼠座標會換算到錯的位置（#199）。
+// 容器或上一層的大小改變時，以及每次按下指標（在 cytoscape 處理之前）時，位置變了就 resize() 讓它重新計算
+function trackContainer(element: HTMLElement, cy: Core): () => void {
+  const rect = () => {
+    const r = element.getBoundingClientRect();
+    return `${r.left},${r.top},${r.width},${r.height}`;
+  };
+  let last = rect();
+  const check = () => {
+    const now = rect();
+    if (now === last) return;
+    last = now;
+    cy.resize();
+  };
+  const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(check);
+  observer?.observe(element);
+  if (element.parentElement !== null) observer?.observe(element.parentElement);
+  element.addEventListener("pointerdown", check, true);
+  return () => {
+    observer?.disconnect();
+    element.removeEventListener("pointerdown", check, true);
+  };
+}
+
 export function GraphView({ graph, language, selected, path, onSelect, expansion, compact = false }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const cy = useRef<Core | null>(null);
@@ -140,6 +165,7 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
 
   useEffect(() => {
     let cancelled = false;
+    let untrack = () => {};
     void import("cytoscape").then(({ default: cytoscape }) => {
       if (cancelled || container.current === null) return;
       const instance = cytoscape({
@@ -151,6 +177,7 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
       // 點空白處不清除選取（避免誤觸），圖譜頁以「回到全部」清除
       instance.on("tap", "node", (e) => select.current(e.target.id()));
       cy.current = instance;
+      untrack = trackContainer(container.current, instance);
       // 版面只在讀入圖時排一次；展開、變灰、回到全部都只改 class，節點位置不動
       markSelected(instance, graph, selected);
       markFocus(instance, graph, expansion ?? ALL);
@@ -159,6 +186,7 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
     });
     return () => {
       cancelled = true;
+      untrack();
       cy.current?.destroy();
       cy.current = null;
     };

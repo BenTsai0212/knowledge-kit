@@ -4,6 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { language, openApp, s, switchIdentity, tab, type RoleId } from "./support/app";
 import { access, reviewer } from "./support/client";
 import { allEntityNames, entityNames } from "./support/dataset";
+import { clickableNode, neighborsOf, selectedNodes, waitForGraphIdle } from "./support/graph";
 import { MAX_QUESTION_CHARS } from "../app/src/qa/prompt";
 
 const roles = access.roles.map((r) => r.id);
@@ -87,6 +88,33 @@ test("點「回答提到」的實體：右側面板顯示實體、鄰近圖、�
   await expect(tab(page, s.tabGraph)).toHaveAttribute("aria-current", "page");
   await expect(page.locator("section.entity").getByRole("heading", { level: 2 })).toContainText(center);
   await expect(page.getByRole("navigation", { name: s.graphExpanded }).getByRole("listitem")).toHaveText([center]);
+});
+
+// 鄰近圖（#199 修正要求）：面板的內容改變時畫布的位置可能移動，cytoscape 若沿用舊的容器位置，點擊會落在別的地方。
+// 不捲動、不重試：以 renderedPosition() 換算的座標點一次相連的節點，面板改以它為中心；在新的面板再點一次
+test("右側鄰近圖：以畫面上的位置點相連的節點，面板改以它為中心（不重試）", async ({ page }) => {
+  const { connected } = entityNames(viewer, language);
+  await openApp(page);
+  await routeNamingAnswer(page);
+  await switchIdentity(page, viewer);
+  const listed = await ask(page, questionOf(connected));
+  const target = listed.find((text) => connected.includes(text));
+  expect(target, "列出的實體中沒有名稱不重複、而且有關係的實體").toBeDefined();
+  await page.getByRole("group", { name: s.answerMentions }).getByRole("button", { name: target!, exact: true }).click();
+
+  const canvas = ".mention-panel .graph-canvas";
+  let center = target!;
+  for (let round = 0; round < 2; round++) {
+    await expect(page.getByRole("complementary", { name: center, exact: true }).getByRole("heading", { level: 2 })).toContainText(center);
+    await waitForGraphIdle(page, canvas);
+    const [selected] = await selectedNodes(page, canvas);
+    const next = await clickableNode(page, canvas, await neighborsOf(page, canvas, selected));
+    expect(next, "鄰近圖中沒有點得到的相連節點").not.toBeNull();
+    await page.mouse.click(next!.x, next!.y);
+    await expect(page.getByRole("complementary", { name: next!.label, exact: true }).getByRole("heading", { level: 2 })).toContainText(next!.label);
+    await expect.poll(() => selectedNodes(page, canvas)).toEqual([next!.id]);
+    center = next!.label;
+  }
 });
 
 test("「回答提到」只列出目前身分看得到的實體，依身分不同", async ({ page }) => {

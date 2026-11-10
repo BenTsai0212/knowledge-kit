@@ -73,32 +73,35 @@ export function GraphPage({ db, identity, language, onOpenSource, initialSelecte
             </li>
           ))}
         </ul>
-        {expansion.length > 0 && (
-          <nav className="graph-trail" aria-label={s.graphExpanded}>
-            <span className="muted">
-              {s.graphExpanded}
-              {s.colon}
-            </span>
-            <ol>
-              {expansion.map((id, i) => (
-                <li key={id}>
-                  {/* 點其中一段：回到該層 */}
-                  <button
-                    type="button"
-                    className="link"
-                    aria-current={i === expansion.length - 1 ? "step" : undefined}
-                    onClick={() => setExpansion(expansion.slice(0, i + 1))}
-                  >
-                    {nameOf(id)}
-                  </button>
-                </li>
-              ))}
-            </ol>
-            <button type="button" onClick={() => setExpansion(ALL)}>
-              {s.graphShowAll}
-            </button>
-          </nav>
-        )}
+        {/* 這一列沒有展開時也保留高度：出現或消失時畫布不移動 */}
+        <div className="graph-trail">
+          {expansion.length > 0 && (
+            <nav aria-label={s.graphExpanded}>
+              <span className="muted">
+                {s.graphExpanded}
+                {s.colon}
+              </span>
+              <ol>
+                {expansion.map((id, i) => (
+                  <li key={id}>
+                    {/* 點其中一段：回到該層 */}
+                    <button
+                      type="button"
+                      className="link"
+                      aria-current={i === expansion.length - 1 ? "step" : undefined}
+                      onClick={() => setExpansion(expansion.slice(0, i + 1))}
+                    >
+                      {nameOf(id)}
+                    </button>
+                  </li>
+                ))}
+              </ol>
+              <button type="button" onClick={() => setExpansion(ALL)}>
+                {s.graphShowAll}
+              </button>
+            </nav>
+          )}
+        </div>
         <GraphView graph={graph} language={language} selected={selected} path={path} expansion={expansion} onSelect={onExpand} />
       </section>
       <PathPanel

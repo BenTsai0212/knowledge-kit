@@ -566,13 +566,17 @@ button.citation {
   gap: 1rem;
 }
 
-/* 已展開的路徑（#199）：A → B，每一段可點回到該層 */
+/* 已展開的路徑（#199）：A → B，每一段可點回到該層。沒有展開時也保留一列按鈕的高度，出現或消失時畫布不移動 */
 .graph-trail {
+  min-height: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.graph-trail nav {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.5rem;
 }
 
 .graph-trail ol {

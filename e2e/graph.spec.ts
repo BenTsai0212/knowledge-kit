@@ -1,8 +1,9 @@
 // 圖譜的逐步展開（#199，docs/graph.md「逐步展開」）：點節點聚焦、再點相連的節點累積展開、點路徑的一段回到該層、回到全部。
-// 圖譜不呼叫模型。節點以 cytoscape 的實例（容器的 _cyreg）取得在畫面上的位置後以滑鼠點擊。
+// 圖譜不呼叫模型。節點以 cytoscape 的實例（容器的 _cyreg）取得在畫面上的位置後以滑鼠點一次，不重試（e2e/support/graph.ts）。
 import { expect, test, type Page } from "@playwright/test";
 import { openApp, openTab, s, switchIdentity } from "./support/app";
 import { reviewer } from "./support/client";
+import { clickableNode, clickNodeOnce, neighborsOf, selectedNodes, waitForGraphIdle, type ClickableNode, type Cy } from "./support/graph";
 
 interface Snapshot {
   // 已展開路徑上第一個與第二個節點的候選：a 與 b 相連，b 還有 a 以外的鄰居
@@ -14,18 +15,6 @@ interface Snapshot {
   neighbors: Record<string, string[]>;
   labels: Record<string, string>;
 }
-
-type Cy = {
-  nodes(): { length: number; map<T>(fn: (n: CyNode) => T): T[] };
-  $id(id: string): CyNode;
-};
-type CyNode = {
-  id(): string;
-  hasClass(name: string): boolean;
-  data(key: string): string;
-  renderedPosition(): { x: number; y: number };
-  neighborhood(selector: string): { map<T>(fn: (n: CyNode) => T): T[] };
-};
 
 // 圖的狀態：哪些節點變灰、選取了哪個，以及挑出可展開兩層的 a → b
 async function snapshot(page: Page): Promise<Snapshot | null> {
@@ -50,21 +39,13 @@ async function snapshot(page: Page): Promise<Snapshot | null> {
   });
 }
 
-// 點節點；畫面平滑移動時位置還會變，整段讀取與點擊一起重試，直到選取了該節點
+const CANVAS = ".graph-page .graph-canvas";
+
+// 等畫面移動結束後點一次節點，確認選取的是該節點
 async function clickNode(page: Page, id: string): Promise<void> {
-  await expect(async () => {
-    const point = await page.evaluate((target) => {
-      const container = document.querySelector<HTMLElement & { _cyreg?: { cy?: Cy } }>(".graph-page .graph-canvas");
-      const cy = container?._cyreg?.cy;
-      if (container == null || cy === undefined) return null;
-      const box = container.getBoundingClientRect();
-      const position = cy.$id(target).renderedPosition();
-      return { x: box.left + position.x, y: box.top + position.y };
-    }, id);
-    expect(point).not.toBeNull();
-    await page.mouse.click(point!.x, point!.y);
-    expect((await snapshot(page))?.selected).toEqual([id]);
-  }).toPass({ timeout: 10_000 });
+  await waitForGraphIdle(page, CANVAS);
+  await clickNodeOnce(page, CANVAS, id);
+  await expect.poll(() => selectedNodes(page, CANVAS)).toEqual([id]);
 }
 
 const sorted = (ids: string[]) => [...ids].sort();
@@ -119,4 +100,39 @@ test("逐步展開：聚焦在節點與直接相連的節點，其他變灰；�
   expect(all.dimmed).toEqual([]);
   expect(all.selected).toEqual([]);
   await expect(page.getByText(s.selectEntity)).toBeVisible();
+});
+
+// 「已展開」那一列出現時畫布不能移動，否則 cytoscape 以舊的容器位置換算滑鼠座標，之後的點擊落在別的地方。
+// 這裡不捲動、不重試：點第一個節點、等畫面移動結束，再以 renderedPosition() 換算的座標點一次相連的節點
+test("點第一個節點後，以畫面上的位置點相連的節點會選取該節點（不捲動、不重試）", async ({ page }) => {
+  await openApp(page);
+  if (reviewer !== undefined) await switchIdentity(page, reviewer.id);
+  await openTab(page, s.tabGraph);
+  await waitForGraphIdle(page, CANVAS);
+  const box = await page.locator(CANVAS).boundingBox();
+
+  // 第一個節點：有鄰居、在畫面上點得到
+  const ids = await page.evaluate((selector) => {
+    const cy = document.querySelector<HTMLElement & { _cyreg?: { cy?: Cy } }>(selector)?._cyreg?.cy;
+    return cy === undefined ? [] : cy.nodes().map((n) => n.id());
+  }, CANVAS);
+  let first: ClickableNode | null = null;
+  for (const id of ids) {
+    if ((await neighborsOf(page, CANVAS, id)).length === 0) continue;
+    first = await clickableNode(page, CANVAS, [id]);
+    if (first !== null) break;
+  }
+  expect(first, "畫面上沒有點得到、而且有鄰居的節點").not.toBeNull();
+  await page.mouse.click(first!.x, first!.y);
+  await expect.poll(() => selectedNodes(page, CANVAS)).toEqual([first!.id]);
+  await expect(trail(page)).toBeVisible();
+  // 「已展開」那一列出現後，畫布的位置不變
+  expect(await page.locator(CANVAS).boundingBox()).toEqual(box);
+
+  await waitForGraphIdle(page, CANVAS);
+  const second = await clickableNode(page, CANVAS, await neighborsOf(page, CANVAS, first!.id));
+  expect(second, "畫面上沒有點得到的相連節點").not.toBeNull();
+  await page.mouse.click(second!.x, second!.y);
+  await expect.poll(() => selectedNodes(page, CANVAS)).toEqual([second!.id]);
+  await expect(trail(page).getByRole("listitem")).toHaveText([first!.label, second!.label]);
 });
