@@ -561,9 +561,108 @@ button.citation {
   flex: none;
 }
 
+/* 圖譜頁（#199）：中間是搜尋、類型篩選與圖，右側是實體面板與多跳路徑 */
 .graph-page {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
+  align-items: start;
   gap: 1rem;
+  max-width: 1400px;
+}
+
+.graph-side {
+  display: grid;
+  gap: 1rem;
+}
+
+.graph-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.graph-tools .legend {
+  margin: 0;
+}
+
+.legend label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+/* 以名稱搜尋實體：結果浮在下方，不推動畫布 */
+.entity-search {
+  position: relative;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.entity-search [role="listbox"] {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 10;
+  min-width: 100%;
+  max-width: min(24rem, 90vw);
+  list-style: none;
+  margin: 0.25rem 0 0;
+  padding: 0.25rem 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-overlay) 25%, transparent);
+}
+
+.entity-search [role="option"] {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.75rem;
+  cursor: pointer;
+}
+
+.entity-search [role="option"][aria-selected="true"] {
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+}
+
+.entity-search-none {
+  position: absolute;
+  top: 100%;
+  margin: 0.25rem 0 0;
+  white-space: nowrap;
+}
+
+.entity-type {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.entity-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.graph-start ol {
+  padding-left: 1.25rem;
+}
+
+.graph-start button.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+details.path summary {
+  cursor: pointer;
+  font-weight: 600;
 }
 
 /* 已展開的路徑（#199）：A → B，每一段可點回到該層。沒有展開時也保留一列按鈕的高度，出現或消失時畫布不移動 */
@@ -598,10 +697,20 @@ button.citation {
 }
 
 .path-select {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 0.5rem;
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0.5rem;
+}
+
+/* 手機寬度（#199）：圖譜頁改為單欄（搜尋 → 圖 → 面板），圖的高度較低。正式的手機設計之後另外處理 */
+@media (max-width: 640px) {
+  .graph-page {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .graph-page .graph-canvas {
+    height: 360px;
+  }
 }
 
 .timeline {

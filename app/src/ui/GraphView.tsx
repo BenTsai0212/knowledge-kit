@@ -5,6 +5,7 @@ import { clientConfig } from "../client/load";
 import { ALL, focusOf, nearRelations, selectedOf, type Expansion } from "../graph/expansion";
 import type { PathStep } from "../graph/path";
 import type { Graph } from "../graph/read";
+import { relationCounts } from "../graph/search";
 import { entityName } from "./graph-labels";
 import { DIMMED_NODE_SCALE, edgeWidth, graphStyle, nodeSize } from "./graph-style";
 import { EXPAND_MS, motionDuration, PAN_MS, watchReducedMotion } from "./motion";
@@ -19,9 +20,13 @@ interface Props {
   onSelect(entityId: string): void;
   // 逐步展開（#199，圖譜頁）：聚焦集合以外的節點與線變灰；沒有傳入時不變灰（問答頁的鄰近圖）
   expansion?: Expansion;
+  // 類型篩選（#199，圖譜頁）：沒勾的類型的實體與它們的線變灰
+  excluded?: ReadonlySet<string>;
   // 右側實體面板的小型鄰近圖（#195）：高度較低
   compact?: boolean;
 }
+
+const NONE: ReadonlySet<string> = new Set();
 
 const { entityTypes, relationTypes } = clientConfig.knowledgeModel;
 
@@ -29,8 +34,7 @@ const { entityTypes, relationTypes } = clientConfig.knowledgeModel;
 // 節點大小依看得到的關聯數（變灰時縮小），線粗依看得到的出處數
 function elements(graph: Graph, language: string): ElementDefinition[] {
   const relationLabel = new Map(relationTypes.map((t) => [t.id, t.label[language]]));
-  const degree = new Map<string, number>();
-  for (const r of graph.relations) for (const id of [r.from, r.to]) degree.set(id, (degree.get(id) ?? 0) + 1);
+  const degree = relationCounts(graph);
   // 先排成一個圓作為起始位置，cose 不打亂起始位置（randomize: false），版面每次相同
   const step = (2 * Math.PI) / Math.max(graph.entities.length, 1);
   return [
@@ -79,14 +83,18 @@ function markSelected(cy: Core, graph: Graph, selected: string | null) {
   });
 }
 
-// 聚焦集合以外變灰；全部時都不變灰
-function markFocus(cy: Core, graph: Graph, expansion: Expansion) {
-  const focus = focusOf(graph, expansion);
+// 聚焦集合以外變灰（找到多跳路徑時改為路徑以外變灰）；全部時都不變灰。類型篩選掉的實體與它們的線也變灰
+function markFocus(cy: Core, graph: Graph, expansion: Expansion, path: PathStep[] | null, excluded: ReadonlySet<string>) {
+  const focus =
+    path === null
+      ? focusOf(graph, expansion)
+      : { entities: new Set(path.map((p) => p.entity)), relations: new Set(path.flatMap((p) => (p.relation === undefined ? [] : [p.relation]))) };
   cy.batch(() => {
     cy.elements().removeClass("dimmed");
-    if (focus === null) return;
-    cy.nodes().filter((n) => !focus.entities.has(n.id())).addClass("dimmed");
-    cy.edges().filter((e) => !focus.relations.has(e.data("relation"))).addClass("dimmed");
+    cy.nodes().filter((n) => (focus !== null && !focus.entities.has(n.id())) || excluded.has(n.id())).addClass("dimmed");
+    cy.edges()
+      .filter((e) => (focus !== null && !focus.relations.has(e.data("relation"))) || excluded.has(e.data("source")) || excluded.has(e.data("target")))
+      .addClass("dimmed");
   });
 }
 
@@ -153,7 +161,7 @@ function trackContainer(element: HTMLElement, cy: Core): () => void {
   };
 }
 
-export function GraphView({ graph, language, selected, path, onSelect, expansion, compact = false }: Props) {
+export function GraphView({ graph, language, selected, path, onSelect, expansion, excluded = NONE, compact = false }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const cy = useRef<Core | null>(null);
   // tap 事件在 cytoscape 實例建立時註冊，以 ref 取得最新的 onSelect
@@ -180,7 +188,7 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
       untrack = trackContainer(container.current, instance);
       // 版面只在讀入圖時排一次；展開、變灰、回到全部都只改 class，節點位置不動
       markSelected(instance, graph, selected);
-      markFocus(instance, graph, expansion ?? ALL);
+      markFocus(instance, graph, expansion ?? ALL, path, excluded);
       applied.current = expansion ?? ALL;
       markPath(instance, path);
     });
@@ -211,17 +219,16 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
     if (cy.current !== null) markSelected(cy.current, graph, selected);
   }, [selected]);
 
+  // 展開狀態改變時才播放動態；路徑與類型篩選只改變灰與標示
   useEffect(() => {
     const next = expansion ?? ALL;
-    if (cy.current === null || next === applied.current) return;
-    markFocus(cy.current, graph, next);
+    if (cy.current === null) return;
+    markFocus(cy.current, graph, next, path, excluded);
+    markPath(cy.current, path);
+    if (next === applied.current) return;
     animateFocus(cy.current, graph, applied.current, next, reduced.current);
     applied.current = next;
-  }, [expansion]);
-
-  useEffect(() => {
-    if (cy.current !== null) markPath(cy.current, path);
-  }, [path]);
+  }, [expansion, path, excluded]);
 
   return <div ref={container} className={compact ? "graph-canvas compact" : "graph-canvas"} />;
 }
