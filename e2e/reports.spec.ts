@@ -23,6 +23,14 @@ async function ask(page: Page, question: string, preset: boolean): Promise<Locat
   return answer;
 }
 
+// 左側「待審」頁籤的筆數（待審項目＋未處理的回報）
+const tabCount = (page: Page) => tab(page, s.tabReview).locator(".tab-count");
+
+async function reviewCount(page: Page): Promise<number> {
+  await expect(tabCount(page)).toHaveText(/^\d+$/);
+  return Number(await tabCount(page).textContent());
+}
+
 // 待審頁的「回報」分頁；分頁名稱後面接著未處理的筆數，所以比對開頭
 async function openReports(page: Page): Promise<void> {
   await openTab(page, s.tabReview);
@@ -39,6 +47,8 @@ test("沒有 canReview 的身分回報回答；審核者在「回報」分頁看
   test.skip(!seesAllOf(reviewer!.id, nonReviewer!.id), `${reviewer!.id} 看不到 ${nonReviewer!.id} 看得到的所有段落`);
 
   await openApp(page);
+  await switchIdentity(page, reviewer!.id);
+  const before = await reviewCount(page);
   await switchIdentity(page, nonReviewer!.id);
   const answer = await ask(page, question!, true);
   await expect(answer.getByText(FAKE_ANSWER_LEAD)).toBeVisible();
@@ -55,6 +65,8 @@ test("沒有 canReview 的身分回報回答；審核者在「回報」分頁看
   await expect(tab(page, s.tabReview)).toHaveCount(0);
 
   await switchIdentity(page, reviewer!.id);
+  // 未處理的回報算進審核者的待審筆數
+  await expect(tabCount(page)).toHaveText(String(before + 1));
   await openReports(page);
   const card = page.getByRole("region", { name: question! });
   const reporter = access.roles.find((r) => r.id === nonReviewer!.id)!.label[language];
@@ -70,6 +82,8 @@ test("沒有 canReview 的身分回報回答；審核者在「回報」分頁看
   await card.getByRole("button", { name: s.reportMarkNotError }).click();
   await expect(card).toContainText(s.reportResolutions.not_error);
   await expect(card.getByRole("button", { name: s.reportMarkNotError })).toHaveCount(0);
+  // 處理後不再算進待審筆數
+  await expect(tabCount(page)).toHaveText(String(before));
 });
 
 test("拒答的回報只含問題文字，預設原因是「資料中有答案，卻拒答了」", async ({ page }) => {
@@ -82,6 +96,7 @@ test("拒答的回報只含問題文字，預設原因是「資料中有答案�
     await route.fulfill({ status: 200, headers: { "Content-Type": "text/event-stream" }, body: sseBody("[[NO_ANSWER]]") });
   });
   await switchIdentity(page, reviewer!.id);
+  const before = await reviewCount(page);
   const question = "E2E qzxv wkjp";
   const answer = await ask(page, question, false);
   await expect(answer.getByText(s.refusal)).toBeVisible();
@@ -90,6 +105,8 @@ test("拒答的回報只含問題文字，預設原因是「資料中有答案�
   await expect(form.locator("select")).toHaveValue("should_answer");
   await form.getByRole("button", { name: s.reportSubmit }).click();
   await expect(answer.getByText(s.reportSent)).toBeVisible();
+  // 審核者自己回報時，待審筆數在送出後加一
+  await expect(tabCount(page)).toHaveText(String(before + 1));
 
   await openReports(page);
   const card = page.getByRole("region", { name: question });

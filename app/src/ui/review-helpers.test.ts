@@ -288,6 +288,12 @@ describe("pendingCount", () => {
     expect(pendingCount([a], [{ decision: null }, { decision: "coexist" }, { decision: null }])).toBe(3);
     expect(pendingCount([], [{ decision: "not_conflict" }])).toBe(0);
   });
+
+  it("加上未處理的回答錯誤回報（#209），已處理的不計", () => {
+    const a = doc([entity("pe-a")], []);
+    expect(pendingCount([a], [{ decision: null }], [{ resolution: null }, { resolution: "not_error" }, { resolution: null }])).toBe(4);
+    expect(pendingCount([], [], [{ resolution: "retracted" }])).toBe(0);
+  });
 });
 
 describe("reviewDocuments", () => {

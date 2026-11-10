@@ -14,7 +14,7 @@ import { readReview } from "./extraction/store";
 import { readGraph, type Graph } from "./graph/read";
 import { ask } from "./qa/answer";
 import { apiTransport } from "./qa/api";
-import { writeReport } from "./reports/store";
+import { readReports, writeReport } from "./reports/store";
 import { createProvider, preparesModel, PROVIDERS, type ActiveProvider, type ProgressListener } from "./retrieval/providers";
 import { openRetriever } from "./retrieval/retrieve";
 import { readSource, type SourceDocument } from "./sources/source";
@@ -88,8 +88,8 @@ export function App() {
   // 同時只有一個有效的提問與原文讀取；切換身分或語言時捨棄進行中的
   const questions = useRef(createRequestGate());
   const sources = useRef(createRequestGate());
-  // 「待審」頁籤的筆數（#48）：待審的實體與關係，加上待處理的說法不同（#51）。
-  // 核准、退回、處理、重新整理（reviewVersion）與萃取、比對結束（activeExtractions、activeConflicts）後重新讀取。
+  // 「待審」頁籤的筆數（#48）：待審的實體與關係，加上待處理的說法不同（#51）與未處理的回答錯誤回報（#209）。
+  // 核准、退回、處理、回報、重新整理（reviewVersion）與萃取、比對結束（activeExtractions、activeConflicts）後重新讀取。
   // 記下讀取時的身分，切換身分後不顯示前一個身分的筆數
   const canReview = access.roles.find((r) => r.id === identity)?.canReview ?? false;
   // 拒答的下一步是否列出上傳（#192）：能上傳、且上傳頁籤看得到（展示模式沒有上傳頁籤）
@@ -126,8 +126,8 @@ export function App() {
   useEffect(() => {
     if (db === null || !canReview) return;
     let cancelled = false;
-    void Promise.all([readReview(db, identity), readConflicts(db, identity)]).then(([docs, conflicts]) => {
-      if (!cancelled) setPending({ identity, count: pendingCount(docs, conflicts) });
+    void Promise.all([readReview(db, identity), readConflicts(db, identity), readReports(db, identity)]).then(([docs, conflicts, reports]) => {
+      if (!cancelled) setPending({ identity, count: pendingCount(docs, conflicts, reports) });
     });
     return () => {
       cancelled = true;
@@ -411,6 +411,8 @@ export function App() {
                 // 能回報的題目一定有資料庫與回報內容（AnswerView 只在 canReport() 時顯示）；否則當作失敗
                 if (db === null || report === null) throw new Error("not reportable");
                 await writeReport(db, identity, report);
+                // 回報的人自己能審核時，待審頁籤的筆數加一
+                setReviewVersion((v) => v + 1);
               }}
             />
             <QuestionPanel language={language} disabled={retriever === null || answering} text={draft} onText={setDraft} onAsk={onAsk} />

@@ -6,6 +6,7 @@ import type { ConflictItem } from "../conflicts/store";
 import type { MergeSuggestion } from "../extraction/merge";
 import type { EntityApproval, ReviewDocument, ReviewEntity, ReviewRelation } from "../extraction/store";
 import type { Graph, GraphRelation } from "../graph/read";
+import type { AnswerReport } from "../reports/store";
 
 // mergeInto：既有實體的 id；null 表示建立新實體；undefined 表示還沒選擇
 export interface EntityChoice {
@@ -233,10 +234,15 @@ export const relationReady = (doc: ReviewDocument, relationId: string) => {
   return r !== undefined && [r.from, r.to].every((id) => doc.entities.some((e) => e.id === id && e.status === "approved"));
 };
 
-// 待審筆數（#48）：目前身分看得到的待審實體與關係，加上待處理的說法不同（#51）
-export const pendingCount = (docs: readonly ReviewDocument[], conflicts: readonly Pick<ConflictItem, "decision">[] = []) =>
+// 待審筆數（#48）：目前身分看得到的待審實體與關係，加上待處理的說法不同（#51）與未處理的回答錯誤回報（#209）
+export const pendingCount = (
+  docs: readonly ReviewDocument[],
+  conflicts: readonly Pick<ConflictItem, "decision">[] = [],
+  reports: readonly Pick<AnswerReport, "resolution">[] = [],
+) =>
   docs.reduce((n, d) => n + [...d.entities, ...d.relations].filter((x) => x.status === "pending").length, 0) +
-  conflicts.filter((c) => c.decision === null).length;
+  conflicts.filter((c) => c.decision === null).length +
+  reports.filter((r) => r.resolution === null).length;
 
 // 待審頁的文件清單（#51）：待審的文件，加上只有說法不同、沒有待審實體與關係的文件（以新段落的文件資訊補上）
 export function reviewDocuments(docs: readonly ReviewDocument[], conflicts: readonly ConflictItem[]): ReviewDocument[] {
