@@ -178,7 +178,7 @@ describe("ask：中止", () => {
   });
 });
 
-describe("ask：矛盾", () => {
+describe("ask：說法不同", () => {
   const launch = clientConfig.scenarios.scenarios.flatMap((s) => s.questions).find((q) => q.id === "bluewing-launch")!;
 
   it.each(clientConfig.client.languages)("青翼桌上市時間（%s）：兩種說法都送出，且分屬不同的文件標題", async (language) => {

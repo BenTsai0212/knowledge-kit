@@ -80,7 +80,7 @@
 - `app/src/evals/run.test.ts` 以 `keyword-hash` 檢查標記與實際結果一致：沒標記的同義詞題檢索得到答案段落、標記的檢索不到，完全無關的題目檢索不到任何段落。
 - 下載的 JSON 記下評測時的 `provider` 與不適用的題目 id（`notApplicable`）。
 
-`app/src/evals/validate.test.ts` 檢查題數（情境題 8 題以上、預期回答 15 題以上，依 [docs/playbook/eval-question-bank.md](playbook/eval-question-bank.md)）、語言與類別的涵蓋範圍、`scenarios.json` 的每一題都在題庫中，以及矛盾題要求兩種說法。
+`app/src/evals/validate.test.ts` 檢查題數（情境題 8 題以上、預期回答 15 題以上，依 [docs/playbook/eval-question-bank.md](playbook/eval-question-bank.md)）、語言與類別的涵蓋範圍、`scenarios.json` 的每一題都在題庫中，以及說法不同的題目要求兩種說法。
 
 ## 指標
 
@@ -95,7 +95,7 @@
 
 - 分母只算已完成的題目。全部完成之前不判定通過或未通過（`meets: null`）；分母為 0 的指標也不判定。
 - 比例以浮點數計算，比較時容許 1e-9 的誤差（例如 9/10 對 0.9）。
-- **矛盾題**計分方式與一般回答題相同：`keyPoints` 要求兩種說法都提到，`answerPassages` 是講上市時間的段落。資料集裡沒有「取代」的決定，所以預期回答會把兩種說法並列（[docs/qa.md](qa.md)「矛盾」）。
+- **說法不同的題目**計分方式與一般回答題相同：`keyPoints` 要求兩種說法都提到，`answerPassages` 是講上市時間的段落。資料集裡沒有「取代」的決定，所以預期回答會把兩種說法並列（[docs/qa.md](qa.md)「說法不同」）。
 - 改用模型評分時，關鍵重點的結果照樣保留，方便對照。
 
 評分在 `app/src/evals/score.ts`，全部是純函式：`scoreQuestion()` 對一題評分，`summarize()` 彙總指標。輸入是一題執行時記下的內容（`Observation`：檢索回傳的段落 id、送到 `/api/ask` 的 body、`ask()` 的結果）。

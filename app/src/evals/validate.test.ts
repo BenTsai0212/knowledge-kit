@@ -97,7 +97,7 @@ describe("參考情境的題庫", () => {
     expect(pairs.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("矛盾題要求兩種說法都提到", () => {
+  it("說法不同的題目要求兩種說法都提到", () => {
     for (const q of questions.filter((q) => q.category === "conflict")) expect(q.keyPoints.length).toBeGreaterThanOrEqual(2);
   });
 });

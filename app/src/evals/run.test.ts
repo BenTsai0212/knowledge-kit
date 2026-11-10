@@ -15,7 +15,7 @@ const { retrieval, evals } = clientConfig.client;
 const DEFAULT: EvalSettings = { topK: retrieval.topK, minScore: retrieval.minScore };
 const all = evalQuestions.questions;
 const pick = (...ids: string[]) => ids.map((id) => all.find((q) => q.id === id)!);
-// 會送出的回答題、本機就拒答的題庫外問題（檢索不到段落）、英文的矛盾題、主管才看得到的回答題
+// 會送出的回答題、本機就拒答的題庫外問題（檢索不到段落）、英文的說法不同題、主管才看得到的回答題
 const sample = pick("annual-leave-staff", "weather-staff", "bluewing-launch-staff-en", "bluewing-cost-manager");
 
 let db: Database;

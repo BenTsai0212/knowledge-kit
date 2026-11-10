@@ -150,7 +150,7 @@ describe.each([
 });
 
 describe("沒有 canReview 的身分", { timeout: 30_000 }, () => {
-  it("看不到未處理與「不是矛盾」的組合，看得到兩段都可見的「並存」「取代」組合", async () => {
+  it("看不到未處理與「不算說法不同」的組合，看得到兩段都可見的「並存」「取代」組合", async () => {
     const w = await setup();
     expect((await queryConflicts(w.db, "staff")).conflicts).toEqual(["pc-p1", "pc-s1"]);
     // pc-m1（取代）的新段落在機密文件中，一般員工看不到

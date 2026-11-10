@@ -193,7 +193,7 @@ policy 中的子查詢同樣受 RLS 限制，所以「段落看得到」已包�
 | `conflict_decisions` | `SELECT`、`INSERT` | 有 `can_review`、`decided_by` 是自己、兩段都看得到 | 兩段都看得到，且（有 `can_review`，或 `decision` 為 `coexist`／`supersede`） |
 
 - **比對只用上傳者看得到的段落**：既有段落必須是上傳者看得到的。新文件與上傳者看不到的機密文件說法不同時不會被偵測，否則等於透露機密內容的存在。
-- **未處理的紀錄只有核准者讀得到**（比照「待審與核准」）：沒有 `can_review` 的身分只看得到兩段都看得到、而且已決定為「並存」或「取代」的組合；未處理與「不是矛盾」的組合看不到。上傳者寫入後讀不到自己寫的紀錄，所以寫入不使用 `RETURNING`。
+- **未處理的紀錄只有核准者讀得到**（比照「待審與核准」）：沒有 `can_review` 的身分只看得到兩段都看得到、而且已決定為「並存」或「取代」的組合；未處理與「不算說法不同」的組合看不到。上傳者寫入後讀不到自己寫的紀錄，所以寫入不使用 `RETURNING`。
 - **任何指向另一段的紀錄，只給看得到兩段的人**：例如主管上傳機密文件並標記取代一段公開段落，一般員工看不到這筆紀錄，因此問答、時間軸與原文都不會出現任何標示。問答的部分以 `oracle.ts` 的 `expectedSupersede()` 比對（`app/tests/qa/supersede.test.ts`）；時間軸與原文的標示在畫面的 PR 實作。
 - **policy 不互相參照**：`conflict_decisions` 帶上兩段的 id（複合外鍵 `(conflict_id, new_passage_id, old_passage_id)` 參照 `conflicts`），SELECT policy 只查 `passages`；`conflicts` 的 SELECT policy 查 `conflict_decisions`。參照方向是 `conflicts → conflict_decisions → passages`。
 - **寫入決定不查 `conflicts`**：INSERT 的 `WITH CHECK` 若寫成 `EXISTS (SELECT … FROM kk.conflicts)`，`conflicts` 的 SELECT policy 又參照 `conflict_decisions`，PostgreSQL 會報 infinite recursion（已以測試確認）。有 `can_review` 時「該組看得到」等於「兩段都看得到」，兩段又由複合外鍵保證與該組一致，所以直接檢查兩段。`store.ts` 的 `decideConflict()` 以 `INSERT … SELECT FROM kk.conflicts` 帶入兩段的 id，看不到該組時沒有可寫入的列，視為拒絕。
