@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { clientConfig } from "../client/load";
 import { iconDataUri } from "./entity-icons";
-import { edgeWidth, graphStyle, mix, nodeSize, SELECTED_NODE_TINT } from "./graph-style";
+import { edgeWidth, graphStyle, mix, NODE_LABEL_MAX_WIDTH, nodeSize, SELECTED_NODE_TINT } from "./graph-style";
 import { themeVariables } from "./theme";
 
 const variables = themeVariables(clientConfig.theme);
@@ -41,6 +41,20 @@ describe("圖譜的節點與線（#199）", () => {
       "background-color": clientConfig.theme.colors.surface,
     });
     expect(rule("edge")).toMatchObject({ width: "data(width)" });
+  });
+
+  it("長的節點標籤換行，以不透明的面板底色襯底，不壓到連線（#207）", () => {
+    expect(rule("node")).toMatchObject({
+      color: clientConfig.theme.colors.text,
+      "text-wrap": "wrap",
+      "text-max-width": `${NODE_LABEL_MAX_WIDTH}px`,
+      "text-background-color": clientConfig.theme.colors.surface,
+      "text-background-opacity": 1,
+    });
+    // 深色模式：GraphView 以切換後的 CSS 變數重新套用，襯底跟著換成深色的 surface
+    const dark: Record<string, string> = { ...variables, "--color-surface": "#101010", "--color-text": "#EEEEEE" };
+    const darkStyle = graphStyle((name) => dark[name] ?? "", []) as typeof style;
+    expect(darkStyle.find((r) => r.selector === "node")?.style).toMatchObject({ color: "#EEEEEE", "text-background-color": "#101010" });
   });
 
   it("每種實體類型：類型色的外圈與圖示；選取時是類型色的淡色底、圖示改用 text", () => {

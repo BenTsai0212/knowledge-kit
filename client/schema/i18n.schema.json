@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "i18n.schema.json",
   "title": "介面文字（client/i18n/<語言>.json）",
-  "description": "每種語言一份，鍵完全相同；帶參數的文字以 {camelCase} 標示，各語言的參數必須相同（check-client.mjs 檢查）",
+  "description": "每種語言一份，鍵完全相同；帶參數的文字以 {camelCase} 標示，單複數以 {camelCase, plural, one {# …} other {# …}} 標示（docs/client-config.md「翻譯檔」），各語言的參數必須相同（check-client.mjs 檢查）",
   "definitions": {
     "Text": { "description": "非空字串（不能只有空白）", "type": "string", "pattern": "\\S" }
   },

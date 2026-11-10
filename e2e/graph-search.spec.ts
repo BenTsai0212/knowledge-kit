@@ -2,9 +2,9 @@
 // 在問答中問（填進輸入框、不送出）；類型篩選；多跳路徑；手機寬度。圖譜不呼叫模型，不點畫布（展開從搜尋與面板操作）。
 import { expect, test, type Page } from "@playwright/test";
 import { openApp, openTab, s, switchIdentity, tab } from "./support/app";
-import { access, knowledgeModel, language, nonReviewer, reviewer } from "./support/client";
+import { access, clientName, knowledgeModel, language, nonReviewer, reviewer } from "./support/client";
 import { sameNameEntities } from "./support/dataset";
-import type { Cy } from "./support/graph";
+import { waitForGraphIdle, type Cy } from "./support/graph";
 
 const CANVAS = ".graph-page .graph-canvas";
 
@@ -159,6 +159,43 @@ test("同名的實體：節點標籤與實體面板的標題分得出來", async
   }
 });
 
+// #207：面板「出現在」的連結換行時靠左、每一行與第一行文字對齊，第一行與項目符號同高；節點標籤換行並有不透明的襯底
+test("面板的長連結換行時靠左對齊；節點標籤換行並以底色襯底", async ({ page }) => {
+  const data = await openGraph(page, reviewer?.id);
+  const found = pair(data);
+  test.skip(found === null, "圖中沒有名稱不重複的節點");
+  const { a } = found!;
+  await searchAndPick(page, data.labels[a]);
+  const sources = page.getByRole("region", { name: data.labels[a] }).locator("h3 + ul").last();
+  await expect(sources.getByRole("button").first()).toBeVisible();
+  // 把連結變窄，讓標題一定換行；量每一行文字的左緣與連結左緣、連結上緣與項目的上緣
+  const lines = await sources.getByRole("button").first().evaluate((button) => {
+    button.style.width = "1em";
+    const range = document.createRange();
+    range.selectNodeContents(button);
+    const box = button.getBoundingClientRect();
+    return {
+      textAlign: getComputedStyle(button).textAlign,
+      lefts: [...range.getClientRects()].map((r) => r.left - box.left),
+      top: box.top - button.closest("li")!.getBoundingClientRect().top,
+    };
+  });
+  expect(["start", "left"]).toContain(lines.textAlign);
+  expect(lines.lefts.length).toBeGreaterThan(1);
+  for (const left of lines.lefts) expect(Math.abs(left)).toBeLessThan(1);
+  expect(Math.abs(lines.top)).toBeLessThan(1);
+
+  const label = await page.evaluate(
+    ({ selector, id }) => {
+      const cy = document.querySelector<HTMLElement & { _cyreg?: { cy?: { $id(id: string): { style(name: string): string } } } }>(selector)!._cyreg!.cy!;
+      const node = cy.$id(id);
+      return { wrap: node.style("text-wrap"), opacity: Number(node.style("text-background-opacity")) };
+    },
+    { selector: CANVAS, id: a },
+  );
+  expect(label).toEqual({ wrap: "wrap", opacity: 1 });
+});
+
 test("類型篩選：沒勾的類型變灰，搜尋不到", async ({ page }) => {
   const data = await openGraph(page, reviewer?.id);
   const found = pair(data);
@@ -191,6 +228,19 @@ test("多跳路徑：起點預設為選取的實體，終點以搜尋選擇，�
   await searchAndPick(page, data.labels[b], s.pathTo);
   const steps = page.locator("details.path > ol > li > strong");
   await expect(steps).toHaveText([data.labels[a], data.labels[b]]);
+});
+
+// #207：排版不把標籤算進節點大小，fit 後整張圖不會縮到標籤看不清（標籤 12px × 縮放）
+test.describe("1280×720", () => {
+  test.use({ viewport: { width: 1280, height: 720 } });
+
+  test("打開圖譜（全部）時，節點標籤的實際字級至少 10px", async ({ page }) => {
+    test.skip(clientName !== "", "只檢查參考情境（client/）");
+    await openGraph(page, reviewer?.id);
+    await waitForGraphIdle(page, CANVAS);
+    const zoom = await page.evaluate((selector) => document.querySelector<HTMLElement & { _cyreg?: { cy?: Cy } }>(selector)!._cyreg!.cy!.zoom(), CANVAS);
+    expect(12 * zoom).toBeGreaterThanOrEqual(10);
+  });
 });
 
 test.describe("手機寬度", () => {

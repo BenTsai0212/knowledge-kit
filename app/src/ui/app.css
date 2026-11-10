@@ -287,6 +287,12 @@ button.link {
   color: var(--color-primary);
   text-decoration: underline;
   padding: 0;
+  text-align: start;
+}
+
+/* 清單中的連結（例如圖譜面板的「出現在」）換行時：第一行與項目符號同高，第二行起與第一行文字對齊（#207） */
+li > button.link {
+  vertical-align: top;
 }
 
 input,

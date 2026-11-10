@@ -6,6 +6,9 @@ import type { StylesheetJson } from "cytoscape";
 import type { EntityType } from "../client/types";
 import { iconDataUri } from "./entity-icons";
 
+// 節點標籤超過這個寬度時在空白處換行（#207）；完整名稱仍在面板與搜尋結果中
+export const NODE_LABEL_MAX_WIDTH = 140;
+
 // 讀取 CSS 變數，例如 (name) => getComputedStyle(document.documentElement).getPropertyValue(name)
 export type ReadVariable = (name: string) => string;
 
@@ -69,6 +72,14 @@ export function graphStyle(read: ReadVariable, types: TypeStyle[], transitionMs 
         "font-size": 12,
         "text-valign": "bottom",
         "text-margin-y": 4,
+        // 長標籤換行，並以不透明的面板底色（畫布在 .card 內）襯底，不壓到經過的連線；文字與襯底的對比就是
+        // text（變灰時 textMuted）與 surface 的對比，由 check:client 檢查（#207）
+        "text-wrap": "wrap",
+        "text-max-width": `${NODE_LABEL_MAX_WIDTH}px`,
+        "text-background-color": v("--color-surface"),
+        "text-background-opacity": 1,
+        "text-background-padding": "2px",
+        "text-background-shape": "roundrectangle",
         ...outline,
         shape: "ellipse",
         width: "data(size)",
