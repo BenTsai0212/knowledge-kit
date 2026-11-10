@@ -78,6 +78,8 @@ PGlite 的 session user 固定是 superuser `postgres`。以 `username: "kk_app"
 | `review_retractions` | `decision_id` PK（每個決定最多撤回一次）、`document_id`（項目所屬的文件）、`retracted_by`、`retracted_at`、`cascade_of`（連帶撤回時指向實體的撤回） | 撤回（ADR 0007，0009） |
 | `conflicts` | `id` PK（`pc-` 開頭）、`document_id`（新文件）、`new_passage_id`（新文件的段落，以複合外鍵保證屬於新文件）、`old_passage_id`（既有段落）、`summary`（1～200 字）；`(new_passage_id, old_passage_id)` 不重複 | 說法不同的偵測（#51） |
 | `conflict_decisions` | `conflict_id` PK、`new_passage_id`、`old_passage_id`（以複合外鍵保證與 `conflicts` 一致）、`decision`（`coexist`／`supersede`／`not_conflict`）、`decided_by` | 主管的處理（#51） |
+| `answer_reports` | `id` PK（`ar-` 開頭）、`reported_by`、`reported_at`、`category`（6 類）、`note`（選填，1～1000 字）、`question`（1～500 字）、`answer`（拒答時 NULL）、`sent_passage_ids`、`cited_passage_ids`（`sent` 的子集）、`entity_ids`（三者都是 `text[]`） | 回答錯誤回報（ADR 0007，0010） |
+| `answer_report_resolutions` | `report_id` PK（每個回報處理一次）、`resolution`（`not_error`／`retracted`）、`resolved_by`、`resolved_at` | 回報的處理（ADR 0007，0010） |
 
 - id 一律 `text`；`client/` 的名單沿用設定中的 id。
 - `language` 以 CHECK 限制為語言代碼格式；「必須屬於 `client.json` 的 `languages`」由匯入程式檢查。
@@ -197,6 +199,24 @@ policy 中的子查詢同樣受 RLS 限制，所以「段落看得到」已包�
 - **寫入決定不查 `conflicts`**：INSERT 的 `WITH CHECK` 若寫成 `EXISTS (SELECT … FROM kk.conflicts)`，`conflicts` 的 SELECT policy 又參照 `conflict_decisions`，PostgreSQL 會報 infinite recursion（已以測試確認）。有 `can_review` 時「該組看得到」等於「兩段都看得到」，兩段又由複合外鍵保證與該組一致，所以直接檢查兩段。`store.ts` 的 `decideConflict()` 以 `INSERT … SELECT FROM kk.conflicts` 帶入兩段的 id，看不到該組時沒有可寫入的列，視為拒絕。
 - 違反 CHECK、外鍵或被 RLS 拒絕時，`store.ts` 回傳 `denied`；重複的組合或已處理的組回傳 `conflict`。不顯示資料庫的訊息。
 - `oracle.ts` 的 `expectedConflictVisible()`、`canWriteConflict()`、`canDecideConflict()` 是上述規則的獨立實作；`app/tests/conflicts/store.test.ts` 以兩種設定（參考情境，以及一般員工也能審核）比對，並測試偽造的決定、`kk_app` 沒有 `UPDATE`／`DELETE`，以及「忽略身分的資料層」的反向驗證。
+
+## 回答錯誤回報
+
+問答的回答可以回報「有錯」（ADR 0007 決定 7，migration 0010）。回報寫入 `answer_reports`，處理（「不是錯誤」或已撤回）寫入 `answer_report_resolutions`，**都只用 INSERT**。寫入與讀取集中在 `app/src/reports/store.ts`（`writeReport()`、`readReports()`、`resolveReport()`），一律經 `withIdentity()`。畫面在 #209 的下一個 PR。
+
+| 資料表 | 權限 | 寫入（`WITH CHECK`） | 讀取（`USING`） |
+| --- | --- | --- | --- |
+| `answer_reports` | `SELECT`、`INSERT` | 所有身分；`reported_by` 是自己、`reported_at` 是現在；`sent_passage_ids` 的段落與 `entity_ids` 的實體自己全部看得到 | 有 `can_review`，且 `sent_passage_ids` 的段落全部看得到 |
+| `answer_report_resolutions` | `SELECT`、`INSERT` | 有 `can_review`、`resolved_by` 是自己、`resolved_at` 是現在、看得到該回報 | 看得到該回報 |
+
+- **以送出的段落判斷，不只引用的段落**（#209 決定 5）：回答可能用到送給模型、但沒有引用的段落內容。送出的段落有一段看不到，就看不到該回報，即使那一段沒有被引用。
+- **段落存成陣列，不另開子表**：子表的 RLS 會隱藏看不到的列，讓「全部看得到」被誤判成立。policy 以 `unnest()` 逐一確認每一段都在 `passages`（受 RLS 限制）中。
+- **拒答的回報只含問題文字**：`answer` 為 NULL 時三個陣列都必須是空的；有回答時至少有一段送出的段落（CHECK），避免沒有段落的回答被所有審核者看到。拒答的回報有 `can_review` 就看得到。
+- **回報者不一定讀得到自己的回報**：沒有 `can_review` 的身分也能回報，寫入後讀不到，所以寫入不使用 `RETURNING`。
+- **提到的實體**：寫入時要求回報者看得到；`readReports()` 只列出讀者看得到的實體（與 `entities` 的 RLS 取交集），回報本身的可見範圍不看實體。
+- **處理每個回報一次**：主鍵是 `report_id`，已處理時回傳 `conflict`。policy 的參照方向是 `answer_report_resolutions → answer_reports → passages`，沒有循環。
+- 違反 CHECK、外鍵、沒有身分或被 RLS 拒絕時，`store.ts` 回傳 `denied`；不顯示資料庫的訊息。
+- `oracle.ts` 的 `expectedReportVisible()`、`canWriteReport()`、`canResolveReport()` 是上述規則的獨立實作；`app/tests/reports/store.test.ts` 以兩種設定（參考情境，以及一般員工也能審核）比對，並測試「沒有引用、但送出的段落看不到時看不到該回報」、偽造的回報與處理、`kk_app` 沒有 `UPDATE`／`DELETE`，以及「忽略身分的資料層」的反向驗證。
 
 ## 越權測試（滲漏矩陣）
 

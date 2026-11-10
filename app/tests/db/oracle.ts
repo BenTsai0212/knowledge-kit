@@ -244,3 +244,37 @@ export function expectedMarks(
   for (const [old, by] of expectedSupersede(access, data, conflicts, identityId, dates)) add(old, `superseded_by|${by}`);
   return out;
 }
+
+// docs/data-model.md「回答錯誤回報」的獨立實作（ADR 0007 決定 7）。拒答的回報沒有段落（sent 是空的）
+export interface ReportSample {
+  reports: { id: string; sent: string[] }[];
+  resolutions: string[];
+}
+
+// 看得到的回報與處理：有 canReview，且送出的段落全部看得到（拒答的回報：有 canReview 即可）
+export function expectedReportVisible(access: AccessFile, data: Sample, reports: ReportSample, identityId: string | null): Visible {
+  const role = access.roles.find((r) => r.id === identityId);
+  const passages = new Set(expectedVisible(access, data, identityId).passages);
+  const ids = new Set(role?.canReview ? reports.reports.filter((r) => r.sent.every((p) => passages.has(p))).map((r) => r.id) : []);
+  return {
+    answer_reports: [...ids],
+    answer_report_resolutions: reports.resolutions.filter((r) => ids.has(r)),
+  };
+}
+
+export const REPORT_KEY_SQL: Record<string, string> = {
+  answer_reports: "id",
+  answer_report_resolutions: "report_id",
+};
+
+// 能否寫入回報：身分存在，送出的段落與提到的實體自己全部看得到（不要求 canReview）
+export function canWriteReport(access: AccessFile, data: Sample, identityId: string | null, report: { sent: string[]; entities: string[] }): boolean {
+  if (!access.roles.some((r) => r.id === identityId)) return false;
+  const visible = expectedVisible(access, data, identityId);
+  return report.sent.every((p) => visible.passages.includes(p)) && report.entities.every((e) => visible.entities.includes(e));
+}
+
+// 能否處理：看得到該回報（因此有 canReview），而且還沒有處理
+export function canResolveReport(access: AccessFile, data: Sample, reports: ReportSample, identityId: string | null, report: string): boolean {
+  return expectedReportVisible(access, data, reports, identityId).answer_reports.includes(report) && !reports.resolutions.includes(report);
+}
