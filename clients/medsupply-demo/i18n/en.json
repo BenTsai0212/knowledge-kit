@@ -59,7 +59,7 @@
   "askAboutEntity": "What do we know about {name}?",
   "relatedEntities": "Related entities",
   "entitySources": "Appears in",
-  "graphRetract": "Withdraw this document's approval",
+  "graphRetract": "Withdraw this document's approval of it",
   "graphRetractWillRemove": "After withdrawing, these will disappear from the graph:",
   "graphRetractNoChange": "Other documents also mention these, so they stay in the graph without this document as a source.",
   "graphRetractConfirm": "Withdraw",

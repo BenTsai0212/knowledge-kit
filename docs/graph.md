@@ -81,7 +81,7 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
 | `ui/GraphView.tsx` | 以 cytoscape 畫圖：節點帶實體類型、看得到的關聯數（大小），邊帶看得到的出處數（線粗）；標籤是 `names[介面語言]`，邊的標籤是關係類型的 `label`，只在選取節點的相連關係顯示；傳入 `expansion` 時（圖譜頁）聚焦集合以外變灰並播放展開的動態 |
 | `ui/graph-style.ts` | cytoscape 的樣式（見下方「節點與線」）：從 `theme.json` 的 CSS 變數讀出顏色（找不到實體類型時用 `graphFallback` 與通用圖示），標籤加上背景色的外框與 `surface` 襯底、長標籤換行；系統切換淺色／深色時由 `GraphView.tsx` 重新套用（[client-config.md](client-config.md)「`theme.json`」） |
 | `ui/entity-icons.ts`、`ui/EntityIcon.tsx` | 實體類型的固定圖示集（自畫的 24×24 SVG path，不使用圖示套件）：cytoscape 節點以 SVG data URI 當背景圖，圖例以同一份 path 畫 `<svg>`（`aria-hidden`，旁邊一律有類型名稱） |
-| `ui/EntityPanel.tsx` | 圖譜頁的右側面板：名稱、類型（圖示＋文字）、關聯數與文件數；「在問答中問」「只看它」；關係清單（方向、關係名稱、對方、出處數，點對方從它繼續展開）；出現的文件（點了以 `readSource()` 打開原文；經審核進來的文件可以「撤回這份文件的核准」，先列出會消失的實體與關係，見 [docs/extraction.md](extraction.md)「畫面」） |
+| `ui/EntityPanel.tsx` | 圖譜頁的右側面板：名稱、類型（圖示＋文字）、關聯數與文件數；「在問答中問」「只看它」；關係清單（方向、關係名稱、對方、出處數，點對方從它繼續展開）；出現的文件（點了以 `readSource()` 打開原文；經審核進來的文件可以「撤回此文件對它的核准」（只撤回這個實體與連帶的關係，小型外框按鈕），先列出會消失的實體與關係，見 [docs/extraction.md](extraction.md)「畫面」） |
 | `graph/search.ts`、`ui/EntitySearch.tsx` | 搜尋、類型篩選與「關聯最多」（純函式）；以名稱搜尋實體的輸入框（`combobox`＋`listbox`，圖譜上方與多跳路徑的兩端共用） |
 | `graph/expansion.ts`、`ui/motion.ts` | 逐步展開的狀態（純函式）；動態的時間與「減少動態效果」的判斷 |
 | `ui/PathPanel.tsx` | 多跳路徑（右側面板下方的可收合區塊，#199）：以搜尋框選起點與終點（起點預設為目前選取的實體），在圖上標示路徑、其他變灰，逐步列出每個關係與它的出處；找不到時顯示固定文字「找不到這兩個實體之間的路徑。」，不區分原因 |

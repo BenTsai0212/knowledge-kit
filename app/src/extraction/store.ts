@@ -414,7 +414,7 @@ export async function retract(db: Database, identityId: string | null, decisionI
   }
 }
 
-// 圖譜面板的「撤回這份文件的核准」（ADR 0007）：實體在某份文件的出處由哪些決定寫入，以及撤回後目前身分的圖譜中會消失的實體與關係
+// 圖譜面板的「撤回此文件對它的核准」（ADR 0007）：實體在某份文件的出處由哪些決定寫入，以及撤回後目前身分的圖譜中會消失的實體與關係
 export interface DocumentRetraction {
   documentId: string;
   // 交給 retract() 的決定（連帶撤回的關係由 retract() 處理）

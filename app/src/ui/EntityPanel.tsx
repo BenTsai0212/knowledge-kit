@@ -20,13 +20,13 @@ interface Props {
   onOpenSource(passageId: string): void;
   // 經審核進來、目前身分可以撤回的文件（ADR 0007；沒有 canReview 時為空）
   retractions: DocumentRetraction[];
-  // 撤回這份文件的核准；失敗時回傳錯誤訊息
+  // 撤回此文件對這個實體的核准（含連帶的關係）；失敗時回傳錯誤訊息
   onRetract(retraction: DocumentRetraction): Promise<string | null>;
 }
 
 // 圖譜頁右側的實體面板（#199）：名稱、類型、關聯數與文件數；在問答中問、只看它；
 // 關係清單（方向、關係名稱、對方、出處數，點對方從它展開）；出現在哪些文件（點了打開原文）。全部只用可見圖。
-// 經審核進來的文件可以「撤回這份文件的核准」：先列出撤回後會從圖譜消失的實體與關係，確認後才撤回（ADR 0007）。
+// 經審核進來的文件可以「撤回此文件對它的核准」：先列出撤回後會從圖譜消失的實體與關係，確認後才撤回（ADR 0007）。
 // 名稱與搜尋結果相同，同名的實體加上第一個相關實體的名稱（#198）
 export function EntityPanel({ graph, entityId, language, onSelect, onShowOnly, onAskAbout, onOpenSource, retractions, onRetract }: Props) {
   const s = strings(language);
@@ -126,7 +126,7 @@ export function EntityPanel({ graph, entityId, language, onSelect, onShowOnly, o
             </button>
             {p.languageLabel !== undefined && <span className="badge">{p.languageLabel}</span>}
             {retractionOf(p.documentId) !== undefined && confirming !== p.documentId && (
-              <button type="button" className="link" onClick={() => (setConfirming(p.documentId), setError(null))}>
+              <button type="button" className="chip retract" onClick={() => (setConfirming(p.documentId), setError(null))}>
                 {s.graphRetract}
               </button>
             )}

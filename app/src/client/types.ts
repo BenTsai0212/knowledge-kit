@@ -328,7 +328,7 @@ export interface UiStrings {
   askAboutEntity: string;
   relatedEntities: string;
   entitySources: string;
-  // 撤回這份文件的核准（ADR 0007）：按鈕、確認時列出會消失的內容的說明、沒有內容會消失時的說明、確認與取消
+  // 撤回此文件對這個實體的核准（ADR 0007，只撤回這個實體與連帶的關係，不是整份文件）：按鈕、確認時列出會消失的內容的說明、沒有內容會消失時的說明、確認與取消
   graphRetract: string;
   graphRetractWillRemove: string;
   graphRetractNoChange: string;

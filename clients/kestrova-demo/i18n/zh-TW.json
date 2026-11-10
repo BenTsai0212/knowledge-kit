@@ -59,7 +59,7 @@
   "askAboutEntity": "{name}的相關資訊有哪些？",
   "relatedEntities": "相關實體",
   "entitySources": "出現的文件",
-  "graphRetract": "撤回這份文件的核准",
+  "graphRetract": "撤回此文件對它的核准",
   "graphRetractWillRemove": "撤回後，以下內容會從圖譜消失：",
   "graphRetractNoChange": "其他文件也提到這些內容，撤回後圖譜中仍看得到，只少了這份文件的出處。",
   "graphRetractConfirm": "撤回",

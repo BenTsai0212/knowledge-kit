@@ -59,7 +59,7 @@
   "askAboutEntity": "{name}について分かっていることを教えてください。",
   "relatedEntities": "関連するエンティティ",
   "entitySources": "登場する文書",
-  "graphRetract": "この文書の承認を取り消す",
+  "graphRetract": "この文書でのこのエンティティの承認を取り消す",
   "graphRetractWillRemove": "取り消すと、次の内容が関係図から消えます：",
   "graphRetractNoChange": "ほかの文書にも記載があるため、取り消しても関係図には残ります（この文書の出典だけがなくなります）。",
   "graphRetractConfirm": "取り消す",
