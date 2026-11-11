@@ -40,7 +40,13 @@ const keepVisible = (graph: Graph) => (id: string | null) => (id !== null && gra
 export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, canReview, onRetracted, initialSelected = null }: Props) {
   const s = strings(language);
   const [graph, setGraph] = useState<Graph | null>(null);
-  const [expansion, setExpansion] = useState<Expansion>(initialSelected === null ? ALL : only(initialSelected));
+  const [expansion, setExpansionState] = useState<Expansion>(initialSelected === null ? ALL : only(initialSelected));
+  // 最後一次操作是按「只看它」時，變灰的元素降到 15%；之後再展開、點節點或搜尋回到 45%（#240 決定 1）
+  const [isolated, setIsolated] = useState(false);
+  const setExpansion = (next: Expansion | ((current: Expansion) => Expansion), isolate = false) => {
+    setExpansionState(next);
+    setIsolated(isolate);
+  };
   const [ends, setEnds] = useState<{ from: string | null; to: string | null }>({ from: null, to: null });
   // 類型篩選：勾選的類型（預設全選）
   const [types, setTypes] = useState<ReadonlySet<string>>(() => new Set(entityTypes.map((t) => t.id)));
@@ -57,7 +63,8 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
       if (!ticket.isCurrent()) return;
       const keep = keepVisible(g);
       setGraph(g);
-      setExpansion((current) => keepVisiblePath(g, current));
+      // 切換身分時只截掉看不到的部分，「只看它」的狀態不變
+      setExpansionState((current) => keepVisiblePath(g, current));
       setEnds(({ from, to }) => ({ from: keep(from), to: keep(to) }));
     });
     return () => reads.current.cancel();
@@ -152,7 +159,7 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
             </nav>
           )}
         </div>
-        <GraphView graph={graph} language={language} selected={selected} path={path} expansion={expansion} excluded={excluded} onSelect={onExpand} />
+        <GraphView graph={graph} language={language} selected={selected} path={path} expansion={expansion} excluded={excluded} isolated={isolated} onSelect={onExpand} />
       </section>
       <div className="graph-side">
         {selected === null ? (
@@ -182,7 +189,7 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
             entityId={selected}
             language={language}
             onSelect={onExpand}
-            onShowOnly={(id) => setExpansion(only(id))}
+            onShowOnly={(id) => setExpansion(only(id), true)}
             onAskAbout={(id) => onAskAbout(fill(s.askAboutEntity, { name: nameOf(id) }))}
             onOpenSource={onOpenSource}
             retractions={canReview && retractions?.entityId === selected ? retractions.list : []}

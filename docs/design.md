@@ -61,6 +61,7 @@ Light 來自提案 A「墨與螢光」，Dark 來自提案 B「晶格」。對�
 - 客戶在 `client/knowledge-model.json` 只設定一個顏色；Light 原樣使用，對 `surface` 至少 3:1（圖形元件標準）。
 - Dark 保留色相與彩度，把 OKLCH 亮度提高到至少 0.75：`oklch(from var(--entity) max(l, 0.75) c h)`。
 - 實體一律「形狀＋顏色」雙重區分：人員圓形、部門圓角方形、專案小圓角方形。
+- 圖譜（#240，[docs/graph.md](graph.md)「節點與線」）：節點是類型色填色、`surface` 色圖示，形狀與入口頁主視覺相同；Dark 與主視覺一樣以 `color-mix(in srgb, 類型色 75%, text)` 近似上面的公式。選取是 `background` 間隙＋2px `text` 外環；變灰 45% 不透明（「只看它」15%）。
 - 參考情境「專案」原本的 `#B26A00` 在 Dark 推導後接近證據琥珀，已改為紫色 `#7A52C7`；`check:client` 在實體色相與證據色相差小於 25° 時警告（#229，[docs/client-config.md](client-config.md)「對比度」）。設計稿上的 Dark 實體色是目測近似值，實作以公式算出的值為準。
 
 ## 字體、圓角、焦點框

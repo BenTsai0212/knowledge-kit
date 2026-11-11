@@ -333,11 +333,11 @@ export const TEXT_CONTRAST = 4.5;
 export const GRAPHIC_CONTRAST = 3;
 const SCHEMES = ["colors", "darkColors"];
 const STATUS = ["danger", "warning", "success", "info"];
-// app.css 的淡色比例：提示框與可見等級標籤 14%，選取中的項目 12%；
-// 圖譜中選取的節點是類型色 14% 的淡色底（app/src/ui/graph-style.ts 的 SELECTED_NODE_TINT）
+// app.css 的淡色比例：提示框與可見等級標籤 14%，選取中的項目 12%
 const TINT = 14;
 const SELECTED_TINT = 12;
-const SELECTED_NODE_TINT = 14;
+// 圖譜節點的填色：Light 是類型色，Dark 是類型色 75% + text（app/src/ui/graph-style.ts 的 DARK_ENTITY_MIX）
+const DARK_ENTITY_MIX = 75;
 
 const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 
@@ -488,16 +488,16 @@ function checkContrast(valid) {
         });
       }
     });
-    // 圖譜的節點：實體類型色的外圈與圖示放在頁面或面板的背景上；
-    // 選取時圖示改用 text，放在類型色的淡色底上（深色模式中類型色在淡色底上不足 3:1）
+    // 圖譜的節點（#240）：類型色填色（Dark 調亮）上是 surface 色的圖示；類型色本身也放在頁面或面板的背景上（圖例、時間軸）
     valid["knowledge-model.json"]?.entityTypes.forEach((type, i) => {
-      const selected = mix(type.color, SELECTED_NODE_TINT, c.surface);
-      const value = contrast(c.text, selected);
+      const fill = scheme === "darkColors" ? mix(type.color, DARK_ENTITY_MIX, c.text) : type.color;
+      const value = contrast(c.surface, fill);
       if (value < GRAPHIC_CONTRAST) {
+        const name = scheme === "darkColors" ? `節點填色（${DARK_ENTITY_MIX}% + text）` : "節點填色";
         errors.push({
           file: "knowledge-model.json",
           path: `/entityTypes/${i}/color`,
-          message: `${label(type)}的選取底色（${SELECTED_NODE_TINT}% + surface）與 ${scheme} 的 text 對比 ${ratio(value)}，需要 ${GRAPHIC_CONTRAST}:1`,
+          message: `${label(type)}的${name}與 ${scheme} 的 surface（圖示）對比 ${ratio(value)}，需要 ${GRAPHIC_CONTRAST}:1`,
         });
       }
       for (const bg of ["background", "surface"]) {

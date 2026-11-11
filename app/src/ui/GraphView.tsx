@@ -7,9 +7,9 @@ import type { PathStep } from "../graph/path";
 import type { Graph } from "../graph/read";
 import { relationCounts } from "../graph/search";
 import { nodeLabels } from "./graph-labels";
-import { DIMMED_NODE_SCALE, edgeWidth, graphStyle, nodeSize } from "./graph-style";
+import { edgeWidth, graphStyle, nodeSize } from "./graph-style";
 import { EXPAND_MS, motionDuration, PAN_MS, watchReducedMotion } from "./motion";
-import { watchColorScheme } from "./theme";
+import { DARK_SCHEME, watchColorScheme } from "./theme";
 
 interface Props {
   graph: Graph;
@@ -22,6 +22,8 @@ interface Props {
   expansion?: Expansion;
   // 類型篩選（#199，圖譜頁）：沒勾的類型的實體與它們的線變灰
   excluded?: ReadonlySet<string>;
+  // 最後一次操作是按「只看它」（#240 決定 1）：變灰的元素降到 15%（平常 45%）
+  isolated?: boolean;
   // 右側實體面板的小型鄰近圖（#195）：高度較低
   compact?: boolean;
   // 判斷同名實體用的圖（#198）：鄰近圖傳入完整的可見圖；沒有傳入時用 graph
@@ -32,8 +34,8 @@ const NONE: ReadonlySet<string> = new Set();
 
 const { entityTypes, relationTypes } = clientConfig.knowledgeModel;
 
-// 節點的類型（type）決定外圈色與圖示，找不到類型時由 graphStyle() 套用 graphFallback 與通用圖示；
-// 標籤與搜尋結果相同，同名的實體加上第一個相關實體的名稱（nodeLabels()）；節點大小依看得到的關聯數（變灰時縮小），線粗依看得到的出處數
+// 節點的類型（type）決定形狀、填色與圖示，找不到類型時由 graphStyle() 套用 graphFallback 與通用圖示；
+// 標籤與搜尋結果相同，同名的實體加上第一個相關實體的名稱（nodeLabels()）；節點大小依看得到的關聯數，線粗依看得到的出處數
 function elements(graph: Graph, language: string, labelGraph: Graph): ElementDefinition[] {
   const labels = nodeLabels(graph, language, labelGraph);
   const relationLabel = new Map(relationTypes.map((t) => [t.id, t.label[language]]));
@@ -44,7 +46,7 @@ function elements(graph: Graph, language: string, labelGraph: Graph): ElementDef
     ...graph.entities.map((e, i) => {
       const size = nodeSize(degree.get(e.id) ?? 0);
       return {
-        data: { id: e.id, type: e.type, label: labels.get(e.id), size, dimmedSize: Math.round(size * DIMMED_NODE_SCALE) },
+        data: { id: e.id, type: e.type, label: labels.get(e.id), size },
         position: { x: 300 * Math.cos(i * step), y: 300 * Math.sin(i * step) },
       };
     }),
@@ -61,10 +63,11 @@ function elements(graph: Graph, language: string, labelGraph: Graph): ElementDef
   ];
 }
 
-// 目前生效的 CSS 變數（淺色或深色）；減少動態效果時 transition 為 0
+// 目前生效的 CSS 變數（淺色或深色）；減少動態效果時 transition 為 0；深色模式時實體色調亮
 function currentStyle(reduced: boolean) {
   const style = getComputedStyle(document.documentElement);
-  return graphStyle((name) => style.getPropertyValue(name), entityTypes, motionDuration(reduced, EXPAND_MS));
+  const dark = window.matchMedia(DARK_SCHEME).matches;
+  return graphStyle((name) => style.getPropertyValue(name), entityTypes, motionDuration(reduced, EXPAND_MS), dark);
 }
 
 function markPath(cy: Core, path: PathStep[] | null) {
@@ -86,18 +89,20 @@ function markSelected(cy: Core, graph: Graph, selected: string | null) {
   });
 }
 
-// 聚焦集合以外變灰（找到多跳路徑時改為路徑以外變灰）；全部時都不變灰。類型篩選掉的實體與它們的線也變灰
-function markFocus(cy: Core, graph: Graph, expansion: Expansion, path: PathStep[] | null, excluded: ReadonlySet<string>) {
+// 聚焦集合以外變灰（找到多跳路徑時改為路徑以外變灰）；全部時都不變灰。類型篩選掉的實體與它們的線也變灰。
+// isolated（按了「只看它」）時變灰的元素再加上 isolated，降到 15%；找到路徑時以路徑為準，維持 45%
+function markFocus(cy: Core, graph: Graph, expansion: Expansion, path: PathStep[] | null, excluded: ReadonlySet<string>, isolated: boolean) {
   const focus =
     path === null
       ? focusOf(graph, expansion)
       : { entities: new Set(path.map((p) => p.entity)), relations: new Set(path.flatMap((p) => (p.relation === undefined ? [] : [p.relation]))) };
   cy.batch(() => {
-    cy.elements().removeClass("dimmed");
+    cy.elements().removeClass("dimmed isolated");
     cy.nodes().filter((n) => (focus !== null && !focus.entities.has(n.id())) || excluded.has(n.id())).addClass("dimmed");
     cy.edges()
       .filter((e) => (focus !== null && !focus.relations.has(e.data("relation"))) || excluded.has(e.data("source")) || excluded.has(e.data("target")))
       .addClass("dimmed");
+    if (isolated && path === null) cy.$(".dimmed").addClass("isolated");
   });
 }
 
@@ -164,7 +169,7 @@ function trackContainer(element: HTMLElement, cy: Core): () => void {
   };
 }
 
-export function GraphView({ graph, language, selected, path, onSelect, expansion, excluded = NONE, compact = false, labelGraph = graph }: Props) {
+export function GraphView({ graph, language, selected, path, onSelect, expansion, excluded = NONE, isolated = false, compact = false, labelGraph = graph }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const cy = useRef<Core | null>(null);
   // tap 事件在 cytoscape 實例建立時註冊，以 ref 取得最新的 onSelect
@@ -187,11 +192,14 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
       });
       // 點空白處不清除選取（避免誤觸），圖譜頁以「回到全部」清除
       instance.on("tap", "node", (e) => select.current(e.target.id()));
+      // 滑過變灰的節點時恢復不透明（graph-style.ts 的 node.dimmed.hover）
+      instance.on("mouseover", "node", (e) => e.target.addClass("hover"));
+      instance.on("mouseout", "node", (e) => e.target.removeClass("hover"));
       cy.current = instance;
       untrack = trackContainer(container.current, instance);
       // 版面只在讀入圖時排一次；展開、變灰、回到全部都只改 class，節點位置不動
       markSelected(instance, graph, selected);
-      markFocus(instance, graph, expansion ?? ALL, path, excluded);
+      markFocus(instance, graph, expansion ?? ALL, path, excluded, isolated);
       applied.current = expansion ?? ALL;
       markPath(instance, path);
     });
@@ -226,12 +234,12 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
   useEffect(() => {
     const next = expansion ?? ALL;
     if (cy.current === null) return;
-    markFocus(cy.current, graph, next, path, excluded);
+    markFocus(cy.current, graph, next, path, excluded, isolated);
     markPath(cy.current, path);
     if (next === applied.current) return;
     animateFocus(cy.current, graph, applied.current, next, reduced.current);
     applied.current = next;
-  }, [expansion, path, excluded]);
+  }, [expansion, path, excluded, isolated]);
 
   return <div ref={container} className={compact ? "graph-canvas compact" : "graph-canvas"} />;
 }
