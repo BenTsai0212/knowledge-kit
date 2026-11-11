@@ -1,5 +1,6 @@
 // 上傳頁（docs/upload.md）：選檔、拖放或貼上文字 → 預覽 → 在彈出視窗中確認後寫入（#42）。
 // 頁首是五個步驟，拖放區、檔案卡片、預覽與確認區套用設計系統 v1 的版面與動態（#242）。
+// 寫入後，確認區的原文預覽依萃取的真實進度畫出找到的字詞（類型色底線），說法不同的段落標 conflictSoft（#242 PR 2）。
 // 可選的等級與專案只列出目前身分看得到的；實際能否寫入由 RLS 決定。上傳內容一律以文字節點顯示。
 // 切換身分或語言時由 App 以 key 重建本元件，清除表單、預覽與結果。
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
@@ -22,7 +23,7 @@ import { staggerIndex } from "./motion";
 import { createRequestGate } from "./requests";
 import { fill, strings } from "../client/i18n";
 import type { UploadFailure } from "../client/types";
-import { audienceRoles, defaultVisibility, formatBytes, todayIso, uploadSteps, passagesWordCount } from "./upload-helpers";
+import { audienceRoles, defaultVisibility, foundTerms, formatBytes, todayIso, underlineRanges, uploadSteps, passagesWordCount, type FoundTerm } from "./upload-helpers";
 import { UploadSteps } from "./UploadSteps";
 
 interface Props {
@@ -40,7 +41,8 @@ interface Props {
   onGoto(view: "qa" | "timeline", document?: { id: string; language: string }): void;
 }
 
-const { access, client } = clientConfig;
+const { access, client, knowledgeModel } = clientConfig;
+const typeColor = (type: string) => knowledgeModel.entityTypes.find((t) => t.id === type)?.color ?? "var(--color-graphFallback)";
 
 type Job = { title: string; state: ExtractionState; running: boolean; conflict?: ConflictState; conflictRunning: boolean };
 const PREVIEW_COUNT = 3;
@@ -49,7 +51,7 @@ const PREVIEW_COUNT = 3;
 type Confirm = {
   passages: string[];
   writing: boolean;
-  result?: { documentId: string; count: number };
+  result?: { documentId: string; passageIds: string[] };
   error?: UploadFailure;
 };
 
@@ -177,7 +179,7 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
         documentLanguage: docLanguage,
         passages: result.passageIds.map((id, i) => ({ id, content: passages[i] })),
       });
-      setConfirm({ passages, writing: false, result: { documentId: result.documentId, count: result.passageIds.length } });
+      setConfirm({ passages, writing: false, result: { documentId: result.documentId, passageIds: result.passageIds } });
     } catch (e) {
       // 失敗時可以修改表單後重新預覽；這份預覽不再寫入
       setConfirm({ passages, writing: false, error: e instanceof UploadError ? e.reason : "failed" });
@@ -208,25 +210,41 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
       <path d={EMPTY_ICONS.upload} />
     </svg>
   );
+  // 寫入後：找到的字詞與說法不同的段落（萃取、比對完成的部分）
+  const terms = writtenJob === undefined ? [] : foundTerms(writtenJob.state.batches);
+  const conflicted = new Set(writtenJob?.conflict?.passages ?? []);
+  // 找到的字詞依序畫出類型色底線（sweep）；key 用位置，之後的批次不重播已畫出的底線
+  const underlined = (text: string, found: FoundTerm[]) => {
+    const parts: ReactNode[] = [];
+    let at = 0;
+    for (const r of underlineRanges(text, found)) {
+      if (r.start > at) parts.push(text.slice(at, r.start));
+      parts.push(
+        <span key={r.start} className="upload-found" style={{ "--type-color": typeColor(r.type), "--i": staggerIndex(r.order) } as CSSProperties}>
+          {text.slice(r.start, r.end)}
+        </span>,
+      );
+      at = r.end;
+    }
+    parts.push(text.slice(at));
+    return parts;
+  };
   // 預覽段落逐條升起（stagger 60ms，超過 6 項不再延遲）
   const passageList = (passages: string[], start: number) =>
-    passages.map((p, i) => (
-      <li key={start + i} style={{ "--i": staggerIndex(start + i) } as CSSProperties}>
-        {p}
-      </li>
-    ));
+    passages.map((p, i) => {
+      const id = confirm?.result?.passageIds[start + i];
+      return (
+        <li key={start + i} className={id !== undefined && conflicted.has(id) ? "is-conflict" : undefined} style={{ "--i": staggerIndex(start + i) } as CSSProperties}>
+          {underlined(p, terms)}
+        </li>
+      );
+    });
 
   return (
     <section className="card upload">
       <UploadSteps steps={steps} language={language} />
       {/* 線上 demo：另外說明上傳內容會傳給模型供應商（#100 決定 4） */}
       <p className="badge warning">{onlineDemo.enabled ? s.demoUploadNotice : s.uploadEphemeral}</p>
-      {extractions.map((job) => (
-        <div key={job.state.documentId} className="card">
-          <p>{job.title}</p>
-          {jobStatus(job)}
-        </div>
-      ))}
       <div
         className={`drop-zone${dragOver ? " is-over" : ""}`}
         onDragEnter={(e) => {
@@ -331,6 +349,18 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
       <button type="button" disabled={parsing} onClick={() => void preview()}>
         {parsing ? s.uploadParsing : s.uploadPreview}
       </button>
+      {/* 這次工作階段上傳過的文件：萃取在背景繼續，與頁首步驟（目前這一份）分開，每份標明標題（#242 審查） */}
+      {extractions.length > 0 && (
+        <section className="upload-recent">
+          <h2>{s.uploadRecentTitle}</h2>
+          {extractions.map((job) => (
+            <div key={job.state.documentId} className="card">
+              <strong>{job.title}</strong>
+              {jobStatus(job)}
+            </div>
+          ))}
+        </section>
+      )}
 
       <dialog
         ref={dialog}
@@ -349,6 +379,8 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
                 ✕
               </button>
             </header>
+            {/* 頁首的步驟在確認面板後方會被遮住：面板內也顯示一份（#242 審查） */}
+            <UploadSteps steps={steps} language={language} />
             {/* 檔案卡片：檔名、段落數、字數；預覽段落放在 reading 紙面上逐條升起 */}
             <div className="upload-file-card">
               <strong className="upload-file-card__name">{file?.name ?? s.uploadPastedText}</strong>
@@ -398,7 +430,7 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
                 <p>
                   {s.uploadDone} {s.uploadPassageCount}
                   {s.colon}
-                  {confirm.result.count}
+                  {confirm.result.passageIds.length}
                 </p>
                 {writtenJob && jobStatus(writtenJob)}
                 <div className="dialog-actions">

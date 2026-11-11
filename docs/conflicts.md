@@ -139,7 +139,7 @@ If there are no conflicts, reply {"conflicts":[]}.
 - 與萃取相同：由 App 管理，切換身分、語言或頁籤都不中斷；同一份文件同時只執行一個（`ui/extraction-runner.ts`）。邀請碼使用開始（或重試）當下的碼：沒有碼時記為 `no_access_code`；碼被拒時清除並回到輸入畫面（#26 決定 3）。
 - 比對的狀態只存在記憶體，重新整理就消失。
 
-**上傳頁的比對狀態**（`ui/ConflictStatus.tsx`，`conflicts.enabled` 時顯示在萃取狀態下方）：等待萃取完成、比對中、找到幾組（與捨棄的組數）、超過長度上限而未比對的段落數、沒有相關既有段落的段落數；失敗時以提示框顯示原因與「重試比對」。失敗原因的訊息與萃取共用（`client/i18n.ts` 的 `taskErrorMessage()`）。
+**上傳頁的比對狀態**（`ui/ConflictStatus.tsx`，`conflicts.enabled` 時顯示在萃取狀態下方）：等待萃取完成、比對中、找到幾組（與捨棄的組數）、超過長度上限而未比對的段落數、沒有相關既有段落的段落數；失敗時以提示框顯示原因與「重試比對」。失敗原因的訊息與萃取共用（`client/i18n.ts` 的 `taskErrorMessage()`）。找到說法不同時，組數以 settle 彈出、說明（「到待審逐組確認」）從右滑入；確認視窗的原文預覽把 `ConflictState.passages`（寫入成功的組合中新文件的段落 id，#242 決定 2）標為 `conflictSoft`。
 
 **待審頁**（`ui/ReviewPage.tsx`）：
 - 每份文件多一個「說法不同」區塊，列出 `readConflicts()` 讀到的待處理組合。只有說法不同、沒有待審實體與關係的文件也會列出（`review-helpers.ts` 的 `reviewDocuments()`），這時不顯示批次核准的按鈕。

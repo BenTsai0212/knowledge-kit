@@ -5,7 +5,7 @@ import type { ClientConfig } from "../../src/client/types";
 import { dataset } from "../../src/dataset/load";
 import { seedDataset } from "../../src/dataset/seed";
 import { openDatabase } from "../../src/db/database";
-import { planExtraction, runExtraction, type ExtractionState } from "../../src/extraction/run";
+import { foundNames, planExtraction, runExtraction, type ExtractionState } from "../../src/extraction/run";
 import { readReview } from "../../src/extraction/store";
 import { answered, fakeTransport } from "../../src/qa/testing";
 import type { AskBody, AskEvent } from "../../src/qa/types";
@@ -50,6 +50,12 @@ describe("runExtraction", { timeout: 30_000 }, () => {
     expect(transport.bodies[0].messages[0].content).toContain('<passage number="1">\n測試人員甲參與青翼專案的使用者測試。\n</passage>');
     expect(result.batches).toMatchObject([{ status: "done", entities: 2, relations: 1, dropped: 0 }]);
     expect(states.map((s) => s.batches[0].status)).toEqual(["running", "done"]);
+    // 找到的字詞（#242）：文件語言的名稱，依類型分組；寫入成功後才記錄
+    expect(result.batches[0].found).toEqual([
+      { type: "person", names: ["測試人員甲"] },
+      { type: "project", names: ["青翼專案"] },
+    ]);
+    expect(states[0].batches[0].found).toEqual([]);
 
     const [doc] = (await readReview(db, "manager")).filter((d) => d.id === upload.documentId);
     expect(doc.entities.map((e) => [e.type, e.names.en, e.sources.map((s) => s.id)])).toEqual(
@@ -154,5 +160,16 @@ describe("runExtraction", { timeout: 30_000 }, () => {
     const [doc] = (await readReview(db, "manager")).filter((d) => d.id === upload.documentId);
     expect(doc.entities.map((e) => e.names["zh-TW"]).sort()).toEqual(["林志明", "林芷敏", "測試人員Ａ"].sort());
     await db.close();
+  });
+});
+
+describe("foundNames", () => {
+  it("取文件語言的名稱，依類型分組、依出現順序，同類型不重複，空名稱略過", () => {
+    const e = (type: string, zh: string, en = "x") => ({ type, names: { "zh-TW": zh, en } });
+    expect(foundNames([e("person", "甲"), e("project", "青翼"), e("person", " 乙 "), e("person", "甲"), e("person", "")], "zh-TW")).toEqual([
+      { type: "person", names: ["甲", "乙"] },
+      { type: "project", names: ["青翼"] },
+    ]);
+    expect(foundNames([e("person", "甲", "A")], "en")).toEqual([{ type: "person", names: ["A"] }]);
   });
 });

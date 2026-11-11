@@ -85,3 +85,49 @@ export function uploadSteps(p: UploadProgress): UploadStep[] {
     { name: "merge", status: "todo" },
   ];
 }
+
+// 萃取中找到的字詞（#242）：已完成的批次中新增的實體名稱，依批次與批次內的順序。
+// order 是批次內的第幾個（底線依序畫出的延遲），同一個名稱只取最早的批次
+export interface FoundTerm {
+  name: string;
+  type: string;
+  order: number;
+}
+
+export function foundTerms(batches: readonly { status: string; found: readonly { type: string; names: readonly string[] }[] }[]): FoundTerm[] {
+  const seen = new Set<string>();
+  const terms: FoundTerm[] = [];
+  for (const batch of batches) {
+    if (batch.status !== "done") continue;
+    let order = 0;
+    for (const group of batch.found)
+      for (const name of group.names) {
+        if (seen.has(name)) continue;
+        seen.add(name);
+        terms.push({ name, type: group.type, order: order++ });
+      }
+  }
+  return terms;
+}
+
+// 原文中出現的字詞：每一處都標出，較長的名稱優先，標出的範圍不重疊。英文等不分大小寫（轉小寫後長度不變時）
+export interface FoundRange extends FoundTerm {
+  start: number;
+  end: number;
+}
+
+export function underlineRanges(text: string, terms: readonly FoundTerm[]): FoundRange[] {
+  const lower = text.toLowerCase();
+  const folded = lower.length === text.length;
+  const haystack = folded ? lower : text;
+  const fold = (name: string) => (folded && name.toLowerCase().length === name.length ? name.toLowerCase() : name);
+  const taken: FoundRange[] = [];
+  const free = (start: number, end: number) => taken.every((r) => end <= r.start || start >= r.end);
+  for (const term of [...terms].sort((a, b) => b.name.length - a.name.length)) {
+    const needle = fold(term.name);
+    if (needle === "") continue;
+    for (let at = haystack.indexOf(needle); at >= 0; at = haystack.indexOf(needle, at + needle.length))
+      if (free(at, at + needle.length)) taken.push({ ...term, start: at, end: at + needle.length });
+  }
+  return taken.sort((a, b) => a.start - b.start);
+}

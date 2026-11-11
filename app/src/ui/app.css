@@ -721,6 +721,13 @@ main.qa > .source .source-text mark.entering {
   }
 }
 
+/* 萃取中找到的字詞畫出底線（#242 PR 2） */
+@keyframes kUnder {
+  from {
+    background-size: 0% 3px;
+  }
+}
+
 /* 刷過時底色保持透明，只有漸層長出（motion-reference.md「例外」） */
 @keyframes kSweep {
   from {
@@ -1422,8 +1429,9 @@ details.path summary {
   overflow-wrap: anywhere;
 }
 
-/* 讀取失敗：在拖放區原地換成說明，不用大面積的紅色（只留圖示與左側細線） */
-.drop-zone .notice {
+/* 讀取失敗、批次失敗：在原地換成說明，不用大面積的紅色（只留圖示與左側細線） */
+.drop-zone .notice,
+.extraction .notice {
   justify-self: stretch;
   text-align: start;
   border-width: 0 0 0 4px;
@@ -1459,6 +1467,31 @@ details.path summary {
 .upload-preview li {
   white-space: pre-wrap;
   animation: kRise var(--motion-base) var(--ease-enter) calc(var(--motion-sweep) + (var(--i, 0) + 1) * var(--motion-stagger-list)) backwards;
+}
+
+/* 寫入後的原文預覽（#242 PR 2）：找到的字詞依序畫出類型色底線（.a-under：kUnder、sweep），
+   延遲照 motion-reference.md「上傳 · 萃取的底線」200／420／640／860／1080ms = sweep / 2 + 第幾個 × base。
+   底線在完成的批次寫入後才出現，所以跟著真實進度 */
+.upload-found {
+  background-image: linear-gradient(var(--type-color), var(--type-color));
+  background-repeat: no-repeat;
+  background-position: left bottom;
+  background-size: 100% 3px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  animation: kUnder var(--motion-sweep) var(--ease-enter) calc(var(--motion-sweep) / 2 + var(--i, 0) * var(--motion-base)) backwards;
+}
+
+/* 與既有說法不同的段落：conflictSoft 底、conflictText 字（Dark 的 conflictSoft 是深色，字一併換掉，不受紙面顏色影響） */
+.upload-preview li.is-conflict {
+  background: var(--color-conflictSoft);
+  color: var(--color-conflictText);
+  box-shadow: inset 3px 0 0 var(--color-conflict);
+  border-radius: var(--radius-small);
+  padding: 0 0.35rem;
+  transition-property: background-color, color;
+  transition-duration: var(--motion-base);
+  transition-timing-function: var(--ease-enter);
 }
 
 /* 確認區從表單底部升起（base）：貼齊畫面底部的面板，仍是原生 <dialog>＋showModal()（#242 決定 1） */
@@ -1545,6 +1578,85 @@ button.secondary {
   border-top: 1px solid var(--color-border);
   margin-top: 0.5rem;
   padding-top: 0.5rem;
+}
+
+/* 萃取中（#242 PR 2）：每批一格，完成時由左往右填滿（.a-batch：kGrow、linear，600ms = 2 × expand）。
+   以批次真正完成的時刻觸發，不用固定延遲；顯示時已完成的格子不重播 */
+.extraction-batches {
+  display: flex;
+  gap: 4px;
+  list-style: none;
+  padding: 0;
+  margin: 0.25rem 0 0.5rem;
+}
+
+.extraction-batches li {
+  flex: 1 1 0;
+  max-width: 4rem;
+  height: 0.4rem;
+  border-radius: 2px;
+  background: var(--color-surfaceRaised);
+  overflow: hidden;
+}
+
+.extraction-batches li.is-running {
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+
+.extraction-batches li.is-failed {
+  box-shadow: inset 0 0 0 1px var(--color-danger);
+}
+
+.extraction-batch {
+  display: block;
+  height: 100%;
+  background: var(--color-primary);
+  transform-origin: left center;
+  animation: kGrow calc(2 * var(--motion-expand)) var(--ease-linear) backwards;
+}
+
+.extraction-batch.is-still {
+  animation: none;
+}
+
+/* 實體數、關係數改變時以 settle 彈出（相差 60ms，motion-reference.md「上傳 · 實體數、關係數」）；
+   說法不同的組數 settle（300ms = expand）、說明從右滑入（200ms = sweep / 2） */
+.extraction-count,
+.conflict-count {
+  display: inline-block;
+  font-family: var(--font-mono);
+}
+
+.extraction-count.is-new {
+  animation: kPopS var(--motion-settle) var(--ease-spring) calc(var(--i, 0) * var(--motion-stagger-list)) backwards;
+}
+
+.conflict-count.is-new {
+  animation: kPopS var(--motion-settle) var(--ease-spring) var(--motion-expand) backwards;
+}
+
+.conflict-hint {
+  margin: 0.25rem 0;
+  border-left: 3px solid var(--color-conflict);
+  border-radius: var(--radius-small);
+  padding: 0.25rem 0.5rem;
+  background: var(--color-conflictSoft);
+  color: var(--color-conflictText);
+}
+
+.conflict-hint.is-new {
+  animation: kSlideIn var(--motion-base) var(--ease-enter) calc(var(--motion-sweep) / 2) backwards;
+}
+
+/* 這次工作階段上傳過的文件（與頁首步驟所指的目前這一份分開） */
+.upload-recent {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.upload-recent h2 {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
 }
 
 .review-page {

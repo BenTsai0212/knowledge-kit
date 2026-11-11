@@ -23,6 +23,8 @@ export interface ConflictState {
   // 寫入的組數與捨棄的組數
   found: number;
   dropped: number;
+  // 寫入的組合中新文件的段落 id（不重複，#242 決定 2）：上傳頁把這些段落標為說法不同。只在寫入成功後記錄
+  passages: string[];
 }
 
 export interface ConflictContext {
@@ -58,6 +60,7 @@ export async function planConflicts(
     status: selection.user === null ? "done" : "waiting",
     found: 0,
     dropped: 0,
+    passages: [],
   };
 }
 
@@ -92,5 +95,5 @@ export async function runConflicts(ctx: ConflictContext, initial: ConflictState,
     return update({ status: "failed", error: "write" });
   }
   const dropped = Object.values(parsed.dropped).reduce((n, c) => n + (c ?? 0), 0);
-  return update({ status: "done", found: pairs.length, dropped });
+  return update({ status: "done", found: pairs.length, dropped, passages: [...new Set(pairs.map((p) => p.newPassage))] });
 }

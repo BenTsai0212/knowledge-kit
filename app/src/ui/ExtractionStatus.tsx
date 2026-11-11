@@ -1,4 +1,7 @@
 // 上傳後的萃取狀態（#44）：萃取中（第幾批）、已送審的筆數、捨棄的筆數、未萃取的段落、失敗時可以重試。
+// 設計系統 v1（#242）：每批一格，依真實進度填滿（linear）；實體數與關係數改變時以 settle 彈出；
+// 失敗時在原地換成說明與「重試」，已完成的批次保留。顯示時已有的結果不重播。
+import { useRef, type CSSProperties } from "react";
 import type { ExtractionState } from "../extraction/run";
 import { Notice } from "./Notice";
 import { fill, strings, taskErrorMessage } from "../client/i18n";
@@ -22,10 +25,28 @@ export function ExtractionStatus({ state, running: active, language, onRetry }: 
   const message = (error: string) => taskErrorMessage(language, error);
   // 失敗的原因不重複列出
   const reasons = [...new Set(failed.map((b) => b.error ?? "failed"))];
+  // 顯示時已完成的批次與已有的數字不重播動畫
+  const shown = useRef({ batches: new Set(state.batches.flatMap((b, i) => (b.status === "done" ? [i] : []))), entities: sum("entities"), relations: sum("relations") });
+  const count = (key: "entities" | "relations", i: number) => {
+    const n = sum(key);
+    return (
+      <span key={`${key}:${n}`} className={`extraction-count${n === shown.current[key] ? "" : " is-new"}`} style={{ "--i": i } as CSSProperties}>
+        {n}
+      </span>
+    );
+  };
 
   return (
     <div className="extraction" aria-live="polite">
       <h3>{s.extractTitle}</h3>
+      {/* 批次格：文字的進度在下方，格子只是視覺 */}
+      <ol className="extraction-batches" aria-hidden="true">
+        {state.batches.map((b, i) => (
+          <li key={i} className={`is-${b.status}`}>
+            {b.status === "done" && <span className={`extraction-batch${shown.current.batches.has(i) ? " is-still" : ""}`} />}
+          </li>
+        ))}
+      </ol>
       {active && running >= 0 && (
         <p className="muted">
           {s.extractRunning} {fill(s.progress, { done: running + 1, total })}
@@ -34,9 +55,9 @@ export function ExtractionStatus({ state, running: active, language, onRetry }: 
       <p>
         {s.extractDone}
         {s.colon}
-        {s.extractEntities} {sum("entities")}
+        {s.extractEntities} {count("entities", 0)}
         {s.listSeparator}
-        {s.extractRelations} {sum("relations")}
+        {s.extractRelations} {count("relations", 1)}
         {s.listSeparator}
         {s.extractDropped} {sum("dropped")}
         <span className="muted">

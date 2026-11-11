@@ -1,4 +1,6 @@
 // 上傳後的比對狀態（#51，docs/conflicts.md「畫面」）：等待萃取完成、比對中、找到幾組、未比對的段落、失敗時可以重試。
+// 設計系統 v1（#242）：找到說法不同時，組數以 settle 彈出、說明從右滑入；顯示時已有的結果不重播。
+import { useRef } from "react";
 import type { ConflictState } from "../conflicts/run";
 import { Notice } from "./Notice";
 import { strings, taskErrorMessage } from "../client/i18n";
@@ -14,6 +16,8 @@ interface Props {
 
 export function ConflictStatus({ state, running, language, onRetry }: Props) {
   const s = strings(language);
+  // 顯示時已完成的比對不重播動畫
+  const still = useRef(state?.status === "done").current;
   const count = (label: string, n: number) => (
     <p className="muted">
       {label}
@@ -34,7 +38,7 @@ export function ConflictStatus({ state, running, language, onRetry }: Props) {
             <p>
               {s.conflictFound}
               {s.colon}
-              {state.found}
+              <span className={`conflict-count${still ? "" : " is-new"}`}>{state.found}</span>
               {state.dropped > 0 && (
                 <span className="muted">
                   {s.listSeparator}
@@ -43,6 +47,7 @@ export function ConflictStatus({ state, running, language, onRetry }: Props) {
               )}
             </p>
           )}
+          {state.status === "done" && state.found > 0 && <p className={`conflict-hint${still ? "" : " is-new"}`}>{s.conflictFoundHint}</p>}
           {state.selection.unchecked.length > 0 && count(s.conflictUnchecked, state.selection.unchecked.length)}
           {state.selection.unrelated.length > 0 && count(s.conflictUnrelated, state.selection.unrelated.length)}
           {/* 重試只重送比對這一次呼叫，送出相同的內容 */}

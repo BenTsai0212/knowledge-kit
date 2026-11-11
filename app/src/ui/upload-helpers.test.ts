@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { uploadSteps, passagesWordCount, type UploadProgress } from "./upload-helpers";
+import { foundTerms, underlineRanges, uploadSteps, passagesWordCount, type UploadProgress } from "./upload-helpers";
 
 // 頁首的五個步驟與檔案卡片的字數（#242）
 const idle: UploadProgress = { hasInput: false, parsing: false, passages: null, written: false, batches: null };
@@ -61,5 +61,46 @@ describe("passagesWordCount()", () => {
   it("中英混合與多段相加；空白與標點不算", () => {
     expect(passagesWordCount(["示範 Demo 計畫。", "  ", "—— 2026"])).toBe(6);
     expect(passagesWordCount([])).toBe(0);
+  });
+});
+
+describe("foundTerms（#242）", () => {
+  it("只取完成的批次；批次內依序編號；同一個名稱只取最早的批次", () => {
+    const terms = foundTerms([
+      { status: "done", found: [{ type: "person", names: ["甲", "乙"] }, { type: "project", names: ["青翼"] }] },
+      { status: "failed", found: [{ type: "person", names: ["丙"] }] },
+      { status: "done", found: [{ type: "person", names: ["甲", "丁"] }] },
+    ]);
+    expect(terms).toEqual([
+      { name: "甲", type: "person", order: 0 },
+      { name: "乙", type: "person", order: 1 },
+      { name: "青翼", type: "project", order: 2 },
+      { name: "丁", type: "person", order: 0 },
+    ]);
+  });
+});
+
+describe("underlineRanges（#242）", () => {
+  const term = (name: string, type = "person", order = 0) => ({ name, type, order });
+
+  it("標出每一處，依位置排序", () => {
+    expect(underlineRanges("甲找乙，乙找甲", [term("甲"), term("乙", "person", 1)]).map((r) => [r.start, r.end, r.name])).toEqual([
+      [0, 1, "甲"],
+      [2, 3, "乙"],
+      [4, 5, "乙"],
+      [6, 7, "甲"],
+    ]);
+  });
+
+  it("較長的名稱優先，範圍不重疊", () => {
+    const ranges = underlineRanges("青翼專案由青翼負責", [term("青翼", "org"), term("青翼專案", "project", 1)]);
+    expect(ranges.map((r) => [r.start, r.end, r.type])).toEqual([
+      [0, 4, "project"],
+      [5, 7, "org"],
+    ]);
+  });
+
+  it("英文不分大小寫；沒有出現的名稱與空名稱略過", () => {
+    expect(underlineRanges("Project Bluewing and project bluewing", [term("Project Bluewing"), term("Nowhere"), term("")]).map((r) => r.start)).toEqual([0, 21]);
   });
 });

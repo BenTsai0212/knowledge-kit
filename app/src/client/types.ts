@@ -427,6 +427,7 @@ export interface UiStrings {
   uploadStepPassages: string;
   uploadStepBatch: string;
   uploadStepSent: string;
+  uploadRecentTitle: string;
   uploadClearFile: string;
   // 依可見等級與專案算出看得到的角色（#42）
   uploadAudience: string;
@@ -531,6 +532,7 @@ export interface UiStrings {
   conflictWaiting: string;
   conflictRunning: string;
   conflictFound: string;
+  conflictFoundHint: string;
   conflictDropped: string;
   conflictUnchecked: string;
   conflictUnrelated: string;
