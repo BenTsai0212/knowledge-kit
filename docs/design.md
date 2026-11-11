@@ -118,6 +118,8 @@ Light 來自提案 A「墨與螢光」，Dark 來自提案 B「晶格」。對�
 
 ## 動態
 
+畫布上的 `@keyframes` 與使用方式逐字放在 [`design/motion-reference.css`](design/motion-reference.css)，每個元素的延遲、時間對應的刻度與無法照抄的例外在 [`design/motion-reference.md`](design/motion-reference.md)（#249）。實作照抄參考檔，`app/src/ui/motion-reference.test.ts` 檢查 `app.css` 的 keyframes 與參考檔一致。
+
 ### 原則
 
 1. **因果**：東西從觸發它的地方出現，消失時往它去的地方走。
@@ -198,7 +200,7 @@ Light 與 Dark 共用同一套時間與曲線。
 
 - 入口頁是 `App.tsx` 的 `main.entry`：左側主視覺 `app/src/ui/EntryHero.tsx`，右側是邀請碼表單與語意模型的下載進度（`RetrievalNotice`）；寬度 900px 以下主視覺在上（高 18rem）、面板在下。「虛構資料」「展示用權限」沿用左側導覽頁首的標示。
 - 版面是 `app/src/ui/entry-hero.ts` 的純函式（固定亂數種子）：前景取 `client/data/` 中關係最多的 18 個實體（參考情境是全部 14 個），以力導向排版，形狀依類型的圖示（人員圓形、部門圓角方形、專案小圓角方形），填色是類型色；遠景與中景各連最近的兩個鄰居；新連線 4 條、每 2.5 秒一條。關係最多的 3 個節點是發光的核心節點；流動光點最多 6 條線，第一條用 `mark`。
-- 動態全部是 `app.css` 的 CSS 動畫（`kOrbit`、`kPop`、`kFloat`、`kTwinkle`、`kDraw`、`kTravel`、`kForm`、`kGlow`），不用 JS 計時器；主視覺在表單畫出後的下一個畫格才繪製。持續循環的裝飾動畫不套用「刻度」（`motion.test.ts` 排除 `.hero`，數值由 `entry-hero.test.ts` 檢查）。
+- 動態全部是 `app.css` 的 CSS 動畫（`kOrbit`、`kPop`、`kFloat`、`kTwinkle`、`kDraw`、`kTravel`、`kForm`、`kGlow`），不用 JS 計時器；keyframes 與時間照抄 [`design/motion-reference.css`](design/motion-reference.css)「補齊 · 入口」（線段的 `pathLength` 是 1，`kFloat`、`kGlow` 是例外，#249）。主視覺在表單畫出後的下一個畫格才繪製。持續循環的裝飾動畫不套用「刻度」（`motion.test.ts` 排除 `.hero`，數值由 `entry-hero.test.ts` 檢查）。
 - 低階裝置（`navigator.hardwareConcurrency` 或 `deviceMemory` 為 4 以下）：遠景 10、中景 8 個節點，遠景不模糊。
 - 主視覺是裝飾（`aria-hidden`），不含文字。
 - 與規格的差異：主題跟隨系統設定（Light／Dark 都成立），不強制 Dark；Dark 的實體色以 `color-mix(in srgb, 類型色 75%, text)` 調亮，近似「實體顏色」的 OKLCH 公式（結構測試不接受 `oklch()`）。
