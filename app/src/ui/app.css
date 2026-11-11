@@ -907,10 +907,13 @@ main.qa > .source .source-text mark.entering {
   gap: 1rem;
 }
 
+/* 圖譜容器（#240）：淡點陣背景，border 色、24px 間距 */
 .graph-canvas {
   height: 480px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-medium);
+  background-image: radial-gradient(var(--color-border) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
 /* 右側實體面板的鄰近圖（#195） */

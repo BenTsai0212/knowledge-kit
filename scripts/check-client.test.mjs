@@ -114,16 +114,28 @@ describe("check-client", () => {
         path: `/visibilityLevels/${i}/color`,
         message: expect.stringMatching(new RegExp(`^「.+」（${id}）的標籤底色與 darkColors 的 text 對比 [\\d.]+:1，需要 4\\.5:1$`)),
       })),
-      // 選取的節點：圖示改用 text，放在類型色 14% 的淡色底上
-      { file: "knowledge-model.json", path: "/entityTypes/0/color", message: "「人員」（person）的選取底色（14% + surface）與 darkColors 的 text 對比 2.9:1，需要 3:1" },
+      // 圖譜節點：Dark 調亮後的填色（75% + text）上的 surface 圖示
+      { file: "knowledge-model.json", path: "/entityTypes/0/color", message: "「人員」（person）的節點填色（75% + text）與 darkColors 的 surface（圖示）對比 2.7:1，需要 3:1" },
       { file: "knowledge-model.json", path: "/entityTypes/0/color", message: "「人員」（person）與 darkColors 的 background 對比 2.8:1，需要 3:1" },
       { file: "knowledge-model.json", path: "/entityTypes/0/color", message: "「人員」（person）與 darkColors 的 surface 對比 2.6:1，需要 3:1" },
-      ...[["部門", "team", 1, "2.8"], ["專案", "project", 2, "2.8"]].map(([name, id, i, value]) => ({
-        file: "knowledge-model.json",
-        path: `/entityTypes/${i}/color`,
-        message: `「${name}」（${id}）的選取底色（14% + surface）與 darkColors 的 text 對比 ${value}:1，需要 3:1`,
-      })),
     ]);
+  });
+
+  it("圖譜節點的填色（Light 類型色、Dark 類型色 75% + text）上的 surface 圖示不足 3:1 時指出（#240）", () => {
+    const fillErrors = (edit) => {
+      const files = example();
+      edit(files);
+      return validateClient(files).filter((e) => e.message.includes("節點填色")).map((e) => `${e.path} ${e.message}`);
+    };
+    // 太淡的類型色：Light 的白色圖示看不清楚
+    expect(fillErrors((f) => (f["knowledge-model.json"].entityTypes[0].color = "#A9C8E8"))).toEqual([
+      expect.stringMatching(/^\/entityTypes\/0\/color 「人員」（person）的節點填色與 colors 的 surface（圖示）對比 [\d.]+:1，需要 3:1$/),
+    ]);
+    // Dark 的 surface 太亮：調亮後的填色上的圖示看不清楚
+    expect(fillErrors((f) => (f["theme.json"].darkColors.surface = "#B0B8C4"))).toContainEqual(
+      expect.stringMatching(/^\/entityTypes\/\d\/color .+的節點填色（75% \+ text）與 darkColors 的 surface（圖示）對比 [\d.]+:1，需要 3:1$/),
+    );
+    expect(fillErrors(() => {})).toEqual([]);
   });
 
   describe("實體顏色與證據色（#229）", () => {

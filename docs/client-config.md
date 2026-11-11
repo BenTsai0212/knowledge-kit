@@ -169,8 +169,8 @@ npm run check:client
 | `conflictText` | `conflictSoft` | 4.5:1 |
 | `focus`（焦點框，非文字） | `surface`、`background` | 3:1 |
 | `text` | 各可見等級的淡色底（`access.json` 的 `color` 14%，等級標籤） | 4.5:1 |
-| 實體類型的 `color`（圖譜節點的外圈與圖示，非文字） | `background`、`surface` | 3:1 |
-| `text`（選取的節點的圖示，非文字） | 各實體類型的淡色底（`color` 14% + `surface`） | 3:1 |
+| 實體類型的 `color`（圖例、時間軸的類型標示，非文字） | `background`、`surface` | 3:1 |
+| `surface`（圖譜節點的圖示，非文字） | 各實體類型的節點填色（淺色：`color`；深色：`color` 75% + `text`） | 3:1 |
 
 **實體顏色與證據色（警告）**：Dark 模式的實體色保留色相、只提高亮度（[docs/design.md](design.md)「實體顏色」），色相接近證據色時，圖譜節點會被看成引用的螢光。`check:client` 以 OKLCH 計算色相，實體類型的 `color` 與 `colors`、`darkColors` 的 `mark` 任一相差小於 25° 時輸出警告（`警告：knowledge-model.json /entityTypes/2/color：…`），不讓檢查失敗；彩度低於 0.02 的灰色沒有明確色相，不比較。Light 的實體色對 `surface` 低於 3:1 則是上表的錯誤，不只是警告。
 

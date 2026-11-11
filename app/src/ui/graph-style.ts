@@ -1,10 +1,12 @@
 // cytoscape 的配色：從 CSS 變數（theme.json）讀出，淺色與深色切換時由 GraphView 重新套用。
-// 節點是白底（surface）圓形、實體類型色（knowledge-model.json 的 color）的外圈與圖示（icon，#199）；
-// 找不到類型時用 graphFallback 與通用圖示。節點大小＝關聯數，線粗＝出處數。
-// 逐步展開時，聚焦集合以外的節點與線變灰（dimmed，不隱藏）；關係名稱只在選取節點的相連關係（near）顯示。
+// 設計系統 v1（#240，docs/design.md「實體顏色」）：節點是「形狀＋填色」，形狀與入口頁主視覺相同（entry-hero.ts 的 heroShape()），
+// 填色是實體類型色（Dark 調亮），圖示是 surface 色；找不到類型時用 graphFallback、圓形與通用圖示。節點大小＝關聯數，線粗＝出處數。
+// 逐步展開與找路徑時，聚焦集合以外的節點與線降低不透明度（dimmed，不隱藏）；關係名稱只在選取節點的相連關係（near）顯示。
+// 圖只有目前身分看得到的實體與關係，這裡不畫任何「有內容被隱藏」的痕跡。
 import type { StylesheetJson } from "cytoscape";
 import type { EntityType } from "../client/types";
 import { iconDataUri } from "./entity-icons";
+import { heroShape, type HeroShape } from "./entry-hero";
 
 // 節點標籤超過這個寬度時在空白處換行（#207）；完整名稱仍在面板與搜尋結果中
 export const NODE_LABEL_MAX_WIDTH = 140;
@@ -12,8 +14,14 @@ export const NODE_LABEL_MAX_WIDTH = 140;
 // 讀取 CSS 變數，例如 (name) => getComputedStyle(document.documentElement).getPropertyValue(name)
 export type ReadVariable = (name: string) => string;
 
-// 選取的節點換成類型色的淡色底（與 check-client.mjs 的 SELECTED_NODE_TINT 相同，對比在那裡檢查）
-export const SELECTED_NODE_TINT = 14;
+// Dark 的實體色：以 color-mix(in srgb, 類型色 75%, text) 調亮，與入口頁主視覺（app.css 的 .hero__shape）相同，
+// 近似 docs/design.md「實體顏色」的 OKLCH 公式；check-client.mjs 以同一個比例檢查圖示的對比
+export const DARK_ENTITY_MIX = 75;
+// 連線：border 加深一階（border 75% + text），不新增 token（#240 決定 2）
+export const EDGE_MIX = 75;
+// 變灰的元素：45% 不透明；按「只看它」之後 15%（#240 決定 1、3）
+export const DIMMED_OPACITY = 0.45;
+export const ISOLATED_OPACITY = 0.15;
 
 // 關聯數 0 → 32px，每多一個關聯加 4px，最多 64px
 export function nodeSize(degree: number): number {
@@ -33,35 +41,38 @@ export function mix(a: string, percent: number, b: string): string {
   return `#${x.map((v, i) => Math.round((v * percent + y[i] * (100 - percent)) / 100).toString(16).padStart(2, "0")).join("")}`;
 }
 
+// 主視覺的形狀換成 cytoscape 的形狀：部門的圓角較大、專案的圓角較小
+export const NODE_SHAPES: Record<HeroShape, { shape: "ellipse" | "round-rectangle"; "corner-radius"?: string }> = {
+  circle: { shape: "ellipse" },
+  block: { shape: "round-rectangle", "corner-radius": "9px" },
+  tile: { shape: "round-rectangle", "corner-radius": "4px" },
+};
+
 type TypeStyle = Pick<EntityType, "id" | "color" | "icon">;
 
-// 變灰的節點縮小到原本的這個比例，展開時放大浮現
-export const DIMMED_NODE_SCALE = 0.75;
-
-// 選取時：類型色的淡色底，圖示改用 text（深色模式中類型色在淡色底上不足 3:1）；變灰時外圈與圖示變灰
-function typeRules(selector: string, color: string, icon: TypeStyle["icon"], v: (name: string) => string): StylesheetJson {
-  return [
-    { selector, style: { "border-color": color, "background-image": iconDataUri(icon, color) } },
-    {
-      selector: `${selector}.dimmed`,
-      style: { "border-color": v("--color-border"), "background-image": iconDataUri(icon, v("--color-textMuted")) },
-    },
-    {
-      selector: `${selector}.selected`,
-      style: {
-        "background-color": mix(color, SELECTED_NODE_TINT, v("--color-surface")),
-        "background-image": iconDataUri(icon, v("--color-text")),
-      },
-    },
-  ];
+// 類型的形狀、填色（Dark 調亮）與 surface 色的圖示
+function typeRule(selector: string, color: string, icon: TypeStyle["icon"] | undefined, v: (name: string) => string, dark: boolean) {
+  const fill = dark ? mix(color, DARK_ENTITY_MIX, v("--color-text")) : color;
+  return {
+    selector,
+    style: { ...NODE_SHAPES[heroShape(icon)], "background-color": fill, "background-image": iconDataUri(icon ?? "generic", v("--color-surface")) },
+  };
 }
 
-// transitionMs：節點與線在變灰／展開之間的 transition 時間（減少動態效果時為 0，見 motion.ts）
-export function graphStyle(read: ReadVariable, types: TypeStyle[], transitionMs = 0): StylesheetJson {
+// transitionMs：節點與線在變灰／展開之間的 transition 時間（減少動態效果時為 0，見 motion.ts）；dark：目前是否為深色模式
+export function graphStyle(read: ReadVariable, types: TypeStyle[], transitionMs = 0, dark = false): StylesheetJson {
   const v = (name: string) => read(name).trim();
   const transition = { "transition-duration": transitionMs, "transition-timing-function": "ease-out" as const };
   // 標籤加上背景色的外框，讓文字在節點與邊上、淺色與深色背景都清楚可讀
   const outline = { "text-outline-color": v("--color-background"), "text-outline-width": 2 };
+  // 節點標籤與關係名稱都以不透明的面板底色（畫布在 .card 內）襯底，不壓到經過的連線
+  const labelBackground = {
+    "text-background-color": v("--color-surface"),
+    "text-background-opacity": 1,
+    "text-background-padding": "2px",
+    "text-background-shape": "roundrectangle" as const,
+  };
+  const edgeColor = mix(v("--color-border"), EDGE_MIX, v("--color-text"));
   return [
     {
       selector: "node",
@@ -71,71 +82,58 @@ export function graphStyle(read: ReadVariable, types: TypeStyle[], transitionMs 
         "font-family": v("--font-body"),
         "font-size": 12,
         "text-valign": "bottom",
-        "text-margin-y": 4,
-        // 長標籤換行，並以不透明的面板底色（畫布在 .card 內）襯底，不壓到經過的連線；文字與襯底的對比就是
-        // text（變灰時 textMuted）與 surface 的對比，由 check:client 檢查（#207）
+        "text-margin-y": 6,
+        // 長標籤換行；文字與襯底的對比就是 text 與 surface 的對比，由 check:client 檢查（#207）
         "text-wrap": "wrap",
         "text-max-width": `${NODE_LABEL_MAX_WIDTH}px`,
-        "text-background-color": v("--color-surface"),
-        "text-background-opacity": 1,
-        "text-background-padding": "2px",
-        "text-background-shape": "roundrectangle",
+        ...labelBackground,
         ...outline,
-        shape: "ellipse",
         width: "data(size)",
         height: "data(size)",
-        "background-color": v("--color-surface"),
-        "border-width": 3,
+        "border-width": 0,
         "background-width": "55%",
         "background-height": "55%",
-        "transition-property": "width, height, border-color, background-color",
+        "transition-property": "opacity",
         ...transition,
       },
     },
-    ...typeRules("node", v("--color-graphFallback"), "generic", v),
-    ...types.flatMap((t) => typeRules(`node[type = "${t.id}"]`, t.color, t.icon, v)),
+    typeRule("node", v("--color-graphFallback"), undefined, v, dark),
+    ...types.map((t) => typeRule(`node[type = "${t.id}"]`, t.color, t.icon, v, dark)),
     {
       selector: "edge",
       style: {
         width: "data(width)",
-        "line-color": v("--color-border"),
-        "target-arrow-color": v("--color-border"),
+        "line-color": edgeColor,
+        "target-arrow-color": edgeColor,
         "target-arrow-shape": "triangle",
         "curve-style": "bezier",
+        // 關係名稱：fonts.mono 小字、surface 底
         "font-size": 9,
+        "font-family": v("--font-mono"),
         color: v("--color-textMuted"),
-        ...outline,
-        "transition-property": "opacity, line-color",
+        ...labelBackground,
+        "transition-property": "opacity",
         ...transition,
       },
     },
     // 關係名稱只在選取節點的相連關係顯示
     { selector: "edge.near", style: { label: "data(label)" } },
-    // 變灰：不隱藏，保留整體輪廓。節點仍可點（點了只看它），所以不降低透明度，標籤維持可讀的對比
-    {
-      selector: "node.dimmed",
-      style: { width: "data(dimmedSize)", height: "data(dimmedSize)", color: v("--color-textMuted") },
-    },
-    { selector: "edge.dimmed", style: { opacity: 0.3 } },
-    // 選取：淡色底（上面依類型設定）＋陰影
+    // 變灰：不隱藏，保留整體輪廓，降到 45% 不透明（「只看它」之後 15%）。變灰的內容是背景，標籤對比刻意降低；
+    // 滑過時恢復（最後的 hover），節點仍可點（#240 決定 3）
+    { selector: ".dimmed", style: { opacity: DIMMED_OPACITY } },
+    { selector: ".dimmed.isolated", style: { opacity: ISOLATED_OPACITY } },
+    // 選取：外面一圈 background 間隙＋2px text 外環
     {
       selector: "node.selected",
-      style: {
-        "border-width": 4,
-        "underlay-color": v("--color-text"),
-        "underlay-opacity": 0.15,
-        "underlay-padding": 6,
-        "underlay-shape": "ellipse",
-      },
+      style: { "border-width": 2, "border-color": v("--color-background"), "outline-width": 2, "outline-color": v("--color-text") },
     },
-    { selector: "node.path", style: { "border-width": 5, "border-color": v("--color-primary") } },
+    // 找路徑的結果：路徑節點加 primary 外環，路徑上的線用 primary 加粗
     {
-      selector: "edge.path",
-      style: {
-        width: 5,
-        "line-color": v("--color-primary"),
-        "target-arrow-color": v("--color-primary"),
-      },
+      selector: "node.path",
+      style: { "border-width": 2, "border-color": v("--color-background"), "outline-width": 2, "outline-color": v("--color-primary") },
     },
+    { selector: "edge.path", style: { width: 5, "line-color": v("--color-primary"), "target-arrow-color": v("--color-primary") } },
+    // 滑過變灰的節點時恢復 100% 不透明，標籤在要讀的時候可讀（#240 決定 3）
+    { selector: "node.dimmed.hover", style: { opacity: 1 } },
   ];
 }
