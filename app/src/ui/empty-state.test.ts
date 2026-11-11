@@ -17,9 +17,11 @@ const NEW_KEYS = [
   "reviewUploadAnother", "reportsEmptyReason", "evalEmptyTitle", "evalEmptyReason", "evalEmptyAction",
 ] as const;
 
-// 與身分的可見範圍有關的原因：不得暗示「有內容但你看不到」（#245 決定、docs/qa.md「不透露是否有看不到的文件」）
-const VISIBILITY_REASONS = ["graphEmptyReason", "timelineEmptyReason", "timelineFilterEmptyReason", "reportsEmptyReason", "reviewEmptyReason"] as const;
-const HIDDEN_HINT = /權限|看不到|沒有權|隱藏|permission|can't see|cannot see|hidden|not allowed|権限|閲覧できない/i;
+// 與身分的可見範圍有關的標題與原因：不得暗示「有內容但你看不到」（#245 決定、docs/qa.md「不透露是否有看不到的文件」）
+const VISIBILITY_TEXTS = [
+  "graphEmpty", "graphEmptyReason", "timelineEmptyReason", "timelineFilterEmptyReason", "reportsEmpty", "reportsEmptyReason", "reviewEmptyReason",
+] as const;
+const HIDDEN_HINT = /權限|看不到|看得到|沒有權|隱藏|permission|can't see|cannot see|can see|visible|hidden|not allowed|権限|閲覧でき|表示できる/i;
 
 describe("空狀態", () => {
   it(`下一步最多 ${MAX_EMPTY_ACTIONS} 個，依傳入的順序（第一個是主要按鈕）`, () => {
@@ -49,14 +51,28 @@ describe("空狀態", () => {
       }
     });
 
-    it(`${language}：與可見範圍有關的原因不暗示有看不到的內容`, () => {
-      for (const key of VISIBILITY_REASONS) expect(s[key], key).not.toMatch(HIDDEN_HINT);
+    it(`${language}：與可見範圍有關的標題與原因不暗示有看不到的內容`, () => {
+      for (const key of VISIBILITY_TEXTS) expect(s[key], key).not.toMatch(HIDDEN_HINT);
     });
 
     it(`${language}：空狀態的按鈕與預設問題、開始評測不同名（同名的按鈕會讓操作與 E2E 選不到）`, () => {
       expect(s.evalEmptyAction.toLowerCase()).not.toContain(s.evalStart.toLowerCase());
       const presets = clientConfig.scenarios.scenarios.flatMap((x) => x.questions.map((q) => q.text[language]));
       expect(presets).not.toContain(s.emptyAnswerAction);
+    });
+  }
+});
+
+describe("示範客戶（clients/）的空狀態文字", () => {
+  const files = Object.entries(import.meta.glob<Record<string, string>>("../../../clients/*/i18n/*.json", { eager: true, import: "default" }));
+
+  it("有示範客戶的翻譯檔", () => {
+    expect(files.length).toBeGreaterThan(0);
+  });
+
+  for (const [path, texts] of files) {
+    it(`${path.replace("../../../", "")}：與可見範圍有關的標題與原因不暗示有看不到的內容`, () => {
+      for (const key of VISIBILITY_TEXTS) expect(texts[key], key).not.toMatch(HIDDEN_HINT);
     });
   }
 });
