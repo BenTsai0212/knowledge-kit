@@ -600,6 +600,8 @@ export interface UiStrings {
   uncited: string;
   // 串流中斷或被截斷，保留已收到的內容
   incomplete: string;
+  // 回答中斷或失敗時，以同一個問題再問一次（#227）
+  answerRetry: string;
   errors: Record<AskErrorType, string>;
   // 不認得的錯誤類型
   unknownError: string;

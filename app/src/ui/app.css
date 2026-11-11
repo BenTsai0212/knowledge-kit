@@ -486,10 +486,151 @@ button.citation[aria-pressed="true"] {
   padding: 0.25rem 0.75rem;
 }
 
-/* 原文螢光：亮色紙面上的螢光與紙面文字（Light 的 markReading 與 mark 相同） */
+/* 原文螢光：亮色紙面上的螢光與紙面文字（Light 的 markReading 與 mark 相同）。
+   不用 background 簡寫：簡寫會把刷過動畫用的 background-image 重設成 none（#227） */
 .source .highlight mark {
-  background: var(--color-markReading);
+  background-color: var(--color-markReading);
   color: var(--color-readingText);
+}
+
+/* 拒答：虛線框（#227） */
+.refusal {
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-medium);
+  padding: 0 0.75rem;
+}
+
+/* 問答的動態（#227，docs/design.md「動態」）：時間與曲線只用 motion.ts 產生的 --motion-*、--ease-*，
+   減少動態效果時時間都是 0ms，全部直接到位。--i 是依序出現的第幾格（motion.ts 的 staggerIndex，超過 6 項不再延遲）；
+   --done 是回答最後一句的格數（answer-motion.ts）。動畫不擋操作，新的提問直接接手 */
+.answer > h2 {
+  animation: kSend var(--motion-base) var(--ease-enter) both;
+}
+
+/* 句子是行內元素，以 top 升起（transform 對行內元素無效）。top 寫明 0：auto 與長度之間不能內插，kRise 會變成跳動 */
+.answer-text .sentence,
+.mentions > p,
+.mention-group > *,
+.refusal-next li,
+.follow-ups li {
+  position: relative;
+  top: 0;
+}
+
+.answer-text .sentence {
+  animation: kRise var(--motion-base) var(--ease-enter) calc(var(--i, 0) * var(--motion-stagger-sentence)) both;
+}
+
+/* 句子升起之後，引用標號才彈出（settle） */
+.answer-text .citation {
+  animation: kPopS var(--motion-settle) var(--ease-spring) calc(var(--i, 0) * var(--motion-stagger-sentence) + var(--motion-base)) both;
+}
+
+/* 回答提到：最後一句的標號彈出後才逐一出現 */
+.mentions > p,
+.mention-group > * {
+  animation: kRise var(--motion-base) var(--ease-enter)
+    calc(var(--done, 0) * var(--motion-stagger-sentence) + var(--motion-base) + var(--motion-settle) + var(--i, 0) * var(--motion-stagger-list)) both;
+}
+
+.follow-ups li {
+  animation: kRise var(--motion-base) var(--ease-enter) calc(var(--i, 0) * var(--motion-stagger-list)) both;
+}
+
+/* 拒答與錯誤：原地淡入、不位移；「可以試試」在框出現後逐項出現 */
+.refusal,
+.answer > .error,
+.answer > .badge,
+.answer > .retry {
+  animation: kFade var(--motion-base) var(--ease-enter) both;
+}
+
+.refusal-next li {
+  animation: kRise var(--motion-base) var(--ease-enter) calc(var(--motion-base) + var(--i, 0) * var(--motion-stagger-list)) both;
+}
+
+/* 回答中斷：已收到的文字變淡，不搖晃、不閃紅 */
+.answer-text {
+  transition: opacity var(--motion-base) var(--ease-enter);
+}
+
+.answer.incomplete .answer-text {
+  opacity: 0.55;
+}
+
+/* 打開原文：標號變實心（fast）→ 面板從右滑入（base）→ 螢光刷過（sweep） */
+button.citation {
+  transition-property: background-color, color, box-shadow;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: var(--ease-enter);
+}
+
+main.qa > .source {
+  animation: kSlideIn var(--motion-base) var(--ease-enter) var(--motion-fast) both;
+}
+
+/* 刷過時底色透明、只有 background-image 由左往右長出；fill-mode 用 backwards（不用 both），
+   動畫結束後回到上面的完整螢光（background-color），減少動態效果時直接是完整螢光 */
+.source-text mark {
+  background-image: linear-gradient(var(--color-markReading), var(--color-markReading));
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  animation: kSweep var(--motion-sweep) var(--ease-enter) var(--motion-fast) backwards;
+}
+
+main.qa > .source .source-text mark.entering {
+  animation-delay: calc(var(--motion-fast) + var(--motion-base));
+}
+
+/* 切換頁籤回來時，已播過的回答不重播 */
+.answer.still,
+.answer.still * {
+  animation: none;
+}
+
+@keyframes kSend {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+}
+
+@keyframes kRise {
+  from {
+    opacity: 0;
+    top: 0.4rem;
+  }
+}
+
+@keyframes kPopS {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}
+
+@keyframes kFade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes kSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(1.5rem);
+  }
+}
+
+@keyframes kSweep {
+  from {
+    background-color: transparent;
+    background-size: 0% 100%;
+  }
+  to {
+    background-color: transparent;
+    background-size: 100% 100%;
+  }
 }
 
 /* 第一層頁籤：左側導覽的直列，目前的頁籤以左側的線標示（#48、#195） */

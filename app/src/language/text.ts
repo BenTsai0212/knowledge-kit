@@ -64,6 +64,22 @@ export function joinSentence(text: string, sentence: string): string {
 
 const SENTENCE_BREAK = new RegExp(`(?<=[${SENTENCE_ENDS.fullwidth}])|(?<=[${SENTENCE_ENDS.halfwidth}])\\s+`);
 
+// 不去掉任何字元的斷句（畫面逐句的動態用，#227）：句尾與其後的空白留在前一句，接起來等於原文；
+// 半形句尾後接空白或在結尾才斷開（v1.2 不斷開）。ends 為 false 的最後一段是還沒寫完的句子
+const PIECE_END = new RegExp(`[${SENTENCE_ENDS.fullwidth}]+|[${SENTENCE_ENDS.halfwidth}]+(?:\\s+|$)`, "g");
+
+export function sentencePieces(text: string): { text: string; ends: boolean }[] {
+  const pieces: { text: string; ends: boolean }[] = [];
+  let start = 0;
+  for (const m of text.matchAll(PIECE_END)) {
+    const end = m.index + m[0].length;
+    pieces.push({ text: text.slice(start, end), ends: true });
+    start = end;
+  }
+  if (start < text.length) pieces.push({ text: text.slice(start), ends: false });
+  return pieces;
+}
+
 // 依句尾斷開段落，去掉前後空白與空句
 export function splitSentences(paragraph: string): string[] {
   return paragraph

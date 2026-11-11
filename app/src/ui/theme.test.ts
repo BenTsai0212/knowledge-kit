@@ -116,7 +116,7 @@ describe("設計系統 v1", () => {
 
   it("原文螢光放在亮色紙面的組合上（readingText 在 markReading 上，check:client 檢查對比）", () => {
     const block = cssText.match(/\.source \.highlight mark\s*\{([^}]*)\}/)?.[1];
-    expect(Object.fromEntries(declarations(`${block};`))).toMatchObject({ background: "var(--color-markReading)", color: "var(--color-readingText)" });
+    expect(Object.fromEntries(declarations(`${block};`))).toMatchObject({ "background-color": "var(--color-markReading)", color: "var(--color-readingText)" });
   });
 
   // 深色模式的 app.css 規則（@media (prefers-color-scheme: dark) { … } 的內容）

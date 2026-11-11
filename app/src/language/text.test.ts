@@ -1,7 +1,7 @@
 // 語言模組的單元測試；切詞與切段的整體行為另見 retrieval/tokenize.test.ts、upload/chunk.test.ts
 import { describe, expect, it } from "vitest";
 import { OTHER, type ScriptRule } from "./scripts";
-import { joinLine, joinSentence, segments, splitSentences } from "./text";
+import { joinLine, joinSentence, segments, sentencePieces, splitSentences } from "./text";
 
 const brief = (text: string, scripts?: readonly ScriptRule[]) => segments(text, scripts).map((s) => [s.text, s.mode]);
 
@@ -80,5 +80,18 @@ describe("相連與句尾", () => {
   it("全形句尾直接斷開，半形句尾後接空白才斷開", () => {
     expect(splitSentences("第一句。第二句！第三句？")).toEqual(["第一句。", "第二句！", "第三句？"]);
     expect(splitSentences("One. Two! Three? v1.2")).toEqual(["One.", "Two!", "Three?", "v1.2"]);
+  });
+
+  it("不去掉字元的斷句：接起來等於原文，最後一段可能還沒結束（#227）", () => {
+    expect(sentencePieces("第一句。第二句！？第三")).toEqual([
+      { text: "第一句。", ends: true },
+      { text: "第二句！？", ends: true },
+      { text: "第三", ends: false },
+    ]);
+    expect(sentencePieces("One.  Two v1.2 ok!")).toEqual([
+      { text: "One.  ", ends: true },
+      { text: "Two v1.2 ok!", ends: true },
+    ]);
+    expect(sentencePieces("")).toEqual([]);
   });
 });
