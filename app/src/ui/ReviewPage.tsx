@@ -1,11 +1,13 @@
 // 待審頁（#44，docs/extraction.md「畫面」）：只有 canReview 的身分看得到。依文件列出待審的實體與關係，
 // 每份文件開頭是摘要與進度，需要確認的組在最上面，系統已準備的收合成一行（#189，分組在 review-helpers.ts 的 reviewGroups()）；
 // 可以修改名稱、選擇合併對象、確認一組、核准整份文件、退回；另有「已退回」分頁。
+// 設計系統 v1（#243）：底線式分頁、文件卡片的頁首（右側是待確認的組數與「核准這份文件的全部」）、textMuted 的組名，
+// 沒有需要確認項目的文件可以收合。
 // 每筆一行，按「編輯名稱」才可以修改；出處點開才顯示，預設 2 行、標出實體名稱；核准或退回後顯示短提示（#48），附「撤銷」（ADR 0007 決定 4）。
 // 每份文件另有「說法不同」區塊（#51）：新舊段落並列、三選一處理；已處理的在「已處理的說法不同」分頁。
 // 「回報」分頁是問答的回答錯誤回報（ADR 0007 決定 7，ReportList.tsx）。
 // 讀取與寫入都經 store.ts、conflicts/store.ts（RLS 決定看得到、能核准什麼）；模型輸出一律以文字節點顯示。
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { clientConfig } from "../client/load";
 import type { LocalizedText } from "../client/types";
 import { decideConflict, readConflicts, type ConflictDecision, type ConflictItem, type ConflictPassage } from "../conflicts/store";
@@ -23,19 +25,24 @@ import { createRequestGate } from "./requests";
 import {
   batchPlan,
   canBatch,
+  docCollapsible,
+  entityMark,
   groupPlan,
   highlightSegments,
   initialChoice,
   inputSize,
   namesInvalid,
+  nextTab,
   reviewDocuments,
   reviewGroups,
+  reviewTabCounts,
   toastText,
   waitingRelations,
   type EntityChoice,
 } from "./review-helpers";
 import { fill, strings } from "../client/i18n";
 import { createToastTimer, type ToastTimer } from "./toast-timer";
+import { entityTypeShape } from "./timeline-view";
 
 interface Props {
   db: Database;
@@ -61,13 +68,19 @@ const { client, knowledgeModel } = clientConfig;
 // 說法不同的三種處理方式（#51 決定 4），依按鈕的順序
 const CONFLICT_DECISIONS: readonly ConflictDecision[] = ["coexist", "supersede", "not_conflict"];
 
+// 第二層分頁（#243：底線式，role="tablist"）。decided：已處理的說法不同（#51）；reports：回答錯誤回報（ADR 0007）
+const TABS = ["pending", "rejected", "decided", "reports"] as const;
+type Tab = (typeof TABS)[number];
+
+const typeColor = (type: string) => knowledgeModel.entityTypes.find((t) => t.id === type)?.color ?? "var(--color-graphFallback)";
+
 // 待審實體沒有主要名稱（name），依介面語言取 names
 const pendingName = (e: ReviewEntity, language: string) => e.names[language] || Object.values(e.names)[0] || e.id;
 
 export function ReviewPage({ db, identity, language, extracting, onOpenSource, onChanged, onGotoGraph, onGotoUpload, onViewInGraph }: Props) {
   const s = strings(language);
-  // decided：已處理的說法不同（#51）；reports：回答錯誤回報（ADR 0007）
-  const [tab, setTab] = useState<"pending" | "rejected" | "decided" | "reports">("pending");
+  const [tab, setTab] = useState<Tab>("pending");
+  const ids = useId();
   const [docs, setDocs] = useState<ReviewDocument[] | null>(null);
   const [conflicts, setConflicts] = useState<ConflictItem[]>([]);
   const [reports, setReports] = useState<AnswerReport[]>([]);
@@ -81,6 +94,10 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   // 點開出處的項目 id（#189：每筆一行，出處點開才顯示）
   const [openSources, setOpenSources] = useState<ReadonlySet<string>>(new Set());
+  // 文件卡片的收合（#243）：沒有需要確認項目的文件預設收合。預設值在第一次出現時決定並記住，
+  // 確認完最後一組時不會在眼前收起來；按下「展開」「收合」後以 openDocs 為準
+  const [openDocs, setOpenDocs] = useState<Record<string, boolean>>({});
+  const firstOpen = useRef(new Map<string, boolean>());
   // graph：附「到圖譜查看」（只有核准；退回的項目不會出現在圖譜）。undo：這次寫入的決定，附「撤銷」（ADR 0007 決定 4）。
   // id 每次遞增，當作 key：文字與上一次相同時也重新掛載，重新播放進場動畫（#48 審查第 2 次）
   const [toast, setToast] = useState<{ id: number; text: string; graph: boolean; undo?: { docId: string; decisions: string[] } } | null>(null);
@@ -131,7 +148,16 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
     setVersion((v) => v + 1);
     onChanged();
   };
-  const unresolved = reports.filter((r) => r.resolution === null).length;
+  const counts = reviewTabCounts(docs, conflicts, reports);
+  const tabLabels: Record<Tab, string> = { pending: s.reviewPendingTab, rejected: s.reviewRejectedTab, decided: s.reviewDecidedTab, reports: s.reviewReportsTab };
+  // 左右鍵、Home、End 切換分頁並把焦點移過去（只有選中的分頁在 Tab 順序中）
+  const tabKey = (ev: KeyboardEvent<HTMLDivElement>) => {
+    const next = nextTab(TABS, tab, ev.key);
+    if (next === null) return;
+    ev.preventDefault();
+    setTab(next);
+    document.getElementById(`${ids}-tab-${next}`)?.focus();
+  };
   const languageNames = new Intl.DisplayNames([language], { type: "language" });
 
   // done：成功後的短提示；undoable 時 action 回傳的決定 id 交給「撤銷」
@@ -256,15 +282,18 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
         {fill(s.reviewSources, { count }, language)}
       </button>
     );
-  // 一筆實體一行（#189）：類型、標籤、名稱、合併選擇、出處的開關與動作。
-  // badge：「新增」「系統建議」；mergeHint：選擇合併時在下一行提示可見範圍；confirm：「確認」一組（沒有時只有退回），confirmLabel 寫明一起核准的關係數
+  // 實體列的標示（#243）：新增、自動合併、系統建議；需要逐筆決定的沒有標示
+  const markLabels = { new: s.reviewNew, auto: s.reviewAutoMerged, suggested: s.reviewSuggested };
+  // 一筆實體一行（#189、#243）：類型的形狀與名稱、名稱、標示、合併選擇、出處數，最後是退回與核准。
+  // mergeHint：選擇合併時在下一行提示可見範圍；confirm：「確認」一組或「核准」一筆（沒有時只有退回），confirmLabel 寫明一起核准的關係數
   const entityRow = (
     doc: ReviewDocument,
     e: ReviewEntity,
-    opts: { badge?: string; mergeHint?: boolean; confirm?: () => void; confirmLabel?: string; confirmDisabled?: boolean },
+    opts: { mergeHint?: boolean; confirm?: () => void; confirmLabel?: string; confirmDisabled?: boolean },
   ) => {
     const pending = e.status === "pending";
     const suggestion = suggestions[e.id];
+    const mark = pending ? entityMark(suggestion) : null;
     const choice = choiceOf(e);
     const candidates = suggestion.mode === "choose" ? suggestion.candidates : suggestion.mode === "auto" ? [suggestion.target] : [];
     const needsChoice = !canBatch(suggestion);
@@ -276,8 +305,10 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
     return (
       <>
         <div className="review-row">
-          <span className="badge">{entityTypeLabel(e.type, language)}</span>
-          {opts.badge !== undefined && <span className="badge primary">{opts.badge}</span>}
+          <span className={`entity-badge shape-${entityTypeShape(e.type)}`} style={{ "--type-color": typeColor(e.type) } as CSSProperties}>
+            <span className="type-dot" aria-hidden="true" />
+            {entityTypeLabel(e.type, language)}
+          </span>
           {isEditing ? (
             <span className="review-names editing">
               {client.languages.map((l) => (
@@ -312,6 +343,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
               )}
             </span>
           )}
+          {mark !== null && <span className={`review-mark is-${mark}`}>{markLabels[mark]}</span>}
           {pending && candidates.length > 0 && (
             <label className="inline">
               {s.reviewMergeInto}
@@ -338,14 +370,14 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
           {sourcesToggle(e.id, e.sources.length)}
           {pending && (
             <span className="review-actions">
+              <button type="button" className="secondary" disabled={busy} onClick={() => void rejectItems(doc.id, { entities: [e.id], relations: [] })}>
+                {s.reviewReject}
+              </button>
               {opts.confirm !== undefined && (
                 <button type="button" disabled={busy || opts.confirmDisabled} onClick={opts.confirm}>
                   {busy ? s.reviewWorking : (opts.confirmLabel ?? s.reviewConfirm)}
                 </button>
               )}
-              <button type="button" className="secondary" disabled={busy} onClick={() => void rejectItems(doc.id, { entities: [e.id], relations: [] })}>
-                {s.reviewReject}
-              </button>
             </span>
           )}
         </div>
@@ -361,7 +393,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
         <span>
           {nameOf(doc, r.from)} —{relationTypeLabel(r.type, language)}→ {nameOf(doc, r.to)}
         </span>
-        {opts.existing && <span className="badge">{s.reviewExisting}</span>}
+        {opts.existing && <span className="review-mark is-existing">{s.reviewExisting}</span>}
         {r.rejectedWithEntity && <span className="badge">{s.reviewRejectedWithEntity}</span>}
         {opts.waiting && <span className="muted">{s.reviewRelationBlocked}</span>}
         {sourcesToggle(r.id, r.sources.length)}
@@ -380,22 +412,23 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   return (
     <div className="review-page">
       <div className="review-toolbar">
-        {/* 第二層：小一號的分段切換（#48） */}
-        <div className="segmented" role="group" aria-label={s.reviewStatusTabs}>
-          <button type="button" aria-pressed={tab === "pending"} onClick={() => setTab("pending")}>
-            {s.reviewPendingTab}
-          </button>
-          <button type="button" aria-pressed={tab === "rejected"} onClick={() => setTab("rejected")}>
-            {s.reviewRejectedTab}
-          </button>
-          <button type="button" aria-pressed={tab === "decided"} onClick={() => setTab("decided")}>
-            {s.reviewDecidedTab}
-          </button>
-          {/* 回報：後面接著未處理的筆數 */}
-          <button type="button" aria-pressed={tab === "reports"} onClick={() => setTab("reports")}>
-            {s.reviewReportsTab}
-            {unresolved > 0 && <span className="tab-count">{unresolved}</span>}
-          </button>
+        {/* 第二層：底線式分頁（#243），數量直接接在名稱後（0 時不顯示） */}
+        <div className="review-tabs" role="tablist" aria-label={s.reviewStatusTabs} onKeyDown={tabKey}>
+          {TABS.map((t) => (
+            <button
+              key={t}
+              type="button"
+              role="tab"
+              id={`${ids}-tab-${t}`}
+              aria-selected={tab === t}
+              aria-controls={`${ids}-panel`}
+              tabIndex={tab === t ? 0 : -1}
+              onClick={() => setTab(t)}
+            >
+              {tabLabels[t]}
+              {counts[t] > 0 && <span className="review-tabs__count"> {counts[t]}</span>}
+            </button>
+          ))}
         </div>
         <button type="button" className="icon-button" aria-label={s.reviewRefresh} title={s.reviewRefresh} disabled={busy} onClick={refresh}>
           ↻
@@ -432,180 +465,228 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
         )}
       </div>
       {extracting && <Notice kind="info" title={s.reviewExtracting} action={{ label: s.reviewRefresh, onClick: refresh, disabled: busy }} />}
-      {tab === "reports" && (
-        <ReportList
-          db={db}
-          identity={identity}
-          language={language}
-          reports={reports}
-          graph={graph}
-          onOpenSource={onOpenSource}
-          onViewInGraph={onViewInGraph}
-          onResolved={refresh}
-        />
-      )}
-      {tab !== "reports" && visibleDocs.length === 0 && (
-        // 待審清空（#245）：到圖譜查看、再上傳一份；已退回與已處理的分頁只有標題
-        <EmptyState
-          icon="review"
-          title={tab === "pending" ? s.reviewEmpty : tab === "rejected" ? s.reviewRejectedEmpty : s.reviewDecidedEmpty}
-          reason={tab === "pending" ? s.reviewEmptyReason : undefined}
-          actions={
-            tab === "pending"
-              ? [
-                  { label: s.reviewGotoGraph, onClick: onGotoGraph },
-                  ...(onGotoUpload === undefined ? [] : [{ label: s.reviewUploadAnother, onClick: onGotoUpload }]),
-                ]
-              : []
-          }
-        />
-      )}
+      <div className="review-panel" role="tabpanel" id={`${ids}-panel`} aria-labelledby={`${ids}-tab-${tab}`}>
+        {tab === "reports" && (
+          <ReportList
+            db={db}
+            identity={identity}
+            language={language}
+            reports={reports}
+            graph={graph}
+            onOpenSource={onOpenSource}
+            onViewInGraph={onViewInGraph}
+            onResolved={refresh}
+          />
+        )}
+        {tab !== "reports" && visibleDocs.length === 0 && (
+          // 待審清空（#245）：到圖譜查看、再上傳一份；已退回與已處理的分頁只有標題
+          <EmptyState
+            icon="review"
+            title={tab === "pending" ? s.reviewEmpty : tab === "rejected" ? s.reviewRejectedEmpty : s.reviewDecidedEmpty}
+            reason={tab === "pending" ? s.reviewEmptyReason : undefined}
+            actions={
+              tab === "pending"
+                ? [
+                    { label: s.reviewGotoGraph, onClick: onGotoGraph },
+                    ...(onGotoUpload === undefined ? [] : [{ label: s.reviewUploadAnother, onClick: onGotoUpload }]),
+                  ]
+                : []
+            }
+          />
+        )}
 
-      {visibleDocs.map((doc) => {
-        const docConflicts = conflictsOf(doc.id);
-        const approvedCount = [...doc.entities, ...doc.relations].filter((x) => x.status === "approved").length;
-        // 待審分頁：分組、摘要與進度（#189）；只有說法不同、沒有待審實體與關係的文件不顯示
-        const g = tab === "pending" ? reviewGroups(doc, suggestions, allChoices, graph, client.languages) : null;
-        const preparedCount = g === null ? 0 : g.prepared.entities.length + g.prepared.relations.length;
-        const hasItems = g !== null && g.groups.length + preparedCount > 0;
-        const decideLeft = g?.groups.filter((x) => x.kind === "decide").length ?? 0;
-        const preparedMerges = g?.prepared.entities.some((e) => typeof allChoices[e.id].mergeInto === "string") ?? false;
-        const rejectedEntities = tab === "rejected" ? doc.entities.filter((e) => e.status === "rejected") : [];
-        const rejectedRelations = tab === "rejected" ? doc.relations.filter((r) => r.status === "rejected") : [];
-        return (
-          <section key={doc.id} className="card review-doc">
-            {notice?.docId === doc.id && notice.error !== undefined && (
-              <Notice kind="error" title={s.noticeReviewTitle} action={{ label: s.reviewRefresh, onClick: refresh, disabled: busy }}>
-                {notice.error}
-              </Notice>
-            )}
-            {notice?.docId === doc.id && (notice.skipped ?? 0) > 0 && (
-              <Notice kind="warning" title={s.reviewSkippedNames}>
-                {notice.skipped}
-              </Notice>
-            )}
-            <h2 lang={doc.language}>
-              {doc.title} <AccessBadges visibility={doc.visibility} project={doc.project} language={language} />
-            </h2>
-            {approvedCount > 0 && (
-              <p className="muted">
-                {s.reviewApprovedCount}
-                {s.colon}
-                {approvedCount}
-              </p>
-            )}
-            {g !== null && hasItems && (
-              <>
-                <p className="review-summary">
-                  {fill(s.reviewSummary, {
-                    entities: g.summary.newEntities,
-                    relations: g.summary.newRelations,
-                    merged: g.summary.mergedEntities,
-                    existing: g.summary.existingRelations,
-                  }, language)}
-                </p>
-                <div className="dialog-actions review-progress">
-                  <strong>{g.summary.toConfirm > 0 ? fill(s.reviewProgress, { count: g.summary.toConfirm }, language) : s.reviewProgressDone}</strong>
-                  <button type="button" disabled={busy} onClick={() => approveBatch(doc.id, batchPlan(doc, suggestions, allChoices, client.languages, graph))}>
-                    {busy ? s.reviewWorking : s.reviewApproveDocument}
-                  </button>
-                  {decideLeft > 0 && <span className="muted">{fill(s.reviewDecideLeft, { count: decideLeft }, language)}</span>}
+        {visibleDocs.map((doc) => {
+          const docConflicts = conflictsOf(doc.id);
+          const approvedCount = [...doc.entities, ...doc.relations].filter((x) => x.status === "approved").length;
+          // 待審分頁：分組、摘要與進度（#189）；只有說法不同、沒有待審實體與關係的文件不顯示
+          const g = tab === "pending" ? reviewGroups(doc, suggestions, allChoices, graph, client.languages) : null;
+          const preparedCount = g === null ? 0 : g.prepared.entities.length + g.prepared.relations.length;
+          const hasItems = g !== null && g.groups.length + preparedCount > 0;
+          const decideLeft = g?.groups.filter((x) => x.kind === "decide").length ?? 0;
+          const preparedMerges = g?.prepared.entities.some((e) => typeof allChoices[e.id].mergeInto === "string") ?? false;
+          const rejectedEntities = tab === "rejected" ? doc.entities.filter((e) => e.status === "rejected") : [];
+          const rejectedRelations = tab === "rejected" ? doc.relations.filter((r) => r.status === "rejected") : [];
+          // 收合（#243）：只在待審分頁，沒有需要確認的組與待處理的說法不同時
+          const collapsible = tab === "pending" && docCollapsible(g?.summary.toConfirm ?? 0, docConflicts.length);
+          if (tab === "pending" && !firstOpen.current.has(doc.id)) firstOpen.current.set(doc.id, !collapsible);
+          const open = !collapsible || (openDocs[doc.id] ?? firstOpen.current.get(doc.id) ?? false);
+          const bodyId = `${ids}-doc-${doc.id}`;
+          return (
+            <section key={doc.id} className="card review-doc">
+              {notice?.docId === doc.id && notice.error !== undefined && (
+                <Notice kind="error" title={s.noticeReviewTitle} action={{ label: s.reviewRefresh, onClick: refresh, disabled: busy }}>
+                  {notice.error}
+                </Notice>
+              )}
+              {notice?.docId === doc.id && (notice.skipped ?? 0) > 0 && (
+                <Notice kind="warning" title={s.reviewSkippedNames}>
+                  {notice.skipped}
+                </Notice>
+              )}
+              {/* 頁首（#243）：左側標題、可見等級與摘要；右側「還有 N 組需要你確認」與「核准這份文件的全部」 */}
+              <header className="review-doc__head">
+                <div className="review-doc__title">
+                  <h2 lang={doc.language}>
+                    {doc.title} <AccessBadges visibility={doc.visibility} project={doc.project} language={language} />
+                  </h2>
+                  {g !== null && hasItems && (
+                    <p className="review-summary">
+                      {fill(s.reviewSummary, {
+                        entities: g.summary.newEntities,
+                        relations: g.summary.newRelations,
+                        merged: g.summary.mergedEntities,
+                        existing: g.summary.existingRelations,
+                      }, language)}
+                    </p>
+                  )}
+                  {approvedCount > 0 && (
+                    <p className="muted">
+                      {s.reviewApprovedCount}
+                      {s.colon}
+                      {approvedCount}
+                    </p>
+                  )}
                 </div>
-                {/* 需要你確認的組：一組一個實體，關係掛在它底下；「確認」一併核准已經可以核准的關係 */}
-                {g.groups.length > 0 && (
-                  <ul className="review-list">
-                    {g.groups.map((group) => {
-                      const plan = groupPlan(doc, group, g.prepared.entities, suggestions, allChoices, client.languages);
-                      const waiting = waitingRelations(doc, group, g.prepared.entities, suggestions, allChoices, client.languages);
-                      const relationCount = plan === null ? 0 : plan.relations.length + plan.existingRelations.length;
-                      return (
-                        <li key={group.entity.id}>
-                          {entityRow(doc, group.entity, {
-                            badge: group.kind === "new" ? s.reviewNew : undefined,
-                            mergeHint: true,
-                            confirm: () => {
-                              if (plan) void approveItems(doc.id, plan);
-                            },
-                            confirmLabel: relationCount > 0 ? fill(s.reviewConfirmWithRelations, { count: relationCount }, language) : s.reviewConfirm,
-                            confirmDisabled: plan === null,
+                {(hasItems || collapsible) && (
+                  <div className="review-doc__side">
+                    {g !== null && hasItems && (
+                      <>
+                        {g.summary.toConfirm > 0 ? (
+                          <strong className="review-to-confirm">{fill(s.reviewProgress, { count: g.summary.toConfirm }, language)}</strong>
+                        ) : (
+                          <span className="muted">{s.reviewProgressDone}</span>
+                        )}
+                        <button type="button" disabled={busy} onClick={() => approveBatch(doc.id, batchPlan(doc, suggestions, allChoices, client.languages, graph))}>
+                          {busy ? s.reviewWorking : s.reviewApproveDocument}
+                        </button>
+                      </>
+                    )}
+                    {collapsible && (
+                      <button
+                        type="button"
+                        className="link"
+                        aria-expanded={open}
+                        aria-controls={bodyId}
+                        onClick={() => setOpenDocs((cur) => ({ ...cur, [doc.id]: !open }))}
+                      >
+                        {open ? s.reviewCollapse : s.reviewExpand}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </header>
+              {decideLeft > 0 && <p className="muted review-decide-left">{fill(s.reviewDecideLeft, { count: decideLeft }, language)}</p>}
+
+              <div className="review-doc__body" id={bodyId} hidden={!open}>
+                {g !== null && hasItems && (
+                  <>
+                    <h3 className="review-group-title">{s.reviewEntities}</h3>
+                    {/* 需要你確認的組：一組一個實體，關係掛在它底下；「確認」一併核准已經可以核准的關係 */}
+                    {g.groups.length > 0 && (
+                      <ul className="review-list">
+                        {g.groups.map((group) => {
+                          const plan = groupPlan(doc, group, g.prepared.entities, suggestions, allChoices, client.languages);
+                          const waiting = waitingRelations(doc, group, g.prepared.entities, suggestions, allChoices, client.languages);
+                          const relationCount = plan === null ? 0 : plan.relations.length + plan.existingRelations.length;
+                          return (
+                            <li key={group.entity.id}>
+                              {entityRow(doc, group.entity, {
+                                mergeHint: true,
+                                confirm: () => {
+                                  if (plan) void approveItems(doc.id, plan);
+                                },
+                                confirmLabel: relationCount > 0 ? fill(s.reviewConfirmWithRelations, { count: relationCount }, language) : s.reviewConfirm,
+                                confirmDisabled: plan === null,
+                              })}
+                              {group.relations.length > 0 && (
+                                <ul className="review-rows">
+                                  {group.relations.map((x) => (
+                                    <li key={x.relation.id}>{relationRow(doc, x.relation, { existing: x.existing, waiting: waiting.has(x.relation.id) })}</li>
+                                  ))}
+                                </ul>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                    {/* 系統已準備：系統建議、自動合併與圖譜已有，收合成一行；合併的可見範圍提示在收合時也看得到。
+                        實體可以逐筆核准（batchPlan 只含這一筆） */}
+                    {preparedCount > 0 && (
+                      <details className="review-prepared">
+                        <summary>
+                          {fill(s.reviewPrepared, { count: preparedCount }, language)}
+                          {preparedMerges && <span className="muted"> {s.reviewPreparedMergeHint}</span>}
+                        </summary>
+                        <ul className="review-rows">
+                          {g.prepared.entities.map((e) => {
+                            const plan = batchPlan(doc, suggestions, allChoices, client.languages, graph, new Set([e.id]));
+                            return (
+                              <li key={e.id}>
+                                {entityRow(doc, e, {
+                                  confirm: () => approveBatch(doc.id, plan),
+                                  confirmLabel: s.reviewApprove,
+                                  confirmDisabled: plan.entities.length === 0,
+                                })}
+                              </li>
+                            );
                           })}
-                          {group.relations.length > 0 && (
-                            <ul className="review-rows">
-                              {group.relations.map((x) => (
-                                <li key={x.relation.id}>{relationRow(doc, x.relation, { existing: x.existing, waiting: waiting.has(x.relation.id) })}</li>
-                              ))}
-                            </ul>
-                          )}
-                        </li>
-                      );
-                    })}
+                          {g.prepared.relations.map((x) => (
+                            <li key={x.relation.id}>{relationRow(doc, x.relation, { existing: x.existing })}</li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
+                  </>
+                )}
+
+                {rejectedEntities.length > 0 && <h3 className="review-group-title">{s.reviewEntities}</h3>}
+                {rejectedEntities.length > 0 && (
+                  <ul className="review-rows">
+                    {rejectedEntities.map((e) => (
+                      <li key={e.id}>{entityRow(doc, e, {})}</li>
+                    ))}
                   </ul>
                 )}
-                {/* 系統已準備：系統建議、自動合併與圖譜已有，收合成一行；合併的可見範圍提示在收合時也看得到 */}
-                {preparedCount > 0 && (
-                  <details className="review-prepared">
-                    <summary>
-                      {fill(s.reviewPrepared, { count: preparedCount }, language)}
-                      {preparedMerges && <span className="muted"> {s.reviewPreparedMergeHint}</span>}
-                    </summary>
-                    <ul className="review-rows">
-                      {g.prepared.entities.map((e) => (
-                        <li key={e.id}>{entityRow(doc, e, { badge: s.reviewSuggested })}</li>
-                      ))}
-                      {g.prepared.relations.map((x) => (
-                        <li key={x.relation.id}>{relationRow(doc, x.relation, { existing: x.existing })}</li>
-                      ))}
-                    </ul>
-                  </details>
+                {rejectedRelations.length > 0 && <h3 className="review-group-title">{s.reviewRelations}</h3>}
+                {rejectedRelations.length > 0 && (
+                  <ul className="review-rows">
+                    {rejectedRelations.map((r) => (
+                      <li key={r.id}>{relationRow(doc, r, {})}</li>
+                    ))}
+                  </ul>
                 )}
-              </>
-            )}
 
-            {rejectedEntities.length > 0 && <h3>{s.reviewEntities}</h3>}
-            {rejectedEntities.length > 0 && (
-              <ul className="review-rows">
-                {rejectedEntities.map((e) => (
-                  <li key={e.id}>{entityRow(doc, e, {})}</li>
-                ))}
-              </ul>
-            )}
-            {rejectedRelations.length > 0 && <h3>{s.reviewRelations}</h3>}
-            {rejectedRelations.length > 0 && (
-              <ul className="review-rows">
-                {rejectedRelations.map((r) => (
-                  <li key={r.id}>{relationRow(doc, r, {})}</li>
-                ))}
-              </ul>
-            )}
-
-            {/* 說法不同（#51）：新舊段落左右並列，附模型的差異說明（純文字）；待審分頁有三個處理按鈕，已處理分頁顯示決定 */}
-            {docConflicts.length > 0 && <h3>{s.conflictSection}</h3>}
-            <ul className="review-list">
-              {docConflicts.map((c) => (
-                <li key={c.id}>
-                  <p className="conflict-summary" lang={c.newPassage.language}>
-                    {c.summary}
-                  </p>
-                  {c.decision !== null && <span className="badge">{s.conflictDecisions[c.decision]}</span>}
-                  <div className="conflict-pair">
-                    {conflictSide(s.conflictNew, c.newPassage)}
-                    {conflictSide(s.conflictOld, c.oldPassage)}
-                  </div>
-                  {c.decision === null && (
-                    <div className="dialog-actions">
-                      {CONFLICT_DECISIONS.map((d) => (
-                        <button key={d} type="button" className={d === "not_conflict" ? "secondary" : undefined} disabled={busy} onClick={() => decide(doc.id, c.id, d)}>
-                          {busy ? s.reviewWorking : s.conflictDecisions[d]}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </section>
-        );
-      })}
+                {/* 說法不同（#51）：新舊段落左右並列，附模型的差異說明（純文字）；待審分頁有三個處理按鈕，已處理分頁顯示決定 */}
+                {docConflicts.length > 0 && <h3 className="review-group-title">{s.conflictSection}</h3>}
+                <ul className="review-list">
+                  {docConflicts.map((c) => (
+                    <li key={c.id}>
+                      <p className="conflict-summary" lang={c.newPassage.language}>
+                        {c.summary}
+                      </p>
+                      {c.decision !== null && <span className="badge">{s.conflictDecisions[c.decision]}</span>}
+                      <div className="conflict-pair">
+                        {conflictSide(s.conflictNew, c.newPassage)}
+                        {conflictSide(s.conflictOld, c.oldPassage)}
+                      </div>
+                      {c.decision === null && (
+                        <div className="dialog-actions">
+                          {CONFLICT_DECISIONS.map((d) => (
+                            <button key={d} type="button" className={d === "not_conflict" ? "secondary" : undefined} disabled={busy} onClick={() => decide(doc.id, c.id, d)}>
+                              {busy ? s.reviewWorking : s.conflictDecisions[d]}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
+          );
+        })}
+      </div>
     </div>
   );
 }

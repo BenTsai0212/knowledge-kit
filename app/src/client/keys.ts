@@ -247,7 +247,7 @@ const uiStrings = {
   reviewApprovedCount: "required", reviewRejectedWithEntity: "required", reviewRelationBlocked: "required",
   reviewNamesRequired: "required", reviewSkippedNames: "required", reviewSummary: "required",
   reviewProgress: "required", reviewProgressDone: "required", reviewDecideLeft: "required", reviewPrepared: "required",
-  reviewPreparedMergeHint: "required", reviewSuggested: "required", reviewExisting: "required", reviewNew: "required",
+  reviewPreparedMergeHint: "required", reviewSuggested: "required", reviewExisting: "required", reviewNew: "required", reviewAutoMerged: "required",
   reviewConfirm: "required", reviewConfirmWithRelations: "required", reviewSources: "required", noticeParseTitle: "required",
   noticeWriteTitle: "required", noticeReviewTitle: "required", uploadChooseAgain: "required",
   dialogClose: "required", reviewStatusTabs: "required", reviewEditNames: "required", reviewEditDone: "required",

@@ -191,6 +191,7 @@
   "reviewSuggested": "システムの提案",
   "reviewExisting": "グラフに登録済み",
   "reviewNew": "新規",
+  "reviewAutoMerged": "自動統合",
   "reviewConfirm": "確認",
   "reviewConfirmWithRelations": "確認（関係 {count} 件を含む）",
   "reviewSources": "出典（{count}）",

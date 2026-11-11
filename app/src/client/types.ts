@@ -489,6 +489,7 @@ export interface UiStrings {
   reviewSuggested: string;
   reviewExisting: string;
   reviewNew: string;
+  reviewAutoMerged: string;
   reviewConfirm: string;
   // 「確認」一組時一起核准的關係數：{count}（#189 修正要求）
   reviewConfirmWithRelations: string;
