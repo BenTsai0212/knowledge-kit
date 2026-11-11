@@ -35,8 +35,8 @@ async function reviewCount(page: Page): Promise<number> {
 async function openReports(page: Page): Promise<void> {
   await openTab(page, s.tabReview);
   await page
-    .getByRole("group", { name: s.reviewStatusTabs })
-    .getByRole("button", { name: new RegExp(`^${escape(s.reviewReportsTab)}`) })
+    .getByRole("tablist", { name: s.reviewStatusTabs })
+    .getByRole("tab", { name: new RegExp(`^${escape(s.reviewReportsTab)}`) })
     .click();
 }
 

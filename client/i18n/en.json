@@ -191,6 +191,7 @@
   "reviewSuggested": "Suggested",
   "reviewExisting": "Already in the graph",
   "reviewNew": "New",
+  "reviewAutoMerged": "Auto-merged",
   "reviewConfirm": "Confirm",
   "reviewConfirmWithRelations": "Confirm (with {count, plural, one {# relation} other {# relations}})",
   "reviewSources": "Sources ({count})",

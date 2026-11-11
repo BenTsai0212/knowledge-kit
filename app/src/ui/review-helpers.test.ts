@@ -7,7 +7,9 @@ import type { ReviewDocument, ReviewEntity, ReviewRelation } from "../extraction
 import {
   batchPlan,
   canBatch,
+  docCollapsible,
   entityApproval,
+  entityMark,
   existingRelation,
   groupPlan,
   highlightSegments,
@@ -16,10 +18,12 @@ import {
   isSuggested,
   namesComplete,
   namesInvalid,
+  nextTab,
   pendingCount,
   relationReady,
   reviewDocuments,
   reviewGroups,
+  reviewTabCounts,
   toastText,
   waitingRelations,
   type EntityChoice,
@@ -170,6 +174,14 @@ describe("系統建議與分組：走查用的通知", () => {
       ["pr-huang-longpier", true],
     ]);
     expect(g.summary).toEqual({ newEntities: 1, mergedEntities: 4, newRelations: 2, existingRelations: 4, toConfirm: 1 });
+    // 列的標示（#243）：營運部是自動合併（部門的 mergeStrategy 是 auto），其他三個是系統建議，陳柏翰是新增
+    expect(walkthrough.entities.map((x) => [x.id, entityMark(suggestions[x.id])])).toEqual([
+      ["pe-zhang", "suggested"],
+      ["pe-ops", "auto"],
+      ["pe-longpier", "suggested"],
+      ["pe-chen", "new"],
+      ["pe-huang", "suggested"],
+    ]);
   });
 
   it("核准這份文件的全部：11 筆都包含在內，圖譜已有的關係不重複建立", () => {
@@ -293,6 +305,42 @@ describe("pendingCount", () => {
     const a = doc([entity("pe-a")], []);
     expect(pendingCount([a], [{ decision: null }], [{ resolution: null }, { resolution: "not_error" }, { resolution: null }])).toBe(4);
     expect(pendingCount([], [], [{ resolution: "retracted" }])).toBe(0);
+  });
+});
+
+describe("reviewTabCounts", () => {
+  it("待審含待處理的說法不同；已退回是退回的實體與關係；已處理是已處理的說法不同；回報是未處理的", () => {
+    const a = doc([entity("pe-a"), entity("pe-b", "approved"), entity("pe-c", "rejected")], [relation("pr-ab", "pe-a", "pe-b"), relation("pr-x", "pe-c", "pe-a", "rejected")]);
+    const counts = reviewTabCounts([a], [{ decision: null }, { decision: "coexist" }, { decision: "supersede" }], [{ resolution: null }, { resolution: "not_error" }]);
+    expect(counts).toEqual({ pending: 3, rejected: 2, decided: 2, reports: 1 });
+    expect(reviewTabCounts([], [], [])).toEqual({ pending: 0, rejected: 0, decided: 0, reports: 0 });
+  });
+});
+
+describe("nextTab", () => {
+  const tabs = ["pending", "rejected", "decided", "reports"] as const;
+  it("左右鍵頭尾相接，Home／End 到第一個與最後一個，其他鍵不切換", () => {
+    expect(nextTab(tabs, "pending", "ArrowRight")).toBe("rejected");
+    expect(nextTab(tabs, "reports", "ArrowRight")).toBe("pending");
+    expect(nextTab(tabs, "pending", "ArrowLeft")).toBe("reports");
+    expect(nextTab(tabs, "decided", "Home")).toBe("pending");
+    expect(nextTab(tabs, "rejected", "End")).toBe("reports");
+    expect(nextTab(tabs, "rejected", "Enter")).toBeNull();
+  });
+});
+
+describe("entityMark、docCollapsible", () => {
+  it("新增、自動合併、系統建議；兩個以上候選需要逐筆決定，沒有標示", () => {
+    expect(entityMark({ mode: "new" })).toBe("new");
+    expect(entityMark({ mode: "auto", target: "e-1" })).toBe("auto");
+    expect(entityMark({ mode: "choose", candidates: ["e-1"] })).toBe("suggested");
+    expect(entityMark({ mode: "choose", candidates: ["e-1", "e-2"] })).toBeNull();
+  });
+
+  it("沒有需要你確認的組、也沒有待處理的說法不同時才可以收合", () => {
+    expect(docCollapsible(0, 0)).toBe(true);
+    expect(docCollapsible(1, 0)).toBe(false);
+    expect(docCollapsible(0, 1)).toBe(false);
   });
 });
 

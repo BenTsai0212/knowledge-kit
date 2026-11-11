@@ -191,6 +191,7 @@
   "reviewSuggested": "系統建議",
   "reviewExisting": "圖譜已有",
   "reviewNew": "新增",
+  "reviewAutoMerged": "自動合併",
   "reviewConfirm": "確認",
   "reviewConfirmWithRelations": "確認（含 {count} 段關係）",
   "reviewSources": "出處（{count}）",

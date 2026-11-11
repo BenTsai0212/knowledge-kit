@@ -244,6 +244,42 @@ export const pendingCount = (
   conflicts.filter((c) => c.decision === null).length +
   reports.filter((r) => r.resolution === null).length;
 
+// 待審頁各分頁名稱後的數量（#243）：待審＝待審的實體與關係＋待處理的說法不同；已退回＝退回的實體與關係；
+// 已處理＝已處理的說法不同；回報＝未處理的回答錯誤回報
+export function reviewTabCounts(
+  docs: readonly ReviewDocument[],
+  conflicts: readonly Pick<ConflictItem, "decision">[],
+  reports: readonly Pick<AnswerReport, "resolution">[],
+): { pending: number; rejected: number; decided: number; reports: number } {
+  const items = docs.flatMap((d) => [...d.entities, ...d.relations]);
+  return {
+    pending: pendingCount(docs, conflicts),
+    rejected: items.filter((x) => x.status === "rejected").length,
+    decided: conflicts.filter((c) => c.decision !== null).length,
+    reports: reports.filter((r) => r.resolution === null).length,
+  };
+}
+
+// 分頁的鍵盤操作（#243，WAI-ARIA tabs）：左右鍵移到前後一個（頭尾相接），Home／End 移到第一個與最後一個；其他鍵回 null
+export function nextTab<T>(tabs: readonly T[], current: T, key: string): T | null {
+  const i = tabs.indexOf(current);
+  if (key === "ArrowRight") return tabs[(i + 1) % tabs.length];
+  if (key === "ArrowLeft") return tabs[(i - 1 + tabs.length) % tabs.length];
+  if (key === "Home") return tabs[0];
+  if (key === "End") return tabs[tabs.length - 1];
+  return null;
+}
+
+// 實體列的標示（#243）：新增（建立新實體）、自動合併（auto）、系統建議（只有一個候選）；需要逐筆決定的沒有標示
+export function entityMark(suggestion: MergeSuggestion): "new" | "auto" | "suggested" | null {
+  if (suggestion.mode === "new") return "new";
+  if (suggestion.mode === "auto") return "auto";
+  return isSuggested(suggestion) ? "suggested" : null;
+}
+
+// 文件卡片可以收合（#243）：沒有需要你確認的組、也沒有待處理的說法不同
+export const docCollapsible = (toConfirm: number, pendingConflicts: number) => toConfirm === 0 && pendingConflicts === 0;
+
 // 待審頁的文件清單（#51）：待審的文件，加上只有說法不同、沒有待審實體與關係的文件（以新段落的文件資訊補上）
 export function reviewDocuments(docs: readonly ReviewDocument[], conflicts: readonly ConflictItem[]): ReviewDocument[] {
   const out = [...docs];

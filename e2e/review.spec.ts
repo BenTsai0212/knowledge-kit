@@ -31,9 +31,10 @@ test("走查用的通知：第一個畫面看得到摘要、進度與需要確�
   // 沒有需要選擇合併對象的組，按鈕旁沒有「還有 N 組需要你決定」
   await expect(card.getByText(s.reviewNeedsChoice)).toHaveCount(0);
 
-  // 展開後每筆一行：4 個系統建議、4 段圖譜已有
+  // 展開後每筆一行：3 個系統建議、1 個自動合併（營運部：部門的 mergeStrategy 是 auto）、4 段圖譜已有
   await prepared.click();
-  await expect(card.getByText(s.reviewSuggested, { exact: true })).toHaveCount(4);
+  await expect(card.getByText(s.reviewSuggested, { exact: true })).toHaveCount(3);
+  await expect(card.getByText(s.reviewAutoMerged, { exact: true })).toHaveCount(1);
   await expect(card.getByText(s.reviewExisting, { exact: true })).toHaveCount(4);
 
   await approveAll.click();

@@ -832,37 +832,40 @@ main.qa > .source .source-text mark.entering {
   }
 }
 
-/* 第二層：小一號的分段切換 */
+/* 待審頁的第二層：底線式分頁（#243）。整列一條 border 底線，選中的分頁是 2px text 底線、粗體；數量直接接在名稱後 */
 .review-toolbar {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 1rem;
+  border-bottom: 1px solid var(--color-border);
 }
 
-.segmented {
-  display: inline-flex;
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius-medium);
-  overflow: hidden;
-  font-size: 0.875rem;
+.review-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
 }
 
-.segmented button {
-  background: var(--color-surface);
-  color: var(--color-primary);
+.review-tabs [role="tab"] {
+  background: none;
   border: none;
+  border-bottom: 2px solid transparent;
   border-radius: 0;
-  padding: 0.15rem 0.75rem;
+  margin-bottom: -1px;
+  padding: 0.5rem 0 0.4rem;
+  color: var(--color-textMuted);
+  font-weight: 400;
 }
 
-.segmented button + button {
-  border-left: 1px solid var(--color-primary);
+.review-tabs [role="tab"][aria-selected="true"] {
+  border-bottom-color: var(--color-text);
+  color: var(--color-text);
+  font-weight: 700;
 }
 
-.segmented button[aria-pressed="true"] {
-  background: var(--color-primary);
-  color: var(--color-onPrimary);
+.review-tabs__count {
+  font-family: var(--font-mono);
 }
 
 /* 圖示按鈕（重新整理、關閉） */
@@ -1757,9 +1760,72 @@ label.inline {
   margin: 0.25rem 0;
 }
 
-.review-progress {
+.review-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+/* 文件卡片的頁首（#243）：左側標題與摘要，右側「還有 N 組需要你確認」（conflictSoft 底）與「核准這份文件的全部」；窄時換行 */
+.review-doc__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.review-doc__title {
+  flex: 1 1 20rem;
+  min-width: 0;
+}
+
+.review-doc__title h2 {
+  margin: 0;
+}
+
+.review-doc__side {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  margin: 0.5rem 0 0.75rem;
+  justify-content: flex-end;
+  gap: 0.5rem 0.75rem;
+}
+
+.review-to-confirm {
+  background: var(--color-conflictSoft);
+  color: var(--color-conflictText);
+  border-radius: var(--radius-pill);
+  padding: 0.15rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.review-decide-left {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+}
+
+/* 卡片內的分組（實體、關係、說法不同）：textMuted 小標題 */
+.review-group-title {
+  margin: 1rem 0 0.5rem;
+  color: var(--color-textMuted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* 實體列與關係列的標示（#243）：新增是 primary 框線；自動合併、系統建議、圖譜已有是 surfaceRaised 底 */
+.review-mark {
+  display: inline-block;
+  border-radius: var(--radius-pill);
+  padding: 0 0.5rem;
+  font-size: 0.8rem;
+  background: var(--color-surfaceRaised);
+  color: var(--color-textMuted);
+}
+
+.review-mark.is-new {
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+  color: var(--color-primary);
 }
 
 .review-prepared {
