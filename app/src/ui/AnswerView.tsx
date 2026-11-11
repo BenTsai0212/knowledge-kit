@@ -1,13 +1,14 @@
-import { useState, type CSSProperties, type Ref } from "react";
+import { Fragment, useEffect, useRef, useState, type CSSProperties, type Ref } from "react";
 import { clientConfig } from "../client/load";
 import type { Graph, GraphEntity } from "../graph/read";
 import type { Answer } from "../qa/answer";
-import { splitCitations } from "../qa/citations";
 import { errorMessage, strings } from "../client/i18n";
 import { entityOptionLabel, entityTypeLabel } from "./graph-labels";
 import { MAX_REPORT_NOTE_CHARS, REPORT_CATEGORIES, type ReportCategory } from "../reports/store";
 import { refusalNextSteps, type RefusalStep } from "./refusal-next-steps";
 import { canReport, defaultCategory } from "./report-helpers";
+import { answerDoneStep, answerSentences, sentenceStep, streamingSentences } from "./answer-motion";
+import { staggerIndex } from "./motion";
 
 export interface AnswerState {
   question: string;
@@ -41,11 +42,20 @@ interface Props {
   openEntity: OpenEntity | null;
   // 「回報有錯」（ADR 0007 決定 7）：寫入失敗時 reject
   onReport(category: ReportCategory, note: string): Promise<void>;
+  // 回答中斷或失敗時的「重新提問」：以同一個問題再問一次（新的一題）；回答中不能按
+  onRetry(): void;
+  retryDisabled: boolean;
 }
 
 const { entityTypes } = clientConfig.knowledgeModel;
 
-export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport }: Props) {
+// 回答完成後已播過動態的題目：切換頁籤回來重新掛載時不再播放（#227）
+const settled = new Set<string>();
+
+// 不重試的錯誤：問題本身的錯誤，重新送出結果相同
+const NOT_RETRYABLE = new Set(["empty_question", "question_too_long"]);
+
+export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport, onRetry, retryDisabled }: Props) {
   const s = strings(language);
   const { answer } = state;
   const stepText: Record<RefusalStep, string> = {
@@ -53,25 +63,50 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
     askPerson: s.refusalNextAskPerson,
     upload: s.refusalNextUpload,
   };
+  const still = useRef(settled.has(id)).current;
+  useEffect(() => {
+    if (answer !== undefined) settled.add(id);
+  }, [id, answer]);
+  // 串流中出現過的句子數：這些句子已經升起，回答完成時不再延遲
+  const streamed = useRef(0);
+  const sentences = answer === undefined ? streamingSentences(state.streaming) : answer.kind === "answer" ? answerSentences(answer.text) : null;
+  if (answer === undefined) streamed.current = sentences!.length;
+  const incomplete = answer?.kind === "answer" && answer.incomplete;
+  const retryable = incomplete || (answer?.kind === "error" && !NOT_RETRYABLE.has(answer.error));
+  const classes = ["card", "answer", still && "still", incomplete && "incomplete"].filter(Boolean).join(" ");
+  const doneStep = sentences === null ? 0 : answerDoneStep(sentences.length, streamed.current);
 
   return (
-    <section id={id} ref={ref} className="card answer" aria-live="polite">
+    <section id={id} ref={ref} className={classes} style={{ "--done": doneStep } as CSSProperties} aria-live="polite">
       <h2>{state.question}</h2>
-      {answer === undefined && (
-        <>
-          <p className="answer-text">{state.streaming}</p>
-          <p className="muted">{s.answering}</p>
-        </>
+      {/* 串流中與完成後是同一個元素：已經升起的句子不重播 */}
+      {sentences !== null && (
+        <p className="answer-text">
+          {sentences.map((sentence, i) => (
+            <span key={i} className="sentence" style={{ "--i": sentenceStep(i, streamed.current) } as CSSProperties}>
+              {sentence.map((segment, j) => {
+                if ("text" in segment) return <Fragment key={j}>{segment.text}</Fragment>;
+                const passage = (answer as Extract<Answer, { kind: "answer" }>).numbering[segment.citation - 1];
+                return (
+                  <button key={j} type="button" className="citation" title={s.openSource} aria-pressed={openPassage === passage} onClick={() => onOpenSource(passage)}>
+                    {segment.citation}
+                  </button>
+                );
+              })}
+            </span>
+          ))}
+        </p>
       )}
+      {answer === undefined && <p className="muted">{s.answering}</p>}
       {answer?.kind === "refusal" && (
-        <>
+        <div className="refusal">
           <p className="answer-text">{answer.text}</p>
           {/* 下一步只依上傳能力決定，「資料沒寫」與「沒有權限」相同（docs/qa.md「拒答」） */}
           <div className="refusal-next">
             <p className="muted">{s.refusalNextTitle}</p>
             <ul>
-              {refusalNextSteps({ canUpload }).map((step) => (
-                <li key={step}>
+              {refusalNextSteps({ canUpload }).map((step, i) => (
+                <li key={step} style={{ "--i": staggerIndex(i) } as CSSProperties}>
                   {stepText[step]}
                   {step === "upload" && (
                     <>
@@ -85,22 +120,11 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
               ))}
             </ul>
           </div>
-        </>
+        </div>
       )}
       {answer?.kind === "error" && <p className="error">{errorMessage(language, answer.error)}</p>}
       {answer?.kind === "answer" && (
         <>
-          <p className="answer-text">
-            {splitCitations(answer.text).map((segment, i) => {
-              if ("text" in segment) return <span key={i}>{segment.text}</span>;
-              const id = answer.numbering[segment.citation - 1];
-              return (
-                <button key={i} type="button" className="citation" title={s.openSource} aria-pressed={openPassage === id} onClick={() => onOpenSource(id)}>
-                  {segment.citation}
-                </button>
-              );
-            })}
-          </p>
           {answer.uncited && <p className="badge warning">{s.uncited}</p>}
           {answer.incomplete && (
             <p className="badge warning">
@@ -112,6 +136,13 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
             <Mentions language={language} {...state.mentions} onOpenEntity={onOpenEntity} openEntity={openEntity} />
           )}
         </>
+      )}
+      {retryable && (
+        <p className="retry">
+          <button type="button" className="secondary" disabled={retryDisabled} onClick={onRetry}>
+            {s.answerRetry}
+          </button>
+        </p>
       )}
       {canReport(state) && <ReportForm language={language} initial={defaultCategory(state)} onReport={onReport} />}
     </section>
@@ -192,6 +223,9 @@ function Mentions({
 }) {
   const s = strings(language);
   const types = [...new Set([...entityTypes.map((t) => t.id), ...entities.map((e) => e.type)])];
+  // 類型標籤與按鈕依序出現（清單的 stagger）
+  let order = 0;
+  const next = () => ({ "--i": staggerIndex(order++) }) as CSSProperties;
   return (
     <div className="mentions" role="group" aria-label={s.answerMentions}>
       <p className="muted">{s.answerMentions}</p>
@@ -201,12 +235,15 @@ function Mentions({
         const color = entityTypes.find((t) => t.id === type)?.color;
         return (
           <div key={type} className="mention-group">
-            <span className="badge">{entityTypeLabel(type, language)}</span>
+            <span className="badge" style={next()}>
+              {entityTypeLabel(type, language)}
+            </span>
             {ofType.map((e) => (
               <button
                 key={e.id}
                 type="button"
                 className="chip"
+                style={next()}
                 aria-pressed={openEntity?.graph === graph && openEntity.id === e.id}
                 onClick={() => onOpenEntity(graph, e.id)}
               >

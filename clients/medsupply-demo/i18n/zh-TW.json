@@ -400,6 +400,7 @@
   "refusalGotoUpload": "到上傳頁",
   "uncited": "未附出處",
   "incomplete": "回答不完整",
+  "answerRetry": "重新提問",
   "errors": {
     "forbidden_origin": "這個網址無法使用問答功能。",
     "invalid_access_code": "邀請碼不正確，請重新輸入。",

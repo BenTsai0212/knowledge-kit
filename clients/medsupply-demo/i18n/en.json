@@ -400,6 +400,7 @@
   "refusalGotoUpload": "Go to Upload",
   "uncited": "No sources cited",
   "incomplete": "Incomplete answer",
+  "answerRetry": "Ask again",
   "errors": {
     "forbidden_origin": "Questions can't be asked from this address.",
     "invalid_access_code": "The access code is incorrect. Please enter it again.",

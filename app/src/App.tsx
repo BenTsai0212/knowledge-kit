@@ -415,6 +415,8 @@ export function App() {
                 // 回報的人自己能審核時，待審頁籤的筆數加一
                 setReviewVersion((v) => v + 1);
               }}
+              onAsk={onAsk}
+              askDisabled={retriever === null || answering}
             />
             <QuestionPanel language={language} disabled={retriever === null || answering} text={draft} onText={setDraft} onAsk={onAsk} />
           </div>

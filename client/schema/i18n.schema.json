@@ -48,7 +48,7 @@
     "evalCitations", "evalNoCitations", "evalDropped", "evalKeyPoints", "evalGrade", "evalMetrics",
     "evalCategories", "evalExpect", "evalVerdicts", "evalLeaks", "evalReport",
     "colon", "progress", "parenthetical", "refusal",
-    "refusalNextTitle", "refusalNextRephrase", "refusalNextAskPerson", "refusalNextUpload", "refusalGotoUpload", "uncited", "incomplete",
+    "refusalNextTitle", "refusalNextRephrase", "refusalNextAskPerson", "refusalNextUpload", "refusalGotoUpload", "uncited", "incomplete", "answerRetry",
     "errors", "unknownError"
   ],
   "properties": {
@@ -560,6 +560,7 @@
     "refusalGotoUpload": { "$ref": "#/definitions/Text" },
     "uncited": { "$ref": "#/definitions/Text" },
     "incomplete": { "$ref": "#/definitions/Text" },
+    "answerRetry": { "$ref": "#/definitions/Text" },
     "errors": {
       "type": "object",
       "additionalProperties": false,

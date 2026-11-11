@@ -22,10 +22,13 @@ interface Props {
   openEntity: OpenEntity | null;
   // 「回報有錯」（ADR 0007 決定 7）
   onReport(turn: Turn, category: ReportCategory, note: string): Promise<void>;
+  // 回答中斷時的「重新提問」（#227）：與輸入區送出相同；askDisabled 時不能按
+  onAsk(question: string): void;
+  askDisabled: boolean;
 }
 
 // 問答依序往下累積（#195）；新的一題出現時捲到該題
-export function Conversation({ language, turns, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport }: Props) {
+export function Conversation({ language, turns, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport, onAsk, askDisabled }: Props) {
   const s = strings(language);
   const latest = turns.at(-1)?.id;
   const latestRef = useRef<HTMLElement>(null);
@@ -53,6 +56,8 @@ export function Conversation({ language, turns, canUpload, onOpenSource, openPas
             onOpenEntity={onOpenEntity}
             openEntity={openEntity}
             onReport={(category, note) => onReport(turn, category, note)}
+            onRetry={() => onAsk(turn.question)}
+            retryDisabled={askDisabled}
           />
         ))
       )}

@@ -400,6 +400,7 @@
   "refusalGotoUpload": "アップロードへ",
   "uncited": "出典の引用なし",
   "incomplete": "回答が途中で終わっています",
+  "answerRetry": "もう一度質問する",
   "errors": {
     "forbidden_origin": "このアドレスからは質問できません。",
     "invalid_access_code": "アクセスコードが正しくありません。もう一度入力してください。",

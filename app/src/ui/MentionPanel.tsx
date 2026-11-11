@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, type CSSProperties } from "react";
 import type { Graph } from "../graph/read";
 import { strings } from "../client/i18n";
 import { entityOptionLabel, entityTypeLabel, relatedEntities } from "./graph-labels";
 import { GraphView } from "./GraphView";
 import { followUps, neighborhood } from "./mentions";
+import { staggerIndex } from "./motion";
 
 interface Props {
   // 送出這一題當下的身分看得到的圖譜（#195 決定 1）；關係清單、鄰近圖與接著問都只用它
@@ -60,8 +61,9 @@ export function MentionPanel({ graph, entityId, language, onSelect, onFollowUp, 
         <>
           <h3>{s.followUpTitle}</h3>
           <ul className="follow-ups">
-            {questions.map((q) => (
-              <li key={q}>
+            {/* 依序出現（清單的 stagger，#227） */}
+            {questions.map((q, i) => (
+              <li key={q} style={{ "--i": staggerIndex(i) } as CSSProperties}>
                 <button type="button" className="chip" onClick={() => onFollowUp(q)}>
                   {q}
                 </button>

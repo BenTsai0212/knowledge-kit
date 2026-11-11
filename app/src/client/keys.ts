@@ -273,7 +273,7 @@ const uiStrings = {
   evalCategories: "required", evalExpect: "required", evalVerdicts: "required", evalLeaks: "required", evalReport: "required",
   colon: "required", progress: "required",
   parenthetical: "required", refusal: "required", refusalNextTitle: "required", refusalNextRephrase: "required",
-  refusalNextAskPerson: "required", refusalNextUpload: "required", refusalGotoUpload: "required", uncited: "required", incomplete: "required",
+  refusalNextAskPerson: "required", refusalNextUpload: "required", refusalGotoUpload: "required", uncited: "required", incomplete: "required", answerRetry: "required",
   errors: "required", unknownError: "required",
 } satisfies KeyManifest<UiStrings>;
 
