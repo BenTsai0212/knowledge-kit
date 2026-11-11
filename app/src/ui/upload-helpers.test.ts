@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { foundTerms, underlineRanges, uploadSteps, passagesWordCount, type UploadProgress } from "./upload-helpers";
+import { flyPath, foundTerms, sentForReview, underlineRanges, uploadSteps, passagesWordCount, type UploadProgress } from "./upload-helpers";
 
 // 頁首的五個步驟與檔案卡片的字數（#242）
 const idle: UploadProgress = { hasInput: false, parsing: false, passages: null, written: false, batches: null };
@@ -102,5 +102,23 @@ describe("underlineRanges（#242）", () => {
 
   it("英文不分大小寫；沒有出現的名稱與空名稱略過", () => {
     expect(underlineRanges("Project Bluewing and project bluewing", [term("Project Bluewing"), term("Nowhere"), term("")]).map((r) => r.start)).toEqual([0, 21]);
+  });
+});
+
+describe("已送審的標記（#242 PR 3）", () => {
+  const written = { ...idle, hasInput: true, passages: 3, written: true };
+
+  it("萃取完成且有送審的實體或關係時才算已送審", () => {
+    expect(sentForReview(uploadSteps({ ...written, batches: [batch("done", 2, 1), batch("running")] }))).toBe(false);
+    expect(sentForReview(uploadSteps({ ...written, batches: [batch("done", 2, 1), batch("done", 0, 1)] }))).toBe(true);
+    // 什麼都沒找到：沒有送審，不飛
+    expect(sentForReview(uploadSteps({ ...written, batches: [batch("done"), batch("done")] }))).toBe(false);
+    expect(sentForReview(uploadSteps(idle))).toBe(false);
+  });
+
+  it("標記放在終點的中心，位移是起點中心減終點中心", () => {
+    const from = { left: 400, top: 500, width: 100, height: 40 };
+    const to = { left: 100, top: 200, width: 20, height: 10 };
+    expect(flyPath(from, to, 12)).toEqual({ left: 104, top: 199, x: 340, y: 315 });
   });
 });

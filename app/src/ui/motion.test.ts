@@ -121,7 +121,7 @@ describe("動態的刻度（#227，docs/design.md「刻度」）", () => {
 
   it("問答用到的 keyframes 都有定義", () => {
     const used = new Set([...cssText.matchAll(/animation:\s*(k[A-Z]\w*)/g)].map((m) => m[1]));
-    expect(used).toEqual(new Set(["kSend", "kRise", "kPopS", "kFade", "kSlideIn", "kSweep", "kGrow", "kUp", "kLift", "kUnder"]));
+    expect(used).toEqual(new Set(["kSend", "kRise", "kPopS", "kFade", "kSlideIn", "kSweep", "kGrow", "kUp", "kLift", "kUnder", "kFlyTo", "kBump"]));
     for (const name of used) expect(cssText).toContain(`@keyframes ${name} {`);
   });
 

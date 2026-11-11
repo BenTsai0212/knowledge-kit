@@ -24,6 +24,9 @@ interface Props {
   onQuestion(id: string): void;
 }
 
+// 導覽的頁籤：上傳頁的「已送審」標記以此找到「待審」的位置（#242 PR 3）
+export const tabSelector = (view: View) => `.primary-tabs [data-view="${view}"]`;
+
 // 語言以該語言自己的名稱顯示（例如 zh-TW → 中文（台灣））
 const ownName = (code: string) => new Intl.DisplayNames([code], { type: "language" }).of(code) ?? code;
 
@@ -80,7 +83,7 @@ export function Sidebar({ language, identity, onIdentity, onLanguage, onChangeAc
       </header>
       <nav className="primary-tabs" aria-label={s.views}>
         {views.map((id) => (
-          <button key={id} type="button" aria-current={view === id ? "page" : undefined} onClick={() => onView(id)}>
+          <button key={id} type="button" data-view={id} aria-current={view === id ? "page" : undefined} onClick={() => onView(id)}>
             {tabLabels[id]}
             {tabExtra?.[id]}
           </button>
