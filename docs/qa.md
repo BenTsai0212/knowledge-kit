@@ -21,8 +21,8 @@ const answer = await ask(ctx, { identityId: "staff", text: "到職滿一年有�
 3. **本機拒答**：沒有段落（都低於 `retrieval.minScore`）時，直接回拒答，不呼叫 `/api/ask`。
 4. **組 prompt**（`prompt.ts`）：段落編號、文件標題、語言與問題，見下方。
 5. **送出**：以 `AskTransport` 送到 `/api/ask`（`api.ts`；body 與事件格式見 [worker/README.md](../worker/README.md)）。
-6. **串流**：逐段收到文字，交給 `onText`（收到的是到目前為止的全部文字）。可能是拒答標記的開頭時先不顯示。
-7. **結束**：判斷拒答標記，再解析引用（`citations.ts`）。
+6. **串流**：逐段收到文字，交給 `onText`（收到的是到目前為止的全部文字，已移除外層標籤）。可能是拒答標記的開頭時先不顯示。
+7. **結束**：判斷拒答標記，移除外層標籤（`unwrap.ts`，見「外層標籤」），再解析引用（`citations.ts`）。
 
 `ask()` 回傳三種結果：
 
@@ -50,7 +50,7 @@ Rules:
 4. If the passages do not contain enough information to answer the question, reply with exactly [[NO_ANSWER]] and nothing else. Do not explain, do not describe the passages, and do not mention other documents.
 5. If passages contradict each other, do not choose one. State each claim with its document title and citation, then say that the sources disagree.
 6. Answer in {languageName}, even if the question or passages are in another language. Keep the answer to one to three sentences, or a short list when sources disagree.
-7. Write plain text without Markdown headings, tables, or links.
+7. Write plain text without Markdown headings, tables, or links. Output only the answer itself. Do not wrap it in XML or HTML tags or add any other wrapper, preamble, or label.
 8. A passage marked superseded-by="N" was replaced by passage N. Treat passage N as current. If the change matters to the answer, state the current claim and what it said before, citing both, for example "originally Q2 [1], later changed to Q3 [3]".
 ```
 
@@ -64,7 +64,7 @@ Rules:
 | 4 | 以固定標記拒答，不讓模型自己寫拒答文字，畫面就一定顯示固定文字；也不讓模型描述段落或提到其他文件 |
 | 5 | 說法不同時並列，不自行選邊。資料庫還沒有文件日期（Epic 第 8 項），所以以文件標題區分來源 |
 | 6 | 回答語言依介面語言（#26 決定 2），結果固定，也與預設問題的語言一致 |
-| 7 | 畫面以純文字顯示 |
+| 7 | 畫面以純文字顯示；模型曾把整段回答包在 `<citation_response>` 標籤裡（#237），所以明確要求只輸出回答本身。仍包上標籤時由後處理移除（見「外層標籤」） |
 | 8 | 主管標記「新說法取代舊說法」時（#51），以新說法為主，並能說明變更的經過；沒有標記的說法不同仍依第 5 條並列。見下方「新說法取代舊說法」 |
 
 ### 段落編排（user 訊息）
@@ -113,6 +113,17 @@ Rules:
   - 文字在翻譯檔的 `refusalNextTitle`、`refusalNextRephrase`、`refusalNextAskPerson`、`refusalNextUpload`、`refusalGotoUpload`。
   - 測試：`refusal-next-steps.test.ts`（輸入只有上傳能力、各語言的文字不提權限與等級等名稱）；E2E `access.spec.ts` 以同一身分問「資料沒寫」與「看不到的段落」，比對兩次的拒答區塊完全相同。
 - 串流時，在能確定開頭不是拒答標記之前先不顯示文字，避免畫面先閃出標記。
+
+## 外層標籤
+
+模型有時不遵守第 7 條，把整段回答包在自訂標籤裡，例如 `<citation_response>…[1]。</citation_response>`（#237）。`unwrap.ts` 的 `unwrapAnswer()` 在顯示前移除：
+
+- **只移除整段回答外層成對的標籤**：開頭是 `<名稱 …>`、第一個 `</名稱>` 之後只剩空白時，取中間的文字（去掉前後空白）。巢狀的包裝最多拆 3 層。內文中看似標籤的文字（例如 `<b>重點</b>：…`、句中的 `<answer>`）不動。
+- **串流中**：開頭標籤還沒收完（`<`、`<citation_`）時先不顯示；開頭標籤完整後顯示標籤之後的文字，結尾還沒收完的結尾標籤（`</citation_`）也不顯示。
+- **中斷或截斷**：結尾標籤可能沒收到，所以開頭標籤完整就移除；正常結束時只有開頭、沒有結尾標籤則不移除。
+- **拒答**：拒答標記在原始文字的任何位置都算拒答，被標籤包住時也一樣。
+- 引用（`citations.ts`）、`answer.text`、畫面與評測（`app/src/evals/` 以 `ask()` 的 `answer.text` 比對答案要點、模型評分與引用）都使用移除後的文字。
+- 測試：`unwrap.test.ts`（外層標籤、沒有標籤、內文中的標籤、串流中的半個標籤）、`answer.test.ts`（串流與拒答）、`evals/run.test.ts`（評測使用移除後的文字）。
 
 ## 引用
 

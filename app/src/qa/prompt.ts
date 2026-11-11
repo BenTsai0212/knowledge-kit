@@ -42,7 +42,7 @@ Rules:
 4. If the passages do not contain enough information to answer the question, reply with exactly ${REFUSAL_MARKER} and nothing else. Do not explain, do not describe the passages, and do not mention other documents.
 5. If passages contradict each other, do not choose one. State each claim with its document title and citation, then say that the sources disagree.
 6. Answer in ${languageName(language)}, even if the question or passages are in another language. Keep the answer to one to three sentences, or a short list when sources disagree.
-7. Write plain text without Markdown headings, tables, or links.
+7. Write plain text without Markdown headings, tables, or links. Output only the answer itself. Do not wrap it in XML or HTML tags or add any other wrapper, preamble, or label.
 8. A passage marked superseded-by="N" was replaced by passage N. Treat passage N as current. If the change matters to the answer, state the current claim and what it said before, citing both, for example "originally Q2 [1], later changed to Q3 [3]".`;
 }
 

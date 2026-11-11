@@ -1,4 +1,4 @@
-// 問答流程：retrieve() → 沒有段落時本機拒答 → 組 prompt → /api/ask → 判斷拒答標記 → 解析引用。
+// 問答流程：retrieve() → 沒有段落時本機拒答 → 組 prompt → /api/ask → 判斷拒答標記 → 移除外層標籤 → 解析引用。
 // 段落只透過 Retriever 取得（權限由 RLS 決定）；本模組不直接查詢資料庫（structure.test.ts 檢查）。
 import type { LanguageCode, LocalizedText, ModelCode } from "../client/types";
 import type { Retriever } from "../retrieval/retrieve";
@@ -6,6 +6,7 @@ import { strings } from "../client/i18n";
 import { resolveCitations } from "./citations";
 import { buildPrompt, MAX_QUESTION_CHARS, REFUSAL_MARKER } from "./prompt";
 import type { AskEvent, AskTransport } from "./types";
+import { unwrapAnswer } from "./unwrap";
 
 export type Answer =
   // 拒答文字固定，不區分本機或模型拒答，也不區分沒有資料或沒有權限
@@ -65,14 +66,18 @@ export async function ask(ctx: QaContext, q: Question, onText?: (text: string) =
       break;
     }
     text += event.text;
-    if (!text.includes(REFUSAL_MARKER) && !mayBeMarker(text)) onText?.(text);
+    const shown = unwrapAnswer(text, false);
+    if (!text.includes(REFUSAL_MARKER) && !mayBeMarker(shown)) onText?.(shown);
   }
 
-  // 標記出現在任何位置都算拒答
+  // 標記出現在任何位置都算拒答（包括被標籤包住時）
   if (text.includes(REFUSAL_MARKER)) return refusal;
-  const visible = mayBeMarker(text) ? "" : text;
   // 串流沒有 done 或 error 就結束，視為中斷
   const error = end === undefined ? "upstream_interrupted" : end.type === "error" ? end.error : undefined;
+  const truncated = end?.type === "done" && end.stopReason === "max_tokens";
+  // 正常結束時只移除成對的外層標籤；中斷或截斷時結尾標籤可能沒收到
+  const unwrapped = unwrapAnswer(text, error === undefined && !truncated);
+  const visible = mayBeMarker(unwrapped) ? "" : unwrapped;
   if (visible.trim() === "") return error === undefined ? refusal : { kind: "error", error };
 
   const { text: resolved, cited, dropped } = resolveCitations(visible, prompt.numbering);
@@ -84,7 +89,7 @@ export async function ask(ctx: QaContext, q: Question, onText?: (text: string) =
     cited,
     dropped,
     uncited: cited.length === 0,
-    incomplete: error !== undefined || (end?.type === "done" && end.stopReason === "max_tokens"),
+    incomplete: error !== undefined || truncated,
     ...(error !== undefined && { error }),
   };
 }
