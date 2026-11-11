@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
-import { CONFIG_FILES, DATASET_FILES, EVALS_FILES, I18N_DIR, checkClient, contrast, mix, validateClient } from "./check-client.mjs";
+import { CONFIG_FILES, DATASET_FILES, EVALS_FILES, GRAPHIC_CONTRAST, I18N_DIR, checkClient, contrast, hueDistance, mix, oklch, validateClient } from "./check-client.mjs";
 
 const readJson = (url) => JSON.parse(readFileSync(url, "utf8"));
 const example = () =>
@@ -118,12 +118,65 @@ describe("check-client", () => {
       { file: "knowledge-model.json", path: "/entityTypes/0/color", message: "「人員」（person）的選取底色（14% + surface）與 darkColors 的 text 對比 2.9:1，需要 3:1" },
       { file: "knowledge-model.json", path: "/entityTypes/0/color", message: "「人員」（person）與 darkColors 的 background 對比 2.8:1，需要 3:1" },
       { file: "knowledge-model.json", path: "/entityTypes/0/color", message: "「人員」（person）與 darkColors 的 surface 對比 2.6:1，需要 3:1" },
-      ...[["部門", "team", 1, "2.8"], ["專案", "project", 2, "2.7"]].map(([name, id, i, value]) => ({
+      ...[["部門", "team", 1, "2.8"], ["專案", "project", 2, "2.8"]].map(([name, id, i, value]) => ({
         file: "knowledge-model.json",
         path: `/entityTypes/${i}/color`,
         message: `「${name}」（${id}）的選取底色（14% + surface）與 darkColors 的 text 對比 ${value}:1，需要 3:1`,
       })),
     ]);
+  });
+
+  describe("實體顏色與證據色（#229）", () => {
+    const run = (color) => {
+      const files = example();
+      files["knowledge-model.json"].entityTypes[2].color = color;
+      const warnings = [];
+      const errors = validateClient(files, undefined, undefined, undefined, warnings);
+      return { errors, warnings };
+    };
+
+    it("OKLCH 色相：證據色是琥珀，參考情境的專案色是紫色", () => {
+      expect(oklch("#FFB547")[2]).toBeCloseTo(73.3, 1);
+      expect(oklch("#7A52C7")[2]).toBeCloseTo(295.8, 1);
+      expect(hueDistance(350, 10)).toBe(20);
+      expect(hueDistance(10, 200)).toBe(170);
+    });
+
+    it("參考情境的專案色是 #7A52C7，對 surface 至少 3:1，沒有警告", () => {
+      const files = example();
+      expect(files["knowledge-model.json"].entityTypes[2]).toMatchObject({ id: "project", color: "#7A52C7" });
+      expect(contrast("#7A52C7", files["theme.json"].colors.surface)).toBeGreaterThanOrEqual(GRAPHIC_CONTRAST);
+      expect(run("#7A52C7")).toEqual({ errors: [], warnings: [] });
+    });
+
+    it("撞色：色相與證據色相差小於 25° 時警告，但不讓檢查失敗", () => {
+      const { errors, warnings } = run("#B26A00");
+      expect(errors).toEqual([]);
+      expect(warnings).toEqual([
+        {
+          file: "knowledge-model.json",
+          path: "/entityTypes/2/color",
+          message: expect.stringMatching(/^「專案」（project）的 OKLCH 色相與 darkColors 的 mark（證據色）只差 8°（建議至少 25°）：Dark 模式/),
+        },
+      ]);
+    });
+
+    it("不撞色：色相相差 25° 以上不警告；灰色沒有色相，不比較", () => {
+      // #C2410C 的色相約 38°，與 darkColors 的 mark（約 73°）相差 35°
+      expect(run("#C2410C").warnings).toEqual([]);
+      expect(run("#6B6B6B").warnings).toEqual([]);
+    });
+
+    it("對比不足：Light 的實體色對 surface 低於 3:1 時，由對比度檢查報錯（比警告更嚴格）", () => {
+      // #B79BE8 與 #7A52C7 同為紫色，不會撞色，但在白底上只有約 2.3:1
+      const { errors, warnings } = run("#B79BE8");
+      expect(warnings).toEqual([]);
+      expect(errors).toContainEqual({
+        file: "knowledge-model.json",
+        path: "/entityTypes/2/color",
+        message: expect.stringMatching(/^「專案」（project）與 colors 的 surface 對比 [\d.]+:1，需要 3:1$/),
+      });
+    });
   });
 
   it("LocalizedText 缺少預設語言時失敗", () => {

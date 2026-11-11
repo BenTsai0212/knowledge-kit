@@ -172,6 +172,14 @@ npm run check:client
 | 實體類型的 `color`（圖譜節點的外圈與圖示，非文字） | `background`、`surface` | 3:1 |
 | `text`（選取的節點的圖示，非文字） | 各實體類型的淡色底（`color` 14% + `surface`） | 3:1 |
 
+**實體顏色與證據色（警告）**：Dark 模式的實體色保留色相、只提高亮度（[docs/design.md](design.md)「實體顏色」），色相接近證據色時，圖譜節點會被看成引用的螢光。`check:client` 以 OKLCH 計算色相，實體類型的 `color` 與 `colors`、`darkColors` 的 `mark` 任一相差小於 25° 時輸出警告（`警告：knowledge-model.json /entityTypes/2/color：…`），不讓檢查失敗；彩度低於 0.02 的灰色沒有明確色相，不比較。Light 的實體色對 `surface` 低於 3:1 則是上表的錯誤，不只是警告。
+
+選實體顏色的建議：
+
+- 避開證據色的黃、琥珀、橘黃（預設 `mark` 的色相約 73°–95°），改用藍、綠、青、紫等色相，例如參考情境的人員 `#3D7AB8`、部門 `#2E7D5B`、專案 `#7A52C7`。
+- 在白底上至少 3:1，同時在深色的 `background`、`surface` 上也至少 3:1（上表）。
+- 類型之間除了顏色還有圖示區分（`icon`），顏色相近的類型不會只靠顏色辨認。
+
 錯誤訊息指出配色、欄位與背景，例如 `theme.json /darkColors/textMuted：與 surface 的對比 3.9:1，需要 4.5:1`；可見等級與實體類型會指出是哪一個，例如 `knowledge-model.json /entityTypes/0/color：「人員」（person）與 darkColors 的 background 對比 2.5:1，需要 3:1`。對比值無條件捨去到小數一位。
 
 不使用任何合作夥伴的品牌名稱、wordmark 或專屬字體名稱作為預設值（RFC 0001）。
