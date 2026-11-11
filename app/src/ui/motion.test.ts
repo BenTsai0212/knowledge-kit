@@ -17,7 +17,10 @@ import {
   watchReducedMotion,
 } from "./motion";
 
-const cssText = css.replace(/\/\*[\s\S]*?\*\//g, "");
+// 入口頁主視覺（#228）是持續循環的裝飾動畫，時間依 docs/design.md「入口頁主視覺」，由 entry-hero.test.ts 檢查，不套用問答的刻度
+const cssText = css
+  .replace(/\/\*[\s\S]*?\*\//g, "")
+  .replace(/[^{}]*\{[^{}]*\}/g, (block) => (/\.hero/.test(block.slice(0, block.indexOf("{"))) ? "" : block));
 
 describe("圖譜的動態（#199）", () => {
   it("動態約 0.2–0.5 秒；減少動態效果時為 0", () => {
