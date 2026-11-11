@@ -469,7 +469,8 @@ export interface UiStrings {
   reviewReject: string;
   reviewWorking: string;
   reviewNeedsChoice: string;
-  reviewChoose: string;
+  // 系統已準備的實體：展開合併選擇（#243）
+  reviewChangeChoice: string;
   reviewCreateNew: string;
   reviewMergeInto: string;
   reviewMergeHint: string;
@@ -478,6 +479,8 @@ export interface UiStrings {
   reviewRelationBlocked: string;
   // 核准前修改的名稱，每種語言都必須有值（#47 審查）
   reviewNamesRequired: string;
+  // 名稱欄位空白時的必填標示（#243）
+  reviewRequired: string;
   reviewSkippedNames: string;
   // 待審頁的分組（#189）：每份文件的摘要與進度、系統已準備、圖譜已有、新增、確認一組、出處的開關
   reviewSummary: string;

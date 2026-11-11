@@ -2,7 +2,8 @@
 // 每份文件開頭是摘要與進度，需要確認的組在最上面，系統已準備的收合成一行（#189，分組在 review-helpers.ts 的 reviewGroups()）；
 // 可以修改名稱、選擇合併對象、確認一組、核准整份文件、退回；另有「已退回」分頁。
 // 設計系統 v1（#243）：底線式分頁、文件卡片的頁首（右側是待確認的組數與「核准這份文件的全部」）、textMuted 的組名，
-// 沒有需要確認項目的文件可以收合。
+// 沒有需要確認項目的文件可以收合。合併選擇是列內展開的兩張單選卡（合併到既有實體、建立新實體）；名稱缺少語言時列加 warning 細框、
+// 展開各語言的名稱欄位；說法不同兩種說法並排、下方三個決定按鈕。窄螢幕的分頁單行、橫向捲動。
 // 每筆一行，按「編輯名稱」才可以修改；出處點開才顯示，預設 2 行、標出實體名稱；核准或退回後顯示短提示（#48），附「撤銷」（ADR 0007 決定 4）。
 // 每份文件另有「說法不同」區塊（#51）：新舊段落並列、三選一處理；已處理的在「已處理的說法不同」分頁。
 // 「回報」分頁是問答的回答錯誤回報（ADR 0007 決定 7，ReportList.tsx）。
@@ -25,13 +26,16 @@ import { createRequestGate } from "./requests";
 import {
   batchPlan,
   canBatch,
+  choiceCard,
+  choiceShown,
   docCollapsible,
   entityMark,
   groupPlan,
   highlightSegments,
   initialChoice,
   inputSize,
-  namesInvalid,
+  mergeCandidates,
+  missingNameLanguages,
   nextTab,
   reviewDocuments,
   reviewGroups,
@@ -94,6 +98,8 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   // 點開出處的項目 id（#189：每筆一行，出處點開才顯示）
   const [openSources, setOpenSources] = useState<ReadonlySet<string>>(new Set());
+  // 按下「變更合併對象」、展開單選卡的實體（系統建議與自動合併；需要逐筆決定的一直展開，#243）
+  const [openChoices, setOpenChoices] = useState<ReadonlySet<string>>(new Set());
   // 文件卡片的收合（#243）：沒有需要確認項目的文件預設收合。預設值在第一次出現時決定並記住，
   // 確認完最後一組時不會在眼前收起來；按下「展開」「收合」後以 openDocs 為準
   const [openDocs, setOpenDocs] = useState<Record<string, boolean>>({});
@@ -150,12 +156,17 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   };
   const counts = reviewTabCounts(docs, conflicts, reports);
   const tabLabels: Record<Tab, string> = { pending: s.reviewPendingTab, rejected: s.reviewRejectedTab, decided: s.reviewDecidedTab, reports: s.reviewReportsTab };
+  // 窄螢幕的分頁橫向捲動（#243）：選中的分頁捲進可見範圍
+  const selectTab = (next: Tab) => {
+    setTab(next);
+    document.getElementById(`${ids}-tab-${next}`)?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  };
   // 左右鍵、Home、End 切換分頁並把焦點移過去（只有選中的分頁在 Tab 順序中）
   const tabKey = (ev: KeyboardEvent<HTMLDivElement>) => {
     const next = nextTab(TABS, tab, ev.key);
     if (next === null) return;
     ev.preventDefault();
-    setTab(next);
+    selectTab(next);
     document.getElementById(`${ids}-tab-${next}`)?.focus();
   };
   const languageNames = new Intl.DisplayNames([language], { type: "language" });
@@ -258,20 +269,22 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
       text: toastText({ one: s.conflictToast, many: s.conflictToast }, [s.conflictDecisions[decision]]),
       graph: false,
     });
-  // 新舊說法的一側：文件標題、等級與專案的標籤、日期、內容（文件的語言）與「打開原文」
+  // 新舊說法的一側：說法（文件的語言），下方是出處（文件標題、等級與專案的標籤、日期）與「打開原文」
   const conflictSide = (label: string, p: ConflictPassage) => (
     <div className="conflict-side">
       <h4>{label}</h4>
-      <p>
+      <p className="conflict-content" lang={p.language}>
+        {p.content}
+      </p>
+      <p className="conflict-source">
         <span lang={p.language}>{p.documentTitle}</span> <AccessBadges visibility={p.visibility} project={p.project} language={language} />{" "}
         <time className="muted" dateTime={p.date ?? undefined}>
           {p.date ?? s.undated}
-        </time>
+        </time>{" "}
+        <button type="button" className="link" onClick={() => onOpenSource(p.id)}>
+          {s.openSource}
+        </button>
       </p>
-      <p lang={p.language}>{p.content}</p>
-      <button type="button" className="link" onClick={() => onOpenSource(p.id)}>
-        {s.openSource}
-      </button>
     </div>
   );
 
@@ -284,26 +297,27 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
     );
   // 實體列的標示（#243）：新增、自動合併、系統建議；需要逐筆決定的沒有標示
   const markLabels = { new: s.reviewNew, auto: s.reviewAutoMerged, suggested: s.reviewSuggested };
-  // 一筆實體一行（#189、#243）：類型的形狀與名稱、名稱、標示、合併選擇、出處數，最後是退回與核准。
-  // mergeHint：選擇合併時在下一行提示可見範圍；confirm：「確認」一組或「核准」一筆（沒有時只有退回），confirmLabel 寫明一起核准的關係數
-  const entityRow = (
-    doc: ReviewDocument,
-    e: ReviewEntity,
-    opts: { mergeHint?: boolean; confirm?: () => void; confirmLabel?: string; confirmDisabled?: boolean },
-  ) => {
+  // 一筆實體一行（#189、#243）：類型的形狀與名稱、名稱、標示、出處數，最後是退回與核准。
+  // 合併選擇在列下方展開成兩張單選卡（choiceShown），選擇合併時下方提示可見範圍；名稱缺少語言時整列 warning 細框、展開名稱欄位。
+  // confirm：「確認」一組或「核准」一筆（沒有時只有退回），confirmLabel 寫明一起核准的關係數
+  const entityRow = (doc: ReviewDocument, e: ReviewEntity, opts: { confirm?: () => void; confirmLabel?: string; confirmDisabled?: boolean }) => {
     const pending = e.status === "pending";
     const suggestion = suggestions[e.id];
     const mark = pending ? entityMark(suggestion) : null;
     const choice = choiceOf(e);
-    const candidates = suggestion.mode === "choose" ? suggestion.candidates : suggestion.mode === "auto" ? [suggestion.target] : [];
+    const candidates = mergeCandidates(suggestion);
     const needsChoice = !canBatch(suggestion);
+    const shown = pending && choiceShown(suggestion, openChoices.has(e.id));
+    const card = choiceCard(choice);
     const names: LocalizedText = choice.names ?? e.names;
-    const invalidNames = pending && namesInvalid(choice, client.languages);
-    // 只有建立新實體的項目可以編輯名稱（#44 決定 4）；名稱不完整時一直顯示輸入框
+    // 只有建立新實體的項目可以編輯名稱（#44 決定 4）；名稱缺少語言時一直顯示輸入框
     const editable = pending && choice.mergeInto === null;
-    const isEditing = editable && (editing.has(e.id) || invalidNames);
+    const missing = editable ? missingNameLanguages(names, client.languages) : [];
+    const isEditing = editable && (editing.has(e.id) || missing.length > 0);
+    const choiceId = `${ids}-choice-${e.id}`;
+    const pick = (mergeInto: string | null) => setChoice(e.id, { ...choice, mergeInto });
     return (
-      <>
+      <div className={missing.length > 0 ? "review-entity is-warning" : "review-entity"}>
         <div className="review-row">
           <span className={`entity-badge shape-${entityTypeShape(e.type)}`} style={{ "--type-color": typeColor(e.type) } as CSSProperties}>
             <span className="type-dot" aria-hidden="true" />
@@ -314,17 +328,20 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
               {client.languages.map((l) => (
                 <label key={l} className="inline">
                   {languageNames.of(l) ?? l}
+                  {missing.includes(l) && <span className="review-required">{s.reviewRequired}</span>}
                   <input
                     type="text"
                     lang={l}
                     value={names[l] ?? ""}
                     size={inputSize(names[l] ?? "")}
+                    required
+                    aria-invalid={missing.includes(l)}
                     disabled={busy}
                     onChange={(ev) => setChoice(e.id, { ...choice, names: { ...names, [l]: ev.target.value } })}
                   />
                 </label>
               ))}
-              <button type="button" className="secondary" disabled={busy || invalidNames} onClick={() => setEditing((cur) => flip(cur, e.id))}>
+              <button type="button" className="secondary" disabled={busy || missing.length > 0} onClick={() => setEditing((cur) => flip(cur, e.id))}>
                 {s.reviewEditDone}
               </button>
             </span>
@@ -344,29 +361,13 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
             </span>
           )}
           {mark !== null && <span className={`review-mark is-${mark}`}>{markLabels[mark]}</span>}
-          {pending && candidates.length > 0 && (
-            <label className="inline">
-              {s.reviewMergeInto}
-              <select
-                value={choice.mergeInto === undefined ? "" : (choice.mergeInto ?? "new")}
-                disabled={busy}
-                onChange={(ev) => setChoice(e.id, { mergeInto: ev.target.value === "" ? undefined : ev.target.value === "new" ? null : ev.target.value })}
-              >
-                {needsChoice && <option value="">{s.reviewChoose}</option>}
-                {candidates.map((id) => {
-                  const target = graph.entities.find((x) => x.id === id);
-                  return (
-                    <option key={id} value={id}>
-                      {target ? entityOptionLabel(graph, target, language) : id}
-                    </option>
-                  );
-                })}
-                <option value="new">{s.reviewCreateNew}</option>
-              </select>
-            </label>
+          {pending && !needsChoice && candidates.length > 0 && (
+            <button type="button" className="link" aria-expanded={shown} aria-controls={choiceId} onClick={() => setOpenChoices((cur) => flip(cur, e.id))}>
+              {s.reviewChangeChoice}
+            </button>
           )}
-          {pending && needsChoice && choice.mergeInto === undefined && <span className="badge warning">{s.reviewNeedsChoice}</span>}
-          {invalidNames && <span className="error">{s.reviewNamesRequired}</span>}
+          {pending && needsChoice && card === null && <span className="badge warning">{s.reviewNeedsChoice}</span>}
+          {missing.length > 0 && <span className="error">{s.reviewNamesRequired}</span>}
           {sourcesToggle(e.id, e.sources.length)}
           {pending && (
             <span className="review-actions">
@@ -374,16 +375,42 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                 {s.reviewReject}
               </button>
               {opts.confirm !== undefined && (
-                <button type="button" disabled={busy || opts.confirmDisabled} onClick={opts.confirm}>
+                <button type="button" disabled={busy || opts.confirmDisabled || missing.length > 0} onClick={opts.confirm}>
                   {busy ? s.reviewWorking : (opts.confirmLabel ?? s.reviewConfirm)}
                 </button>
               )}
             </span>
           )}
         </div>
-        {opts.mergeHint && pending && typeof choice.mergeInto === "string" && <p className="muted review-hint">{s.reviewMergeHint}</p>}
+        {/* 合併選擇（#243）：兩張單選卡，同一組 radio；候選有多個時「合併到既有實體」卡內逐一列出 */}
+        {shown && (
+          <div className="review-choice" id={choiceId} role="radiogroup" aria-label={pendingName(e, language)}>
+            <div className={card === "merge" ? "review-choice__card is-selected" : "review-choice__card"}>
+              <span className="review-choice__title">
+                {s.reviewMergeInto}
+                {(mark === "suggested" || mark === "auto") && <span className="review-mark">{markLabels[mark]}</span>}
+              </span>
+              {candidates.map((id) => {
+                const target = graph.entities.find((x) => x.id === id);
+                return (
+                  <label key={id} className="review-choice__option">
+                    <input type="radio" name={choiceId} checked={choice.mergeInto === id} disabled={busy} onChange={() => pick(id)} />
+                    {target ? entityOptionLabel(graph, target, language) : id}
+                  </label>
+                );
+              })}
+            </div>
+            <label className={card === "new" ? "review-choice__card is-selected" : "review-choice__card"}>
+              <span className="review-choice__option">
+                <input type="radio" name={choiceId} checked={choice.mergeInto === null} disabled={busy} onChange={() => pick(null)} />
+                <span className="review-choice__title">{s.reviewCreateNew}</span>
+              </span>
+            </label>
+          </div>
+        )}
+        {shown && card === "merge" && <p className="muted review-hint">{s.reviewMergeHint}</p>}
         {openSources.has(e.id) && sourceList(doc, e.id, e.sources, [e.id])}
-      </>
+      </div>
     );
   };
   // 一段關係一行：「起點 —關係→ 終點」、圖譜已有、出處的開關與退回；waiting：另一端還待審，確認這組時不會一起核准
@@ -423,7 +450,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
               aria-selected={tab === t}
               aria-controls={`${ids}-panel`}
               tabIndex={tab === t ? 0 : -1}
-              onClick={() => setTab(t)}
+              onClick={() => selectTab(t)}
             >
               {tabLabels[t]}
               {counts[t] > 0 && <span className="review-tabs__count"> {counts[t]}</span>}
@@ -591,7 +618,6 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                           return (
                             <li key={group.entity.id}>
                               {entityRow(doc, group.entity, {
-                                mergeHint: true,
                                 confirm: () => {
                                   if (plan) void approveItems(doc.id, plan);
                                 },
@@ -671,7 +697,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                         {conflictSide(s.conflictOld, c.oldPassage)}
                       </div>
                       {c.decision === null && (
-                        <div className="dialog-actions">
+                        <div className="conflict-actions">
                           {CONFLICT_DECISIONS.map((d) => (
                             <button key={d} type="button" className={d === "not_conflict" ? "secondary" : undefined} disabled={busy} onClick={() => decide(doc.id, c.id, d)}>
                               {busy ? s.reviewWorking : s.conflictDecisions[d]}

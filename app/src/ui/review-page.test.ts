@@ -45,3 +45,35 @@ describe("文件卡片", () => {
     }
   });
 });
+
+describe("窄螢幕的分頁（#243 PR 1 審查）", () => {
+  it("單行、超出時橫向捲動；分頁不換行", () => {
+    expect(rule(".review-tabs")).toMatchObject({ "flex-wrap": "nowrap", "overflow-x": "auto", "min-width": "0" });
+    expect(rule('.review-tabs [role="tab"]')).toMatchObject({ "white-space": "nowrap", flex: "none" });
+  });
+
+  it("切換分頁時把選中的分頁捲進可見範圍", () => {
+    expect(reviewPage).toMatch(/scrollIntoView\?\.\(\{ block: "nearest", inline: "nearest" \}\)/);
+  });
+});
+
+describe("逐筆決定與說法不同（#243 PR 2）", () => {
+  it("合併選擇是兩張單選卡，不再用下拉選單；選中用 primary 框線", () => {
+    expect(reviewPage).toContain('role="radiogroup"');
+    expect(reviewPage).toContain('type="radio"');
+    expect(reviewPage).not.toContain("<select");
+    expect(rule(".review-choice__card.is-selected")["border-color"]).toBe("var(--color-primary)");
+    for (const key of ["reviewMergeInto", "reviewCreateNew", "reviewMergeHint", "reviewChangeChoice"]) expect(reviewPage, key).toContain(`s.${key}`);
+  });
+
+  it("名稱缺少語言：warning 細框，缺的欄位標示必填", () => {
+    expect(rule(".review-entity.is-warning").border).toBe("1px solid var(--color-warning)");
+    expect(reviewPage).toContain("s.reviewRequired");
+    expect(reviewPage).toMatch(/\brequired\s*\n\s*aria-invalid=/);
+  });
+
+  it("說法不同：兩種說法並排，下方是決定按鈕", () => {
+    expect(rule(".conflict-pair")["grid-template-columns"]).toBe("1fr 1fr");
+    expect(reviewPage.indexOf('className="conflict-pair"')).toBeLessThan(reviewPage.indexOf('className="conflict-actions"'));
+  });
+});
