@@ -171,6 +171,16 @@ describe("設計系統 v1", () => {
     expect(rule(lightCss, ".source-text")).toMatchObject({ background: "var(--color-reading)", color: "var(--color-readingText)" });
   });
 
+  it("實體面板（#240）：原文片段在 reading 紙面、名稱用 markReading；類型徽章是類型色淡底與 text 字；數量用 fonts.mono", () => {
+    expect(rule(lightCss, ".entity-excerpt")).toMatchObject({ background: "var(--color-reading)", color: "var(--color-readingText)" });
+    expect(rule(lightCss, ".entity-excerpt mark")).toMatchObject({ "background-color": "var(--color-markReading)", color: "var(--color-readingText)" });
+    expect(rule(lightCss, ".entity-badge")).toMatchObject({
+      background: "color-mix(in srgb, var(--type-color) 14%, var(--color-surface))",
+      color: "var(--color-text)",
+    });
+    expect(rule(lightCss, ".entity-counts")).toMatchObject({ "font-family": "var(--font-mono)" });
+  });
+
   it("說法不同的標示只用 conflict 系列（conflict 在 surface 上、conflictText 在 conflictSoft 上）", () => {
     expect(rule(lightCss, ".passage-marks .badge")).toMatchObject({
       background: "var(--color-conflictSoft)",
