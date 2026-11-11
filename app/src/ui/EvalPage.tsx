@@ -14,6 +14,7 @@ import { apiTransport } from "../qa/api";
 import { preparesModel, type ActiveProvider } from "../retrieval/providers";
 import { openRetriever } from "../retrieval/retrieve";
 import { createEvalDatabases, differs, effectiveForm, evalReport, parseReportSource, parseSettings, settingsForm, setSummary, TOP_K_MAX, verdicts, type SettingsForm } from "./eval-helpers";
+import { EmptyState } from "./EmptyState";
 import { FilePicker } from "./FilePicker";
 import { Notice } from "./Notice";
 import { RetrievalNotice } from "./RetrievalNotice";
@@ -364,6 +365,15 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
         </div>
       </dialog>
 
+      {/* 尚未執行（#245）：下一步與設定區的「開始評測」相同（文字不同，避免同名的兩個按鈕） */}
+      {run === null && (
+        <EmptyState
+          icon="evals"
+          title={s.evalEmptyTitle}
+          reason={s.evalEmptyReason}
+          actions={[{ label: s.evalEmptyAction, onClick: () => void prepare(), disabled: busy || plan === null }]}
+        />
+      )}
       {run !== null && (
         <>
           <section className="card">

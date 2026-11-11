@@ -329,6 +329,8 @@ export interface UiStrings {
   askButton: string;
   answering: string;
   emptyAnswer: string;
+  emptyAnswerReason: string;
+  emptyAnswerAction: string;
   // 三欄的問答頁（#195）：輸入框下方的說明（每題獨立回答）、左側導覽「這次的問題」
   qaIndependent: string;
   sessionQuestions: string;
@@ -346,6 +348,8 @@ export interface UiStrings {
   tabGraph: string;
   legend: string;
   graphEmpty: string;
+  graphEmptyReason: string;
+  switchIdentity: string;
   selectEntity: string;
   // 圖譜的逐步展開（#199）：已展開的路徑、回到全部、只看它
   graphExpanded: string;
@@ -375,12 +379,18 @@ export interface UiStrings {
   pathChoose: string;
   // 找不到路徑時的固定文字：不區分沒有連通或看不到（不透露是否因權限而找不到）
   pathNotFound: string;
+  pathNotFoundReason: string;
+  pathChangeEnd: string;
   timelineFilter: string;
   timelineAll: string;
   timelineEmpty: string;
+  timelineEmptyReason: string;
+  timelineFilterEmptyReason: string;
+  timelineShowAll: string;
   undated: string;
   tabUpload: string;
   uploadNotAllowed: string;
+  uploadNotAllowedReason: string;
   // 上傳內容只存在瀏覽器記憶體
   uploadEphemeral: string;
   uploadFile: string;
@@ -433,6 +443,8 @@ export interface UiStrings {
   reviewPendingTab: string;
   reviewRejectedTab: string;
   reviewEmpty: string;
+  reviewEmptyReason: string;
+  reviewUploadAnother: string;
   reviewRejectedEmpty: string;
   reviewExtracting: string;
   reviewRefresh: string;
@@ -523,7 +535,9 @@ export interface UiStrings {
   reportFailed: string;
   reviewReportsTab: string;
   reportsEmpty: string;
+  reportsEmptyReason: string;
   reportRefusal: string;
+  reportAnswer: string;
   reportMeta: string;
   reportMarkNotError: string;
   reportMarkRetracted: string;
@@ -570,6 +584,9 @@ export interface UiStrings {
   evalDiffers: string;
   evalQuestion: string;
   evalNotRun: string;
+  evalEmptyTitle: string;
+  evalEmptyReason: string;
+  evalEmptyAction: string;
   // requires: "semantic" 的題目在 keyword-hash 時的結果欄
   evalRequiresSemantic: string;
   // 題目的 passageLanguage：{language} 是語言代碼

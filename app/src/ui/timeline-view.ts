@@ -33,6 +33,13 @@ export function timelineSections(entries: readonly TimelineEntry[], filter: stri
   return sections;
 }
 
+// 空狀態（#245）：沒有文件（"none"）、依實體篩選後沒有符合的文件（"filtered"，下一步是回到全部），或有文件可顯示（null）
+export function timelineEmptyKind(sections: TimelineSections, filter: string | null): "none" | "filtered" | null {
+  const rows = [...sections.dated, ...sections.undated];
+  if (rows.length === 0) return "none";
+  return filter !== null && !rows.some((r) => r.matches) ? "filtered" : null;
+}
+
 // 實體類型的形狀：人員圓形、部門圓角方形、專案小圓角方形（docs/design.md「實體顏色」），與入口頁主視覺相同的歸類
 export function entityTypeShape(type: string): HeroShape {
   return heroShape(clientConfig.knowledgeModel.entityTypes.find((t) => t.id === type)?.icon);

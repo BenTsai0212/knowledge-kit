@@ -1,6 +1,7 @@
 import { clientConfig } from "../client/load";
 import { MAX_QUESTION_CHARS } from "../qa/prompt";
 import { strings } from "../client/i18n";
+import { PRESETS_ID } from "./empty-state";
 
 interface Props {
   language: string;
@@ -19,7 +20,7 @@ export function QuestionPanel({ language, disabled, text, onText, onAsk }: Props
   const s = strings(language);
   return (
     <section className="card composer">
-      <div className="presets" role="group" aria-label={s.presetQuestions}>
+      <div id={PRESETS_ID} className="presets" role="group" aria-label={s.presetQuestions}>
         {clientConfig.scenarios.scenarios.map((scenario) => (
           <div key={scenario.id} className="scenario" role="group" aria-label={scenario.title[language]}>
             <span className="muted">

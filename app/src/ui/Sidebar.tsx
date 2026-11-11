@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { clientConfig } from "../client/load";
 import { strings } from "../client/i18n";
+import { IDENTITY_SELECT_ID } from "./empty-state";
 import type { View } from "./online-demo";
 import { ProductIcon } from "./ProductIcon";
 
@@ -51,7 +52,8 @@ export function Sidebar({ language, identity, onIdentity, onLanguage, onChangeAc
         <span className="badge">{s.fictionalData}</span>
         <label>
           {s.identity}
-          <select value={identity} onChange={(e) => onIdentity(e.target.value)}>
+          {/* 空狀態的「切換身分」把焦點移到這裡（#245） */}
+          <select id={IDENTITY_SELECT_ID} value={identity} onChange={(e) => onIdentity(e.target.value)}>
             {clientConfig.access.roles.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.label[language]}

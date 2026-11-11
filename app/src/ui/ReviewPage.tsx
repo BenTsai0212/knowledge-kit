@@ -17,6 +17,7 @@ import { readReports, type AnswerReport } from "../reports/store";
 import { AccessBadges } from "./AccessBadges";
 import { entityOptionLabel, entityTypeLabel, relationTypeLabel } from "./graph-labels";
 import { Notice } from "./Notice";
+import { EmptyState } from "./EmptyState";
 import { ReportList } from "./ReportList";
 import { createRequestGate } from "./requests";
 import {
@@ -46,6 +47,8 @@ interface Props {
   // 核准、退回或重新整理後通知 App 更新頁籤的待審筆數
   onChanged(): void;
   onGotoGraph(): void;
+  // 待審清空時的「再上傳一份」；目前身分不能上傳時不傳（#245）
+  onGotoUpload?(): void;
   // 回報中的實體：切到圖譜頁並選取該實體
   onViewInGraph(entityId: string): void;
 }
@@ -61,7 +64,7 @@ const CONFLICT_DECISIONS: readonly ConflictDecision[] = ["coexist", "supersede",
 // 待審實體沒有主要名稱（name），依介面語言取 names
 const pendingName = (e: ReviewEntity, language: string) => e.names[language] || Object.values(e.names)[0] || e.id;
 
-export function ReviewPage({ db, identity, language, extracting, onOpenSource, onChanged, onGotoGraph, onViewInGraph }: Props) {
+export function ReviewPage({ db, identity, language, extracting, onOpenSource, onChanged, onGotoGraph, onGotoUpload, onViewInGraph }: Props) {
   const s = strings(language);
   // decided：已處理的說法不同（#51）；reports：回答錯誤回報（ADR 0007）
   const [tab, setTab] = useState<"pending" | "rejected" | "decided" | "reports">("pending");
@@ -442,7 +445,20 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
         />
       )}
       {tab !== "reports" && visibleDocs.length === 0 && (
-        <p className="card muted">{tab === "pending" ? s.reviewEmpty : tab === "rejected" ? s.reviewRejectedEmpty : s.reviewDecidedEmpty}</p>
+        // 待審清空（#245）：到圖譜查看、再上傳一份；已退回與已處理的分頁只有標題
+        <EmptyState
+          icon="review"
+          title={tab === "pending" ? s.reviewEmpty : tab === "rejected" ? s.reviewRejectedEmpty : s.reviewDecidedEmpty}
+          reason={tab === "pending" ? s.reviewEmptyReason : undefined}
+          actions={
+            tab === "pending"
+              ? [
+                  { label: s.reviewGotoGraph, onClick: onGotoGraph },
+                  ...(onGotoUpload === undefined ? [] : [{ label: s.reviewUploadAnother, onClick: onGotoUpload }]),
+                ]
+              : []
+          }
+        />
       )}
 
       {visibleDocs.map((doc) => {

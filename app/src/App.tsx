@@ -326,6 +326,7 @@ export function App() {
               onOpenSource={onOpenSource}
               onChanged={() => setReviewVersion((v) => v + 1)}
               onGotoGraph={() => setView("graph")}
+              onGotoUpload={canUpload ? () => setView("upload") : undefined}
               onViewInGraph={(id) => (setGraphFocus(id), setView("graph"))}
             />
           ) : view === "upload" ? (

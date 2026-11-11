@@ -3,6 +3,8 @@ import type { Graph } from "../graph/read";
 import { strings } from "../client/i18n";
 import type { ReportCategory } from "../reports/store";
 import { AnswerView, type AnswerState, type OpenEntity } from "./AnswerView";
+import { focusPresets } from "./empty-state";
+import { EmptyState } from "./EmptyState";
 
 // 一題問答；id 也是畫面上的元素 id（左側「這次的問題」捲到該題）
 export interface Turn extends AnswerState {
@@ -40,7 +42,13 @@ export function Conversation({ language, turns, canUpload, onOpenSource, openPas
   return (
     <div className="conversation">
       {turns.length === 0 ? (
-        <section className="card muted">{s.emptyAnswer}</section>
+        // 尚未提問（#245）：下一步是輸入區的預設問題
+        <EmptyState
+          icon="question"
+          title={s.emptyAnswer}
+          reason={s.emptyAnswerReason}
+          actions={[{ label: s.emptyAnswerAction, onClick: focusPresets, disabled: askDisabled }]}
+        />
       ) : (
         turns.map((turn) => (
           <AnswerView

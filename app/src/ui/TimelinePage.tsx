@@ -6,7 +6,8 @@ import { AccessBadges } from "./AccessBadges";
 import { entityOptionLabel } from "./graph-labels";
 import { PassageMarks } from "./PassageMarks";
 import { createRequestGate } from "./requests";
-import { entityTypeShape, timelineSections, type TimelineRow } from "./timeline-view";
+import { EmptyState } from "./EmptyState";
+import { entityTypeShape, timelineEmptyKind, timelineSections, type TimelineRow } from "./timeline-view";
 import { strings } from "../client/i18n";
 import { clientConfig } from "../client/load";
 
@@ -151,6 +152,7 @@ export function TimelinePage({ db, identity, language, uploaded, focus, onFocuse
   };
 
   const sections = entries === null ? null : timelineSections(entries, entityId);
+  const empty = sections === null ? null : timelineEmptyKind(sections, entityId);
 
   return (
     <div className="timeline-page">
@@ -167,8 +169,14 @@ export function TimelinePage({ db, identity, language, uploaded, focus, onFocuse
       </div>
       {sections === null ? (
         <p className="card muted">{s.loading}</p>
-      ) : sections.dated.length + sections.undated.length === 0 ? (
-        <p className="card muted">{s.timelineEmpty}</p>
+      ) : empty !== null ? (
+        // 篩選後沒有符合的文件時，以空狀態取代全部變淡的清單，下一步是回到全部（#245）
+        <EmptyState
+          icon="timeline"
+          title={s.timelineEmpty}
+          reason={empty === "filtered" ? s.timelineFilterEmptyReason : s.timelineEmptyReason}
+          actions={empty === "filtered" ? [{ label: s.timelineShowAll, onClick: () => setEntityId(null) }] : []}
+        />
       ) : (
         <div ref={list}>
           {sections.dated.length > 0 && <ol className="timeline">{sections.dated.map(renderRow)}</ol>}

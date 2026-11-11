@@ -1952,3 +1952,59 @@ label.inline {
     transform: scale(1);
   }
 }
+
+/* 空狀態（#245，docs/design.md「狀態的共同語言」）：虛線框與線條圖示用 textMuted 系，不用插圖；
+   標題粗體、原因一句、最多兩個下一步（第一個是主要按鈕） */
+.empty-state {
+  display: grid;
+  justify-items: start;
+  gap: 0.35rem;
+  border: 1px dashed var(--color-textMuted);
+  border-radius: var(--radius-large);
+  padding: 1rem;
+  color: var(--color-textMuted);
+}
+
+.empty-state p {
+  margin: 0;
+}
+
+.empty-state__icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.empty-state__title {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.empty-state__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+/* 回報清單的卡片（#245）：原因晶片在最上方，當時的回答以框線區隔；拒答沿用問答的虛線框 */
+.report-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.report-answer {
+  border-left: 3px solid var(--color-border);
+  padding-left: 0.75rem;
+}
+
+.report-answer.refusal {
+  border: 1px dashed var(--color-border);
+  padding: 0 0.75rem;
+}
