@@ -79,6 +79,8 @@
   "uploadNotAllowed": "The current identity can't upload documents.",
   "uploadEphemeral": "Uploaded content is kept only until you reload the page.",
   "uploadFile": "Choose a file (.txt, .md, .pdf, .docx)",
+  "fileChoose": "Choose file",
+  "fileNone": "No file chosen",
   "uploadPaste": "Or paste text",
   "uploadPastePlaceholder": "Paste the text to upload",
   "uploadDocTitle": "Title",

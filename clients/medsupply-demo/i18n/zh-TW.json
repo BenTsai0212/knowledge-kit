@@ -79,6 +79,8 @@
   "uploadNotAllowed": "目前的身分沒有上傳文件的權限。",
   "uploadEphemeral": "上傳內容只保留到重新整理頁面為止。",
   "uploadFile": "選擇檔案（.txt、.md、.pdf、.docx）",
+  "fileChoose": "選擇檔案",
+  "fileNone": "尚未選擇檔案",
   "uploadPaste": "或直接貼上文字",
   "uploadPastePlaceholder": "貼上要上傳的文字",
   "uploadDocTitle": "標題",

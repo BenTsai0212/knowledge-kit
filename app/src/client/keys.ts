@@ -223,7 +223,7 @@ const uiStrings = {
   graphRetractCancel: "required", tabTimeline: "required", pathTitle: "required",
   pathFrom: "required", pathTo: "required", pathChoose: "required", pathNotFound: "required",
   timelineFilter: "required", timelineAll: "required", timelineEmpty: "required", undated: "required",
-  tabUpload: "required", uploadNotAllowed: "required", uploadEphemeral: "required", uploadFile: "required",
+  tabUpload: "required", uploadNotAllowed: "required", uploadEphemeral: "required", uploadFile: "required", fileChoose: "required", fileNone: "required",
   uploadPaste: "required", uploadPastePlaceholder: "required", uploadDocTitle: "required",
   uploadLanguage: "required", uploadVisibility: "required", uploadProject: "required",
   uploadNoProject: "required", uploadDate: "required", uploadPreview: "required", uploadParsing: "required",

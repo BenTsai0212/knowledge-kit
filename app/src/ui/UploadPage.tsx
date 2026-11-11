@@ -12,6 +12,7 @@ import type { ExtractionState } from "../extraction/run";
 import { LevelBadge, ProjectBadge } from "./AccessBadges";
 import { ConflictStatus } from "./ConflictStatus";
 import { ExtractionStatus } from "./ExtractionStatus";
+import { FilePicker } from "./FilePicker";
 import { Notice } from "./Notice";
 import { onlineDemo } from "./online-demo";
 import { createRequestGate } from "./requests";
@@ -203,19 +204,26 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
           if (dropped !== undefined) chooseFile(dropped);
         }}
       >
-        <label>
-          {s.uploadFile}
-          <input ref={fileInput} key={fileInputKey} type="file" accept=".txt,.md,.markdown,.pdf,.docx" onChange={(e) => chooseFile(e.target.files?.[0] ?? null)} />
-        </label>
+        <FilePicker
+          key={fileInputKey}
+          inputRef={fileInput}
+          accept=".txt,.md,.markdown,.pdf,.docx"
+          onChange={(e) => chooseFile(e.target.files?.[0] ?? null)}
+          button={s.uploadFile}
+          status={
+            file === null ? (
+              <span className="muted">{s.fileNone}</span>
+            ) : (
+              <>
+                {fill(s.parenthetical, { text: file.name, note: formatBytes(file.size) })}{" "}
+                <button type="button" className="link" onClick={clearFile}>
+                  {s.uploadClearFile}
+                </button>
+              </>
+            )
+          }
+        />
         <p className="muted">{s.uploadDrop}</p>
-        {file !== null && (
-          <p>
-            {fill(s.parenthetical, { text: file.name, note: formatBytes(file.size) })}{" "}
-            <button type="button" className="link" onClick={clearFile}>
-              {s.uploadClearFile}
-            </button>
-          </p>
-        )}
       </div>
       <label>
         {s.uploadPaste}

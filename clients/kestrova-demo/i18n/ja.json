@@ -79,6 +79,8 @@
   "uploadNotAllowed": "現在のユーザーは文書をアップロードできません。",
   "uploadEphemeral": "アップロードした内容は、ページを再読み込みするまでのみ保持されます。",
   "uploadFile": "ファイルを選択（.txt、.md、.pdf、.docx）",
+  "fileChoose": "ファイルを選択",
+  "fileNone": "ファイルが選択されていません",
   "uploadPaste": "またはテキストを貼り付け",
   "uploadPastePlaceholder": "アップロードするテキストを貼り付けてください",
   "uploadDocTitle": "タイトル",

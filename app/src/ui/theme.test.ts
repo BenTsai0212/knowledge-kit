@@ -131,7 +131,7 @@ describe("設計系統 v1", () => {
   })();
   const lightCss = darkStart < 0 ? cssText : cssText.replace(`@media ${DARK_SCHEME} {${darkCss}}`, "");
   const rule = (text: string, selector: string) => {
-    const block = text.match(new RegExp(`(?:^|[\\n}])\\s*${selector.replace(/[.[\]"=:()]/g, "\\$&")}\\s*\\{([^}]*)\\}`))?.[1];
+    const block = text.match(new RegExp(`(?:^|[\\n}])\\s*${selector.replace(/[.[\]"=:()+]/g, "\\$&")}\\s*\\{([^}]*)\\}`))?.[1];
     expect(block, selector).toBeDefined();
     return Object.fromEntries(declarations(`${block};`));
   };
@@ -186,6 +186,35 @@ describe("設計系統 v1", () => {
   it("所有可聚焦元件有 :focus-visible 焦點框（2px focus、外推 2px），沒有規則取消焦點框", () => {
     expect(rule(lightCss, ":focus-visible")).toEqual({ outline: "2px solid var(--color-focus)", "outline-offset": "2px" });
     expect(cssText).not.toMatch(/outline(?:-style)?\s*:\s*(?:none|0)\s*;/);
+  });
+
+  it("表單元件用主題色，不用瀏覽器的系統控制項配色（#239）", () => {
+    const fields = rule(lightCss, 'input:not([type="checkbox"], [type="radio"]),\nselect,\ntextarea');
+    expect(fields).toMatchObject({
+      "background-color": "var(--color-surface)",
+      color: "var(--color-text)",
+      border: "1px solid var(--color-border)",
+    });
+    expect(rule(lightCss, "input::placeholder,\ntextarea::placeholder")).toEqual({ color: "var(--color-textMuted)", opacity: "1" });
+    // 停用時只降低不透明度，不換底色
+    expect(rule(lightCss, ":is(input, select, textarea):disabled")).toEqual({ cursor: "default", opacity: "0.5" });
+    expect(rule(lightCss, 'input[type="checkbox"],\ninput[type="radio"]')).toEqual({ "accent-color": "var(--color-primary)" });
+    const select = rule(lightCss, "select");
+    expect(select).toMatchObject({ appearance: "none" });
+    expect(select["background-image"].match(/var\(--color-[\w-]+\)/g)).toEqual(Array(2).fill("var(--color-textMuted)"));
+    // Dark 不覆寫表單元件：兩個模式都讀同一組變數
+    expect(darkCss).not.toMatch(/\b(?:input|select|textarea)\b/);
+  });
+
+  it("檔案選擇：原生 input 視覺上隱藏但可聚焦，焦點框畫在自訂按鈕上（#239）", () => {
+    const hidden = rule(lightCss, ".visually-hidden");
+    expect(hidden).toMatchObject({ position: "absolute", width: "1px", height: "1px" });
+    expect(hidden).not.toHaveProperty("display");
+    expect(hidden).not.toHaveProperty("visibility");
+    expect(rule(lightCss, ".file-picker input:focus-visible + .file-picker__button")).toEqual({
+      outline: "2px solid var(--color-focus)",
+      "outline-offset": "2px",
+    });
   });
 
   it("--font-mono、--font-display 由 theme.json 提供", () => {
