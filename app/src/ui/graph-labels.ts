@@ -2,6 +2,7 @@
 import { fill, strings } from "../client/i18n";
 import { clientConfig } from "../client/load";
 import type { Graph, GraphEntity, SourcePassage } from "../graph/read";
+import { highlightSegments, type Segment } from "./review-helpers";
 
 const { entityTypes, relationTypes } = clientConfig.knowledgeModel;
 
@@ -58,4 +59,26 @@ export function sourcesForLanguage(sources: SourcePassage[], language: string): 
   if (same.length > 0 || sources.length === 0) return same;
   const names = new Intl.DisplayNames([language], { type: "language" });
   return sources.map((s) => ({ ...s, languageLabel: names.of(s.language) ?? s.language }));
+}
+
+export interface EntityDocument {
+  documentId: string;
+  documentTitle: string;
+  languageLabel?: string;
+  // 這份文件中提到實體、目前身分看得到的出處段落（依段落順序）；segments 是標出實體名稱的原文
+  passages: { id: string; segments: Segment[] }[];
+}
+
+// 實體面板「出現的文件」（#240）：出處依文件分組，每份文件一張 reading 紙面，列出提到實體的原文片段，
+// 片段中的實體名稱（主要名稱與各語言的顯示名稱）以 <mark> 標出。段落只來自 readGraph() 的出處，
+// 也就是目前身分看得到的段落（withIdentity()／RLS）；文件中看不到的段落不出現，也不標示被省略（#247）
+export function entityDocuments(entity: GraphEntity, language: string): EntityDocument[] {
+  const names = [entity.name, ...Object.values(entity.names)];
+  const byDocument = new Map<string, EntityDocument>();
+  for (const p of sourcesForLanguage(entity.sources, language)) {
+    const doc = byDocument.get(p.documentId) ?? { documentId: p.documentId, documentTitle: p.documentTitle, languageLabel: p.languageLabel, passages: [] };
+    doc.passages.push({ id: p.id, segments: highlightSegments(p.content, names) });
+    byDocument.set(p.documentId, doc);
+  }
+  return [...byDocument.values()];
 }

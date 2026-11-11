@@ -81,7 +81,7 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
 | `ui/GraphView.tsx` | 以 cytoscape 畫圖：節點帶實體類型、看得到的關聯數（大小），邊帶看得到的出處數（線粗）；標籤是 `names[介面語言]`，邊的標籤是關係類型的 `label`，只在選取節點的相連關係顯示；傳入 `expansion` 時（圖譜頁）聚焦集合以外變灰並播放展開的動態 |
 | `ui/graph-style.ts` | cytoscape 的樣式（見下方「節點與線」）：從 `theme.json` 的 CSS 變數讀出顏色（找不到實體類型時用 `graphFallback`、圓形與通用圖示），標籤加上背景色的外框與 `surface` 襯底、長標籤換行；系統切換淺色／深色時由 `GraphView.tsx` 重新套用（深色模式的實體色調亮）（[client-config.md](client-config.md)「`theme.json`」） |
 | `ui/entity-icons.ts`、`ui/EntityIcon.tsx` | 實體類型的固定圖示集（自畫的 24×24 SVG path，不使用圖示套件）：cytoscape 節點以 SVG data URI 當背景圖，圖例以同一份 path 畫 `<svg>`（`aria-hidden`，旁邊一律有類型名稱） |
-| `ui/EntityPanel.tsx` | 圖譜頁的右側面板：名稱、類型（圖示＋文字）、關聯數與文件數；「在問答中問」「只看它」；關係清單（方向、關係名稱、對方、出處數，點對方從它繼續展開）；出現的文件（點了以 `readSource()` 打開原文；經審核進來的文件可以「撤回此文件對它的核准」（只撤回這個實體與連帶的關係，小型外框按鈕），先列出會消失的實體與關係，見 [docs/extraction.md](extraction.md)「畫面」） |
+| `ui/EntityPanel.tsx` | 圖譜頁的右側面板（設計系統 v1，#240）：類型徽章（類型色 14% 淡底、`text` 字，前面是類型的形狀）、名稱、關聯／文件／出處數（`fonts.mono`）；「在問答中問」（主要按鈕）、「只看它」（次要按鈕）；關係清單（方向、關係名稱、對方、出處數，點對方從它繼續展開）；出現的文件（每份文件的標題下，提到它的原文片段放在 `reading` 紙面，實體名稱以 `markReading` 標出，見下方「出現的文件」；點標題以 `readSource()` 打開原文；經審核進來的文件可以「撤回此文件對它的核准」（只撤回這個實體與連帶的關係，小型外框按鈕），先列出會消失的實體與關係，見 [docs/extraction.md](extraction.md)「畫面」） |
 | `graph/search.ts`、`ui/EntitySearch.tsx` | 搜尋、類型篩選與「關聯最多」（純函式）；以名稱搜尋實體的輸入框（`combobox`＋`listbox`，圖譜上方與多跳路徑的兩端共用） |
 | `graph/expansion.ts`、`ui/motion.ts` | 逐步展開的狀態（純函式）；動態的時間與「減少動態效果」的判斷 |
 | `ui/PathPanel.tsx` | 多跳路徑（右側面板下方的可收合區塊，#199）：以搜尋框選起點與終點（起點預設為目前選取的實體），在圖上標示路徑、其他變灰，逐步列出每個關係與它的出處；找不到時顯示固定文字「找不到這兩個實體之間的路徑。」，不區分原因 |
@@ -112,6 +112,8 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
   - **在問答中問**：以 `askAboutEntity`（例如「{name}的相關資訊有哪些？」）填進問答頁的輸入框並切到問答頁，不送出。
   - **多跳路徑**：找到路徑時，路徑上的節點與線以外變灰（優先於逐步展開的變灰）；清除終點後恢復。
   - **文件數**：出現的文件（實體的出處段落所在的文件，依「出處優先顯示介面語言」挑選）的數目。
+  - **出處數**：依「出處優先顯示介面語言」挑選的出處段落數。
+  - **出現的文件**（#240）：出處依文件分組（`ui/graph-labels.ts` 的 `entityDocuments()`），每份文件列出提到實體的原文片段，片段中的主要名稱與各語言的顯示名稱以 `<mark>` 標出（不分大小寫，同一位置取最長的）。片段只來自 `readGraph()` 的出處，也就是目前身分看得到的段落；同一份文件中看不到的段落不出現，也不標示被省略（[docs/qa.md](qa.md)「不透露是否有看不到的文件」，#247）。`app/tests/graph/entity-documents.test.ts` 對每個身分以 `oracle.ts` 比對，並涵蓋文件有部分段落看不到的身分。
   - 全部在 `readGraph()` 的可見圖上計算，不新增查詢，所以搜尋、起點清單與面板只會有目前身分看得到的實體與關係。
   - **手機寬度**：改為單欄（搜尋 → 圖 → 面板），圖的高度較低；正式的手機設計之後另外處理。
 - **版面不重排**：版面只在讀入圖時排一次；展開、變灰、回到全部都只改 cytoscape 的 class，節點位置不動。切換身分或語言時圖本身改變，才重新排版。

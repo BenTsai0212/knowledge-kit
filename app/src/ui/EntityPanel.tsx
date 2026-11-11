@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { Fragment, useState, type CSSProperties } from "react";
 import { clientConfig } from "../client/load";
 import type { DocumentRetraction } from "../extraction/store";
 import type { Graph } from "../graph/read";
 import { relationCounts } from "../graph/search";
-import { EntityIcon } from "./EntityIcon";
-import { entityOptionLabel, entityTypeLabel, relatedEntities, relationTypeLabel, sourcesForLanguage } from "./graph-labels";
+import { entityDocuments, entityOptionLabel, entityTypeLabel, relatedEntities, relationTypeLabel, sourcesForLanguage } from "./graph-labels";
+import { entityTypeShape } from "./timeline-view";
 import { fill, strings } from "../client/i18n";
 
 interface Props {
@@ -24,8 +24,9 @@ interface Props {
   onRetract(retraction: DocumentRetraction): Promise<string | null>;
 }
 
-// 圖譜頁右側的實體面板（#199）：名稱、類型、關聯數與文件數；在問答中問、只看它；
-// 關係清單（方向、關係名稱、對方、出處數，點對方從它展開）；出現在哪些文件（點了打開原文）。全部只用可見圖。
+// 圖譜頁右側的實體面板（#199，設計系統 v1 #240）：類型徽章（類型色淡底＋形狀）、名稱、關聯／文件／出處數；
+// 在問答中問（主要按鈕）、只看它（次要按鈕）；關係清單（方向、關係名稱、對方、出處數，點對方從它展開）；
+// 出現的文件：每份文件一張 reading 紙面，列出提到它的原文片段並以 <mark> 標出名稱（點標題打開原文）。全部只用可見圖。
 // 經審核進來的文件可以「撤回此文件對它的核准」：先列出撤回後會從圖譜消失的實體與關係，確認後才撤回（ADR 0007）。
 // 名稱與搜尋結果相同，同名的實體加上第一個相關實體的名稱（#198）
 export function EntityPanel({ graph, entityId, language, onSelect, onShowOnly, onAskAbout, onOpenSource, retractions, onRetract }: Props) {
@@ -39,8 +40,8 @@ export function EntityPanel({ graph, entityId, language, onSelect, onShowOnly, o
   const name = entityOptionLabel(graph, entity, language);
   const type = clientConfig.knowledgeModel.entityTypes.find((t) => t.id === entity.type);
   const relations = new Map(graph.relations.map((r) => [r.id, r]));
-  // 同一份文件的段落只列一次，點了打開第一段；出處優先顯示介面語言（#36）
-  const documents = sourcesForLanguage(entity.sources, language).filter((p, i, all) => all.findIndex((q) => q.documentId === p.documentId) === i);
+  // 出處依文件分組，點標題打開第一段；出處優先顯示介面語言（#36）
+  const documents = entityDocuments(entity, language);
 
   const retractionOf = (documentId: string) => retractions.find((r) => r.documentId === documentId);
   const entityName = (id: string) => {
@@ -87,21 +88,23 @@ export function EntityPanel({ graph, entityId, language, onSelect, onShowOnly, o
 
   return (
     <section className="card entity" aria-label={name}>
-      <h2>{name}</h2>
-      <p className="entity-type">
-        {type !== undefined && <EntityIcon icon={type.icon} color={type.color} />}
+      <span className={`entity-badge shape-${entityTypeShape(entity.type)}`} style={{ "--type-color": type?.color ?? "var(--color-graphFallback)" } as CSSProperties}>
+        <span className="type-dot" aria-hidden="true" />
         {entityTypeLabel(entity.type, language)}
-      </p>
-      <p className="muted">
+      </span>
+      <h2>{name}</h2>
+      <p className="entity-counts muted">
         {fill(s.graphRelationCount, { count: relationCounts(graph).get(entityId) ?? 0 })}
         {" · "}
         {fill(s.graphDocumentCount, { count: documents.length })}
+        {" · "}
+        {fill(s.graphSourceCount, { count: sourcesForLanguage(entity.sources, language).length })}
       </p>
       <div className="entity-actions">
         <button type="button" onClick={() => onAskAbout(entityId)}>
           {s.graphAskAbout}
         </button>
-        <button type="button" onClick={() => onShowOnly(entityId)}>
+        <button type="button" className="secondary" onClick={() => onShowOnly(entityId)}>
           {s.graphShowOnly}
         </button>
       </div>
@@ -118,19 +121,24 @@ export function EntityPanel({ graph, entityId, language, onSelect, onShowOnly, o
         ))}
       </ul>
       <h3>{s.entitySources}</h3>
-      <ul>
-        {documents.map((p) => (
-          <li key={p.documentId}>
-            <button type="button" className="link" onClick={() => onOpenSource(p.id)}>
-              {p.documentTitle}
+      <ul className="entity-documents">
+        {documents.map((d) => (
+          <li key={d.documentId} className="entity-document">
+            <button type="button" className="link" onClick={() => onOpenSource(d.passages[0].id)}>
+              {d.documentTitle}
             </button>
-            {p.languageLabel !== undefined && <span className="badge">{p.languageLabel}</span>}
-            {retractionOf(p.documentId) !== undefined && confirming !== p.documentId && (
-              <button type="button" className="chip retract" onClick={() => (setConfirming(p.documentId), setError(null))}>
+            {d.languageLabel !== undefined && <span className="badge">{d.languageLabel}</span>}
+            {retractionOf(d.documentId) !== undefined && confirming !== d.documentId && (
+              <button type="button" className="chip retract" onClick={() => (setConfirming(d.documentId), setError(null))}>
                 {s.graphRetract}
               </button>
             )}
-            {confirming === p.documentId && confirmBox(retractionOf(p.documentId)!)}
+            {confirming === d.documentId && confirmBox(retractionOf(d.documentId)!)}
+            {d.passages.map((p) => (
+              <p key={p.id} className="entity-excerpt">
+                {p.segments.map((seg, i) => (seg.mark ? <mark key={i}>{seg.text}</mark> : <Fragment key={i}>{seg.text}</Fragment>))}
+              </p>
+            ))}
           </li>
         ))}
       </ul>

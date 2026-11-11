@@ -134,6 +134,34 @@ test("在問答中問：切到問答頁，問句填進輸入框，不送出", as
   await expect(page.locator("section.answer")).toHaveCount(0);
 });
 
+// 設計系統 v1（#240）：類型徽章、「在問答中問」是主要按鈕（「只看它」是次要按鈕）、
+// 出現的文件的原文片段在 reading 紙面上，片段中出現的實體名稱以 <mark> 標出
+test("實體面板：類型徽章、主要與次要按鈕、原文片段在紙面上並標出名稱", async ({ page }) => {
+  const data = await openGraph(page, nonReviewer?.id ?? reviewer?.id);
+  const found = pair(data);
+  test.skip(found === null, "圖中沒有名稱不重複的節點");
+  const name = data.labels[found!.a];
+  await searchAndPick(page, name);
+  const panel = page.getByRole("region", { name });
+  await expect(panel.locator(".entity-badge")).toBeVisible();
+  await expect(panel.getByRole("button", { name: s.graphAskAbout })).not.toHaveClass(/secondary/);
+  await expect(panel.getByRole("button", { name: s.graphShowOnly })).toHaveClass(/secondary/);
+  const excerpts = panel.locator(".entity-excerpt");
+  await expect(excerpts.first()).toBeVisible();
+  const paper = await excerpts.first().evaluate((el) => {
+    const probe = document.createElement("div");
+    probe.style.background = "var(--color-reading)";
+    document.body.append(probe);
+    const expected = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return { actual: getComputedStyle(el).backgroundColor, expected };
+  });
+  expect(paper.actual).toBe(paper.expected);
+  const texts = (await excerpts.allTextContents()).map((t) => t.toLowerCase());
+  const marks = (await excerpts.locator("mark").allTextContents()).map((t) => t.toLowerCase());
+  if (texts.some((t) => t.includes(name.toLowerCase()))) expect(marks).toContain(name.toLowerCase());
+});
+
 // 同名的實體（#198）：節點標籤、搜尋結果與面板標題都加上第一個相關實體的名稱，兩位分得出來
 const twins = access.roles.map((r) => ({ role: r.id, group: sameNameEntities(r.id, language)[0] })).find((x) => x.group !== undefined);
 

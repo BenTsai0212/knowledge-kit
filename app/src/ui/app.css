@@ -1018,18 +1018,69 @@ main.qa > .source .source-text mark.entering {
   white-space: nowrap;
 }
 
-.entity-type {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin: 0;
-}
-
 .entity-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.75rem;
+}
+
+/* 實體面板（#240，docs/design.md「實體顏色」）：類型徽章是類型色 14% 的淡底、text 字，前面是類型的形狀；
+   Dark 的形狀與圖譜節點一樣調亮。數量用 fonts.mono */
+.entity-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: var(--radius-pill);
+  padding: 0 0.6rem;
+  font-size: 0.8rem;
+  background: color-mix(in srgb, var(--type-color) 14%, var(--color-surface));
+  color: var(--color-text);
+}
+
+.entity-badge.shape-block .type-dot {
+  border-radius: 0.15rem;
+}
+
+.entity-badge.shape-tile .type-dot {
+  border-radius: 0.05rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  .entity-badge .type-dot {
+    background: color-mix(in srgb, var(--type-color) 75%, var(--color-text));
+  }
+}
+
+.entity h2 {
+  margin: 0.4rem 0 0.25rem;
+}
+
+.entity-counts {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+/* 「出現的文件」：每份文件的標題下，提到實體的原文片段放在 reading 紙面上，實體名稱用 markReading 標出（與原文面板相同） */
+.entity-documents {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.entity-excerpt {
+  margin: 0.35rem 0 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-medium);
+  background: var(--color-reading);
+  color: var(--color-readingText);
+}
+
+.entity-excerpt mark {
+  background-color: var(--color-markReading);
+  color: var(--color-readingText);
 }
 
 /* 「出現的文件」的撤回（ADR 0007）：小型的淺色外框按鈕，與文件標題的連結區分 */
