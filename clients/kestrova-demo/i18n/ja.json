@@ -117,6 +117,7 @@
   "uploadWriting": "アップロードしています…",
   "uploadAnother": "続けてアップロード",
   "timelineUploaded": "アップロード済み",
+  "timelineMentions": "言及",
   "extractTitle": "エンティティと関係の抽出",
   "extractRunning": "抽出中",
   "extractDone": "レビューに送信しました",

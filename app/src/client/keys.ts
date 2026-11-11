@@ -230,7 +230,7 @@ const uiStrings = {
   uploadPassageCount: "required", uploadSubmit: "required", uploadDone: "required", uploadGotoQa: "required",
   uploadGotoTimeline: "required", uploadErrors: "required", uploadDrop: "required", uploadClearFile: "required",
   uploadAudience: "required", listSeparator: "required", uploadConfirmTitle: "required", uploadBack: "required",
-  uploadShowAll: "required", uploadWriting: "required", uploadAnother: "required", timelineUploaded: "required",
+  uploadShowAll: "required", uploadWriting: "required", uploadAnother: "required", timelineUploaded: "required", timelineMentions: "required",
   extractTitle: "required", extractRunning: "required", extractDone: "required", extractEntities: "required",
   extractRelations: "required", extractDropped: "required", extractSkipped: "required",
   extractFailed: "required", extractNotRun: "required", extractRetry: "required", extractErrors: "required",

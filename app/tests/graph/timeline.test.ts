@@ -5,6 +5,7 @@ import { dataset } from "../../src/dataset/load";
 import { seedDataset } from "../../src/dataset/seed";
 import { openDatabase, type Database } from "../../src/db/database";
 import { readTimeline, type TimelineEntry } from "../../src/graph/timeline";
+import { timelineSections } from "../../src/ui/timeline-view";
 import { datasetSample } from "../db/dataset-sample";
 import { expectedVisible } from "../db/oracle";
 
@@ -55,6 +56,21 @@ describe("readTimeline 的權限", () => {
       for (const language of LANGUAGES) {
         const ids = (await readTimeline(db, id, { language })).flatMap((e) => e.passages.flatMap((p) => p.entityIds));
         expect(ids.filter((e) => !entities.has(e)), `${id} ${language}`).toEqual([]);
+      }
+    }
+  });
+
+  // 時間軸頁讀出全部文件後在畫面上篩選（#241：不符合的變淡、不移除）；符合的文件必須正好等於資料層篩選的結果，
+  // 而且篩選不會帶出不篩選時沒有的文件
+  it.each(IDENTITIES.map((id) => [String(id), id] as const))("%s：畫面篩選符合的文件，正好等於資料層篩選的文件", async (_name, id) => {
+    for (const language of LANGUAGES) {
+      const all = await readTimeline(db, id, { language });
+      for (const entityId of FILTERS.filter((e) => e !== undefined)) {
+        const { dated, undated } = timelineSections(all, entityId);
+        const rows = [...dated, ...undated];
+        expect(rows.map((r) => r.entry.documentId), `${language} ${entityId}`).toEqual(all.map((e) => e.documentId));
+        const matched = rows.filter((r) => r.matches).map((r) => r.entry.documentId);
+        expect(matched, `${language} ${entityId}`).toEqual((await readTimeline(db, id, { language, entityId })).map((e) => e.documentId));
       }
     }
   });

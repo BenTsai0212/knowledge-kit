@@ -85,7 +85,7 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
 | `graph/search.ts`、`ui/EntitySearch.tsx` | 搜尋、類型篩選與「關聯最多」（純函式）；以名稱搜尋實體的輸入框（`combobox`＋`listbox`，圖譜上方與多跳路徑的兩端共用） |
 | `graph/expansion.ts`、`ui/motion.ts` | 逐步展開的狀態（純函式）；動態的時間與「減少動態效果」的判斷 |
 | `ui/PathPanel.tsx` | 多跳路徑（右側面板下方的可收合區塊，#199）：以搜尋框選起點與終點（起點預設為目前選取的實體），在圖上標示路徑、其他變灰，逐步列出每個關係與它的出處；找不到時顯示固定文字「找不到這兩個實體之間的路徑。」，不區分原因 |
-| `ui/TimelinePage.tsx` | 時間軸：依日期由新到舊列出介面語言的文件與看得到的段落，可依實體篩選；日期直接顯示 `YYYY-MM-DD` 字串，沒有日期時顯示「未註明日期」；本次工作階段上傳的文件加上「上傳」標籤，從上傳頁跳過來時捲動到該文件並標示後淡出（`animationend` 時結束；減少動態效果時不淡出）（[docs/upload.md](upload.md)） |
+| `ui/TimelinePage.tsx`、`ui/timeline-view.ts` | 時間軸（#241，[docs/design.md](design.md)）：三欄格線（日期 `YYYY-MM-DD` 靠右、時間軸線與圓點、文件卡片），依日期由新到舊列出介面語言的文件與看得到的段落；沒有日期的文件放在最下方的「未註明日期」區。依實體篩選是一排晶片（「全部」＋實體，前面是類型的形狀與顏色，`aria-pressed`）：讀出全部文件後在畫面上篩選，不符合的文件降到 45% 不透明、圓點變灰，不移除（符合的文件與 `readTimeline()` 的 `entityId` 篩選相同，`app/tests/graph/timeline.test.ts` 檢查）。卡片列出標題、可見等級、語言、「提到」的實體（只有看得到的），段落旁是說法不同的標示（`PassageMarks.tsx`）；看不到的文件完全不出現，不顯示數量或任何痕跡。本次工作階段上傳的文件加上「上傳」標籤，從上傳頁跳過來時捲動到該文件並標示後淡出（`animationend` 時結束；減少動態效果時不淡出）（[docs/upload.md](upload.md)）。同一份文件的多語言版本合併成一張卡片尚未實作（#241 決定） |
 | `ui/graph-labels.ts` | 實體、類型、關係類型的顯示文字與相關實體；出處的語言（`sourcesForLanguage()`，見下方）；顯示名稱相同的實體（兩位林志明）加上第一個相關實體的名稱以便區分（`entityOptionLabel()`、`nodeLabels()`，見「限制」的同名實體） |
 
 - **節點與線**（#199）：

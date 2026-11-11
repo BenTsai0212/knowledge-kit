@@ -1108,17 +1108,134 @@ details.path summary {
   }
 }
 
+/* 時間軸（#241，docs/design.md）：依實體篩選的晶片一排，可換行；晶片的樣式沿用 button.chip */
+.timeline-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+/* 實體類型的形狀：人員圓形、部門圓角方形、專案小圓角方形（docs/design.md「實體顏色」） */
+.type-dot.shape-block {
+  border-radius: 0.15rem;
+}
+
+.type-dot.shape-tile {
+  border-radius: 0.05rem;
+}
+
+/* 三欄格線：日期（靠右）、2px 時間軸線與圓點、文件卡片。列之間不留空隙，時間軸線連成一條 */
 .timeline {
   display: grid;
-  gap: 0.75rem;
   list-style: none;
   padding: 0;
   margin: 1rem 0 0;
 }
 
-.timeline time {
+.timeline-entry {
+  display: grid;
+  grid-template-columns: 6.5rem 1.5rem minmax(0, 1fr);
+  column-gap: 0.5rem;
+}
+
+.timeline-date {
+  font-family: var(--font-mono);
   color: var(--color-textMuted);
-  margin-right: 0.5rem;
+  text-align: right;
+  font-size: 0.85rem;
+  padding-top: 1.1rem;
+  transition: opacity var(--motion-base) var(--ease-enter);
+}
+
+.timeline-rail {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.timeline-rail::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-border);
+}
+
+.timeline-entry:first-child .timeline-rail::before {
+  top: 1.35rem;
+}
+
+.timeline-entry:last-child .timeline-rail::before {
+  bottom: calc(100% - 1.35rem);
+}
+
+.timeline-dot {
+  position: relative;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-top: 1rem;
+  border-radius: 50%;
+  border: 2px solid var(--color-surface);
+  background: var(--color-primary);
+  transition: background-color var(--motion-base) var(--ease-enter);
+}
+
+.timeline-card {
+  min-width: 0;
+  margin-bottom: 0.75rem;
+  overflow-wrap: anywhere;
+  transition: opacity var(--motion-base) var(--ease-enter);
+}
+
+.timeline-card h3 {
+  margin: 0;
+}
+
+/* 篩選後不符合的文件：45% 不透明、圓點變灰，不從清單移除 */
+.timeline-entry.dimmed .timeline-card {
+  opacity: 0.45;
+}
+
+.timeline-entry.dimmed .timeline-date {
+  opacity: 0.45;
+}
+
+.timeline-entry.dimmed .timeline-dot {
+  background: var(--color-graphFallback);
+}
+
+.timeline-meta,
+.timeline-mentions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  margin: 0.4rem 0 0;
+}
+
+.timeline-mention {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.timeline-undated h2 {
+  font-size: 1rem;
+  color: var(--color-textMuted);
+  margin: 1.5rem 0 0;
+}
+
+/* 手機寬度：日期欄變窄，沒有橫向捲動 */
+@media (max-width: 640px) {
+  .timeline-entry {
+    grid-template-columns: 4.75rem 1rem minmax(0, 1fr);
+    column-gap: 0.35rem;
+  }
+
+  .timeline-date {
+    font-size: 0.75rem;
+  }
 }
 
 .upload {
@@ -1182,7 +1299,7 @@ button.secondary {
 }
 
 /* 跳到新文件時的標示（#42）：框線加淡色背景維持約 1 秒，再於約 1.5 秒內淡出；animationend 時由程式取消 */
-.timeline .flash {
+.timeline .flash .timeline-card {
   animation: timeline-flash 2.5s ease-out forwards;
 }
 
@@ -1200,7 +1317,7 @@ button.secondary {
 
 /* 減少動態效果：不播放淡出，框線顯示一段時間後直接取消（steps 讓最後一刻才跳到結束狀態，animationend 照樣觸發） */
 @media (prefers-reduced-motion: reduce) {
-  .timeline .flash {
+  .timeline .flash .timeline-card {
     animation: timeline-flash-static 2s steps(1, end) forwards;
   }
 }
