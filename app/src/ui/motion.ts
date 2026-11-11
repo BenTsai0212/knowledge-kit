@@ -32,6 +32,8 @@ export const EASING = {
   exit: "cubic-bezier(.4,0,1,1)",
   // settle 專用
   spring: "cubic-bezier(.3,1.5,.5,1)",
+  // progress 專用：依實際進度填滿（評測題數等）
+  linear: "linear",
 } as const;
 
 export const motionDuration = (reduced: boolean, ms: number): number => (reduced ? 0 : ms);

@@ -148,7 +148,7 @@ Light 與 Dark 共用同一套時間與曲線。
 | progress | 實際時間 | `linear` | 下載、萃取批次、評測題數、路徑脈衝（每跳 300ms）、toast 倒數 |
 | stagger | 60／80ms | — | 清單 60ms、回答的句子 80ms；超過 6 項後不再延遲 |
 
-退場一律用 `cubic-bezier(.4,0,1,1)`。所有時間經過 `app/src/ui/motion.ts` 的 `motionDuration()`。
+退場一律用 `cubic-bezier(.4,0,1,1)`。所有時間經過 `app/src/ui/motion.ts` 的 `motionDuration()`。progress 的 `linear` 是 `--ease-linear`（#244）。
 
 ### 全互動對照表
 

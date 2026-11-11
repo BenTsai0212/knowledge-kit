@@ -131,3 +131,29 @@ export function createEvalDatabases<D extends { close(): Promise<void> }>(open: 
     },
   };
 }
+
+// 每題的結果（#244）：任一指標未通過、有滲漏或錯誤是「不正確」；全部通過時，預期拒答的題目是「正確拒答」
+export type Outcome = "correct" | "incorrect" | "refused";
+
+export function outcome(q: EvalQuestion, result: QuestionResult, mode: AnswerMode): Outcome {
+  const v = verdicts(result, mode);
+  const pass = result.score.error === null && !v.leaked && v.citation !== false && v.answer !== false && v.refusal !== false;
+  if (!pass) return "incorrect";
+  return q.expect === "refusal" ? "refused" : "correct";
+}
+
+// 頁首的題庫摘要：題數、身分數、類別數（取自題庫）
+export function bankSummary(questions: EvalQuestion[]) {
+  return { questions: questions.length, roles: new Set(questions.map((q) => q.role)).size, categories: new Set(questions.map((q) => q.category)).size };
+}
+
+// 評測中的進度格（#244）：每組 × 適用的題目各一格，依執行順序（先設定 A 再設定 B）；還沒回來的是 null
+export function progressCells(run: EvalRun, applicable: EvalQuestion[]): (Outcome | null)[] {
+  return run.sets.flatMap((set) => {
+    const byId = new Map(set.results.map((r) => [r.question, r]));
+    return applicable.map((q) => {
+      const r = byId.get(q.id);
+      return r === undefined ? null : outcome(q, r, run.mode);
+    });
+  });
+}
