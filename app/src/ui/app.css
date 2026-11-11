@@ -65,6 +65,61 @@ h3 {
   margin: 0;
 }
 
+/* 組合字標（#226）：icon＋「Knowledge Kit」（display 字體）＋分隔線＋客戶名稱；導覽寬度不夠時客戶名稱換到下一行 */
+.brand {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  font-size: 1rem;
+}
+
+.brand__wordmark {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.brand__client {
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--color-border);
+  color: var(--color-textMuted);
+  font-weight: 500;
+}
+
+/* 產品 icon（docs/design.md「產品 icon（K 晶格）」）：顏色只讀 token；證據節點讀 mark，客戶不能改 */
+.product-icon {
+  flex: none;
+}
+
+.product-icon__tile {
+  fill: var(--color-surface);
+  stroke: var(--color-border);
+}
+
+.product-icon__line {
+  fill: none;
+  stroke: var(--color-text);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.product-icon__joint {
+  fill: var(--color-text);
+}
+
+.product-icon__primary {
+  fill: var(--color-primary);
+}
+
+/* 描邊用 markText：Light 是墨色（與設計稿相同），Dark 是淡琥珀，接近設計稿的不描邊 */
+.product-icon__evidence {
+  fill: var(--color-mark);
+  stroke: var(--color-markText);
+}
+
 .toolbar select {
   max-width: 100%;
 }

@@ -100,6 +100,12 @@ Light 來自提案 A「墨與螢光」，Dark 來自提案 B「晶格」。對�
 - 不要：漸層、發光、旋轉翻轉、拉長、把證據節點改成主色。
 - 組合字標：icon＋「Knowledge Kit」（`fonts.display`）＋分隔線＋客戶名稱。
 
+實作（#226）：
+
+- 頁首（`app/src/ui/Sidebar.tsx`）的組合字標用 `app/src/ui/ProductIcon.tsx` 繪製：磚塊讀 `surface`／`border`，線條與交點讀 `text`，下方節點讀 `primary`，證據節點讀 `mark`、描邊讀 `markText`（Light 是墨色；Dark 是淡琥珀，接近原始檔的不描邊）。icon 是裝飾（`aria-hidden`），產品名稱是 i18n 的 `productName`，客戶名稱取自 `client.json` 的 `displayName`。
+- 32px 以下（含）元件改畫簡化版；簡化版的證據節點也讀 `mark`（原始檔的 `#E8B800` 不是 token）。
+- favicon 是 `app/public/favicon.svg`：`knowledge-kit-16.svg` 的形狀與 Light 顏色，以 SVG 內的 `@media (prefers-color-scheme: dark)` 改用 Dark 的 `surface`、`border`、`text`、`mark`。不隨客戶換色（16px 版本沒有主色節點）。`app/src/ui/product-icon.test.ts` 檢查形狀與顏色和原始檔一致。
+
 ## 動態
 
 ### 原則

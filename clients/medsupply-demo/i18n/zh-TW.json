@@ -11,6 +11,7 @@
     "integrity": "下載的語意模型與登記的檔案不符，為了安全沒有使用。跨語言與換句話說的問題可能找不到相關段落。",
     "init": "語意模型無法在這個瀏覽器啟動。跨語言與換句話說的問題可能找不到相關段落。"
   },
+  "productName": "Knowledge Kit",
   "fictionalData": "虛構資料",
   "demoPermissions": "展示用權限",
   "identity": "身分",

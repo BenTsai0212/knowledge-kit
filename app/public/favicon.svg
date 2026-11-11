@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="16" height="16">
+  <!-- docs/images/icon/knowledge-kit-16.svg 加上 Dark：顏色依 prefers-color-scheme 切換（#226） -->
+  <style>
+    .tile { fill: #FFFFFF; stroke: #DDE1E4; }
+    .line { stroke: #14171A; }
+    .evidence { fill: #E8B800; }
+    @media (prefers-color-scheme: dark) {
+      .tile { fill: #111621; stroke: #253044; }
+      .line { stroke: #E7ECF5; }
+      .evidence { fill: #FFB547; }
+    }
+  </style>
+  <rect class="tile" width="48" height="48" rx="11" stroke-width="2"/>
+  <path class="line" d="M17 12v24M17 24 32 13.5M17 24l15 10.5" fill="none" stroke-width="5.5" stroke-linecap="round"/>
+  <circle class="evidence" cx="32" cy="13.5" r="5.5"/>
+</svg>

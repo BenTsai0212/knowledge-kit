@@ -305,6 +305,8 @@ export interface UiStrings {
   // 語意向量 provider 準備失敗、改用 keyword-hash 時的提示（問答頁與評測台）
   retrievalFallbackTitle: string;
   retrievalFallback: Record<FallbackReason, string>;
+  // 頁首的產品字標（#226）：產品名稱，各語言相同
+  productName: string;
   // 標示：資料是虛構的、身分切換只是展示權限
   fictionalData: string;
   demoPermissions: string;
