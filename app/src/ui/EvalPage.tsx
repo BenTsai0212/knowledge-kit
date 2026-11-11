@@ -14,6 +14,7 @@ import { apiTransport } from "../qa/api";
 import { preparesModel, type ActiveProvider } from "../retrieval/providers";
 import { openRetriever } from "../retrieval/retrieve";
 import { createEvalDatabases, differs, effectiveForm, evalReport, parseReportSource, parseSettings, settingsForm, setSummary, TOP_K_MAX, verdicts, type SettingsForm } from "./eval-helpers";
+import { FilePicker } from "./FilePicker";
 import { Notice } from "./Notice";
 import { RetrievalNotice } from "./RetrievalNotice";
 import type { ProviderStatus } from "./retrieval-notice";
@@ -68,6 +69,7 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
   const [reportSet, setReportSet] = useState(0);
   const [previous, setPrevious] = useState<ReportSource | null>(null);
   const [previousInvalid, setPreviousInvalid] = useState(false);
+  const [previousName, setPreviousName] = useState<string | null>(null);
   const dbs = useRef(createEvalDatabases(() => openEvalDatabase(clientConfig, dataset)));
   const ctx = useRef<EvalContext | null>(null);
   // 確認視窗估算時的設定；開始後以同一組執行
@@ -171,6 +173,7 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
   async function choosePrevious(file: File | undefined) {
     const parsed = file === undefined ? null : parseReportSource(await file.text());
     setPrevious(parsed);
+    setPreviousName(file?.name ?? null);
     setPreviousInvalid(file !== undefined && parsed === null);
   }
 
@@ -325,10 +328,13 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
                 </select>
               </label>
             )}
-            <label>
-              {s.evalReport.previous}
-              <input type="file" accept=".json,application/json" onChange={(e) => void choosePrevious(e.target.files?.[0])} />
-            </label>
+            <FilePicker
+              label={s.evalReport.previous}
+              accept=".json,application/json"
+              onChange={(e) => void choosePrevious(e.target.files?.[0])}
+              button={s.fileChoose}
+              status={previousName ?? <span className="muted">{s.fileNone}</span>}
+            />
             {previousInvalid && <p className="error">{s.evalReport.previousInvalid}</p>}
             <div className="dialog-actions">
               <button type="button" className="secondary" onClick={() => void downloadReport()}>

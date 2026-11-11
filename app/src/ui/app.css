@@ -359,13 +359,97 @@ li > button.link {
   vertical-align: top;
 }
 
-input,
+/* 表單元件（#239）：底色與文字一律用主題色，不用瀏覽器的系統控制項配色（Dark 的灰底、Light 下拉選單的淺灰）。
+   核取方塊與單選鈕保留原生外觀，只換強調色。焦點框沿用最上方共用的 :focus-visible */
+input:not([type="checkbox"], [type="radio"]),
 select,
 textarea {
   font: inherit;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-medium);
   padding: 0.25rem 0.5rem;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-textMuted);
+  opacity: 1;
+}
+
+/* 停用時只降低不透明度，不換成灰底 */
+:is(input, select, textarea):disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--color-primary);
+}
+
+/* 下拉選單自繪箭頭：兩個斜向漸層組成的 V，顏色讀 textMuted，Light／Dark 一致 */
+select {
+  appearance: none;
+  padding-right: 1.75rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--color-textMuted) 50%),
+    linear-gradient(135deg, var(--color-textMuted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 0.95rem) 55%,
+    calc(100% - 0.6rem) 55%;
+  background-size: 0.35rem 0.35rem;
+  background-repeat: no-repeat;
+}
+
+/* 視覺上隱藏但仍可聚焦、可被輔助技術讀到（例如檔案選擇的原生 input） */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* 檔案選擇（FilePicker.tsx）：原生 input 隱藏，按鈕外觀與次要按鈕相同；鍵盤聚焦 input 時焦點框畫在按鈕上 */
+.file-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* 加上 div 提高權重：上傳頁的 .upload label 寫在後面 */
+div.file-picker > label {
+  position: relative;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.file-picker__button {
+  cursor: pointer;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  padding: 0.25rem 0.75rem;
+}
+
+.file-picker input:focus-visible + .file-picker__button {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.file-picker input:disabled + .file-picker__button {
+  cursor: default;
+  opacity: 0.5;
 }
 
 /* 預設問題：一行，橫向捲動；依情境分組 */

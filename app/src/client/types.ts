@@ -384,6 +384,9 @@ export interface UiStrings {
   // 上傳內容只存在瀏覽器記憶體
   uploadEphemeral: string;
   uploadFile: string;
+  // 自訂的檔案選擇鈕（FilePicker.tsx）：按鈕文字與尚未選檔時的說明
+  fileChoose: string;
+  fileNone: string;
   uploadPaste: string;
   uploadPastePlaceholder: string;
   uploadDocTitle: string;
