@@ -11,6 +11,8 @@ import type { ConflictState } from "../conflicts/run";
 import type { ExtractionState } from "../extraction/run";
 import { LevelBadge, ProjectBadge } from "./AccessBadges";
 import { ConflictStatus } from "./ConflictStatus";
+import { focusIdentity } from "./empty-state";
+import { EmptyState } from "./EmptyState";
 import { ExtractionStatus } from "./ExtractionStatus";
 import { FilePicker } from "./FilePicker";
 import { Notice } from "./Notice";
@@ -90,7 +92,8 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
     if (confirm === null && d.open) d.close();
   }, [confirm]);
 
-  if (!role?.canUpload) return <p className="card muted">{s.uploadNotAllowed}</p>;
+  if (!role?.canUpload)
+    return <EmptyState icon="upload" title={s.uploadNotAllowed} reason={s.uploadNotAllowedReason} actions={[{ label: s.switchIdentity, onClick: focusIdentity }]} />;
 
   const audience = audienceRoles(access, visibility, project === "" ? null : project)
     .map((r) => r.label[language])

@@ -6,6 +6,8 @@ import { ALL, expand, keepVisible as keepVisiblePath, only, selectedOf, type Exp
 import { shortestPath } from "../graph/path";
 import { readGraph, type Graph } from "../graph/read";
 import { excludedEntities, topConnected } from "../graph/search";
+import { focusIdentity } from "./empty-state";
+import { EmptyState } from "./EmptyState";
 import { EntityIcon } from "./EntityIcon";
 import { EntityPanel } from "./EntityPanel";
 import { EntitySearch } from "./EntitySearch";
@@ -96,7 +98,9 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
   const excluded = useMemo(() => (graph === null ? new Set<string>() : excludedEntities(graph, filter)), [graph, filter]);
 
   if (graph === null) return <p className="card muted">{s.loading}</p>;
-  if (graph.entities.length === 0) return <p className="card muted">{s.graphEmpty}</p>;
+  // 原因只說明目前身分的資料，不暗示有看不到的實體；切換身分旁不說明會多看到什麼（#245 決定）
+  if (graph.entities.length === 0)
+    return <EmptyState icon="graph" title={s.graphEmpty} reason={s.graphEmptyReason} actions={[{ label: s.switchIdentity, onClick: focusIdentity }]} />;
 
   const onExpand = (id: string) => setExpansion((current) => expand(graph, current, id));
   // 與搜尋結果、節點標籤相同：同名的實體加上第一個相關實體的名稱（#198）

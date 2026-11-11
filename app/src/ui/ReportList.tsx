@@ -9,6 +9,7 @@ import { ReviewError } from "../extraction/store";
 import type { Graph } from "../graph/read";
 import { splitCitations } from "../qa/citations";
 import { resolveReport, type AnswerReport, type ReportResolution } from "../reports/store";
+import { EmptyState } from "./EmptyState";
 import { entityOptionLabel } from "./graph-labels";
 import { Notice } from "./Notice";
 
@@ -52,7 +53,7 @@ export function ReportList({ db, identity, language, reports, graph, onOpenSourc
     }
   }
 
-  if (reports.length === 0) return <p className="card muted">{s.reportsEmpty}</p>;
+  if (reports.length === 0) return <EmptyState icon="report" title={s.reportsEmpty} reason={s.reportsEmptyReason} />;
   return (
     <>
       {reports.map((r) => {
@@ -64,32 +65,37 @@ export function ReportList({ db, identity, language, reports, graph, onOpenSourc
                 {error.text}
               </Notice>
             )}
+            {/* 卡片（#245）：原因晶片 → 回報者與日期 → 問題 → 當時的回答 → 說明 → 回答提到 → 撤回提示與處理按鈕 */}
+            <p className="report-chips">
+              <span className="badge warning">{s.reportCategories[r.category]}</span>
+              {r.resolution !== null && <span className="badge">{s.reportResolutions[r.resolution]}</span>}
+            </p>
             <p className="muted">
               {fill(s.reportMeta, { name: roleLabel(r.reportedBy, language), date: dateFormat.format(new Date(r.reportedAt)) })}
             </p>
             <h2>{r.question}</h2>
-            <p>
-              <span className="badge warning">{s.reportCategories[r.category]}</span>{" "}
-              {r.resolution !== null && <span className="badge">{s.reportResolutions[r.resolution]}</span>}
-            </p>
+            <div role="group" aria-label={s.reportAnswer} className={r.answer === null ? "report-answer refusal" : "report-answer"}>
+              <p className="muted">{s.reportAnswer}</p>
+              {r.answer === null ? (
+                // 拒答：與問答相同的虛線框
+                <p>{s.reportRefusal}</p>
+              ) : (
+                <p className="answer-text">
+                  {/* 引用編號對應送出的段落（與問答相同的 numbering）；標號用證據色系（button.citation） */}
+                  {splitCitations(r.answer).map((segment, i) => {
+                    if ("text" in segment) return <span key={i}>{segment.text}</span>;
+                    const id = r.sentPassageIds[segment.citation - 1];
+                    if (id === undefined) return <span key={i}>[{segment.citation}]</span>;
+                    return (
+                      <button key={i} type="button" className="citation" title={s.openSource} onClick={() => onOpenSource(id)}>
+                        {segment.citation}
+                      </button>
+                    );
+                  })}
+                </p>
+              )}
+            </div>
             {r.note !== null && <p className="report-note">{r.note}</p>}
-            {r.answer === null ? (
-              <p className="muted">{s.reportRefusal}</p>
-            ) : (
-              <p className="answer-text">
-                {/* 引用編號對應送出的段落（與問答相同的 numbering） */}
-                {splitCitations(r.answer).map((segment, i) => {
-                  if ("text" in segment) return <span key={i}>{segment.text}</span>;
-                  const id = r.sentPassageIds[segment.citation - 1];
-                  if (id === undefined) return <span key={i}>[{segment.citation}]</span>;
-                  return (
-                    <button key={i} type="button" className="citation" title={s.openSource} onClick={() => onOpenSource(id)}>
-                      {segment.citation}
-                    </button>
-                  );
-                })}
-              </p>
-            )}
             {entities.length > 0 && (
               <div className="mentions" role="group" aria-label={s.answerMentions}>
                 <p className="muted">{s.answerMentions}</p>

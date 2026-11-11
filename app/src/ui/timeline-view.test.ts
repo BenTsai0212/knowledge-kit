@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TimelineEntry } from "../graph/timeline";
 import css from "./app.css?raw";
-import { entityTypeShape, mentionedEntityIds, timelineSections } from "./timeline-view";
+import { entityTypeShape, mentionedEntityIds, timelineEmptyKind, timelineSections } from "./timeline-view";
 
 const entry = (documentId: string, date: string | null, passages: string[][]): TimelineEntry => ({
   documentId,
@@ -33,6 +33,14 @@ describe("時間軸的區段與篩選", () => {
     expect(filtered.dated.map((r) => r.entry.documentId)).toEqual(all.dated.map((r) => r.entry.documentId));
     expect(filtered.dated.map((r) => r.matches)).toEqual([true, false]);
     expect(filtered.undated.map((r) => r.matches)).toEqual([true]);
+  });
+
+  it("空狀態（#245）：沒有文件、篩選後沒有符合的文件（回到全部），有符合的文件時不是空狀態", () => {
+    expect(timelineEmptyKind(timelineSections([], null), null)).toBe("none");
+    expect(timelineEmptyKind(timelineSections([], "a"), "a")).toBe("none");
+    expect(timelineEmptyKind(timelineSections(entries, "z"), "z")).toBe("filtered");
+    expect(timelineEmptyKind(timelineSections(entries, "c"), "c")).toBeNull();
+    expect(timelineEmptyKind(timelineSections(entries, null), null)).toBeNull();
   });
 
   it("實體類型的形狀：人員圓形、部門（team）圓角方形、專案小圓角方形", () => {
