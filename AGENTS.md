@@ -38,7 +38,7 @@ Node 22 以上，先 `npm install`（CI 用 `npm ci`）。CI 的 job 見 `docs/t
 
 - 實作一張 Issue：`/work-on-issue <編號>`，依 `docs/workflow/agent-workflow.md`。
 - 建立新客戶的 demo：`/new-client <Issue 編號>`（Issue 用「新客戶 demo」範本建立），依 `docs/playbook/new-client-setup.md` 在 `clients/<名稱>/` 建立，三個 ⏸ 檢查點停下等 `## 決定`。
-- 一張 Issue 一條分支（`feat/`、`fix/`、`docs/`、`chore/`、`ci/`），一個 PR，目標 400 行內；完成且無合併後待辦寫 `Closes #N`，否則寫 `Refs #N`；依 PR 範本填寫。
+- 一張 Issue 一條分支（`feat/`、`fix/`、`docs/`、`chore/`、`ci/`、`design/`），一個 PR，目標 400 行內；完成且無合併後待辦寫 `Closes #N`，否則寫 `Refs #N`；依 PR 範本填寫。`design/` 只放設計規格與素材、不改程式〔#223 決定者指定設計用獨立分支類別｜設計改由其他流程管理時〕。
 - 審查修正以 PR 留言＋`changes-requested` 提出，用同一個 `/work-on-issue <Issue 編號>` 處理。
 - 不修改其他人或其他 agent 的分支與 PR。
 

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="Knowledge Kit">
+  <path d="M17 12v24M17 24 32 13.5M17 24l15 10.5" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="17" cy="24" r="3.5" fill="currentColor"/>
+  <circle cx="32" cy="34.5" r="4.5" fill="currentColor"/>
+  <circle cx="32" cy="13.5" r="4" fill="none" stroke="currentColor" stroke-width="2.5"/>
+</svg>

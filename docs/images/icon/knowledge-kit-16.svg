@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="16" height="16" role="img" aria-label="Knowledge Kit">
+  <rect width="48" height="48" rx="11" fill="#FFFFFF" stroke="#DDE1E4" stroke-width="2"/>
+  <path d="M17 12v24M17 24 32 13.5M17 24l15 10.5" fill="none" stroke="#14171A" stroke-width="5.5" stroke-linecap="round"/>
+  <circle cx="32" cy="13.5" r="5.5" fill="#E8B800"/>
+</svg>
