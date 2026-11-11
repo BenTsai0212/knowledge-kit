@@ -14,6 +14,8 @@ interface Props {
   turns: readonly Turn[];
   canUpload: boolean;
   onOpenSource(passageId: string): void;
+  // 目前在原文面板中的段落（#225）
+  openPassage: string | null;
   onGotoUpload(): void;
   onOpenEntity(graph: Graph, entityId: string): void;
   // 目前在右側實體面板中的實體（#198）
@@ -23,7 +25,7 @@ interface Props {
 }
 
 // 問答依序往下累積（#195）；新的一題出現時捲到該題
-export function Conversation({ language, turns, canUpload, onOpenSource, onGotoUpload, onOpenEntity, openEntity, onReport }: Props) {
+export function Conversation({ language, turns, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport }: Props) {
   const s = strings(language);
   const latest = turns.at(-1)?.id;
   const latestRef = useRef<HTMLElement>(null);
@@ -46,6 +48,7 @@ export function Conversation({ language, turns, canUpload, onOpenSource, onGotoU
             state={turn}
             canUpload={canUpload}
             onOpenSource={onOpenSource}
+            openPassage={openPassage}
             onGotoUpload={onGotoUpload}
             onOpenEntity={onOpenEntity}
             openEntity={openEntity}

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { clientConfig } from "../client/load";
 import { sources, stripComments } from "../client/source-scan";
 import design from "../../../docs/design.md?raw";
+import checkClient from "../../../scripts/check-client.mjs?raw";
 import css from "./app.css?raw";
 import { graphStyle } from "./graph-style";
 import { DARK_SCHEME, themeStyleSheet, themeVariables, watchColorScheme } from "./theme";
@@ -23,7 +24,7 @@ const NAMED_COLOR = new RegExp(`["'\`](?:${COLOR_NAMES.join("|")})["'\`]`, "i");
 const COLOR_PROPERTY = /^(?:--[\w-]+|color|background(?:-color)?|border(?:-(?:top|right|bottom|left))?(?:-color)?|outline(?:-color)?|box-shadow|text-shadow|text-decoration(?:-color)?|caret-color|accent-color|fill|stroke)$/;
 
 // 顏色屬性的值去掉 var(...)、color-mix(in srgb, ...) 之後，只能剩下這些字
-const ALLOWED_TOKEN = /^(?:-?\d*\.?\d+(?:px|rem|em|%|s)?|transparent|currentColor|inherit|none|solid|dashed|dotted|underline)$/i;
+const ALLOWED_TOKEN = /^(?:-?\d*\.?\d+(?:px|rem|em|%|s)?|transparent|currentColor|inherit|none|inset|solid|dashed|dotted|underline)$/i;
 
 function declarations(text: string): Array<[string, string]> {
   return [...text.matchAll(/([-\w]+)\s*:\s*([^;{}]+);/g)].map((m) => [m[1], m[2].trim()]);
@@ -116,6 +117,79 @@ describe("設計系統 v1", () => {
   it("原文螢光放在亮色紙面的組合上（readingText 在 markReading 上，check:client 檢查對比）", () => {
     const block = cssText.match(/\.source \.highlight mark\s*\{([^}]*)\}/)?.[1];
     expect(Object.fromEntries(declarations(`${block};`))).toMatchObject({ background: "var(--color-markReading)", color: "var(--color-readingText)" });
+  });
+
+  // 深色模式的 app.css 規則（@media (prefers-color-scheme: dark) { … } 的內容）
+  const darkStart = cssText.indexOf(`@media ${DARK_SCHEME} {`);
+  const darkCss = (() => {
+    let depth = 0;
+    for (let i = cssText.indexOf("{", darkStart); i < cssText.length; i++) {
+      if (cssText[i] === "{") depth++;
+      if (cssText[i] === "}" && --depth === 0) return cssText.slice(cssText.indexOf("{", darkStart) + 1, i);
+    }
+    return "";
+  })();
+  const lightCss = darkStart < 0 ? cssText : cssText.replace(`@media ${DARK_SCHEME} {${darkCss}}`, "");
+  const rule = (text: string, selector: string) => {
+    const block = text.match(new RegExp(`(?:^|[\\n}])\\s*${selector.replace(/[.[\]"=:()]/g, "\\$&")}\\s*\\{([^}]*)\\}`))?.[1];
+    expect(block, selector).toBeDefined();
+    return Object.fromEntries(declarations(`${block};`));
+  };
+  const mix = (a: string, percent: number, b: string) => `color-mix(in srgb, var(--color-${a}) ${percent}%, var(--color-${b}))`;
+  // 比例以 check:client 的 CITATION_MIX 為準（對比由它檢查）
+  const ratio = (key: string) => Number(checkClient.match(new RegExp(`CITATION_MIX = \\{[^}]*\\b${key}: (\\d+)`))?.[1]);
+
+  it("引用標號的三個狀態只用證據色系，內框與 Dark 的 hover 色比例與 check:client 相同", () => {
+    expect(ratio("lightBorder")).toBeGreaterThan(0);
+    const citation = 'button.citation, button.citation:hover, button.citation[aria-pressed="true"]'.split(", ");
+    for (const selector of citation) {
+      for (const value of [...Object.values(rule(lightCss, selector)), ...Object.values(rule(darkCss, selector))]) {
+        expect(value).not.toContain("--color-primary");
+      }
+    }
+    expect(rule(lightCss, "button.citation")).toMatchObject({
+      "font-family": "var(--font-mono)",
+      background: "var(--color-markSoft)",
+      color: "var(--color-markText)",
+      "box-shadow": `inset 0 0 0 1px ${mix("mark", ratio("lightBorder"), "markText")}`,
+    });
+    expect(rule(lightCss, "button.citation:hover")).toMatchObject({
+      background: "var(--color-mark)",
+      "box-shadow": `inset 0 0 0 1px ${mix("mark", ratio("lightHoverBorder"), "markText")}`,
+    });
+    expect(rule(lightCss, 'button.citation[aria-pressed="true"]')).toMatchObject({ background: "var(--color-text)", color: "var(--color-mark)" });
+    expect(rule(darkCss, "button.citation")).toEqual({ "box-shadow": `inset 0 0 0 1px ${mix("mark", ratio("darkBorder"), "markSoft")}` });
+    expect(rule(darkCss, "button.citation:hover")).toEqual({
+      background: mix("mark", ratio("darkHoverBackground"), "markSoft"),
+      color: mix("markReading", ratio("darkHoverText"), "text"),
+      "box-shadow": "inset 0 0 0 1px var(--color-mark)",
+    });
+    expect(rule(darkCss, 'button.citation[aria-pressed="true"]')).toEqual({ background: "var(--color-mark)", color: "var(--color-markSoft)" });
+  });
+
+  it("原文放在 reading 紙面上", () => {
+    expect(rule(lightCss, ".source-text")).toMatchObject({ background: "var(--color-reading)", color: "var(--color-readingText)" });
+  });
+
+  it("說法不同的標示只用 conflict 系列（conflict 在 surface 上、conflictText 在 conflictSoft 上）", () => {
+    expect(rule(lightCss, ".passage-marks .badge")).toMatchObject({
+      background: "var(--color-conflictSoft)",
+      "border-color": "var(--color-conflict)",
+      color: "var(--color-conflictText)",
+    });
+    expect(rule(lightCss, ".conflict-summary")).toMatchObject({ color: "var(--color-conflict)" });
+    expect(rule(lightCss, ".conflict-side")).toMatchObject({ border: "1px solid var(--color-conflict)" });
+    // 段落旁的標示不再個別用警告色
+    expect(cssText).not.toMatch(/\.mark-(?:conflict|superseded_by|supersedes)\b/);
+  });
+
+  it("所有可聚焦元件有 :focus-visible 焦點框（2px focus、外推 2px），沒有規則取消焦點框", () => {
+    expect(rule(lightCss, ":focus-visible")).toEqual({ outline: "2px solid var(--color-focus)", "outline-offset": "2px" });
+    expect(cssText).not.toMatch(/outline(?:-style)?\s*:\s*(?:none|0)\s*;/);
+  });
+
+  it("--font-mono、--font-display 由 theme.json 提供", () => {
+    expect(themeVariables(theme)).toMatchObject({ "--font-mono": theme.fonts.mono, "--font-display": theme.fonts.display });
   });
 });
 

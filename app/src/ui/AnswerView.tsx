@@ -34,6 +34,8 @@ interface Props {
   // 目前身分能上傳、且上傳頁籤看得到時，拒答下方多一項上傳與「到上傳頁」按鈕
   canUpload: boolean;
   onOpenSource(passageId: string): void;
+  // 目前在原文面板中的段落（#225）：引用標號顯示「選取」狀態
+  openPassage: string | null;
   onGotoUpload(): void;
   onOpenEntity(graph: Graph, entityId: string): void;
   openEntity: OpenEntity | null;
@@ -43,7 +45,7 @@ interface Props {
 
 const { entityTypes } = clientConfig.knowledgeModel;
 
-export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, onGotoUpload, onOpenEntity, openEntity, onReport }: Props) {
+export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport }: Props) {
   const s = strings(language);
   const { answer } = state;
   const stepText: Record<RefusalStep, string> = {
@@ -93,7 +95,7 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
               if ("text" in segment) return <span key={i}>{segment.text}</span>;
               const id = answer.numbering[segment.citation - 1];
               return (
-                <button key={i} type="button" className="citation" title={s.openSource} onClick={() => onOpenSource(id)}>
+                <button key={i} type="button" className="citation" title={s.openSource} aria-pressed={openPassage === id} onClick={() => onOpenSource(id)}>
                   {segment.citation}
                 </button>
               );

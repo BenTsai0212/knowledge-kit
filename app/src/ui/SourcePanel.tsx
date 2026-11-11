@@ -32,7 +32,8 @@ export function SourcePanel({ language, source, onOpenSource, onClose }: Props) 
           {s.closeSource}
         </button>
       </header>
-      <div lang={source.language}>
+      {/* 原文紙面（#225）：Dark 也是亮色的 reading 底 */}
+      <div className="source-text" lang={source.language}>
         {source.passages.map((p) => {
           const marks = <PassageMarks marks={p.marks} language={language} onOpenSource={onOpenSource} />;
           return p.id === source.highlight ? (
