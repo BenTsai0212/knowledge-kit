@@ -109,19 +109,31 @@ describe("頁首的組合字標", () => {
       }),
     );
 
-  it("icon＋產品名稱＋客戶顯示名稱，文字來自 i18n 與 client.json", () => {
+  it("兩行：第一行 icon＋產品名稱，第二行客戶顯示名稱，文字來自 i18n 與 client.json", () => {
     for (const language of clientConfig.client.languages) {
       const h1 = html(language).match(/<h1 class="brand">([\s\S]*?)<\/h1>/)?.[1] ?? "";
-      expect(h1).toContain('class="product-icon"');
-      expect(h1).toContain(`<span class="brand__wordmark">${strings(language).productName}</span>`);
-      expect(h1).toContain(`<span class="brand__client">${clientConfig.client.displayName[language]}</span>`);
+      const product = h1.match(/^<span class="brand__product">(<svg[\s\S]*?<\/svg><span class="brand__wordmark">[^<]*<\/span>)<\/span>/)?.[1];
+      expect(product, language).toBeDefined();
+      expect(product).toContain('class="product-icon"');
+      expect(product).toContain(`<span class="brand__wordmark">${strings(language).productName}</span>`);
+      expect(h1.endsWith(`</span> <span class="brand__client">${clientConfig.client.displayName[language]}</span>`)).toBe(true);
     }
     expect(BRAND_ICON_SIZE).toBeGreaterThan(SIMPLIFIED_MAX_SIZE);
   });
 
-  it("字標用 fonts.display，客戶名稱前有分隔線", () => {
+  it("兩行排列：產品名稱一行、客戶名稱另一行", () => {
+    expect(rule(cssText, ".brand")).toMatchObject({ display: "flex", "flex-direction": "column" });
+    expect(rule(cssText, ".brand__product")).toMatchObject({ display: "flex", "align-items": "center" });
+  });
+
+  it("字標用 fonts.display；客戶名稱沒有分隔線、用 text 色與 h1 的字重", () => {
     expect(rule(cssText, ".brand__wordmark")).toMatchObject({ "font-family": "var(--font-display)" });
-    expect(rule(cssText, ".brand__client")).toMatchObject({ "border-left": "1px solid var(--color-border)" });
+    const client = rule(cssText, ".brand__client");
+    expect(client).toMatchObject({ color: "var(--color-text)" });
+    expect(Object.keys(client).filter((k) => k.startsWith("border"))).toEqual([]);
+    expect(client).not.toHaveProperty("font-weight");
+    expect(client).not.toHaveProperty("font-size");
+    expect(cssText).not.toMatch(/\.brand[^{]*\{[^}]*textMuted/);
   });
 });
 

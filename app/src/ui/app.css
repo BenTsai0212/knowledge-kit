@@ -65,13 +65,18 @@ h3 {
   margin: 0;
 }
 
-/* 組合字標（#226）：icon＋「Knowledge Kit」（display 字體）＋分隔線＋客戶名稱；導覽寬度不夠時客戶名稱換到下一行 */
+/* 組合字標（#226）：側欄固定兩行，第一行 icon＋「Knowledge Kit」（display 字體），第二行客戶名稱；不加分隔線 */
 .brand {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.brand__product {
+  display: flex;
   align-items: center;
-  gap: 0.25rem 0.5rem;
-  font-size: 1rem;
+  gap: 0.5rem;
 }
 
 .brand__wordmark {
@@ -82,11 +87,9 @@ h3 {
   white-space: nowrap;
 }
 
+/* 客戶名稱是客戶 demo 的主角：沿用 h1 的大小、字重與 text 色，不比產品名稱弱 */
 .brand__client {
-  padding-left: 0.5rem;
-  border-left: 1px solid var(--color-border);
-  color: var(--color-textMuted);
-  font-weight: 500;
+  color: var(--color-text);
 }
 
 /* 產品 icon（docs/design.md「產品 icon（K 晶格）」）：顏色只讀 token；證據節點讀 mark，客戶不能改 */

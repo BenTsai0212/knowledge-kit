@@ -40,10 +40,12 @@ export function Sidebar({ language, identity, onIdentity, onLanguage, onChangeAc
   return (
     <div className="sidebar">
       <header className="toolbar">
-        {/* 組合字標（#226）：icon＋產品名稱＋分隔線＋客戶名稱 */}
+        {/* 組合字標（#226）：側欄固定兩行，第一行 icon＋產品名稱，第二行客戶名稱（不加分隔線） */}
         <h1 className="brand">
-          <ProductIcon size={BRAND_ICON_SIZE} />
-          <span className="brand__wordmark">{s.productName}</span>{" "}
+          <span className="brand__product">
+            <ProductIcon size={BRAND_ICON_SIZE} />
+            <span className="brand__wordmark">{s.productName}</span>
+          </span>{" "}
           <span className="brand__client">{clientConfig.client.displayName[language]}</span>
         </h1>
         <span className="badge">{s.fictionalData}</span>
