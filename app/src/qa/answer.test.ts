@@ -135,6 +135,39 @@ describe("ask：引用", () => {
   });
 });
 
+describe("ask：外層標籤（#237）", () => {
+  const refusal = { kind: "refusal", text: strings("zh-TW").refusal };
+
+  it("移除整段回答外層的標籤再解析引用，串流中不顯示標籤", async () => {
+    const { ctx } = context(() => answered("<cita", "tion_response>一年", "有 7 天 [1]。</citation", "_response>"));
+    const seen: string[] = [];
+    const answer = await ask(ctx, LEAVE, (text) => seen.push(text));
+    expect(answer).toMatchObject({ kind: "answer", text: "一年有 7 天 [1]。", cited: ["employee-handbook-zh-03"], uncited: false, incomplete: false });
+    expect(seen).toEqual(["一年", "一年有 7 天 [1]。", "一年有 7 天 [1]。"]);
+  });
+
+  it("沒有標籤與內文中看似標籤的文字不受影響", async () => {
+    const { ctx } = context(() => answered("<b>重點</b>：一年有 7 天 [1]。"));
+    expect(await ask(ctx, LEAVE)).toMatchObject({ kind: "answer", text: "<b>重點</b>：一年有 7 天 [1]。" });
+  });
+
+  it("包在標籤裡的拒答標記仍判定為拒答，畫面不出現標記", async () => {
+    for (const deltas of [["<answer>", REFUSAL_MARKER, "</answer>"], ["<answer>[[NO_", "ANSWER]]</answer>"], ["<citation_response>\n[[NO_ANSWER]]\n"]]) {
+      const { ctx } = context(() => answered(...deltas));
+      const seen: string[] = [];
+      expect(await ask(ctx, LEAVE, (text) => seen.push(text)), deltas.join("|")).toEqual(refusal);
+      expect(seen.some((text) => text.includes("[[") || text.includes("<")), deltas.join("|")).toBe(false);
+    }
+  });
+
+  it("中斷時結尾標籤沒收到也移除開頭標籤；只收到開頭標籤就中斷時回錯誤", async () => {
+    const cut = context(() => [{ type: "delta", text: "<answer>一年有 7 天 [1]</ans" }, { type: "error", error: "upstream_overloaded" }]);
+    expect(await ask(cut.ctx, LEAVE)).toMatchObject({ kind: "answer", text: "一年有 7 天 [1]", incomplete: true });
+    const empty = context(() => [{ type: "delta", text: "<answer>" }, { type: "error", error: "upstream_interrupted" }]);
+    expect(await ask(empty.ctx, LEAVE)).toEqual({ kind: "error", error: "upstream_interrupted" });
+  });
+});
+
 describe("ask：錯誤與串流中斷", () => {
   it("還沒收到內容就失敗時回錯誤類型", async () => {
     const { ctx } = context(() => [{ type: "error", error: "daily_limit" }]);

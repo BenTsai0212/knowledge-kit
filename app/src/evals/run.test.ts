@@ -144,6 +144,18 @@ describe("runEvals", () => {
     expect(byId.get("annual-leave-staff")!.grade).toBeUndefined();
   });
 
+  it("答案要點、引用與模型評分都用移除外層標籤後的文字（#237）", async () => {
+    const wrapped = (body: AskBody): AskEvent[] =>
+      isGrade(body) ? answered('{"verdict":"correct","reason":"ok"}') : answered("<citation_response>第二季 Q3 7 天 [1]</citation_response>");
+    const { ctx, transport } = context(pick("annual-leave-staff"), wrapped);
+    const [result] = (await runEvals(ctx, { sets: [DEFAULT], mode: "model" })).sets[0].results;
+    expect(result.answer).toMatchObject({ kind: "answer", text: "第二季 Q3 7 天 [1]" });
+    expect(result.score.citation?.cited).toHaveLength(1);
+    expect(transport.bodies.find(isGrade)!.messages[0].content).toContain("<answer>\n第二季 Q3 7 天 [1]\n</answer>");
+    const plain = await runEvals(context(pick("annual-leave-staff")).ctx, { sets: [DEFAULT], mode: "model" });
+    expect(result.score).toEqual(plain.sets[0].results[0].score);
+  });
+
   it("遇到 daily_limit 時停止，保留已完成的結果", async () => {
     let calls = 0;
     const { ctx } = context(sample, (body) => (++calls === 2 ? [{ type: "error", error: "daily_limit" }] : reply()(body)));
