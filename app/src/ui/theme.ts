@@ -13,8 +13,7 @@ export function themeVariables(theme: ThemeFile): Record<string, string> {
   return {
     ...colorVariables(theme.colors),
     ...Object.fromEntries(Object.entries(theme.radius).map(([name, value]) => [`--radius-${name}`, value])),
-    "--font-body": theme.fonts.body,
-    "--font-heading": theme.fonts.heading,
+    ...Object.fromEntries(Object.entries(theme.fonts).map(([name, value]) => [`--font-${name}`, value])),
   };
 }
 

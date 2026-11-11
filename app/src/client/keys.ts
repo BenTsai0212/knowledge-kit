@@ -103,6 +103,16 @@ export const manifests: ManifestEntry[] = [
       mark: "required",
       overlay: "required",
       graphFallback: "required",
+      surfaceRaised: "required",
+      reading: "required",
+      readingText: "required",
+      focus: "required",
+      markSoft: "required",
+      markText: "required",
+      markReading: "required",
+      conflict: "required",
+      conflictSoft: "required",
+      conflictText: "required",
     } satisfies KeyManifest<ThemeColors>,
   },
   {
@@ -113,7 +123,7 @@ export const manifests: ManifestEntry[] = [
   {
     schema: "theme.schema.json",
     pointer: "/properties/fonts",
-    keys: { body: "required", heading: "required" } satisfies KeyManifest<ThemeFonts>,
+    keys: { body: "required", heading: "required", mono: "required", display: "required" } satisfies KeyManifest<ThemeFonts>,
   },
   {
     schema: "knowledge-model.schema.json",

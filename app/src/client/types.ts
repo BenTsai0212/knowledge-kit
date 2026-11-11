@@ -79,12 +79,27 @@ export interface ThemeColors {
   info: string;
   // 放在實心狀態色上的文字
   onStatus: string;
-  // <mark> 的底色
+  // 證據色（ADR 0008，客戶不可改）：選取的引用、原文螢光
   mark: string;
   // 確認視窗的遮罩與陰影（#RRGGBBAA）
   overlay: string;
   // 圖譜與標籤找不到類型或等級時的顏色
   graphFallback: string;
+  // 列、晶片、次要區塊
+  surfaceRaised: string;
+  // 原文閱讀紙面（深色模式也是亮色）與紙面上的文字
+  reading: string;
+  readingText: string;
+  // 鍵盤焦點框
+  focus: string;
+  // 證據色（ADR 0008，客戶不可改）：引用標號的預設底色、證據底色上的文字、紙面上的螢光
+  markSoft: string;
+  markText: string;
+  markReading: string;
+  // 說法不同：圖示與框線、底色、底色上的文字
+  conflict: string;
+  conflictSoft: string;
+  conflictText: string;
 }
 
 export interface ThemeRadius {
@@ -97,6 +112,10 @@ export interface ThemeRadius {
 export interface ThemeFonts {
   body: string;
   heading: string;
+  // 等寬：ID、數量、關係名稱、引用標號
+  mono: string;
+  // 只用於字標與大數字
+  display: string;
 }
 
 export interface ThemeFile {
