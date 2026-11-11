@@ -20,6 +20,8 @@ export interface BatchState {
   entities: number;
   relations: number;
   dropped: number;
+  // 這一批新增的待審實體在文件語言的名稱，依類型分組（#242 決定 2）：上傳頁在原文預覽中依序畫出類型色底線。只在寫入成功後記錄
+  found: { type: string; names: string[] }[];
 }
 
 export interface ExtractionState {
@@ -54,7 +56,7 @@ export function planExtraction(
     uploader: upload.uploader,
     documentLanguage: upload.documentLanguage,
     passages: Object.fromEntries(upload.passages.map((p) => [p.id, p.content])),
-    batches: batches.map((passageIds) => ({ passageIds, status: "waiting", entities: 0, relations: 0, dropped: 0 })),
+    batches: batches.map((passageIds) => ({ passageIds, status: "waiting", entities: 0, relations: 0, dropped: 0, found: [] })),
     skipped,
     entityKeys: {},
     relationKeys: {},
@@ -157,7 +159,20 @@ export async function runExtraction(
       continue;
     }
     const dropped = Object.values(parsed.dropped).reduce((n, c) => n + (c ?? 0), 0);
-    update(i, { status: "done", entities: input.entities.length, relations: input.relations.length, dropped }, { entityKeys, relationKeys });
+    update(i, { status: "done", entities: input.entities.length, relations: input.relations.length, dropped, found: foundNames(input.entities, state.documentLanguage) }, { entityKeys, relationKeys });
   }
   return state;
+}
+
+// 新增的實體在文件語言的名稱，依類型分組、依出現順序（同一類型的名稱不重複）
+export function foundNames(entities: readonly { type: string; names: Partial<Record<string, string>> }[], language: string): BatchState["found"] {
+  const groups = new Map<string, string[]>();
+  for (const e of entities) {
+    const name = e.names[language]?.trim();
+    if (name === undefined || name === "") continue;
+    const names = groups.get(e.type) ?? [];
+    if (!names.includes(name)) names.push(name);
+    groups.set(e.type, names);
+  }
+  return [...groups].map(([type, names]) => ({ type, names }));
 }

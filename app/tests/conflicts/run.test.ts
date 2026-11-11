@@ -72,6 +72,9 @@ describe("runConflicts", { timeout: 30_000 }, () => {
     expect(transport.bodies[0].messages[0].content).toBe(state.selection.user);
     expect(states.map((s) => s.status)).toEqual(["running", "done"]);
     expect(result).toMatchObject({ status: "done", found: 1, dropped: 1 });
+    // 說法不同的新段落（#242）：上傳頁標出這些段落；失敗前與執行中是空的
+    expect(result.passages).toEqual([upload.passageIds[0]]);
+    expect(states[0].passages).toEqual([]);
 
     const items = await readConflicts(db, "manager");
     expect(items.map((c) => [c.newPassage.id, c.oldPassage.id, c.summary, c.decision])).toEqual([
@@ -126,7 +129,7 @@ describe("runConflicts", { timeout: 30_000 }, () => {
 });
 
 describe("shouldDetectConflicts", () => {
-  const batch = (status: BatchState["status"], error?: string): BatchState => ({ passageIds: [], status, error, entities: 0, relations: 0, dropped: 0 });
+  const batch = (status: BatchState["status"], error?: string): BatchState => ({ passageIds: [], status, error, entities: 0, relations: 0, dropped: 0, found: [] });
   const disabled: ClientConfig = { ...clientConfig, client: { ...clientConfig.client, conflicts: { ...clientConfig.client.conflicts, enabled: false } } };
 
   it("萃取結束後才比對；因邀請碼失效而停止時不比對；設定關閉時不比對", () => {
