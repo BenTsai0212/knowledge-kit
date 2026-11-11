@@ -358,6 +358,28 @@ export function contrast(a, b) {
   return (l1 + 0.05) / (l2 + 0.05);
 }
 
+// 引用標號的三個狀態（docs/design.md）：內框與 Dark 的 hover 色由證據色以 color-mix 算出，比例與 app.css 相同
+export const CITATION_MIX = { lightBorder: 84, lightHoverBorder: 73, darkBorder: 40, darkHoverBackground: 17, darkHoverText: 90 };
+
+// [前景鍵, 背景名稱, 背景色, 需要的對比, 前景色（省略時是前景鍵的顏色）]
+function citationPairs(scheme, c) {
+  const focus = [
+    ["focus", "surface", c.surface, GRAPHIC_CONTRAST],
+    ["focus", "background", c.background, GRAPHIC_CONTRAST],
+  ];
+  if (scheme === "colors") {
+    // 淺色：hover 是 mark 底、markText 字；選取是 text 底、mark 字
+    return [...focus, ["markText", "mark", c.mark], ["mark", "text", c.text]];
+  }
+  const { darkBorder, darkHoverBackground, darkHoverText } = CITATION_MIX;
+  return [
+    ...focus,
+    ["mark", `surface（引用標號的內框 mark ${darkBorder}% + markSoft）`, c.surface, GRAPHIC_CONTRAST, mix(c.mark, darkBorder, c.markSoft)],
+    ["markReading", `mark ${darkHoverBackground}% + markSoft（hover 的字是 markReading ${darkHoverText}% + text）`, mix(c.mark, darkHoverBackground, c.markSoft), TEXT_CONTRAST, mix(c.markReading, darkHoverText, c.text)],
+    ["markSoft", "mark", c.mark],
+  ];
+}
+
 // 無條件捨去到小數一位，避免 4.46 顯示成 4.5:1 卻不通過
 const ratio = (value) => `${Math.floor(value * 10) / 10}:1`;
 
@@ -384,13 +406,19 @@ function checkContrast(valid) {
           ["onStatus", s, c[s]],
         ];
       }),
-      ["text", "mark", c.mark],
       ["text", `primary ${SELECTED_TINT}% + surface`, mix(c.primary, SELECTED_TINT, c.surface)],
+      ["markText", "markSoft", c.markSoft],
+      ["readingText", "reading", c.reading],
+      ["readingText", "markReading", c.markReading],
+      ["conflict", "surface", c.surface],
+      ["conflict", "background", c.background],
+      ["conflictText", "conflictSoft", c.conflictSoft],
+      ...citationPairs(scheme, c),
     ];
-    for (const [fg, bg, color] of pairs) {
-      const value = contrast(c[fg], color);
-      if (value < TEXT_CONTRAST) {
-        errors.push({ file: "theme.json", path: `/${scheme}/${fg}`, message: `與 ${bg} 的對比 ${ratio(value)}，需要 ${TEXT_CONTRAST}:1` });
+    for (const [fg, bg, color, min = TEXT_CONTRAST, fgColor = c[fg]] of pairs) {
+      const value = contrast(fgColor, color);
+      if (value < min) {
+        errors.push({ file: "theme.json", path: `/${scheme}/${fg}`, message: `與 ${bg} 的對比 ${ratio(value)}，需要 ${min}:1` });
       }
     }
 

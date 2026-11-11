@@ -47,9 +47,12 @@ Light 來自提案 A「墨與螢光」，Dark 來自提案 B「晶格」。對�
 
 | 狀態 | Light（底／字） | Dark（底／字） |
 | --- | --- | --- |
-| 預設 | `markSoft`／`markText`，內框 1px `#E8B800` | `markSoft`／`markText`，內框 1px `#7A5A20` |
-| hover | `mark`／`markText`，內框 1px `#C9A400` | `#5A4316`／`#FFE4B8`，內框 1px `mark` |
-| 選取（原文已開） | `text`／`mark` | `mark`／`#1A1200` |
+| 預設 | `markSoft`／`markText`，內框 1px `mark` 84%＋`markText` | `markSoft`／`markText`，內框 1px `mark` 40%＋`markSoft` |
+| hover | `mark`／`markText`，內框 1px `mark` 73%＋`markText` | `mark` 17%＋`markSoft`／`markReading` 90%＋`text`，內框 1px `mark` |
+| 選取（原文已開） | `text`／`mark` | `mark`／`markSoft` |
+
+- 「A 百分比＋B」是 `color-mix(in srgb, var(--color-A) 百分比, var(--color-B))`；不另設 token，證據色只由 `mark`、`markSoft`、`markText`、`markReading` 決定（#225 決定 1）。比例同時寫在 `scripts/check-client.mjs` 的 `CITATION_MIX`，`check:client` 依此檢查對比（[docs/client-config.md](client-config.md)「對比度」）。
+- 與設計稿的差異：Light 的兩個內框比設計稿（`#E8B800`、`#C9A400`）稍暗；Dark 預設內框用 40%，對 `surface` 3.3:1（設計稿的 `#7A5A20` 只有 2.9:1）；Dark 選取的字用 `markSoft`（設計稿 `#1A1200`），對 `mark` 7.8:1。
 
 原文螢光：Light 用 `mark`；Dark 的原文放在 `reading` 紙面上，用 `markReading`。
 

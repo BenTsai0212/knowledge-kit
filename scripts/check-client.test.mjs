@@ -68,22 +68,44 @@ describe("check-client", () => {
     files["theme.json"].darkColors.textMuted = "#555555";
     files["theme.json"].colors.onStatus = "#B0B0B0";
     const errors = validateClient(files);
-    expect(errors).toContainEqual({ file: "theme.json", path: "/darkColors/textMuted", message: "與 surface 的對比 2.1:1，需要 4.5:1" });
+    expect(errors).toContainEqual({ file: "theme.json", path: "/darkColors/textMuted", message: "與 surface 的對比 2.4:1，需要 4.5:1" });
     expect(errors.map((e) => e.path)).toContain("/colors/onStatus");
     expect(errors.every((e) => e.file === "theme.json")).toBe(true);
   });
 
-  it("淡色底色（提示框、標示）也檢查對比", () => {
+  it("證據色、原文紙面、說法不同與焦點框也檢查對比", () => {
     const files = example();
-    files["theme.json"].darkColors.mark = "#9A8A40";
+    files["theme.json"].colors.mark = "#8A7A30";
+    files["theme.json"].colors.readingText = "#9AA0A6";
+    files["theme.json"].colors.conflictText = "#D07AA0";
+    files["theme.json"].darkColors.focus = "#253044";
     const errors = validateClient(files);
-    expect(errors.map((e) => `${e.path} ${e.message.split(" 的對比")[0]}`)).toEqual(["/darkColors/text 與 mark"]);
+    expect(errors.map((e) => `${e.path} ${e.message.split(" 的對比")[0]}`)).toEqual([
+      "/colors/readingText 與 reading",
+      "/colors/readingText 與 markReading",
+      "/colors/conflictText 與 conflictSoft",
+      "/colors/markText 與 mark",
+      "/colors/mark 與 text",
+      "/darkColors/focus 與 surface",
+      "/darkColors/focus 與 background",
+    ]);
+  });
+
+  it("深色的引用標號：內框與 hover 色依 color-mix 的比例算出後檢查", () => {
+    const files = example();
+    files["theme.json"].darkColors.mark = "#9A6A20";
+    const errors = validateClient(files);
+    expect(errors.map((e) => `${e.path} ${e.message.split(" 的對比")[0]}`)).toEqual([
+      "/darkColors/mark 與 surface（引用標號的內框 mark 40% + markSoft）",
+      "/darkColors/markSoft 與 mark",
+    ]);
+    expect(errors[0].message).toMatch(/需要 3:1$/);
   });
 
   it("可見等級與實體類型的顏色在任一配色下不足時，指出是哪一個、對哪組背景", () => {
     const files = example();
     // 等級標籤的淡色底只有 14%，一般文字色夠深就不會不足；這裡讓深色的 text 變暗來觸發
-    files["theme.json"].darkColors.text = "#6E7681";
+    files["theme.json"].darkColors.text = "#606873";
     files["knowledge-model.json"].entityTypes[0].color = "#2F5D8A";
     const errors = validateClient(files).filter((e) => e.file !== "theme.json");
     expect(errors).toEqual([
@@ -92,13 +114,14 @@ describe("check-client", () => {
         path: `/visibilityLevels/${i}/color`,
         message: expect.stringMatching(new RegExp(`^「.+」（${id}）的標籤底色與 darkColors 的 text 對比 [\\d.]+:1，需要 4\\.5:1$`)),
       })),
-      { file: "knowledge-model.json", path: "/entityTypes/0/color", message: "「人員」（person）與 darkColors 的 background 對比 2.5:1，需要 3:1" },
-      { file: "knowledge-model.json", path: "/entityTypes/0/color", message: "「人員」（person）與 darkColors 的 surface 對比 2.2:1，需要 3:1" },
       // 選取的節點：圖示改用 text，放在類型色 14% 的淡色底上
-      ...[["部門", "team", 1], ["專案", "project", 2]].map(([name, id, i]) => ({
+      { file: "knowledge-model.json", path: "/entityTypes/0/color", message: "「人員」（person）的選取底色（14% + surface）與 darkColors 的 text 對比 2.9:1，需要 3:1" },
+      { file: "knowledge-model.json", path: "/entityTypes/0/color", message: "「人員」（person）與 darkColors 的 background 對比 2.8:1，需要 3:1" },
+      { file: "knowledge-model.json", path: "/entityTypes/0/color", message: "「人員」（person）與 darkColors 的 surface 對比 2.6:1，需要 3:1" },
+      ...[["部門", "team", 1, "2.8"], ["專案", "project", 2, "2.7"]].map(([name, id, i, value]) => ({
         file: "knowledge-model.json",
         path: `/entityTypes/${i}/color`,
-        message: `「${name}」（${id}）的選取底色（14% + surface）與 darkColors 的 text 對比 2.9:1，需要 3:1`,
+        message: `「${name}」（${id}）的選取底色（14% + surface）與 darkColors 的 text 對比 ${value}:1，需要 3:1`,
       })),
     ]);
   });

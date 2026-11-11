@@ -378,9 +378,10 @@ button.citation {
   gap: 1rem;
 }
 
+/* 原文螢光：亮色紙面上的螢光與紙面文字（Light 的 markReading 與 mark 相同） */
 .source .highlight mark {
-  background: var(--color-mark);
-  color: inherit;
+  background: var(--color-markReading);
+  color: var(--color-readingText);
 }
 
 /* 第一層頁籤：左側導覽的直列，目前的頁籤以左側的線標示（#48、#195） */

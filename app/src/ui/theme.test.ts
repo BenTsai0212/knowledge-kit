@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { clientConfig } from "../client/load";
 import { sources, stripComments } from "../client/source-scan";
+import design from "../../../docs/design.md?raw";
 import css from "./app.css?raw";
 import { graphStyle } from "./graph-style";
 import { DARK_SCHEME, themeStyleSheet, themeVariables, watchColorScheme } from "./theme";
@@ -92,6 +93,29 @@ describe("主題的結構", () => {
       })
       .map(([p]) => p);
     expect(found).toEqual([]);
+  });
+});
+
+// 參考情境的 token 與設計規格（docs/design.md「顏色 token」「字體、圓角、焦點框」）逐鍵相同（#225）
+describe("設計系統 v1", () => {
+  const { theme } = clientConfig;
+
+  it("colors／darkColors 的每個鍵都與 design.md 的表格相同", () => {
+    const rows = [...design.matchAll(/^\| `(\w+)` \| [^|]+ \| `(#[0-9A-F]+)` \| `(#[0-9A-F]+)` \|/gm)];
+    expect(Object.fromEntries(rows.map((m) => [m[1], m[2]]))).toEqual(theme.colors);
+    expect(Object.fromEntries(rows.map((m) => [m[1], m[3]]))).toEqual(theme.darkColors);
+  });
+
+  it("字體與圓角與 design.md 相同", () => {
+    const fonts = [...design.matchAll(/^\| `fonts\.(\w+)`(?:（新增）)? \| `([^`]+)`/gm)];
+    expect(Object.fromEntries(fonts.map((m) => [m[1], m[2]]))).toEqual(theme.fonts);
+    const radius = design.match(/^\| `radius` \| (.+) \|$/m)?.[1] ?? "";
+    expect(Object.fromEntries([...radius.matchAll(/(small|medium|large|pill) (\d+px)/g)].map((m) => [m[1], m[2]]))).toEqual(theme.radius);
+  });
+
+  it("原文螢光放在亮色紙面的組合上（readingText 在 markReading 上，check:client 檢查對比）", () => {
+    const block = cssText.match(/\.source \.highlight mark\s*\{([^}]*)\}/)?.[1];
+    expect(Object.fromEntries(declarations(`${block};`))).toMatchObject({ background: "var(--color-markReading)", color: "var(--color-readingText)" });
   });
 });
 

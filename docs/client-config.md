@@ -118,9 +118,19 @@ npm run check:client
 | `colors.success` | 是 | `#RRGGBB` | 成功狀態 |
 | `colors.info` | 是 | `#RRGGBB` | 資訊提示框 |
 | `colors.onStatus` | 是 | `#RRGGBB` | 放在實心狀態色（`danger`、`warning`、`success`、`info`）上的文字，例如提示框的圖示 |
-| `colors.mark` | 是 | `#RRGGBB` | 原文面板中引用段落的標示底色（`<mark>`） |
+| `colors.mark` | 是 | `#RRGGBB` | 證據色，**客戶不可改**：選取的引用、原文螢光 |
 | `colors.overlay` | 是 | `#RRGGBBAA` | 確認視窗後方的遮罩；短提示的陰影也由它算出 |
 | `colors.graphFallback` | 是 | `#RRGGBB` | 找不到實體類型或可見等級時，圖譜節點與等級標籤使用的顏色 |
+| `colors.surfaceRaised` | 是 | `#RRGGBB` | 列、晶片、次要區塊 |
+| `colors.reading` | 是 | `#RRGGBB` | 原文閱讀紙面（深色模式也是亮色） |
+| `colors.readingText` | 是 | `#RRGGBB` | `reading` 紙面上的文字 |
+| `colors.focus` | 是 | `#RRGGBB` | 鍵盤焦點框（`:focus-visible`），通常與 `primary` 相同 |
+| `colors.markSoft` | 是 | `#RRGGBB` | 證據色，**客戶不可改**：引用標號的預設底色 |
+| `colors.markText` | 是 | `#RRGGBB` | 證據色，**客戶不可改**：證據底色上的文字 |
+| `colors.markReading` | 是 | `#RRGGBB` | 證據色，**客戶不可改**：`reading` 紙面上的螢光 |
+| `colors.conflict` | 是 | `#RRGGBB` | 說法不同：圖示、框線、文字 |
+| `colors.conflictSoft` | 是 | `#RRGGBB` | 說法不同的底色 |
+| `colors.conflictText` | 是 | `#RRGGBB` | `conflictSoft` 上的文字 |
 | `darkColors.<鍵>` | 是 | 同 `colors` | 深色模式的色票，鍵與 `colors` 完全相同（Schema 以 `$ref` 共用同一份定義），全部必填 |
 | `radius.small` | 是 | 長度（`px` 或 `rem`，或 `0`） | 小圓角：引用編號按鈕 |
 | `radius.medium` | 是 | 同上 | 一般圓角：按鈕、輸入框、提示框、待審卡片 |
@@ -128,7 +138,10 @@ npm run check:client
 | `radius.pill` | 是 | 同上 | 膠囊形：標籤、筆數（例如 `999px`） |
 | `fonts.body` | 是 | CSS `font-family` 值 | 內文字體 |
 | `fonts.heading` | 是 | CSS `font-family` 值 | 標題字體 |
+| `fonts.mono` | 是 | CSS `font-family` 值 | 等寬字體：ID、數量、關係名稱、引用標號 |
+| `fonts.display` | 是 | CSS `font-family` 值 | 只用於字標與大數字 |
 
+- **證據色客戶不可改**：`mark`、`markSoft`、`markText`、`markReading` 沿用參考情境 `client/theme.json` 的值（證據只用一個顏色，[ADR 0008](adr/0008-design-system.md)）。目前只寫在文件與 Schema 的 `description`，`check:client` 不檢查。各鍵的設計值見 [docs/design.md](design.md)「顏色 token」。
 - 提示框與可見等級標籤的淡色底色，不另外設欄位：以 `color-mix(in srgb, <狀態色或等級色> 14%, surface)` 算出。
 - **深色模式**：依系統設定（`prefers-color-scheme`）自動切換，沒有手動開關。`colors` 放在 `:root`，`darkColors` 放在 `@media (prefers-color-scheme: dark)` 內，切換完全由 CSS 處理；圓角與字型兩種模式相同。圖譜（cytoscape）不讀 CSS，由 `app/src/ui/graph-style.ts` 的 `graphStyle()` 從 CSS 變數組出樣式，`GraphView.tsx` 監聽系統切換（`watchColorScheme()`）後重新套用。實體類型與可見等級只有一個顏色，淺色、深色共用，所以要選兩種背景上都清楚的顏色（見下方「對比度」）。
 - **不寫死顏色**：`app.css` 與 `app/src/` 的程式中不得出現顏色值（`#hex`、`rgb()`、`hsl()` 等）或色名；`app.css` 中帶顏色的屬性只能由 `var(--…)`、`color-mix(in srgb, …)` 與 `transparent`、`currentColor` 等關鍵字組成。結構測試在 `app/src/ui/theme.test.ts`，也確認 `app.css` 用到的 `--color-*`、`--radius-*`、`--font-*` 都由 `theme.json` 提供。需要新的顏色時，依[擴充 Schema](#擴充-schema) 在 `theme.json` 加欄位。
@@ -145,7 +158,16 @@ npm run check:client
 | `danger`、`warning`、`success`、`info` | `surface`、`background`、各自的淡色底（14%） | 4.5:1 |
 | `text` | 各狀態色的淡色底（14%，提示框內文） | 4.5:1 |
 | `onStatus` | `danger`、`warning`、`success`、`info` | 4.5:1 |
-| `text` | `mark`；主色的淡色底（12%，選取中的項目） | 4.5:1 |
+| `text` | 主色的淡色底（12%，選取中的項目） | 4.5:1 |
+| `markText` | `markSoft`（引用標號）；淺色另檢查 `mark`（hover） | 4.5:1 |
+| `mark` | `text`（淺色：選取的引用標號） | 4.5:1 |
+| `markSoft` | `mark`（深色：選取的引用標號） | 4.5:1 |
+| `markReading` 90% + `text`（深色：hover 的字） | `mark` 17% + `markSoft`（深色：hover 的底） | 4.5:1 |
+| `mark` 40% + `markSoft`（深色：引用標號的內框，非文字） | `surface` | 3:1 |
+| `readingText` | `reading`、`markReading` | 4.5:1 |
+| `conflict` | `surface`、`background` | 4.5:1 |
+| `conflictText` | `conflictSoft` | 4.5:1 |
+| `focus`（焦點框，非文字） | `surface`、`background` | 3:1 |
 | `text` | 各可見等級的淡色底（`access.json` 的 `color` 14%，等級標籤） | 4.5:1 |
 | 實體類型的 `color`（圖譜節點的外圈與圖示，非文字） | `background`、`surface` | 3:1 |
 | `text`（選取的節點的圖示，非文字） | 各實體類型的淡色底（`color` 14% + `surface`） | 3:1 |

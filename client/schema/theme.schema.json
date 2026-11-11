@@ -30,7 +30,17 @@
         "onStatus",
         "mark",
         "overlay",
-        "graphFallback"
+        "graphFallback",
+        "surfaceRaised",
+        "reading",
+        "readingText",
+        "focus",
+        "markSoft",
+        "markText",
+        "markReading",
+        "conflict",
+        "conflictSoft",
+        "conflictText"
       ],
       "properties": {
         "primary": { "$ref": "#/definitions/Color" },
@@ -45,9 +55,19 @@
         "success": { "$ref": "#/definitions/Color" },
         "info": { "$ref": "#/definitions/Color" },
         "onStatus": { "$ref": "#/definitions/Color" },
-        "mark": { "$ref": "#/definitions/Color" },
+        "mark": { "description": "證據色（ADR 0008，客戶不可改）：選取的引用、原文螢光", "$ref": "#/definitions/Color" },
         "overlay": { "$ref": "#/definitions/ColorAlpha" },
-        "graphFallback": { "$ref": "#/definitions/Color" }
+        "graphFallback": { "$ref": "#/definitions/Color" },
+        "surfaceRaised": { "description": "列、晶片、次要區塊", "$ref": "#/definitions/Color" },
+        "reading": { "description": "原文閱讀紙面（深色模式也是亮色）", "$ref": "#/definitions/Color" },
+        "readingText": { "description": "reading 紙面上的文字", "$ref": "#/definitions/Color" },
+        "focus": { "description": "鍵盤焦點框（:focus-visible）", "$ref": "#/definitions/Color" },
+        "markSoft": { "description": "證據色（ADR 0008，客戶不可改）：引用標號的預設底色", "$ref": "#/definitions/Color" },
+        "markText": { "description": "證據色（ADR 0008，客戶不可改）：證據底色上的文字", "$ref": "#/definitions/Color" },
+        "markReading": { "description": "證據色（ADR 0008，客戶不可改）：reading 紙面上的螢光", "$ref": "#/definitions/Color" },
+        "conflict": { "description": "說法不同：圖示、框線、文字", "$ref": "#/definitions/Color" },
+        "conflictSoft": { "description": "說法不同的底色", "$ref": "#/definitions/Color" },
+        "conflictText": { "description": "conflictSoft 上的文字", "$ref": "#/definitions/Color" }
       }
     },
     "darkColors": {
@@ -68,10 +88,12 @@
     "fonts": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["body", "heading"],
+      "required": ["body", "heading", "mono", "display"],
       "properties": {
         "body": { "$ref": "#/definitions/FontStack" },
-        "heading": { "$ref": "#/definitions/FontStack" }
+        "heading": { "$ref": "#/definitions/FontStack" },
+        "mono": { "description": "等寬：ID、數量、關係名稱、引用標號", "$ref": "#/definitions/FontStack" },
+        "display": { "description": "只用於字標與大數字", "$ref": "#/definitions/FontStack" }
       }
     }
   }
