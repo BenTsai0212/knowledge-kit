@@ -707,6 +707,20 @@ main.qa > .source .source-text mark.entering {
   }
 }
 
+/* 上傳頁（#242）：確認區升起、拖放區的圖示上浮 */
+@keyframes kUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+@keyframes kLift {
+  to {
+    transform: translateY(-6px);
+  }
+}
+
 /* 刷過時底色保持透明，只有漸層長出（motion-reference.md「例外」） */
 @keyframes kSweep {
   from {
@@ -1302,23 +1316,165 @@ details.path summary {
   gap: 0.25rem;
 }
 
-.upload-preview li {
-  white-space: pre-wrap;
+/* 上傳頁（#242，docs/design.md「全互動對照表」的上傳列）：時間只用 --motion-*、--ease-*，減少動態效果時直接到位。
+   頁首五個步驟：完成的步驟下方是 primary 細條，進行中的步驟顯示真實數字 */
+.upload-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
+.upload-step {
+  display: grid;
+  align-content: start;
+  gap: 0.15rem;
+  padding-top: 0.5rem;
+  border-top: 3px solid var(--color-border);
+  font-size: 0.85rem;
+  color: var(--color-textMuted);
+  transition: border-color var(--motion-base) var(--ease-enter);
+}
+
+.upload-step.is-done {
+  border-top-color: var(--color-primary);
+}
+
+.upload-step.is-active {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.upload-step__detail {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+/* 拖放區：虛線框；拖進範圍時框線變實線 primary、底色變淺、圖示上浮 6px（fast） */
 .drop-zone {
   display: grid;
+  justify-items: center;
   gap: 0.25rem;
   border: 2px dashed var(--color-border);
   border-radius: var(--radius-large);
-  padding: 0.75rem;
+  padding: 1.25rem 0.75rem;
+  text-align: center;
+  transition-property: border-color, background-color;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: var(--ease-enter);
 }
 
-.upload-dialog {
-  max-width: min(640px, 90vw);
+.drop-zone p {
+  margin: 0;
+}
+
+.drop-zone.is-over {
+  border-style: solid;
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface));
+}
+
+.drop-zone__icon,
+.upload-file__icon {
+  width: 1.75rem;
+  height: 1.75rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: var(--color-primary);
+}
+
+/* 上浮後的位置寫在元素上（不用 forwards 留住 kLift 的 to），離開範圍時回到原位 */
+.drop-zone.is-over .drop-zone__icon {
+  transform: translateY(-6px);
+  animation: kLift var(--motion-fast) var(--ease-enter);
+}
+
+.drop-zone__title {
+  font-weight: 600;
+}
+
+/* 放下後檔案卡片落定（settle） */
+.upload-file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-large);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface);
+  padding: 0.5rem 0.75rem;
+  animation: kPopS var(--motion-settle) var(--ease-spring) backwards;
+}
+
+.upload-file__icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.upload-file__name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* 讀取失敗：在拖放區原地換成說明，不用大面積的紅色（只留圖示與左側細線） */
+.drop-zone .notice {
+  justify-self: stretch;
+  text-align: start;
+  border-width: 0 0 0 4px;
+  background: transparent;
+  animation: kFade var(--motion-base) var(--ease-enter) backwards;
+}
+
+/* 確認區：檔名、段落數、字數；預覽段落放在 reading 紙面上（Dark 也是亮色）逐條升起。
+   延遲依 motion-reference.md 的「上傳」列：標題 300ms、段落數 400ms、¶1／¶2 460／520ms */
+.upload-file-card {
+  display: grid;
+  gap: 0.15rem;
+  margin-bottom: 0.5rem;
+}
+
+.upload-file-card__name {
+  overflow-wrap: anywhere;
+  animation: kFade var(--motion-base) var(--ease-enter) var(--motion-expand) backwards;
+}
+
+.upload-file-card__stats {
+  animation: kFade var(--motion-base) var(--ease-enter) var(--motion-sweep) backwards;
+}
+
+.upload-preview {
+  background: var(--color-reading);
+  color: var(--color-readingText);
+  border-radius: var(--radius-medium);
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem 0.5rem 2rem;
+}
+
+.upload-preview li {
+  white-space: pre-wrap;
+  animation: kRise var(--motion-base) var(--ease-enter) calc(var(--motion-sweep) + (var(--i, 0) + 1) * var(--motion-stagger-list)) backwards;
+}
+
+/* 確認區從表單底部升起（base）：貼齊畫面底部的面板，仍是原生 <dialog>＋showModal()（#242 決定 1） */
+.upload-dialog {
+  width: min(640px, 100vw);
+  max-width: 100vw;
+  max-height: 85vh;
+  margin: auto auto 0;
+  border: 1px solid var(--color-border);
+  border-bottom: none;
+  border-radius: var(--radius-large) var(--radius-large) 0 0;
   padding: 1rem;
+}
+
+.upload-dialog[open] {
+  animation: kUp var(--motion-base) var(--ease-enter) backwards;
 }
 
 .upload-dialog::backdrop {

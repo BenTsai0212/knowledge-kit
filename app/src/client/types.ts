@@ -414,6 +414,19 @@ export interface UiStrings {
   uploadGotoTimeline: string;
   uploadErrors: Record<UploadFailure, string>;
   uploadDrop: string;
+  // 上傳頁的拖放說明、檔案卡片與頁首的五個步驟（#242）
+  uploadDropHint: string;
+  uploadPastedText: string;
+  uploadFileStats: string;
+  uploadStepsLabel: string;
+  uploadStepUpload: string;
+  uploadStepChunk: string;
+  uploadStepExtract: string;
+  uploadStepReview: string;
+  uploadStepMerge: string;
+  uploadStepPassages: string;
+  uploadStepBatch: string;
+  uploadStepSent: string;
   uploadClearFile: string;
   // 依可見等級與專案算出看得到的角色（#42）
   uploadAudience: string;
