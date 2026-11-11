@@ -1,0 +1,85 @@
+/*
+ * 動態參考檔（#249）
+ * 來源：Claude 的設計畫布「Knowledge Kit 新設計」的動態提案頁與補齊畫面頁，由決策中心逐字擷取（2026-11-11）。
+ * 只能由設計更新、實作照抄：app/src/ui/app.css 中同名的 @keyframes 必須與本檔相同，
+ * 無法照抄的列在 motion-reference.md 的「例外」（app/src/ui/motion-reference.test.ts 檢查）。
+ * 每個元素的延遲與時間對應的刻度見 motion-reference.md。
+ */
+
+/* 動態 · AI 問答 */
+@keyframes kSend{from{opacity:0;transform:translateY(56px) scale(.96)}}
+@keyframes kRise{from{opacity:0;transform:translateY(8px)}}
+@keyframes kPopS{from{opacity:0;transform:scale(.4)}}
+@keyframes kFade{from{opacity:0}}
+@keyframes kSlideIn{from{opacity:0;transform:translateX(24px)}}
+@keyframes kSweep{from{background-size:0% 100%}}
+@keyframes kDim{to{opacity:.55}}
+.a-send{animation:kSend 220ms cubic-bezier(.2,0,0,1) backwards}
+.a-rise{animation:kRise 220ms cubic-bezier(.2,0,0,1) backwards}
+.a-pop{animation:kPopS 520ms cubic-bezier(.3,1.5,.5,1) backwards}
+.a-fade{animation:kFade 220ms cubic-bezier(.2,0,0,1) backwards}
+.a-slide{animation:kSlideIn 220ms cubic-bezier(.2,0,0,1) backwards}
+.a-sweep{background-repeat:no-repeat;background-size:100% 100%;-webkit-box-decoration-break:clone;box-decoration-break:clone;animation:kSweep 400ms cubic-bezier(.2,0,0,1) 240ms backwards}
+.a-dim{animation:kDim 220ms cubic-bezier(.4,0,1,1) 200ms forwards}
+
+/* 動態 · 全域與等待狀態 */
+@keyframes kToast{from{opacity:0;transform:translateY(12px)}}
+@keyframes kFadeOut{to{opacity:0}}
+@keyframes kBlurOut{to{opacity:0;filter:blur(4px)}}
+@keyframes kScale{from{opacity:0;transform:scale(.98)}}
+@keyframes kDrop{from{grid-template-rows:0fr;opacity:0}}
+@keyframes kGrow{from{transform:scaleX(0)}}
+@keyframes kTimer{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@keyframes kNode{0%,30%{transform:scale(0)}45%{transform:scale(1.25)}55%,100%{transform:none}}
+.a-toast{animation:kToast 220ms cubic-bezier(.2,0,0,1) backwards}
+.a-fadeout{animation:kFadeOut 120ms cubic-bezier(.4,0,1,1) forwards}
+.a-blurout{animation:kBlurOut 220ms cubic-bezier(.4,0,1,1) forwards}
+.a-scale{animation:kScale 220ms cubic-bezier(.2,0,0,1) 60ms backwards}
+.a-drop{animation:kDrop 220ms cubic-bezier(.2,0,0,1) backwards}
+.a-load{transform-origin:left center;animation:kGrow 2400ms linear backwards}
+.a-timer{transform-origin:left center;animation:kTimer 5000ms linear forwards}
+.a-node{transform-box:fill-box;transform-origin:center;animation:kNode 1600ms cubic-bezier(.2,0,0,1) infinite}
+
+/* 動態 · 審核與說法不同 */
+@keyframes kExpand{from{grid-template-rows:0fr;opacity:0}}
+@keyframes kCollapse{to{grid-template-rows:0fr;opacity:0}}
+@keyframes kOut{to{opacity:0;transform:translateX(56px)}}
+@keyframes kGrowY{from{transform:scaleY(0)}}
+.a-expand{animation:kExpand 300ms cubic-bezier(.2,0,0,1) backwards}
+.a-collapse{animation:kCollapse 300ms cubic-bezier(.4,0,1,1) forwards}
+.a-out{animation:kOut 220ms cubic-bezier(.4,0,1,1) forwards}
+.a-grow{transform-origin:left center;animation:kGrow 400ms cubic-bezier(.2,0,0,1) backwards}
+.a-growy{transform-origin:top center;animation:kGrowY 300ms cubic-bezier(.2,0,0,1) backwards}
+
+/* 動態 · 上傳與萃取 */
+@keyframes kUp{from{opacity:0;transform:translateY(24px)}}
+@keyframes kLift{to{transform:translateY(-6px)}}
+@keyframes kUnder{from{background-size:0% 3px}}
+@keyframes kFlyTo{0%{opacity:0;transform:translate(560px,600px) scale(.6)}12%{opacity:1}88%{opacity:1}100%{opacity:0;transform:none}}
+@keyframes kBump{0%{transform:none}40%{transform:scale(1.35)}100%{transform:none}}
+.a-up{animation:kUp 220ms cubic-bezier(.2,0,0,1) backwards}
+.a-lift{animation:kLift 120ms cubic-bezier(.2,0,0,1) forwards}
+.a-batch{transform-origin:left center;animation:kGrow 600ms linear backwards}
+.a-under{background-repeat:no-repeat;background-position:left bottom;background-size:100% 3px;animation:kUnder 400ms cubic-bezier(.2,0,0,1) backwards}
+.a-fly{opacity:0;animation:kFlyTo 700ms cubic-bezier(.2,0,0,1) 300ms backwards}
+.a-bump{animation:kBump 520ms cubic-bezier(.3,1.5,.5,1) 950ms}
+
+/* 補齊 · 入口（主視覺） */
+@keyframes kOrbit{0%,100%{transform:rotateY(-9deg) rotateX(5deg)}50%{transform:rotateY(9deg) rotateX(-4deg)}}
+@keyframes kPop{0%{opacity:0;transform:scale(0)}60%{opacity:1;transform:scale(1.15)}100%{transform:none}}
+@keyframes kFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(0,-5px)}}
+@keyframes kTwinkle{0%,100%{opacity:.35}50%{opacity:.9}}
+@keyframes kDraw{from{stroke-dashoffset:1}}
+@keyframes kFadeIn{from{opacity:0}}
+@keyframes kTravel{0%{stroke-dashoffset:.08;opacity:0}6%{opacity:1}60%{stroke-dashoffset:-1;opacity:1}61%,100%{stroke-dashoffset:-1;opacity:0}}
+@keyframes kForm{0%,8%{stroke-dashoffset:1;opacity:1}24%{stroke-dashoffset:0}70%{stroke-dashoffset:0;opacity:1}85%,100%{stroke-dashoffset:0;opacity:0}}
+@keyframes kGlow{0%,100%{box-shadow:0 0 0 4px var(--bg),0 0 0 4px transparent}50%{box-shadow:0 0 0 4px var(--bg),0 0 0 10px var(--glow)}}
+.s-scene{transform-style:preserve-3d;animation:kOrbit 26s ease-in-out infinite}
+.s-pop{animation:kPop 600ms cubic-bezier(.2,0,0,1) backwards}
+.s-float{animation:kFloat 6s ease-in-out infinite}
+.s-twinkle{animation:kTwinkle 5s ease-in-out infinite}
+.s-edge{stroke-dasharray:1;animation:kDraw 900ms cubic-bezier(.2,0,0,1) backwards}
+.s-fade{animation:kFadeIn 1200ms cubic-bezier(.2,0,0,1) backwards}
+.s-travel{stroke-dasharray:.07 2;stroke-dashoffset:.08;opacity:0;animation:kTravel 4.2s linear infinite backwards}
+.s-form{stroke-dasharray:1;stroke-dashoffset:1;animation:kForm 10s cubic-bezier(.2,0,0,1) infinite backwards}
+.s-glow{animation:kGlow 4s ease-in-out infinite}

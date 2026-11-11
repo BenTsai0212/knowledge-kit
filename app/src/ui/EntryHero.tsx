@@ -24,7 +24,7 @@ function Lines({ points, links, className }: { points: readonly Point[]; links: 
           y1={points[l.from].y}
           x2={points[l.to].x}
           y2={points[l.to].y}
-          pathLength={100}
+          pathLength={1}
           style={vars({ "--i": i })}
         />
       ))}
@@ -89,7 +89,7 @@ export function EntryHero() {
               y1={scene.front[l.from].y}
               x2={scene.front[l.to].x}
               y2={scene.front[l.to].y}
-              pathLength={100}
+              pathLength={1}
               style={vars({ "--i": i })}
             />
           ))}

@@ -675,14 +675,15 @@ main.qa > .source .source-text mark.entering {
 @keyframes kSend {
   from {
     opacity: 0;
-    transform: translateY(1.5rem);
+    transform: translateY(56px) scale(0.96);
   }
 }
 
+/* 畫布是 transform；句子是行內元素，改以 top 升起（motion-reference.md「例外」） */
 @keyframes kRise {
   from {
     opacity: 0;
-    top: 0.4rem;
+    top: 8px;
   }
 }
 
@@ -702,10 +703,11 @@ main.qa > .source .source-text mark.entering {
 @keyframes kSlideIn {
   from {
     opacity: 0;
-    transform: translateX(1.5rem);
+    transform: translateX(24px);
   }
 }
 
+/* 刷過時底色保持透明，只有漸層長出（motion-reference.md「例外」） */
 @keyframes kSweep {
   from {
     background-color: transparent;
@@ -1589,7 +1591,7 @@ label.inline {
 .hero__link--front {
   stroke: color-mix(in srgb, var(--color-textMuted) 55%, transparent);
   stroke-width: 0.25;
-  stroke-dasharray: 100;
+  stroke-dasharray: 1;
   animation: kDraw 900ms var(--ease-enter) backwards;
   animation-delay: calc(900ms + var(--i) * 40ms);
 }
@@ -1597,7 +1599,7 @@ label.inline {
 .hero__dot {
   fill: var(--color-textMuted);
   opacity: 0.45;
-  animation: kTwinkle 5s ease-in-out infinite alternate;
+  animation: kTwinkle 5s ease-in-out infinite;
   animation-delay: calc(var(--i) * -0.7s);
 }
 
@@ -1608,12 +1610,12 @@ label.inline {
 }
 
 .hero__float {
-  animation: kFloat 7s ease-in-out infinite alternate;
+  animation: kFloat 6s ease-in-out infinite;
   animation-delay: calc(var(--i) * -1.3s);
 }
 
 .hero__node {
-  animation: kPop 520ms var(--ease-spring) backwards;
+  animation: kPop 600ms var(--ease-enter) backwards;
   animation-delay: calc(600ms + var(--i) * 60ms);
 }
 
@@ -1626,7 +1628,7 @@ label.inline {
 .hero__glow {
   fill: color-mix(in srgb, var(--color-primary) 22%, transparent);
   opacity: 0;
-  animation: kGlow 6s ease-in-out infinite;
+  animation: kGlow 4s ease-in-out infinite;
   animation-delay: calc(2s + var(--i) * 0.8s);
 }
 
@@ -1635,9 +1637,10 @@ label.inline {
   stroke: var(--color-primary);
   stroke-width: 0.8;
   stroke-linecap: round;
-  stroke-dasharray: 0.1 99.9;
+  stroke-dasharray: 0.07 2;
+  stroke-dashoffset: 0.08;
   opacity: 0;
-  animation: kTravel 3.2s linear infinite;
+  animation: kTravel 4.2s linear infinite backwards;
   animation-delay: calc(1.8s + var(--i) * 0.55s);
 }
 
@@ -1649,9 +1652,9 @@ label.inline {
 .hero__form {
   stroke: var(--color-primary);
   stroke-width: 0.25;
-  stroke-dasharray: 100;
-  opacity: 0;
-  animation: kForm 10s var(--ease-enter) infinite both;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: kForm 10s var(--ease-enter) infinite backwards;
   animation-delay: calc(2.5s + var(--i) * 2.5s);
 }
 
@@ -1678,77 +1681,95 @@ label.inline {
 @keyframes kOrbit {
   0%,
   100% {
-    transform: rotateY(-9deg) rotateX(0deg);
-  }
-  25% {
-    transform: rotateY(0deg) rotateX(5deg);
+    transform: rotateY(-9deg) rotateX(5deg);
   }
   50% {
-    transform: rotateY(9deg) rotateX(0deg);
-  }
-  75% {
-    transform: rotateY(0deg) rotateX(-5deg);
+    transform: rotateY(9deg) rotateX(-4deg);
   }
 }
 
 @keyframes kPop {
-  from {
+  0% {
     opacity: 0;
-    transform: scale(0.3);
+    transform: scale(0);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  100% {
+    transform: none;
   }
 }
 
+/* 主視覺的 SVG 以 viewBox 100 為單位，畫布的 -5px 在這裡約是場景的 5%；位移縮小（motion-reference.md「例外」） */
 @keyframes kFloat {
-  to {
-    transform: translate(0.4px, -0.8px);
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(0, -0.8px);
   }
 }
 
 @keyframes kTwinkle {
-  to {
-    opacity: 0.15;
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.9;
   }
 }
 
+/* 線段的 pathLength 是 1（EntryHero.tsx），虛線長度與畫布相同 */
 @keyframes kDraw {
   from {
-    stroke-dashoffset: 100;
+    stroke-dashoffset: 1;
   }
 }
 
 @keyframes kTravel {
   0% {
-    stroke-dashoffset: 0;
+    stroke-dashoffset: 0.08;
     opacity: 0;
   }
-  10%,
-  90% {
+  6% {
     opacity: 1;
   }
+  60% {
+    stroke-dashoffset: -1;
+    opacity: 1;
+  }
+  61%,
   100% {
-    stroke-dashoffset: -100;
+    stroke-dashoffset: -1;
     opacity: 0;
   }
 }
 
 @keyframes kForm {
-  0% {
-    stroke-dashoffset: 100;
-    opacity: 0.9;
+  0%,
+  8% {
+    stroke-dashoffset: 1;
+    opacity: 1;
   }
-  10% {
+  24% {
     stroke-dashoffset: 0;
   }
-  20% {
-    opacity: 0.9;
+  70% {
+    stroke-dashoffset: 0;
+    opacity: 1;
   }
-  26%,
+  85%,
   100% {
     stroke-dashoffset: 0;
     opacity: 0;
   }
 }
 
+/* 光暈是 SVG 的圓，box-shadow 對 SVG 無效；改以圓的不透明度與縮放呈現（motion-reference.md「例外」） */
 @keyframes kGlow {
   0%,
   100% {
