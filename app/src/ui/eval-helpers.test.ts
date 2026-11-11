@@ -6,7 +6,9 @@ import { evalQuestions } from "../evals/load";
 import type { RetrievalConfig } from "../client/types";
 import { keywordHashProvider } from "../retrieval/keyword-hash";
 import { createProvider, PROVIDERS, RETRIEVAL_DEFAULTS, withRetrievalDefaults } from "../retrieval/providers";
-import { createEvalDatabases, differs, effectiveForm, evalReport, parseReportSource, parseSettings, setSummary, settingsForm, verdicts } from "./eval-helpers";
+import css from "./app.css?raw";
+import { bankSummary, createEvalDatabases, differs, effectiveForm, evalReport, outcome, parseReportSource, parseSettings, progressCells, setSummary, settingsForm, verdicts } from "./eval-helpers";
+import { MOTION, STAGGER } from "./motion";
 
 const { thresholds } = clientConfig.client.evals;
 const questions = evalQuestions.questions.slice(0, 2);
@@ -183,5 +185,47 @@ describe("createEvalDatabases", () => {
     await dbs.close();
     await opening;
     expect(log).toEqual(["open 1", "close 1"]);
+  });
+});
+
+describe("每題的結果、題庫摘要與進度格（#244）", () => {
+  it("全部通過：回答題是正確、拒答題是正確拒答；任一指標未通過、滲漏或錯誤是不正確", () => {
+    expect(outcome(answerQ, result(), "keyPoints")).toBe("correct");
+    expect(outcome(refusalQ, result({ id: refusalQ.id, citation: null, keyPoints: null, refused: true }), "keyPoints")).toBe("refused");
+    expect(outcome(refusalQ, result({ id: refusalQ.id, citation: null, keyPoints: null, refused: false }), "keyPoints")).toBe("incorrect");
+    expect(outcome(answerQ, result({ citation: { pass: false, cited: [], dropped: [] } }), "keyPoints")).toBe("incorrect");
+    expect(outcome(answerQ, result({ keyPoints: { pass: false, points: [] } }), "keyPoints")).toBe("incorrect");
+    expect(outcome(answerQ, result({ leaks: [{ kind: "document", document: "d" } as never] }), "keyPoints")).toBe("incorrect");
+    expect(outcome(answerQ, result({ error: "network" }), "keyPoints")).toBe("incorrect");
+  });
+
+  it("題庫摘要的題數、身分數、類別數取自題庫", () => {
+    const all = evalQuestions.questions;
+    expect(bankSummary(all)).toEqual({ questions: all.length, roles: new Set(all.map((q) => q.role)).size, categories: new Set(all.map((q) => q.category)).size });
+    expect(bankSummary([answerQ, answerQ])).toEqual({ questions: 2, roles: 1, categories: 1 });
+  });
+
+  it("進度格：每組 × 適用的題目各一格，先設定 A 再設定 B；還沒回來的是 null", () => {
+    const qs = [answerQ, refusalQ];
+    const run: EvalRun = {
+      mode: "keyPoints",
+      providerId: "keyword-hash",
+      status: "running",
+      startedAt: "2026-11-11T00:00:00.000Z",
+      sets: [
+        { settings: { topK: 5, minScore: 0.2 }, results: [result(), result({ id: refusalQ.id, citation: null, keyPoints: null, refused: false })] },
+        { settings: { topK: 3, minScore: 0.2 }, results: [result()] },
+      ],
+    };
+    expect(progressCells(run, qs)).toEqual(["correct", "incorrect", "correct", null]);
+  });
+
+  it("動態：進度格以 kGrow（linear）填滿；完成時四項指標以 kPopS 依序彈出，延遲 900／960／1020／1080ms 寫成 --motion-* 的組合", () => {
+    const rule = (selector: string) => css.match(new RegExp(`\\n${selector.replace(/[.]/g, "\\.")}\\s*\\{([^}]*)\\}`))?.[1] ?? "";
+    expect(rule(".eval-cell")).toContain("animation: kGrow var(--motion-base) var(--ease-linear) backwards;");
+    expect(rule(".eval-summary.settled .eval-verdict")).toContain(
+      "animation: kPopS var(--motion-settle) var(--ease-spring) calc(3 * var(--motion-expand) + var(--i, 0) * var(--motion-stagger-list)) backwards;",
+    );
+    expect([0, 1, 2, 3].map((i) => 3 * MOTION.expand + i * STAGGER.list)).toEqual([900, 960, 1020, 1080]);
   });
 });

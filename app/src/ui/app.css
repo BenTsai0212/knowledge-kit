@@ -1633,24 +1633,57 @@ label.inline {
   margin-left: 0.5rem;
 }
 
-/* 評測台（#62） */
+/* 評測台（#62；版面 #244）：頁首 → 「評測設定」與「總覽」並排（窄螢幕上下堆疊）→ 每題的結果 */
 .eval-page {
   display: grid;
   gap: 1rem;
 }
 
-.eval-settings fieldset {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1rem;
+.eval-header h2,
+.eval-header p {
+  margin: 0;
+}
+
+.eval-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+/* 設定 A／B 各一個淡底區塊 */
+.eval-sets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.eval-sets fieldset {
+  display: grid;
+  gap: 0.5rem;
+  border: none;
+  border-radius: var(--radius-medium);
+  background: var(--color-surfaceRaised);
+  margin: 0;
+}
+
+.eval-report {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-medium);
-  margin: 0 0 0.5rem;
+}
+
+.table-scroll {
+  overflow-x: auto;
 }
 
 .eval-table {
   width: 100%;
   border-collapse: collapse;
+}
+
+.eval-results {
+  min-width: 44rem;
 }
 
 .eval-table th,
@@ -1661,12 +1694,148 @@ label.inline {
   vertical-align: top;
 }
 
+.eval-threshold,
+.eval-number {
+  font-family: var(--font-mono);
+}
+
+/* 通過 success 淡底、未通過 warning 淡底（不用紅色）；字用 text，淡底上的對比與一般文字相同 */
+.eval-verdict.pass {
+  background: color-mix(in srgb, var(--color-success) 14%, var(--color-surface));
+  border-color: var(--color-success);
+  color: var(--color-text);
+}
+
+.eval-verdict.fail {
+  background: color-mix(in srgb, var(--color-warning) 14%, var(--color-surface));
+  border-color: var(--color-warning);
+  color: var(--color-text);
+}
+
+.eval-chip {
+  display: inline-block;
+  border-radius: var(--radius-pill);
+  padding: 0 0.5rem;
+  background: var(--color-surfaceRaised);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+/* 每題的結果：符號＋文字，顏色只是輔助 */
+.eval-outcome {
+  white-space: nowrap;
+}
+
+.eval-outcome.correct,
+.eval-outcome.refused {
+  color: var(--color-success);
+}
+
+.eval-outcome.incorrect {
+  color: var(--color-warning);
+}
+
+.eval-detail-sets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1rem;
+}
+
+.eval-detail h4 {
+  margin: 0 0 0.25rem;
+}
+
 .eval-result p {
   margin: 0.25rem 0;
 }
 
 .eval-result .badge {
   margin: 0 0.25rem 0.25rem 0;
+}
+
+.eval-answer {
+  border-left: 3px solid var(--color-border);
+  padding-left: 0.75rem;
+}
+
+.eval-answer.refusal {
+  border: 1px dashed var(--color-border);
+}
+
+.eval-passages {
+  padding-left: 1.25rem;
+}
+
+.eval-passage {
+  background: var(--color-reading);
+  color: var(--color-readingText);
+  border-radius: var(--radius-small);
+  padding: 0.25rem 0.5rem;
+}
+
+/* 引用標號：與問答的標號預設狀態相同（證據色系，不是按鈕） */
+.eval-result .citation {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 0 0.35rem;
+  margin: 0 0.1rem;
+  border-radius: var(--radius-small);
+  background: var(--color-markSoft);
+  color: var(--color-markText);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-mark) 84%, var(--color-markText));
+}
+
+.eval-answer-text .citation {
+  vertical-align: super;
+}
+
+/* 評測中（progress）：每題一格，結果回來就由左往右填滿（kGrow、linear） */
+.eval-progress {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0;
+}
+
+.eval-progress li {
+  width: 0.5rem;
+  height: 0.75rem;
+  border-radius: 2px;
+  background: var(--color-surfaceRaised);
+  overflow: hidden;
+}
+
+.eval-cell {
+  display: block;
+  height: 100%;
+  transform-origin: left center;
+  animation: kGrow var(--motion-base) var(--ease-linear) backwards;
+}
+
+.eval-cell.pass {
+  background: var(--color-success);
+}
+
+.eval-cell.fail {
+  background: var(--color-warning);
+}
+
+/* 評測完成（settle）：四項指標依序彈出，延遲照 motion-reference.md「全域 · 評測完成的四項指標」（900／960／1020／1080ms） */
+.eval-summary.settled .eval-verdict {
+  animation: kPopS var(--motion-settle) var(--ease-spring) calc(3 * var(--motion-expand) + var(--i, 0) * var(--motion-stagger-list)) backwards;
+}
+
+/* 進入頁籤時已有的結果不重播（指標的彈出只在評測完成時加上 settled） */
+.eval-summary.still .eval-cell {
+  animation: none;
+}
+
+@keyframes kGrow {
+  from {
+    transform: scaleX(0);
+  }
 }
 
 /* 入口頁（#228）：左側主視覺、右側邀請碼面板；窄螢幕時主視覺在上、面板在下 */

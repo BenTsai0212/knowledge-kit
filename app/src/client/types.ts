@@ -584,6 +584,14 @@ export interface UiStrings {
   evalDiffers: string;
   evalQuestion: string;
   evalNotRun: string;
+  evalBankSummary: string;
+  evalNumber: string;
+  evalRole: string;
+  evalCategory: string;
+  evalOutcomeCorrect: string;
+  evalOutcomeIncorrect: string;
+  evalOutcomeRefused: string;
+  evalCitedPassages: string;
   evalEmptyTitle: string;
   evalEmptyReason: string;
   evalEmptyAction: string;

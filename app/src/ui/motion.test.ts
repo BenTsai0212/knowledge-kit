@@ -66,7 +66,7 @@ describe("動態的刻度（#227，docs/design.md「刻度」）", () => {
     expect(MOTION).toEqual({ fast: 120, base: 220, expand: EXPAND_MS, sweep: PAN_MS, settle: 520 });
     expect([EXPAND_MS, PAN_MS]).toEqual([300, 400]);
     expect(STAGGER).toEqual({ list: 60, sentence: 80 });
-    expect(EASING).toEqual({ enter: "cubic-bezier(.2,0,0,1)", exit: "cubic-bezier(.4,0,1,1)", spring: "cubic-bezier(.3,1.5,.5,1)" });
+    expect(EASING).toEqual({ enter: "cubic-bezier(.2,0,0,1)", exit: "cubic-bezier(.4,0,1,1)", spring: "cubic-bezier(.3,1.5,.5,1)", linear: "linear" });
   });
 
   it("依序出現的延遲：超過 6 項不再延遲；減少動態效果時為 0", () => {
@@ -87,6 +87,7 @@ describe("動態的刻度（#227，docs/design.md「刻度」）", () => {
       "--ease-enter": EASING.enter,
       "--ease-exit": EASING.exit,
       "--ease-spring": EASING.spring,
+      "--ease-linear": EASING.linear,
     });
     const reduced = motionVariables(true);
     for (const [name, value] of Object.entries(reduced)) expect(value).toBe(name.startsWith("--motion-") ? "0ms" : motionVariables(false)[name]);
@@ -120,7 +121,7 @@ describe("動態的刻度（#227，docs/design.md「刻度」）", () => {
 
   it("問答用到的 keyframes 都有定義", () => {
     const used = new Set([...cssText.matchAll(/animation:\s*(k[A-Z]\w*)/g)].map((m) => m[1]));
-    expect(used).toEqual(new Set(["kSend", "kRise", "kPopS", "kFade", "kSlideIn", "kSweep"]));
+    expect(used).toEqual(new Set(["kSend", "kRise", "kPopS", "kFade", "kSlideIn", "kSweep", "kGrow"]));
     for (const name of used) expect(cssText).toContain(`@keyframes ${name} {`);
   });
 
