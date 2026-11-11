@@ -10,7 +10,7 @@
   "additionalProperties": false,
   "required": [
     "loading", "loadFailed", "modelLoadingTitle", "modelDownloadingTitle", "modelDownloadProgress", "modelPreparing",
-    "retrievalFallbackTitle", "retrievalFallback", "fictionalData", "demoPermissions", "identity", "language", "accessCodeTitle",
+    "retrievalFallbackTitle", "retrievalFallback", "productName", "fictionalData", "demoPermissions", "identity", "language", "accessCodeTitle",
     "accessCodeLabel", "accessCodeHint", "demoAccessCodeHint", "demoQaNotice", "demoUploadNotice", "accessCodeSubmit", "changeAccessCode", "presetQuestions", "scenarioRole",
     "questionLabel", "questionPlaceholder", "askButton", "answering", "emptyAnswer", "qaIndependent", "sessionQuestions", "answerMentions", "followUpTitle", "followUpOutgoing", "followUpIncoming", "viewInGraph", "openSource", "sourceTitle",
     "closeSource", "views", "tabQa", "tabGraph", "legend", "graphEmpty", "selectEntity", "graphExpanded", "graphShowAll", "graphShowOnly",
@@ -70,6 +70,7 @@
         "init": { "$ref": "#/definitions/Text" }
       }
     },
+    "productName": { "$ref": "#/definitions/Text" },
     "fictionalData": { "$ref": "#/definitions/Text" },
     "demoPermissions": { "$ref": "#/definitions/Text" },
     "identity": { "$ref": "#/definitions/Text" },

@@ -98,7 +98,13 @@ Light 來自提案 A「墨與螢光」，Dark 來自提案 B「晶格」。對�
 - 網格 48、磚塊圓角 11、線寬 3.5、節點半徑 3.5／4.5、安全區內縮 10。
 - 換客戶時，下方節點讀 `primary`，證據節點讀 `mark`；證據節點不換色。
 - 不要：漸層、發光、旋轉翻轉、拉長、把證據節點改成主色。
-- 組合字標：icon＋「Knowledge Kit」（`fonts.display`）＋分隔線＋客戶名稱。
+- 組合字標：icon＋「Knowledge Kit」（`fonts.display`）＋分隔線＋客戶名稱。分隔線只在同一行時使用；側欄寬度放不下一行，改用兩行版本：第一行 icon＋「Knowledge Kit」，第二行客戶名稱，不加分隔線。
+
+實作（#226）：
+
+- 頁首（`app/src/ui/Sidebar.tsx`）的組合字標用 `app/src/ui/ProductIcon.tsx` 繪製：磚塊讀 `surface`／`border`，線條與交點讀 `text`，下方節點讀 `primary`，證據節點讀 `mark`、描邊讀 `markText`（Light 是墨色；Dark 是淡琥珀，接近原始檔的不描邊）。icon 是裝飾（`aria-hidden`），產品名稱是 i18n 的 `productName`，客戶名稱取自 `client.json` 的 `displayName`。側欄用兩行版本；客戶名稱沿用 `h1` 的大小與字重、`text` 色（客戶 demo 中客戶名稱是主角，不比產品名稱弱）。
+- 32px 以下（含）元件改畫簡化版；簡化版的證據節點也讀 `mark`（原始檔的 `#E8B800` 不是 token）。
+- favicon 是 `app/public/favicon.svg`：`knowledge-kit-16.svg` 的形狀與 Light 顏色，以 SVG 內的 `@media (prefers-color-scheme: dark)` 改用 Dark 的 `surface`、`border`、`text`、`mark`。不隨客戶換色（16px 版本沒有主色節點）。`app/src/ui/product-icon.test.ts` 檢查形狀與顏色和原始檔一致。
 
 ## 動態
 

@@ -11,6 +11,7 @@
     "integrity": "The downloaded semantic model didn't match the registered files, so it wasn't used for safety. Questions in another language or worded differently may not find relevant passages.",
     "init": "The semantic model couldn't start in this browser. Questions in another language or worded differently may not find relevant passages."
   },
+  "productName": "Knowledge Kit",
   "fictionalData": "Fictional data",
   "demoPermissions": "Demo permissions",
   "identity": "Identity",

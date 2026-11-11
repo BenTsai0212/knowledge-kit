@@ -2,6 +2,10 @@ import type { ReactNode } from "react";
 import { clientConfig } from "../client/load";
 import { strings } from "../client/i18n";
 import type { View } from "./online-demo";
+import { ProductIcon } from "./ProductIcon";
+
+// 頁首 icon 的尺寸：大於 32px，用完整版（含主色節點）
+export const BRAND_ICON_SIZE = 36;
 
 interface Props {
   language: string;
@@ -36,7 +40,14 @@ export function Sidebar({ language, identity, onIdentity, onLanguage, onChangeAc
   return (
     <div className="sidebar">
       <header className="toolbar">
-        <h1>{clientConfig.client.displayName[language]}</h1>
+        {/* 組合字標（#226）：側欄固定兩行，第一行 icon＋產品名稱，第二行客戶名稱（不加分隔線） */}
+        <h1 className="brand">
+          <span className="brand__product">
+            <ProductIcon size={BRAND_ICON_SIZE} />
+            <span className="brand__wordmark">{s.productName}</span>
+          </span>{" "}
+          <span className="brand__client">{clientConfig.client.displayName[language]}</span>
+        </h1>
         <span className="badge">{s.fictionalData}</span>
         <label>
           {s.identity}

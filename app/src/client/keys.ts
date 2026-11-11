@@ -205,7 +205,7 @@ const uiStrings = {
   loading: "required", loadFailed: "required",
   modelLoadingTitle: "required", modelDownloadingTitle: "required", modelDownloadProgress: "required", modelPreparing: "required",
   retrievalFallbackTitle: "required", retrievalFallback: "required",
-  fictionalData: "required", demoPermissions: "required",
+  productName: "required", fictionalData: "required", demoPermissions: "required",
   identity: "required", language: "required", accessCodeTitle: "required", accessCodeLabel: "required",
   accessCodeHint: "required", demoAccessCodeHint: "required", demoQaNotice: "required",
   demoUploadNotice: "required", accessCodeSubmit: "required", changeAccessCode: "required",
