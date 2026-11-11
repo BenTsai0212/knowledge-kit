@@ -120,4 +120,15 @@ describe("動態的刻度（#227，docs/design.md「刻度」）", () => {
     expect(used).toEqual(new Set(["kSend", "kRise", "kPopS", "kFade", "kSlideIn", "kSweep"]));
     for (const name of used) expect(cssText).toContain(`@keyframes ${name} {`);
   });
+
+  // 結束狀態留在 keyframes 的 to 會蓋掉元素自己的樣式（#227：螢光在刷過後變透明）
+  it("fill-mode 是 both／forwards 的問答 keyframes 只寫 from，結束時回到元素自己的樣式", () => {
+    const keyframes = (name: string) => cssText.match(new RegExp(`@keyframes ${name} \\{([\\s\\S]*?)\\n\\}`))?.[1] ?? "";
+    const filled = (css: string) =>
+      [...css.matchAll(/animation:\s*(k[A-Z]\w*)[^;]*\b(both|forwards)\s*;/g)].map((m) => m[1]).filter((name) => /\bto\s*\{|100%\s*\{/.test(keyframes(name)));
+    // 檢查本身：以 both 結束在 to 的寫法會被抓到
+    expect(filled(`${cssText}\n.x { animation: kSweep 1s both; }`)).toEqual(["kSweep"]);
+    expect(filled(cssText)).toEqual([]);
+    expect(cssText).toMatch(/animation: kSweep [^;]* backwards;/);
+  });
 });
