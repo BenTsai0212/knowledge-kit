@@ -1,5 +1,6 @@
 // 上傳頁的輔助計算（#42）：誰看得到、預設的可見等級、今天的日期、檔案大小。
 import type { AccessFile, Role } from "../client/types";
+import { wordCount } from "../language/text";
 
 // 依 access.json 算出看得到這個可見等級與專案的角色（與 docs/data-model.md 的讀取規則相同；
 // 實際權限由 RLS 執行，這裡只是給上傳者參考，app/tests/upload/audience.test.ts 與 oracle 比對）
@@ -31,4 +32,56 @@ export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// 檔案卡片的字數（#242）：文字類別的規則在語言模組（language/text.ts 的 wordCount）
+export function passagesWordCount(passages: readonly string[]): number {
+  return passages.reduce((n, p) => n + wordCount(p), 0);
+}
+
+// 頁首的五個步驟（#242）：上傳 → 切段 → 模型萃取 → 人工審核 → 併入圖譜。
+// 上傳頁不知道審核進度：萃取完成後「人工審核」為進行中並顯示送審筆數，「併入圖譜」保持未完成（#242 決定 3）
+export type UploadStepName = "upload" | "chunk" | "extract" | "review" | "merge";
+export type UploadStepStatus = "done" | "active" | "todo";
+export type UploadStepDetail = { kind: "passages"; count: number } | { kind: "batch"; done: number; total: number } | { kind: "sent"; count: number };
+export interface UploadStep {
+  name: UploadStepName;
+  status: UploadStepStatus;
+  detail?: UploadStepDetail;
+}
+
+export interface UploadProgress {
+  // 已選檔或已貼上文字
+  hasInput: boolean;
+  parsing: boolean;
+  // 預覽成功後的段落數；還沒預覽時為 null
+  passages: number | null;
+  // 已寫入資料庫
+  written: boolean;
+  // 這份文件的萃取批次（還沒開始時為 null）
+  batches: readonly { status: string; entities: number; relations: number }[] | null;
+}
+
+export function uploadSteps(p: UploadProgress): UploadStep[] {
+  const batches = p.batches ?? [];
+  const finished = batches.filter((b) => b.status === "done").length;
+  const extracted = p.batches !== null && finished === batches.length;
+  const running = batches.findIndex((b) => b.status === "running");
+  const sent = batches.reduce((n, b) => n + b.entities + b.relations, 0);
+  const read = p.passages !== null;
+  return [
+    { name: "upload", status: p.hasInput || read ? "done" : "active" },
+    {
+      name: "chunk",
+      status: read ? "done" : p.hasInput || p.parsing ? "active" : "todo",
+      ...(read && { detail: { kind: "passages", count: p.passages! } }),
+    },
+    {
+      name: "extract",
+      status: extracted ? "done" : p.written ? "active" : "todo",
+      ...(p.batches !== null && batches.length > 0 && { detail: { kind: "batch", done: running >= 0 ? running + 1 : finished, total: batches.length } }),
+    },
+    { name: "review", status: extracted ? "active" : "todo", ...(extracted && { detail: { kind: "sent", count: sent } }) },
+    { name: "merge", status: "todo" },
+  ];
 }

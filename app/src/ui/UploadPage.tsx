@@ -1,26 +1,29 @@
 // 上傳頁（docs/upload.md）：選檔、拖放或貼上文字 → 預覽 → 在彈出視窗中確認後寫入（#42）。
+// 頁首是五個步驟，拖放區、檔案卡片、預覽與確認區套用設計系統 v1 的版面與動態（#242）。
 // 可選的等級與專案只列出目前身分看得到的；實際能否寫入由 RLS 決定。上傳內容一律以文字節點顯示。
 // 切換身分或語言時由 App 以 key 重建本元件，清除表單、預覽與結果。
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { clientConfig } from "../client/load";
 import type { Database } from "../db/database";
 import { chunk } from "../upload/chunk";
-import { extractText, formatOf, ParseError } from "../upload/parse";
+import { extractText, formatOf, MAX_FILE_BYTES, ParseError } from "../upload/parse";
 import { uploadDocument, UploadError } from "../upload/write";
 import type { ConflictState } from "../conflicts/run";
 import type { ExtractionState } from "../extraction/run";
 import { LevelBadge, ProjectBadge } from "./AccessBadges";
 import { ConflictStatus } from "./ConflictStatus";
-import { focusIdentity } from "./empty-state";
+import { EMPTY_ICONS, focusIdentity } from "./empty-state";
 import { EmptyState } from "./EmptyState";
 import { ExtractionStatus } from "./ExtractionStatus";
 import { FilePicker } from "./FilePicker";
 import { Notice } from "./Notice";
 import { onlineDemo } from "./online-demo";
+import { staggerIndex } from "./motion";
 import { createRequestGate } from "./requests";
 import { fill, strings } from "../client/i18n";
 import type { UploadFailure } from "../client/types";
-import { audienceRoles, defaultVisibility, formatBytes, todayIso } from "./upload-helpers";
+import { audienceRoles, defaultVisibility, formatBytes, todayIso, uploadSteps, passagesWordCount } from "./upload-helpers";
+import { UploadSteps } from "./UploadSteps";
 
 interface Props {
   db: Database;
@@ -79,6 +82,8 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
   const [parsing, setParsing] = useState(false);
   const [parseError, setParseError] = useState<UploadFailure | null>(null);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
+  // 拖著檔案進入拖放區（#242）：框線變實線、底色變淺、圖示上浮
+  const [dragOver, setDragOver] = useState(false);
   const parses = useRef(createRequestGate());
   // 連點時 state 還沒更新，以 ref 確保同一份預覽只寫入一次
   const writeStarted = useRef(false);
@@ -179,17 +184,41 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
     }
   }
 
+  // 確認區先列「誰看得到」與專案，再是其他設定與上傳按鈕（#242）
   const summary: [string, ReactNode][] = [
-    [s.uploadDocTitle, title],
-    [s.uploadLanguage, languageName.of(docLanguage) ?? docLanguage],
+    [s.uploadAudience, audience],
     [s.uploadVisibility, <LevelBadge visibility={visibility} language={language} />],
     [s.uploadProject, project === "" ? s.uploadNoProject : <ProjectBadge project={project} language={language} />],
+    [s.uploadDocTitle, title],
+    [s.uploadLanguage, languageName.of(docLanguage) ?? docLanguage],
     [s.uploadDate, date === "" ? s.undated : date],
-    [s.uploadAudience, audience],
   ];
+
+  const written = confirm?.result?.documentId;
+  const writtenJob = written === undefined ? undefined : extractions.find((x) => x.state.documentId === written);
+  const steps = uploadSteps({
+    hasInput: file !== null || pasted.trim() !== "",
+    parsing,
+    passages: confirm?.passages.length ?? null,
+    written: written !== undefined,
+    batches: writtenJob?.state.batches ?? null,
+  });
+  const icon = (className: string) => (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d={EMPTY_ICONS.upload} />
+    </svg>
+  );
+  // 預覽段落逐條升起（stagger 60ms，超過 6 項不再延遲）
+  const passageList = (passages: string[], start: number) =>
+    passages.map((p, i) => (
+      <li key={start + i} style={{ "--i": staggerIndex(start + i) } as CSSProperties}>
+        {p}
+      </li>
+    ));
 
   return (
     <section className="card upload">
+      <UploadSteps steps={steps} language={language} />
       {/* 線上 demo：另外說明上傳內容會傳給模型供應商（#100 決定 4） */}
       <p className="badge warning">{onlineDemo.enabled ? s.demoUploadNotice : s.uploadEphemeral}</p>
       {extractions.map((job) => (
@@ -199,49 +228,62 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
         </div>
       ))}
       <div
-        className="drop-zone"
+        className={`drop-zone${dragOver ? " is-over" : ""}`}
+        onDragEnter={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
         onDragOver={(e) => e.preventDefault()}
+        // 移到拖放區內的子元素也會觸發 dragleave：只有離開整個拖放區才算離開
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragOver(false);
+        }}
         onDrop={(e) => {
           e.preventDefault();
+          setDragOver(false);
           const dropped = e.dataTransfer.files[0];
           if (dropped !== undefined) chooseFile(dropped);
         }}
       >
+        {parseError !== null ? (
+          // 讀取失敗：在拖放區原地換成說明，附「清除檔案」（有選檔時）或「重新選檔」；不搖晃、不用大面積的紅色
+          <Notice
+            kind="error"
+            title={s.noticeParseTitle}
+            action={file !== null ? { label: s.uploadClearFile, onClick: clearFile } : { label: s.uploadChooseAgain, onClick: () => fileInput.current?.click() }}
+          >
+            {s.uploadErrors[parseError]}
+          </Notice>
+        ) : file === null ? (
+          <>
+            {icon("drop-zone__icon")}
+            <p className="drop-zone__title">{s.uploadDrop}</p>
+            <p className="muted">{fill(s.uploadDropHint, { size: formatBytes(MAX_FILE_BYTES) })}</p>
+          </>
+        ) : (
+          // 放下或選好檔案後，檔案卡片落定（settle）；換檔時重播
+          <div key={`${file.name}:${file.size}:${file.lastModified}`} className="upload-file">
+            {icon("upload-file__icon")}
+            <span className="upload-file__name">{file.name}</span>
+            <span className="muted">{formatBytes(file.size)}</span>
+            <button type="button" className="link" onClick={clearFile}>
+              {s.uploadClearFile}
+            </button>
+          </div>
+        )}
         <FilePicker
           key={fileInputKey}
           inputRef={fileInput}
           accept=".txt,.md,.markdown,.pdf,.docx"
           onChange={(e) => chooseFile(e.target.files?.[0] ?? null)}
           button={s.uploadFile}
-          status={
-            file === null ? (
-              <span className="muted">{s.fileNone}</span>
-            ) : (
-              <>
-                {fill(s.parenthetical, { text: file.name, note: formatBytes(file.size) })}{" "}
-                <button type="button" className="link" onClick={clearFile}>
-                  {s.uploadClearFile}
-                </button>
-              </>
-            )
-          }
+          status={file === null ? <span className="muted">{s.fileNone}</span> : null}
         />
-        <p className="muted">{s.uploadDrop}</p>
       </div>
       <label>
         {s.uploadPaste}
         <textarea rows={4} value={pasted} placeholder={s.uploadPastePlaceholder} disabled={file !== null} onChange={(e) => edit(setPasted)(e.target.value)} />
       </label>
-      {parseError !== null && (
-        // 解析錯誤顯示在檔案區與貼上區旁邊：有檔案時可以清除，沒有時可以重新選檔
-        <Notice
-          kind="error"
-          title={s.noticeParseTitle}
-          action={file !== null ? { label: s.uploadClearFile, onClick: clearFile } : { label: s.uploadChooseAgain, onClick: () => fileInput.current?.click() }}
-        >
-          {s.uploadErrors[parseError]}
-        </Notice>
-      )}
       <label>
         {s.uploadDocTitle}
         <input type="text" value={title} onChange={(e) => edit(setTitle)(e.target.value)} />
@@ -307,6 +349,24 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
                 ✕
               </button>
             </header>
+            {/* 檔案卡片：檔名、段落數、字數；預覽段落放在 reading 紙面上逐條升起 */}
+            <div className="upload-file-card">
+              <strong className="upload-file-card__name">{file?.name ?? s.uploadPastedText}</strong>
+              <span className="upload-file-card__stats muted">
+                {fill(s.uploadFileStats, { passages: confirm.passages.length, words: passagesWordCount(confirm.passages) })}
+              </span>
+            </div>
+            <ol className="upload-preview" lang={docLanguage}>
+              {passageList(confirm.passages.slice(0, PREVIEW_COUNT), 0)}
+            </ol>
+            {confirm.passages.length > PREVIEW_COUNT && (
+              <details>
+                <summary>{s.uploadShowAll}</summary>
+                <ol className="upload-preview" start={PREVIEW_COUNT + 1} lang={docLanguage}>
+                  {passageList(confirm.passages.slice(PREVIEW_COUNT), PREVIEW_COUNT)}
+                </ol>
+              </details>
+            )}
             <dl>
               {summary.map(([label, value]) => (
                 <div key={label}>
@@ -314,26 +374,7 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
                   <dd>{value}</dd>
                 </div>
               ))}
-              <div>
-                <dt>{s.uploadPassageCount}</dt>
-                <dd>{confirm.passages.length}</dd>
-              </div>
             </dl>
-            <ol className="upload-preview" lang={docLanguage}>
-              {confirm.passages.slice(0, PREVIEW_COUNT).map((p, i) => (
-                <li key={i}>{p}</li>
-              ))}
-            </ol>
-            {confirm.passages.length > PREVIEW_COUNT && (
-              <details>
-                <summary>{s.uploadShowAll}</summary>
-                <ol className="upload-preview" start={PREVIEW_COUNT + 1} lang={docLanguage}>
-                  {confirm.passages.slice(PREVIEW_COUNT).map((p, i) => (
-                    <li key={i}>{p}</li>
-                  ))}
-                </ol>
-              </details>
-            )}
             {confirm.error !== undefined && (
               <Notice kind="error" title={s.noticeWriteTitle} action={{ label: s.uploadBack, onClick: () => setConfirm(null) }}>
                 {s.uploadErrors[confirm.error]}
@@ -359,10 +400,7 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
                   {s.colon}
                   {confirm.result.count}
                 </p>
-                {(() => {
-                  const job = extractions.find((x) => x.state.documentId === confirm.result!.documentId);
-                  return job && jobStatus(job);
-                })()}
+                {writtenJob && jobStatus(writtenJob)}
                 <div className="dialog-actions">
                   <button type="button" onClick={() => onGoto("qa")}>
                     {s.uploadGotoQa}

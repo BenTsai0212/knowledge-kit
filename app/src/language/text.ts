@@ -47,6 +47,16 @@ export function segments(text: string, scripts?: readonly ScriptRule[], other: S
   return out;
 }
 
+// 字數（上傳頁的檔案卡片，#242）：不加空白相連的文字類別（漢字、假名）每字算 1，其他文字以連續的字母與數字算 1 個字；標點與空白不算
+export function wordCount(text: string): number {
+  let count = 0;
+  for (const [run] of text.matchAll(DEFAULT.pattern)) {
+    const { rule } = DEFAULT.rules.find((r) => r.test.test(run))!;
+    count += rule.joinsWithoutSpace ? [...run].length : 1;
+  }
+  return count;
+}
+
 // 換行與句子相連時不加空白的字元
 const JOINS = new RegExp(`[${SCRIPTS.filter((r) => r.joinsWithoutSpace).map((r) => r.chars).join("")}${FULLWIDTH_PUNCTUATION}]`, "u");
 
