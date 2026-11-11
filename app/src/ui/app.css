@@ -3,6 +3,12 @@
   box-sizing: border-box;
 }
 
+/* 鍵盤焦點框（docs/design.md「字體、圓角、焦點框」，#225）：所有可聚焦元件共用 */
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
 body {
   margin: 0;
   background: var(--color-background);
@@ -363,12 +369,48 @@ textarea {
   margin: 0.25rem 0;
 }
 
+/* 引用標號的三個狀態（docs/design.md，#225）：只用證據色系，不用主色。
+   內框與 Dark 的 hover 色是 color-mix，比例與 scripts/check-client.mjs 的 CITATION_MIX 相同（check:client 檢查對比）。
+   選取（aria-pressed）：這個標號的段落正在原文面板中 */
 button.citation {
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   padding: 0 0.35rem;
   margin: 0 0.1rem;
   vertical-align: super;
+  border: none;
   border-radius: var(--radius-small);
+  background: var(--color-markSoft);
+  color: var(--color-markText);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-mark) 84%, var(--color-markText));
+}
+
+button.citation:hover {
+  background: var(--color-mark);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-mark) 73%, var(--color-markText));
+}
+
+button.citation[aria-pressed="true"] {
+  background: var(--color-text);
+  color: var(--color-mark);
+  box-shadow: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  button.citation {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-mark) 40%, var(--color-markSoft));
+  }
+
+  button.citation:hover {
+    background: color-mix(in srgb, var(--color-mark) 17%, var(--color-markSoft));
+    color: color-mix(in srgb, var(--color-markReading) 90%, var(--color-text));
+    box-shadow: inset 0 0 0 1px var(--color-mark);
+  }
+
+  button.citation[aria-pressed="true"] {
+    background: var(--color-mark);
+    color: var(--color-markSoft);
+  }
 }
 
 .source header {
@@ -376,6 +418,14 @@ button.citation {
   justify-content: space-between;
   align-items: baseline;
   gap: 1rem;
+}
+
+/* 原文紙面（#225）：Dark 也是亮色的 reading 底（Light 的 reading 與 surface 相同）。段落旁的標示有自己的底色 */
+.source-text {
+  background: var(--color-reading);
+  color: var(--color-readingText);
+  border-radius: var(--radius-medium);
+  padding: 0.25rem 0.75rem;
 }
 
 /* 原文螢光：亮色紙面上的螢光與紙面文字（Light 的 markReading 與 mark 相同） */
@@ -1035,8 +1085,9 @@ label.inline {
   font-size: 0.875rem;
 }
 
-/* 說法不同（#51）：新舊段落左右並列，窄螢幕改為上下排列 */
+/* 說法不同（#51）：新舊段落左右並列，窄螢幕改為上下排列；標示用 conflict 系列（#225） */
 .conflict-summary {
+  color: var(--color-conflict);
   font-weight: 600;
   margin: 0 0 0.25rem;
 }
@@ -1049,7 +1100,7 @@ label.inline {
 }
 
 .conflict-side {
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-conflict);
   border-radius: var(--radius-medium);
   padding: 0.5rem 0.75rem;
 }
@@ -1065,7 +1116,8 @@ label.inline {
   }
 }
 
-/* 時間軸與原文面板中段落旁的標示：可以點擊，跳到另一段 */
+/* 時間軸與原文面板中段落旁的標示：可以點擊，跳到另一段。說法不同的底色與文字（conflictText 在 conflictSoft 上），
+   放在原文紙面上也不受紙面顏色影響 */
 .passage-marks {
   display: inline-flex;
   flex-wrap: wrap;
@@ -1074,14 +1126,11 @@ label.inline {
 }
 
 .passage-marks .badge {
-  background: none;
+  background: var(--color-conflictSoft);
+  border-color: var(--color-conflict);
+  color: var(--color-conflictText);
   cursor: pointer;
   font-weight: 400;
-}
-
-.passage-marks .mark-superseded_by {
-  border-color: var(--color-warning);
-  color: var(--color-warning);
 }
 
 /* 核准或退回後的短提示：浮動在視窗上方置中，不隨頁面捲動（#48 審查第 2 次）。區域一直存在（live region） */

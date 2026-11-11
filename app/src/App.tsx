@@ -403,6 +403,7 @@ export function App() {
               turns={turns}
               canUpload={canUpload}
               onOpenSource={onOpenSource}
+              openPassage={source?.highlight ?? null}
               onGotoUpload={() => setView("upload")}
               onOpenEntity={onOpenEntity}
               openEntity={entity}

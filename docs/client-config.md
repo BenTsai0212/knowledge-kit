@@ -114,11 +114,11 @@ npm run check:client
 | `colors.textMuted` | 是 | `#RRGGBB` | 次要文字 |
 | `colors.border` | 是 | `#RRGGBB` | 邊框與分隔線 |
 | `colors.danger` | 是 | `#RRGGBB` | 錯誤：錯誤文字、錯誤提示框的邊框與圖示 |
-| `colors.warning` | 是 | `#RRGGBB` | 警告：警告標籤與「已有新說法」標示的文字與邊框、警告提示框 |
+| `colors.warning` | 是 | `#RRGGBB` | 警告：警告標籤的文字與邊框、警告提示框 |
 | `colors.success` | 是 | `#RRGGBB` | 成功狀態 |
 | `colors.info` | 是 | `#RRGGBB` | 資訊提示框 |
 | `colors.onStatus` | 是 | `#RRGGBB` | 放在實心狀態色（`danger`、`warning`、`success`、`info`）上的文字，例如提示框的圖示 |
-| `colors.mark` | 是 | `#RRGGBB` | 證據色，**客戶不可改**：選取的引用、原文螢光 |
+| `colors.mark` | 是 | `#RRGGBB` | 證據色，**客戶不可改**：引用標號的 hover 與選取、原文螢光 |
 | `colors.overlay` | 是 | `#RRGGBBAA` | 確認視窗後方的遮罩；短提示的陰影也由它算出 |
 | `colors.graphFallback` | 是 | `#RRGGBB` | 找不到實體類型或可見等級時，圖譜節點與等級標籤使用的顏色 |
 | `colors.surfaceRaised` | 是 | `#RRGGBB` | 列、晶片、次要區塊 |
@@ -128,9 +128,9 @@ npm run check:client
 | `colors.markSoft` | 是 | `#RRGGBB` | 證據色，**客戶不可改**：引用標號的預設底色 |
 | `colors.markText` | 是 | `#RRGGBB` | 證據色，**客戶不可改**：證據底色上的文字 |
 | `colors.markReading` | 是 | `#RRGGBB` | 證據色，**客戶不可改**：`reading` 紙面上的螢光 |
-| `colors.conflict` | 是 | `#RRGGBB` | 說法不同：圖示、框線、文字 |
+| `colors.conflict` | 是 | `#RRGGBB` | 說法不同：圖示、框線、文字（待審的並列段落、段落旁標示的框線） |
 | `colors.conflictSoft` | 是 | `#RRGGBB` | 說法不同的底色 |
-| `colors.conflictText` | 是 | `#RRGGBB` | `conflictSoft` 上的文字 |
+| `colors.conflictText` | 是 | `#RRGGBB` | `conflictSoft` 上的文字（時間軸與原文面板中段落旁的標示） |
 | `darkColors.<鍵>` | 是 | 同 `colors` | 深色模式的色票，鍵與 `colors` 完全相同（Schema 以 `$ref` 共用同一份定義），全部必填 |
 | `radius.small` | 是 | 長度（`px` 或 `rem`，或 `0`） | 小圓角：引用編號按鈕 |
 | `radius.medium` | 是 | 同上 | 一般圓角：按鈕、輸入框、提示框、待審卡片 |
