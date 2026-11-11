@@ -26,7 +26,7 @@ export function UploadSteps({ steps, language }: Props) {
   return (
     <ol className="upload-steps" aria-label={s.uploadStepsLabel}>
       {steps.map((step) => (
-        <li key={step.name} className={`upload-step is-${step.status}`} aria-current={step.status === "active" ? "step" : undefined}>
+        <li key={step.name} data-step={step.name} className={`upload-step is-${step.status}`} aria-current={step.status === "active" ? "step" : undefined}>
           <span className="upload-step__name">{names[step.name]}</span>
           {step.detail !== undefined && <span className="upload-step__detail">{detail(step.detail)}</span>}
         </li>

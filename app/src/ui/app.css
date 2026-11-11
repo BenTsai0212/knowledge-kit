@@ -728,6 +728,37 @@ main.qa > .source .source-text mark.entering {
   }
 }
 
+/* 已送審的標記飛向導覽的「待審」、待審數量跳一下（#242 PR 3）。
+   kFlyTo 的起點是畫布座標，實作改為依實際版面算出的 --fly-x、--fly-y（motion-reference.md「例外」） */
+@keyframes kFlyTo {
+  0% {
+    opacity: 0;
+    transform: translate(var(--fly-x), var(--fly-y)) scale(0.6);
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+
+@keyframes kBump {
+  0% {
+    transform: none;
+  }
+  40% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: none;
+  }
+}
+
 /* 刷過時底色保持透明，只有漸層長出（motion-reference.md「例外」） */
 @keyframes kSweep {
   from {
@@ -1648,6 +1679,19 @@ button.secondary {
   animation: kSlideIn var(--motion-base) var(--ease-enter) calc(var(--motion-sweep) / 2) backwards;
 }
 
+/* 已送審（#242 PR 3，.a-fly）：標記固定在終點（待審數量的中心），從「人工審核」步驟飛過去；
+   畫布的 700ms 寫成 expand＋sweep，延遲 300ms 是 expand。減少動態效果時不顯示（UploadPage） */
+.upload-fly {
+  position: fixed;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  pointer-events: none;
+  opacity: 0;
+  animation: kFlyTo calc(var(--motion-expand) + var(--motion-sweep)) var(--ease-enter) var(--motion-expand) backwards;
+}
+
 /* 這次工作階段上傳過的文件（與頁首步驟所指的目前這一份分開） */
 .upload-recent {
   display: grid;
@@ -1769,6 +1813,12 @@ label.inline {
   font-size: 0.8rem;
   font-weight: 400;
   line-height: 1.4;
+}
+
+/* 待審數量增加時跳一下（.a-bump：settle）。畫布的延遲 950ms 對應標記抵達，寫成標記的延遲＋飛行時間
+   （expand＋expand＋sweep＝1000ms）；不是從上傳頁增加的（例如在其他頁籤時萃取結束）也一樣跳 */
+.tab-count.is-bump {
+  animation: kBump var(--motion-settle) var(--ease-spring) calc(2 * var(--motion-expand) + var(--motion-sweep));
 }
 
 /* 待審卡片的名稱：平常只顯示文字，編輯時輸入框隨內容加寬（size 由 inputSize 決定） */

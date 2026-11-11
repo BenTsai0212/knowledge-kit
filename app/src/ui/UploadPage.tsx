@@ -1,6 +1,7 @@
 // 上傳頁（docs/upload.md）：選檔、拖放或貼上文字 → 預覽 → 在彈出視窗中確認後寫入（#42）。
 // 頁首是五個步驟，拖放區、檔案卡片、預覽與確認區套用設計系統 v1 的版面與動態（#242）。
 // 寫入後，確認區的原文預覽依萃取的真實進度畫出找到的字詞（類型色底線），說法不同的段落標 conflictSoft（#242 PR 2）。
+// 萃取完成、已送審時，一顆標記從面板飛向導覽的「待審」（#242 PR 3）。
 // 可選的等級與專案只列出目前身分看得到的；實際能否寫入由 RLS 決定。上傳內容一律以文字節點顯示。
 // 切換身分或語言時由 App 以 key 重建本元件，清除表單、預覽與結果。
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
@@ -19,11 +20,25 @@ import { ExtractionStatus } from "./ExtractionStatus";
 import { FilePicker } from "./FilePicker";
 import { Notice } from "./Notice";
 import { onlineDemo } from "./online-demo";
-import { staggerIndex } from "./motion";
+import { REDUCED_MOTION, staggerIndex } from "./motion";
 import { createRequestGate } from "./requests";
 import { fill, strings } from "../client/i18n";
 import type { UploadFailure } from "../client/types";
-import { audienceRoles, defaultVisibility, foundTerms, formatBytes, todayIso, underlineRanges, uploadSteps, passagesWordCount, type FoundTerm } from "./upload-helpers";
+import { tabSelector } from "./Sidebar";
+import {
+  audienceRoles,
+  defaultVisibility,
+  flyPath,
+  foundTerms,
+  formatBytes,
+  todayIso,
+  underlineRanges,
+  uploadSteps,
+  passagesWordCount,
+  sentForReview,
+  type FlyPath,
+  type FoundTerm,
+} from "./upload-helpers";
 import { UploadSteps } from "./UploadSteps";
 
 interface Props {
@@ -46,6 +61,8 @@ const typeColor = (type: string) => knowledgeModel.entityTypes.find((t) => t.id 
 
 type Job = { title: string; state: ExtractionState; running: boolean; conflict?: ConflictState; conflictRunning: boolean };
 const PREVIEW_COUNT = 3;
+// 已送審的標記的直徑（px），與 app.css 的 .upload-fly 相同
+const FLY_SIZE = 12;
 
 // 預覽成功後在彈出視窗中確認；寫入中不能關閉，同一份預覽只能寫入一次
 type Confirm = {
@@ -91,6 +108,31 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
   const writeStarted = useRef(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+
+  const written = confirm?.result?.documentId;
+  const writtenJob = written === undefined ? undefined : extractions.find((x) => x.state.documentId === written);
+  const steps = uploadSteps({
+    hasInput: file !== null || pasted.trim() !== "",
+    parsing,
+    passages: confirm?.passages.length ?? null,
+    written: written !== undefined,
+    batches: writtenJob?.state.batches ?? null,
+  });
+  // 已送審（#242 PR 3）：萃取完成且有送審時，一顆標記從面板內的「人工審核」飛向導覽的「待審」數量，每份文件只飛一次
+  const sent = written !== undefined && sentForReview(steps);
+  const [fly, setFly] = useState<(FlyPath & { key: string }) | null>(null);
+  const flown = useRef(new Set<string>());
+
+  useEffect(() => {
+    if (!sent || written === undefined || flown.current.has(written)) return;
+    flown.current.add(written);
+    // 減少動態效果時不飛（待審數量直接更新）；沒有「待審」頁籤的身分與展示模式找不到終點，也不飛
+    if (window.matchMedia?.(REDUCED_MOTION).matches) return;
+    const from = dialog.current?.querySelector('[data-step="review"]');
+    const to = document.querySelector(`${tabSelector("review")} .tab-count`) ?? document.querySelector(tabSelector("review"));
+    if (!from || !to) return;
+    setFly({ key: written, ...flyPath(from.getBoundingClientRect(), to.getBoundingClientRect(), FLY_SIZE) });
+  }, [sent, written]);
 
   useEffect(() => {
     const d = dialog.current;
@@ -196,15 +238,6 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
     [s.uploadDate, date === "" ? s.undated : date],
   ];
 
-  const written = confirm?.result?.documentId;
-  const writtenJob = written === undefined ? undefined : extractions.find((x) => x.state.documentId === written);
-  const steps = uploadSteps({
-    hasInput: file !== null || pasted.trim() !== "",
-    parsing,
-    passages: confirm?.passages.length ?? null,
-    written: written !== undefined,
-    batches: writtenJob?.state.batches ?? null,
-  });
   const icon = (className: string) => (
     <svg className={className} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <path d={EMPTY_ICONS.upload} />
@@ -454,6 +487,16 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
               </>
             )}
           </>
+        )}
+        {/* 在 dialog 內才會在面板的 backdrop 之上；位置固定在終點，結束後移除。關閉面板或再上傳一份時一併移除 */}
+        {fly !== null && fly.key === written && (
+          <span
+            key={fly.key}
+            className="upload-fly"
+            aria-hidden="true"
+            style={{ left: fly.left, top: fly.top, "--fly-x": `${fly.x}px`, "--fly-y": `${fly.y}px` } as CSSProperties}
+            onAnimationEnd={() => setFly(null)}
+          />
         )}
       </dialog>
     </section>

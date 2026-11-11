@@ -97,6 +97,14 @@ export function App() {
   const canUpload = (access.roles.find((r) => r.id === identity)?.canUpload ?? false) && views(canReview).includes("upload");
   const [reviewVersion, setReviewVersion] = useState(0);
   const [pending, setPending] = useState<{ identity: string; count: number } | null>(null);
+  // 待審數量增加時跳一下（kBump，#242 PR 3）：換 key 重播動畫；第一次讀取與切換身分時不跳
+  const [bump, setBump] = useState(0);
+  const lastPending = useRef(pending);
+  useEffect(() => {
+    const last = lastPending.current;
+    lastPending.current = pending;
+    if (pending !== null && last !== null && last.identity === pending.identity && pending.count > last.count) setBump((n) => n + 1);
+  }, [pending]);
   // 評測台最近一次的結果（#62）：只在記憶體，切換頁籤後仍可查看與下載
   const [evalRun, setEvalRun] = useState<EvalRun | null>(null);
   // VectorProvider 的準備狀態：準備中的下載進度，與準備失敗、改用 keyword-hash 時的原因（docs/retrieval.md「準備中的提示」「降級」）
@@ -281,7 +289,13 @@ export function App() {
         views={views(canReview)}
         view={view}
         onView={(next) => (setGraphFocus(null), setView(next))}
-        tabExtra={{ review: pending?.identity === identity && <span className="tab-count">{pending.count}</span> }}
+        tabExtra={{
+          review: pending?.identity === identity && (
+            <span key={bump} className={bump > 0 ? "tab-count is-bump" : "tab-count"}>
+              {pending.count}
+            </span>
+          ),
+        }}
         questions={turns}
         onQuestion={(id) => void document.getElementById(id)?.scrollIntoView({ block: "start" })}
       />

@@ -131,3 +131,31 @@ export function underlineRanges(text: string, terms: readonly FoundTerm[]): Foun
   }
   return taken.sort((a, b) => a.start - b.start);
 }
+
+// 已送審（#242 PR 3）：一顆標記從「人工審核」步驟飛向導覽的「待審」數量。
+// 標記放在終點的中心，kFlyTo 從起點與終點中心的差（--fly-x、--fly-y）飛回 transform: none
+export interface Box {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+export interface FlyPath {
+  left: number;
+  top: number;
+  x: number;
+  y: number;
+}
+
+const center = (b: Box) => ({ x: b.left + b.width / 2, y: b.top + b.height / 2 });
+
+export function flyPath(from: Box, to: Box, size: number): FlyPath {
+  const a = center(from);
+  const b = center(to);
+  return { left: b.x - size / 2, top: b.y - size / 2, x: a.x - b.x, y: a.y - b.y };
+}
+
+// 萃取完成、有送審的實體或關係時才算「已送審」（「人工審核」步驟為進行中且送審筆數大於 0）
+export const sentForReview = (steps: readonly UploadStep[]): boolean =>
+  steps.some((s) => s.name === "review" && s.status === "active" && s.detail?.kind === "sent" && s.detail.count > 0);

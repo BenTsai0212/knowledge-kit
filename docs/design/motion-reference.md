@@ -42,6 +42,7 @@
 | 上傳 | 批次 1／2／3 | batch | 0／600／1200ms |
 | 上傳 | 實體數、關係數 | pop | 1500／1560ms |
 | 上傳 | 說法不同的說明；組數 | slide；pop | 200ms；300ms |
+| 上傳 | 已送審的標記；待審數量 | fly；bump | 300ms；950ms（參考檔的 `.a-fly`、`.a-bump`） |
 
 上傳的批次條在畫布上也叫 `.a-grow`（600ms linear），與審核的 `.a-grow`（400ms）同名不同值，參考檔改名為 `.a-batch`。
 
@@ -61,4 +62,5 @@
 | `kRise` | 回答的句子是行內元素，`transform` 對行內元素無效（#234），改以 `position: relative` 的 `top` 升起，距離相同 | `from{opacity:0;top:8px}` |
 | `kSweep` | 引用段落的 `mark` 平時以 `background-color` 顯示完整螢光（減少動態時直接到位、動畫結束後留著）；刷過時底色要保持透明，只有 `background-image` 長出 | `from{background-color:transparent;background-size:0% 100%}to{background-color:transparent;background-size:100% 100%}` |
 | `kFloat` | 主視覺的 SVG 以 `viewBox="0 0 100 100"` 為單位，畫布的 `-5px` 在這裡約是場景的 5%；保留畫布的節奏，位移縮小 | `0%,100%{transform:translate(0,0)}50%{transform:translate(0,-0.8px)}` |
+| `kFlyTo` | 畫布的起點寫死畫布座標 `translate(560px,600px)`；實際畫面中「人工審核」步驟與導覽「待審」的距離依視窗大小而定，起點依實際版面計算，以 CSS 變數帶入（#242 PR 3） | `0%{opacity:0;transform:translate(var(--fly-x),var(--fly-y)) scale(.6)}12%{opacity:1}88%{opacity:1}100%{opacity:0;transform:none}` |
 | `kGlow` | 光暈是 SVG 的圓，`box-shadow` 對 SVG 無效；改以圓的不透明度與縮放呈現 | `0%,100%{opacity:0;transform:scale(.6)}50%{opacity:1;transform:scale(1)}` |
