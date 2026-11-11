@@ -19,7 +19,7 @@
     {
       "id": "project",
       "label": { "zh-TW": "專案", "en": "Project" },
-      "color": "#B26A00",
+      "color": "#7A52C7",
       "icon": "folder",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": false }
     }

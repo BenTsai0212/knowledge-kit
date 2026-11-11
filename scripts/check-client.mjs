@@ -56,8 +56,9 @@ const RELATIVE_PATH = new RegExp(readJson(new URL("common.schema.json", SCHEMA_D
 // dataset：{ root: dataset.path, files: { 相對於 root 的路徑: 解析後的 JSON } }；省略時不驗證資料集。
 // i18n：{ 語言代碼: 解析後的 JSON }（client/i18n/ 的檔名去掉 .json）；省略時不驗證翻譯檔。
 // evals：{ root: evals.path, files: { 相對於 root 的路徑: 解析後的 JSON } }；省略時不驗證評測題庫。
+// warnings：給定陣列時，把不讓檢查失敗的警告（entityColorWarnings）加進去。
 // 回傳 [{ file, path, message }]，沒有錯誤時為空陣列。
-export function validateClient(files, dataset, i18n, evals) {
+export function validateClient(files, dataset, i18n, evals, warnings) {
   const errors = [];
   const client = files["client.json"];
   const languages = Array.isArray(client?.languages) ? client.languages : null;
@@ -111,6 +112,7 @@ export function validateClient(files, dataset, i18n, evals) {
   if (dataset) errors.push(...validateDataset(ajv, dataset));
   if (i18n && languages) errors.push(...validateI18n(ajv, i18n, languages, defaultLanguage));
   if (evals) errors.push(...validateEvals(ajv, evals, valid));
+  warnings?.push(...entityColorWarnings(valid));
   return [...errors, ...checkReferences(valid), ...checkContrast(valid)];
 }
 
@@ -380,6 +382,59 @@ function citationPairs(scheme, c) {
   ];
 }
 
+// OKLCH（Björn Ottosson 的 OKLab 轉換）：回傳 [L, C, h]，h 為 0–360 度
+export function oklch(hex) {
+  const [r, g, b] = rgb(hex).map((v) => {
+    const c = v / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  const L = 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s;
+  const A = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s;
+  const B = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s;
+  return [L, Math.hypot(A, B), ((Math.atan2(B, A) * 180) / Math.PI + 360) % 360];
+}
+
+// 兩個色相的夾角（0–180 度）
+export function hueDistance(a, b) {
+  const d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
+}
+
+// 實體顏色與證據色（docs/design.md「實體顏色」）：Dark 的實體色保留色相、把 OKLCH 亮度提高到至少 0.75，
+// 色相接近證據色（mark）時，在 Dark 會被看成引用的螢光。只警告，不讓檢查失敗（#229）。
+// 彩度低於 ACHROMATIC 的灰色沒有明確色相，不比較。
+export const HUE_DISTANCE = 25;
+const ACHROMATIC = 0.02;
+
+export function entityColorWarnings(valid) {
+  const theme = valid["theme.json"];
+  const model = valid["knowledge-model.json"];
+  if (!theme || !model) return [];
+  const label = (type) => `「${type.label[valid["client.json"]?.defaultLanguage] ?? type.id}」（${type.id}）`;
+  const marks = SCHEMES.map((scheme) => [scheme, theme[scheme].mark]);
+  const warnings = [];
+  model.entityTypes.forEach((type, i) => {
+    const [, chroma, hue] = oklch(type.color);
+    if (chroma < ACHROMATIC) return;
+    for (const [scheme, mark] of marks) {
+      const distance = hueDistance(hue, oklch(mark)[2]);
+      if (distance < HUE_DISTANCE) {
+        warnings.push({
+          file: "knowledge-model.json",
+          path: `/entityTypes/${i}/color`,
+          message:
+            `${label(type)}的 OKLCH 色相與 ${scheme} 的 mark（證據色）只差 ${Math.floor(distance)}°（建議至少 ${HUE_DISTANCE}°）：` +
+            "Dark 模式提高亮度後，圖譜節點會像引用的螢光；建議改用色相離證據色較遠的顏色，例如紫色或藍色",
+        });
+      }
+    }
+  });
+  return warnings;
+}
+
 // 無條件捨去到小數一位，避免 4.46 顯示成 4.5:1 卻不通過
 const ratio = (value) => `${Math.floor(value * 10) / 10}:1`;
 
@@ -467,7 +522,7 @@ function describe(e) {
 }
 
 // 讀取資料夾中所有頂層 .json 檔、翻譯檔、資料集與評測題庫再驗證；dataset.path、evals.path 必須存在。
-export function checkClient(dir = DEFAULT_CLIENT_DIR) {
+export function checkClient(dir = DEFAULT_CLIENT_DIR, warnings) {
   const base = new URL(dir.toString().endsWith("/") ? dir : `${dir}/`);
   const files = {};
   const errors = [];
@@ -511,7 +566,7 @@ export function checkClient(dir = DEFAULT_CLIENT_DIR) {
     }
     return out;
   });
-  return [...errors, ...validateClient(files, dataset, i18n, evals)];
+  return [...errors, ...validateClient(files, dataset, i18n, evals, warnings)];
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
@@ -523,11 +578,14 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     console.error(err.message);
     process.exit(1);
   }
-  const errors = checkClient(dir);
+  const warnings = [];
+  const errors = checkClient(dir, warnings);
+  for (const w of warnings) console.warn(`警告：${w.file} ${w.path}：${w.message}`);
   for (const e of errors) console.error(`${e.file} ${e.path}：${e.message}`);
   if (errors.length > 0) {
     console.error(`client 設定檢查失敗：${errors.length} 個錯誤`);
     process.exit(1);
   }
-  console.log(`client 設定檢查通過：${fileURLToPath(dir)}`);
+  const note = warnings.length > 0 ? `（${warnings.length} 個警告）` : "";
+  console.log(`client 設定檢查通過${note}：${fileURLToPath(dir)}`);
 }
