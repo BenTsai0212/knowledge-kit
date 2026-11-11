@@ -20,6 +20,7 @@ import { openRetriever } from "./retrieval/retrieve";
 import { readSource, type SourceDocument } from "./sources/source";
 import { clearAccessCode, loadAccessCode, saveAccessCode } from "./ui/access-code";
 import { AccessCodeForm } from "./ui/AccessCodeForm";
+import { EntryHero } from "./ui/EntryHero";
 import { EvalPage } from "./ui/EvalPage";
 import { GraphPage } from "./ui/GraphPage";
 import { mentionedEntities } from "./ui/mentions";
@@ -379,16 +380,21 @@ export function App() {
           {source !== null && <SourcePanel language={language} source={source} onOpenSource={onOpenSource} onClose={() => (sources.current.cancel(), setSource(null))} />}
         </main>
       ) : accessCode === null ? (
-        <main className="page">
-          <AccessCodeForm
-            language={language}
-            rejected={codeRejected}
-            onSubmit={(code) => {
-              saveAccessCode(code);
-              setAccessCode(code);
-              setCodeRejected(false);
-            }}
-          />
+        // 入口頁（#228）：左側主視覺、右側邀請碼與語意模型的下載進度；窄螢幕時主視覺在上
+        <main className="entry">
+          <EntryHero />
+          <div className="entry__panel">
+            <AccessCodeForm
+              language={language}
+              rejected={codeRejected}
+              onSubmit={(code) => {
+                saveAccessCode(code);
+                setAccessCode(code);
+                setCodeRejected(false);
+              }}
+            />
+            <RetrievalNotice language={language} preparesModel={preparesModel(client.retrieval)} status={providerStatus} />
+          </div>
         </main>
       ) : (
         // 中間是對話與固定在下方的輸入區，右側是原文或實體面板（關閉時中間欄變寬）
