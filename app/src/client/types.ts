@@ -415,6 +415,8 @@ export interface UiStrings {
   uploadAnother: string;
   // 時間軸中本次工作階段上傳的文件
   timelineUploaded: string;
+  // 時間軸卡片中文件提到的實體
+  timelineMentions: string;
   extractTitle: string;
   extractRunning: string;
   extractDone: string;

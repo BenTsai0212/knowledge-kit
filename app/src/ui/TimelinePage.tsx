@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { Database } from "../db/database";
 import { readGraph, type Graph } from "../graph/read";
 import { readTimeline, type TimelineEntry } from "../graph/timeline";
@@ -6,7 +6,9 @@ import { AccessBadges } from "./AccessBadges";
 import { entityOptionLabel } from "./graph-labels";
 import { PassageMarks } from "./PassageMarks";
 import { createRequestGate } from "./requests";
+import { entityTypeShape, timelineSections, type TimelineRow } from "./timeline-view";
 import { strings } from "../client/i18n";
+import { clientConfig } from "../client/load";
 
 interface Props {
   db: Database;
@@ -23,32 +25,48 @@ interface Props {
 // 標示由 CSS 的 timeline-flash 動畫（約 2.5 秒）淡出，animationend 時結束；動畫沒有觸發時（例如瀏覽器停用動畫）以此保底清除
 const FLASH_FALLBACK_MS = 4000;
 
-// 時間軸頁：依日期由新到舊列出介面語言的文件，可依實體篩選。切換身分或語言時重新讀取，舊結果忽略；篩選的實體已看不到時清除
+const { entityTypes } = clientConfig.knowledgeModel;
+
+// 實體類型的形狀與顏色（docs/design.md「實體顏色」：形狀＋顏色雙重區分）
+function TypeMark({ type }: { type: string }) {
+  const color = entityTypes.find((t) => t.id === type)?.color;
+  return (
+    <span
+      className={`type-dot shape-${entityTypeShape(type)}`}
+      style={{ "--type-color": color ?? "var(--color-graphFallback)" } as CSSProperties}
+      aria-hidden="true"
+    />
+  );
+}
+
+// 時間軸頁（#241，docs/design.md）：三欄格線（日期、時間軸線與圓點、文件卡片），依日期由新到舊列出介面語言的文件，
+// 沒有日期的文件在最下方的「未註明日期」區。依實體篩選時不符合的文件變淡、不移除，位置不跳動。
+// 只列出目前身分看得到的文件（RLS），不顯示看不到的文件的數量或任何痕跡。
+// 切換身分或語言時重新讀取，舊結果忽略；篩選的實體已看不到時清除
 export function TimelinePage({ db, identity, language, uploaded, focus, onFocused, onOpenSource }: Props) {
   const s = strings(language);
   const [graph, setGraph] = useState<Graph | null>(null);
   const [entityId, setEntityId] = useState<string | null>(null);
   const [entries, setEntries] = useState<TimelineEntry[] | null>(null);
   const reads = useRef(createRequestGate());
-  const list = useRef<HTMLOListElement>(null);
+  const list = useRef<HTMLDivElement>(null);
   const [flash, setFlash] = useState<string | null>(null);
 
   useEffect(() => {
     const ticket = reads.current.begin();
     setEntries(null);
     void (async () => {
-      // 篩選選單用的實體也依目前身分讀取；篩選的實體看不到時改為不篩選
+      // 篩選晶片用的實體也依目前身分讀取；篩選的實體看不到時改為不篩選
       const g = await readGraph(db, identity);
       if (!ticket.isCurrent()) return;
-      const filter = entityId !== null && g.entities.some((e) => e.id === entityId) ? entityId : null;
-      const timeline = await readTimeline(db, identity, { language, ...(filter !== null && { entityId: filter }) });
+      const timeline = await readTimeline(db, identity, { language });
       if (!ticket.isCurrent()) return;
       setGraph(g);
-      setEntityId(filter);
+      setEntityId((current) => (current !== null && g.entities.some((e) => e.id === current) ? current : null));
       setEntries(timeline);
     })();
     return () => reads.current.cancel();
-  }, [db, identity, language, entityId]);
+  }, [db, identity, language]);
 
   // onFocused 每次 render 都是新的函式，以 ref 取得最新的，不放進 effect 的相依
   const focused = useRef(onFocused);
@@ -71,59 +89,96 @@ export function TimelinePage({ db, identity, language, uploaded, focus, onFocuse
     return () => clearTimeout(timer);
   }, [flash]);
 
+  const byId = new Map(graph?.entities.map((e) => [e.id, e]) ?? []);
+  const label = (id: string) => {
+    const entity = byId.get(id);
+    return graph !== null && entity !== undefined ? entityOptionLabel(graph, entity, language) : id;
+  };
   const options =
     graph?.entities
-      .map((e) => ({ id: e.id, label: entityOptionLabel(graph, e, language) }))
+      .map((e) => ({ id: e.id, type: e.type, label: label(e.id) }))
       .sort((a, b) => a.label.localeCompare(b.label, language)) ?? [];
+  const languageNames = new Intl.DisplayNames([language], { type: "language" });
+
+  const renderRow = ({ entry, matches, entityIds }: TimelineRow) => {
+    const mentioned = entityIds.filter((id) => byId.has(id));
+    return (
+      <li
+        key={entry.documentId}
+        data-document-id={entry.documentId}
+        className={`timeline-entry${matches ? "" : " dimmed"}${entry.documentId === flash ? " flash" : ""}`}
+        // 淡出動畫結束時取消標示，程式與 CSS 的時間不會不一致
+        onAnimationEnd={(e) => e.animationName.startsWith("timeline-flash") && setFlash(null)}
+      >
+        <time className="timeline-date" dateTime={entry.date ?? undefined}>
+          {entry.date ?? ""}
+        </time>
+        <span className="timeline-rail" aria-hidden="true">
+          <span className="timeline-dot" />
+        </span>
+        <div className="card timeline-card">
+          <h3>{entry.title}</h3>
+          <p className="timeline-meta">
+            <AccessBadges visibility={entry.visibility} project={entry.project} language={language} />
+            <span className="badge">{languageNames.of(entry.language) ?? entry.language}</span>
+            {uploaded.has(entry.documentId) && <span className="badge primary">{s.timelineUploaded}</span>}
+          </p>
+          {mentioned.length > 0 && (
+            <p className="timeline-mentions">
+              <span className="muted">{s.timelineMentions}</span>
+              {mentioned.map((id) => (
+                <span key={id} className="timeline-mention">
+                  <TypeMark type={byId.get(id)!.type} />
+                  {label(id)}
+                </span>
+              ))}
+            </p>
+          )}
+          <ul>
+            {entry.passages.map((p) => (
+              <li key={p.id}>
+                <span lang={entry.language}>{p.content}</span>{" "}
+                <button type="button" className="link" onClick={() => onOpenSource(p.id)}>
+                  {s.openSource}
+                </button>
+                <PassageMarks marks={p.marks} language={language} onOpenSource={onOpenSource} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      </li>
+    );
+  };
+
+  const sections = entries === null ? null : timelineSections(entries, entityId);
 
   return (
     <div className="timeline-page">
-      <section className="card">
-        <label>
-          {s.timelineFilter}
-          <select value={entityId ?? ""} onChange={(e) => setEntityId(e.target.value === "" ? null : e.target.value)}>
-            <option value="">{s.timelineAll}</option>
-            {options.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </section>
-      {entries === null ? (
+      <div className="timeline-filter" role="group" aria-label={s.timelineFilter}>
+        <button type="button" className="chip" aria-pressed={entityId === null} onClick={() => setEntityId(null)}>
+          {s.timelineAll}
+        </button>
+        {options.map((o) => (
+          <button key={o.id} type="button" className="chip" aria-pressed={entityId === o.id} onClick={() => setEntityId(o.id)}>
+            <TypeMark type={o.type} />
+            {o.label}
+          </button>
+        ))}
+      </div>
+      {sections === null ? (
         <p className="card muted">{s.loading}</p>
-      ) : entries.length === 0 ? (
+      ) : sections.dated.length + sections.undated.length === 0 ? (
         <p className="card muted">{s.timelineEmpty}</p>
       ) : (
-        <ol className="timeline" ref={list}>
-          {entries.map((entry) => (
-            <li
-              key={entry.documentId}
-              data-document-id={entry.documentId}
-              className={entry.documentId === flash ? "card flash" : "card"}
-              // 淡出動畫結束時取消標示，程式與 CSS 的時間不會不一致
-              onAnimationEnd={(e) => e.animationName.startsWith("timeline-flash") && setFlash(null)}
-            >
-              <h3>
-                <time dateTime={entry.date ?? undefined}>{entry.date ?? s.undated}</time> {entry.title}
-                {uploaded.has(entry.documentId) && <span className="badge">{s.timelineUploaded}</span>}{" "}
-                <AccessBadges visibility={entry.visibility} project={entry.project} language={language} />
-              </h3>
-              <ul>
-                {entry.passages.map((p) => (
-                  <li key={p.id}>
-                    <span lang={entry.language}>{p.content}</span>{" "}
-                    <button type="button" className="link" onClick={() => onOpenSource(p.id)}>
-                      {s.openSource}
-                    </button>
-                    <PassageMarks marks={p.marks} language={language} onOpenSource={onOpenSource} />
-                  </li>
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ol>
+        <div ref={list}>
+          {sections.dated.length > 0 && <ol className="timeline">{sections.dated.map(renderRow)}</ol>}
+          {sections.undated.length > 0 && (
+            <section className="timeline-undated">
+              <h2>{s.undated}</h2>
+              <ol className="timeline">{sections.undated.map(renderRow)}</ol>
+            </section>
+          )}
+        </div>
       )}
     </div>
   );

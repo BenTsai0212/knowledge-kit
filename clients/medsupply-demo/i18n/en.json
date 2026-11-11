@@ -117,6 +117,7 @@
   "uploadWriting": "Uploading…",
   "uploadAnother": "Upload another",
   "timelineUploaded": "Uploaded",
+  "timelineMentions": "Mentions",
   "extractTitle": "Entity and relation extraction",
   "extractRunning": "Extracting",
   "extractDone": "Sent for review",
