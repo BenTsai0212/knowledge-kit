@@ -14,7 +14,7 @@ interface Props {
 
 const { entityTypes } = clientConfig.knowledgeModel;
 
-// 清單模式（#289）：群組是 h3，實體是清單項目（名稱是按鈕，打開實體面板），關係是句子，句中的實體名稱是連結、跳到清單中的那一項
+// 清單模式（#289）：群組（#254 的分群）是 h3，前面是代表實體的類型圖示；實體是清單項目（名稱是按鈕，打開實體面板），關係是句子，句中的實體名稱是連結、跳到清單中的那一項
 export function GraphList({ groups, language, current, onSelect }: Props) {
   const s = strings(language).graphKeyboard;
   const root = useRef<HTMLDivElement>(null);
@@ -35,7 +35,7 @@ export function GraphList({ groups, language, current, onSelect }: Props) {
       {groups.map((g) => {
         const type = entityTypes.find((t) => t.id === g.type);
         return (
-          <section key={g.type}>
+          <section key={g.id}>
             <h3>
               {type !== undefined && <EntityIcon icon={type.icon} color={type.color} />}
               {g.label}

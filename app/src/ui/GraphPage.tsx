@@ -198,10 +198,12 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
     () => (filtered === null || scaleMode(filtered.entities.length, mobile) === "all" ? null : clusterGraph(filtered, clientConfig.knowledgeModel)),
     [filtered, mobile],
   );
-  const groups = useMemo(
-    () => (graph === null || mode !== "list" ? [] : listGroups(graph, listedEntities(graph, excluded, expansion, isolated), excluded, language)),
-    [graph, mode, excluded, expansion, isolated, language],
-  );
+  // 清單的群組（#254 決定 5）：門檻以上沿用全覽的分群，門檻以下也用同一種分群（篩選後的圖），不再依實體類型
+  const groups = useMemo(() => {
+    if (graph === null || filtered === null || mode !== "list") return [];
+    const listClustering = clustering ?? clusterGraph(filtered, clientConfig.knowledgeModel);
+    return listGroups(graph, listClustering, listedEntities(graph, excluded, expansion, isolated), excluded, language);
+  }, [graph, filtered, clustering, mode, excluded, expansion, isolated, language]);
   // 選取改變時（點節點、搜尋、面板）游標清除，細節層的成員收回
   useEffect(() => {
     setCursor(null);

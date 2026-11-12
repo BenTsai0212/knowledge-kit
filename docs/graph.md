@@ -45,7 +45,7 @@ const graph = await readGraph(db, "staff");
 
 ## 大量節點時的分群：`clusters.ts`
 
-規格見 [docs/design.md](design.md)「大量節點時的圖譜」（#254）。分 3 個 PR 完成：第 1 個 PR 是下列純函式與測試，第 2 個 PR 是三層的畫法與導覽（見下方「三層語意縮放（畫面）」），清單模式改用分群在第 3 個 PR。
+規格見 [docs/design.md](design.md)「大量節點時的圖譜」（#254）。分 3 個 PR 完成：第 1 個 PR 是下列純函式與測試，第 2 個 PR 是三層的畫法與導覽（見下方「三層語意縮放（畫面）」），第 3 個 PR 把清單模式的群組換成分群（見下方「清單模式」）。
 
 全部只用 `readGraph()` 回傳的可見圖計算，不新增 SQL 或 migration，所以泡泡的實體數、類型組成與聚合線的段數只涉及目前身分看得到的實體與關係（#247，`app/tests/graph/clusters.test.ts`）。
 
@@ -163,10 +163,10 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
   - 圖譜外框（`GraphPage.tsx` 的 `.graph-frame`）是 `tabIndex=0`、`role="application"`、`aria-roledescription`「知識圖譜」的元素，在 Tab 順序中只佔一個位置；canvas 不能取得 DOM 焦點，所以「目前的實體」與「游標」是 `GraphPage` 的 state，以 cytoscape 的 class 畫出（`kb-current`：`focus` 色 3px 實線圈；`kb-cursor`：虛線圈；`kb-near`：連到目前實體的線加粗成 `primary` 並標出關係名稱），只在外框有鍵盤焦點（`:focus-visible`）時畫。圖譜頁的畫布對報讀器隱藏（`aria-hidden`），問答頁的鄰近圖不變。
   - 已實作的按鍵：`Tab` 進入（目前的實體＝選取的實體；沒有選取時是關聯最多的實體，只畫圈與報讀，按 `Enter` 前不展開、不改實體面板，#289 決定 2）、`←`／`→`（目前實體的相關實體，依版面位置從 12 點鐘方向順時針，兩端相接；類型篩選掉的不列入）、`Enter`（前往游標所在的實體，等同點節點）、`Backspace`（展開路徑的上一段，與麵包屑一致，#289 決定 3；只有一層時回到全部，等同「回到全部」；已是全部時報讀「已經是第一個實體」）、`Space`（只看目前的實體＋`isolated`；目前的實體已是「只看它」時回到按之前的展開）、`A`（在問答中問，與實體面板的按鈕相同）、`/`（焦點移到「搜尋名稱」，選了結果後回到外框並報讀進入）、`+`／`-`／`0`（以畫面中心縮放 1.25 倍、全部顯示）、`Esc`（回到全部；已是全部時焦點移到外框後的下一個可聚焦元素，#289 決定 4）、`?`（按鍵表，沿用置中的 `.dialog`，關閉後焦點回到外框，不重新報讀進入）。Backspace、Space 與按鍵表的內容是 `ui/graph-keyboard.ts` 的 `backStep()`、`toggleOnly()`、`KEY_HELP`（鍵帽是鍵盤上的符號與鍵名，不隨語言改變；說明在 `graphKeyboard` 的 `help*`）。
   - 按鍵提示列（`.graph-keys`）在外框之後，只在外框有鍵盤焦點時出現（`.graph-frame:focus-visible + .graph-keys`）；對報讀器隱藏，內容與按鍵表相同。
-  - 自動平移：游標（沒有游標時是目前的實體）移到畫面外時平移到中央（`GraphView.tsx` 的 `reveal()`，`PAN_MS` 的 sweep），減少動態效果時直接到位；縮放與全部顯示同樣在減少動態效果時直接到位。E2E 見 `e2e/graph-keyboard.spec.ts`。
+  - 自動平移：游標（沒有游標時是目前的實體）移到畫面外時平移到中央（`GraphView.tsx` 的 `reveal()`，`PAN_MS` 的 sweep），減少動態效果時直接到位；縮放與全部顯示同樣在減少動態效果時直接到位。E2E 見 `e2e/graph-keyboard.spec.ts`；清單的群組依身分以 oracle 比對見 `e2e/graph-scale.spec.ts`。
   - 報讀：每一步寫進外框下方一個視覺上隱藏的 `aria-live="polite"` 區域，200ms 去抖（只讀最後一次）。句型在 `client/i18n/` 的 `graphKeyboard`；關係說成「主詞 關係 受詞」，同一方向的多種關係合併在同一句（例如「林志明 隸屬、負責 產品研發部」），名稱用與畫面相同的消歧名稱（`entityOptionLabel()`）。類型篩選改變時報讀顯示的實體數。
   - 順序、按鍵對應與句子都是 `ui/graph-keyboard.ts` 的純函式，只用 `readGraph()` 的可見圖：數量、相關實體與關係都只算目前身分看得到的，句子不提及看不到的部分（#247，`graph-keyboard.test.ts` 以兩種身分的圖比對）。節點位置由 `GraphView` 從 cytoscape 讀出（`api` 的 `positions()`）後傳入。
-  - **清單模式**：圖例後的「圖譜｜清單」切換一直都在（不偵測報讀器），選擇記在這個瀏覽器（`localStorage` 的 `kk.graphMode`，只存這一個值；`app/src/` 中唯一使用 `localStorage` 的地方，`access-code.test.ts` 檢查）。清單以文字列出同一份可見圖（`ui/graph-list.ts` 的 `listGroups()`，元件是 `GraphList.tsx`）：群組是 `h3`，**先用實體類型**（依 `knowledge-model.json` 的順序，#289 決定 1；#254 之後換成它的分群，元件與連結沿用）；實體依名稱排序，名稱是按鈕（等同點節點，實體面板同步）；每個實體之下是它的關係句（與報讀相同的「主詞 關係 受詞」與消歧名稱，`relationSentenceParts()`），句中其他實體的名稱是連結，跳到清單中的那一項（焦點移到它的名稱按鈕）。類型篩選、搜尋、已展開的路徑與「只看它」兩種檢視共用（`GraphPage` 的 state）：篩選掉的類型不列；「只看它」時只列聚焦集合，句中不在清單裡的實體不做連結。目前的實體（選取的實體，沒有選取時是鍵盤的「目前」）以 `aria-current` 標出，切到清單或搜尋後捲到它。報讀區兩種檢視共用。E2E 見 `e2e/graph-keyboard.spec.ts`。
+  - **清單模式**：圖例後的「圖譜｜清單」切換一直都在（不偵測報讀器），選擇記在這個瀏覽器（`localStorage` 的 `kk.graphMode`，只存這一個值；`app/src/` 中唯一使用 `localStorage` 的地方，`access-code.test.ts` 檢查）。清單以文字列出同一份可見圖（`ui/graph-list.ts` 的 `listGroups()`，元件是 `GraphList.tsx`）：群組是 `h3`，**是大量節點時的分群**（`clusterGraph()`，見上方「大量節點時的分群」；#254 決定 5）：以篩選後的圖（類型篩選與「只顯示關聯 ≥ N」）分群，門檻以上沿用全覽的分群、門檻以下也用同一種分群；群組的順序與全覽相同（實體數多的在前，「其他」最後），標題是群組名稱（容器或代表實體的消歧名稱，前面是它的類型圖示；「其他」用 `client/i18n/` 的 `graphZoom.other`）。群內代表實體在最前，其他依名稱排序，名稱是按鈕（等同點節點，實體面板同步）；每個實體之下是它的關係句（與報讀相同的「主詞 關係 受詞」與消歧名稱，`relationSentenceParts()`），句中其他實體的名稱是連結，跳到清單中的那一項（焦點移到它的名稱按鈕）。類型篩選、搜尋、已展開的路徑與「只看它」兩種檢視共用（`GraphPage` 的 state）：篩選掉的實體不列（沒有列出實體的群組也不列）；「只看它」時只列聚焦集合，句中不在清單裡的實體不做連結。目前的實體（選取的實體，沒有選取時是鍵盤的「目前」）以 `aria-current` 標出，切到清單或搜尋後捲到它。報讀區兩種檢視共用。E2E 見 `e2e/graph-keyboard.spec.ts`；清單的群組依身分以 oracle 比對見 `e2e/graph-scale.spec.ts`。
 - **版面不重排**：版面只在讀入圖時排一次；展開、變灰、回到全部都只改 cytoscape 的 class，節點位置不動。切換身分或語言時圖本身改變，才重新排版。
 - **畫布不移動**：cytoscape 快取容器在畫面上的位置，只在視窗大小改變、捲動與容器本身的大小改變時重新計算；容器被上方的內容推動時，滑鼠座標會換算到錯的位置。所以「已展開」那一列沒有展開時也保留高度；另外在容器或上一層的大小改變時，以及每次按下指標時，位置變了就呼叫 `cy.resize()`（`ui/GraphView.tsx` 的 `trackContainer()`，問答頁的鄰近圖也適用）。
 - **動態**（`ui/motion.ts`，約 0.3–0.4 秒）：
