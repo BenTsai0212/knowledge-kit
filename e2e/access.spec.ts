@@ -3,7 +3,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { EVALS_PATH, language, openApp, openTab, presetQuestions, s, sourcePanel, switchIdentity, tab, type RoleId } from "./support/app";
 import { access, NO_NON_REVIEWER, NO_REVIEWER, nonReviewer, reviewer } from "./support/client";
-import { hiddenDocument, hiddenPassages, leakedPassages } from "./support/dataset";
+import { hiddenDocument, hiddenPassages, leakedPassages, visibleNamesIn } from "./support/dataset";
 import { askStreamCancelled, askStreamOpen, event, holdAskStream, pushAskStream, sseBody } from "./support/fake-ask";
 
 const roles = access.roles.map((r) => r.id);
@@ -96,6 +96,7 @@ test("在評測台切換成沒有 canReview 的身分：回到問答，頁籤消
 });
 
 // 查不到時的下一步（#192）：「資料沒寫」與「看不到的資料」的拒答區塊完全相同，不透露是哪一種。
+// 下一步會從問題中看得到的實體產生（#285），所以「資料沒寫」的問題也放進同樣的看得到的實體名稱
 // 問答一律回拒答標記（app/src/qa/prompt.ts 的 REFUSAL_MARKER），檢索到看得到的段落而送出 /api/ask 時也拒答
 const REFUSAL_MARKER = "[[NO_ANSWER]]";
 
@@ -120,8 +121,8 @@ for (const role of lessPrivileged) {
       await expect(answer.locator(".refusal-next")).toBeVisible();
       return answer.locator(".answer-text, .refusal-next").allInnerTexts();
     };
-    // 資料沒寫：資料集中沒有的詞；看不到的資料：該身分看不到的段落開頭（問題本身含有這段文字，所以不做滲漏比對）
-    const notWritten = await ask("E2E qzxv wkjp");
+    // 資料沒寫：資料集中沒有的詞，加上段落開頭中看得到的實體名稱；看不到的資料：該身分看不到的段落開頭（問題本身含有這段文字，所以不做滲漏比對）
+    const notWritten = await ask(["E2E qzxv wkjp", ...visibleNamesIn(hidden.prefix, role)].join(" "));
     const notVisible = await ask(hidden.prefix);
     expect(notVisible).toEqual(notWritten);
     expect(notWritten[0]).toBe(s.refusal);

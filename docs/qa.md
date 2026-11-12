@@ -108,10 +108,13 @@ Rules:
   - 繁中：找不到可以回答這個問題的資料。
   - 英文：I couldn't find information to answer this question.
 - **不透露是否有看不到的文件**：看不到的段落在 RLS 就被濾掉，「沒有資料」與「沒有權限」走同一條路；拒答文字也不提權限。`answer.test.ts` 確認一般員工問調薪、主管問題庫外的問題、本機拒答三者的結果完全相同。
-- **查不到時的下一步**（#192）：畫面在拒答文字下方顯示固定的「可以試試」清單：換個說法或改用文件中的用詞、改問負責的人或部門；目前身分能上傳且上傳頁籤看得到時（展示模式沒有），多一項「有相關文件時上傳後再問」與「到上傳頁」按鈕。
-  - 清單只依目前身分的上傳能力決定（`ui/refusal-next-steps.ts` 的 `refusalNextSteps({ canUpload })`），不讀問題、檢索結果或拒答原因，所以「資料沒寫」與「沒有權限」永遠相同；文字不提權限、等級、專案或身分。`ask()` 回的拒答（`answer.text`）不變。
-  - 文字在翻譯檔的 `refusalNextTitle`、`refusalNextRephrase`、`refusalNextAskPerson`、`refusalNextUpload`、`refusalGotoUpload`。
-  - 測試：`refusal-next-steps.test.ts`（輸入只有上傳能力、各語言的文字不提權限與等級等名稱）；E2E `access.spec.ts` 以同一身分問「資料沒寫」與「看不到的段落」，比對兩次的拒答區塊完全相同。
+- **查不到時的下一步**（#192、#285）：畫面在拒答文字下方顯示「可以試試」清單（`ui/refusal-next-steps.ts` 的 `refusalNextSteps()`）：
+  - **問題中有目前身分看得到的實體時**（依在問題中第一次出現的位置，最多 2 個；比對方式與「回答提到」相同）：每個實體「在圖譜看它」（「在圖譜中查看」切到圖譜頁並選取它）；有負責人時「問它的負責人」（例如「問王小明（青翼專案負責人）」，負責人是 `knowledge-model.json` 中有 `owner` 的關係的起點，同一位只列一次）；最後是第一個實體的「用它換個問法」（實體面板「接著問」的第一題，按了填進輸入框、不送出；沒有接著問時只寫名稱）。
+  - **沒有看得到的實體時**：退回通用建議：換個說法或改用文件中的用詞、改問負責的人或部門。
+  - 目前身分能上傳且上傳頁籤看得到時（展示模式沒有），兩者最後都多一項「有相關文件時上傳後再問」與「到上傳頁」按鈕。
+  - 依據只有問題文字、上傳能力與送出當下身分的 `readGraph()` 結果（RLS 已篩選，與「回答提到」相同，拒答時 `App.tsx` 也讀圖譜），不讀檢索結果或拒答原因：同一身分問同一題時「資料沒寫」與「沒有權限」永遠相同，看不到的實體不會出現，只提到看不到的實體時與資料不存在相同（#247）。文字不提權限、等級、專案或身分。`ask()` 回的拒答（`answer.text`）不變。
+  - 文字在翻譯檔的 `refusalNextTitle`、`refusalNextRephrase`、`refusalNextAskPerson`、`refusalNextUpload`、`refusalNextGraph`、`refusalNextOwner`、`refusalNextRephraseWith`、`refusalNextRephraseName`、`refusalGotoUpload`。
+  - 測試：`refusal-next-steps.test.ts`（通用建議、從實體產生的建議、負責人、多傳拒答原因不影響、各語言的文字不提權限與等級等名稱）；越權測試 `app/tests/graph/refusal.test.ts`（以所有實體的名稱提問，建議只含 oracle 算出看得到的實體；只提到看不到的實體時與資料沒寫的問題相同）；E2E `access.spec.ts` 以同一身分問「資料沒寫」與「看不到的段落」，「資料沒寫」的問題放進段落開頭中看得到的實體名稱，比對兩次的拒答區塊完全相同。
 - 串流時，在能確定開頭不是拒答標記之前先不顯示文字，避免畫面先閃出標記。
 
 ## 外層標籤

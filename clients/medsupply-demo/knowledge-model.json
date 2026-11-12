@@ -68,7 +68,8 @@
       "questions": {
         "outgoing": { "zh-TW": "{name}負責哪些{type}？", "en": "What is {name} responsible for?" },
         "incoming": { "zh-TW": "誰負責{name}？", "en": "Who is responsible for {name}?" }
-      }
+      },
+      "owner": { "zh-TW": "負責人", "en": "person in charge" }
     },
     {
       "id": "uses",

@@ -50,7 +50,7 @@
     "evalCitations", "evalNoCitations", "evalDropped", "evalKeyPoints", "evalGrade", "evalMetrics",
     "evalCategories", "evalExpect", "evalVerdicts", "evalLeaks", "evalReport",
     "colon", "progress", "parenthetical", "refusal",
-    "refusalNextTitle", "refusalNextRephrase", "refusalNextAskPerson", "refusalNextUpload", "refusalGotoUpload", "uncited", "incomplete", "answerRetry",
+    "refusalNextTitle", "refusalNextRephrase", "refusalNextAskPerson", "refusalNextUpload", "refusalNextGraph", "refusalNextOwner", "refusalNextRephraseWith", "refusalNextRephraseName", "refusalGotoUpload", "uncited", "incomplete", "answerRetry",
     "qaProblems", "errors", "unknownError"
   ],
   "properties": {
@@ -603,6 +603,10 @@
     "refusalNextRephrase": { "$ref": "#/definitions/Text" },
     "refusalNextAskPerson": { "$ref": "#/definitions/Text" },
     "refusalNextUpload": { "$ref": "#/definitions/Text" },
+    "refusalNextGraph": { "$ref": "#/definitions/Text" },
+    "refusalNextOwner": { "$ref": "#/definitions/Text" },
+    "refusalNextRephraseWith": { "$ref": "#/definitions/Text" },
+    "refusalNextRephraseName": { "$ref": "#/definitions/Text" },
     "refusalGotoUpload": { "$ref": "#/definitions/Text" },
     "uncited": { "$ref": "#/definitions/Text" },
     "incomplete": { "$ref": "#/definitions/Text" },

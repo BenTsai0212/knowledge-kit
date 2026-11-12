@@ -154,7 +154,7 @@ export const manifests: ManifestEntry[] = [
   {
     schema: "knowledge-model.schema.json",
     pointer: "/properties/relationTypes/items",
-    keys: { id: "required", label: "required", from: "required", to: "required", questions: "optional" } satisfies KeyManifest<RelationType>,
+    keys: { id: "required", label: "required", from: "required", to: "required", questions: "optional", owner: "optional" } satisfies KeyManifest<RelationType>,
   },
   {
     schema: "knowledge-model.schema.json",
@@ -280,7 +280,8 @@ const uiStrings = {
   evalCategories: "required", evalExpect: "required", evalVerdicts: "required", evalLeaks: "required", evalReport: "required",
   colon: "required", progress: "required",
   parenthetical: "required", refusal: "required", refusalNextTitle: "required", refusalNextRephrase: "required",
-  refusalNextAskPerson: "required", refusalNextUpload: "required", refusalGotoUpload: "required", uncited: "required", incomplete: "required", answerRetry: "required",
+  refusalNextAskPerson: "required", refusalNextUpload: "required", refusalNextGraph: "required",
+  refusalNextOwner: "required", refusalNextRephraseWith: "required", refusalNextRephraseName: "required", refusalGotoUpload: "required", uncited: "required", incomplete: "required", answerRetry: "required",
   qaProblems: "required", errors: "required", unknownError: "required",
 } satisfies KeyManifest<UiStrings>;
 
