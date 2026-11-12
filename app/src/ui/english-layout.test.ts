@@ -108,6 +108,72 @@ describe("首頁", () => {
   });
 });
 
+describe("頁面外層與清單的欄寬", () => {
+  // 不換行、截斷或橫向捲動的元素 → 它在畫面上的祖先中所有 display: grid 的容器（到 .app 為止）。
+  // 隱含的 auto 欄與 1fr（minmax(auto, 1fr)）至少是內容的最小寬度，這些元素會把欄撐寬、整頁出現橫向捲動
+  // （#288 審查：首頁的清單、待審頁的分頁列）。新增這類元素時，把它與祖先的 grid 加進這張表
+  const page = ["main"];
+  const ancestors: Record<string, string[]> = {
+    ".brand__wordmark": [".app"],
+    ".presets": [".app", "main.qa", ".home", ...page],
+    ".scenario": [".app", "main.qa", ".home", ...page],
+    ".review-tabs": [".review-page", ".upload", ...page],
+    '.review-tabs [role="tab"]': [".review-page", ".upload", ...page],
+    ".table-scroll": [".eval-overview", ".eval-page", ...page],
+    ".eval-chip": [".eval-page", ...page],
+    ".eval-outcome": [".eval-overview", ".eval-page", ...page],
+    ".home__question": [".home__asked ul", ".home", ...page],
+    ".home__recent .home__name": [".home__recent ul", ".home", ...page],
+    ".home__update .home__name": [".home__updates ul", ".home", ...page],
+    ".my-upload__title": [".my-uploads__list", ".my-uploads", ".upload", ...page],
+  };
+
+  // 不在畫面上占寬度的（絕對定位、只給報讀器）不算
+  const unwrapped = () =>
+    rules()
+      .filter((r) => /nowrap/.test(r.decls["white-space"] ?? "") || "text-overflow" in r.decls || /auto|scroll/.test(r.decls["overflow-x"] ?? ""))
+      .filter((r) => r.decls.position !== "absolute")
+      .map((r) => r.selector);
+
+  // 每個欄的最小寬度都不看內容：minmax(0, …)、minmax(min(100%, …), …) 或固定長度
+  const tracks = (template: string): string[] => {
+    const out: string[] = [];
+    let depth = 0;
+    let current = "";
+    for (const c of `${template} `) {
+      if (c === " " && depth === 0) {
+        if (current !== "") out.push(current);
+        current = "";
+        continue;
+      }
+      depth += c === "(" ? 1 : c === ")" ? -1 : 0;
+      current += c;
+    }
+    return out.flatMap((t) => (t.startsWith("repeat(") ? tracks(t.slice(t.indexOf(",") + 1, -1).trim()) : [t]));
+  };
+  const contentFree = (track: string) => /^minmax\((?:0|min\(100%, [^)]+\)),/.test(track) || /^\d+(?:\.\d+)?(?:px|rem)$/.test(track);
+
+  it("表列出所有不換行、截斷或橫向捲動的元素", () => {
+    expect(unwrapped().sort()).toEqual(Object.keys(ancestors).sort());
+  });
+
+  it.each(Object.entries(ancestors))("%s 的祖先 grid 都指定不看內容的欄寬", (_, containers) => {
+    for (const container of containers) {
+      const rule = rules().find((r) => r.media === null && r.selector.split(", ").includes(container) && "grid-template-columns" in r.decls);
+      expect(rule, container).toBeDefined();
+      const template = rule?.decls["grid-template-columns"] ?? "";
+      expect(tracks(template).every(contentFree), `${container} { grid-template-columns: ${template} }`).toBe(true);
+    }
+  });
+
+  it("頁面外層與清單的 grid 是 minmax(0, 1fr)", () => {
+    for (const selector of ["main", ".review-page", ".review-list", ".review-rows", ".timeline", ".upload", ".upload-recent", ".graph-side", ".eval-page", ".my-uploads", ".my-uploads__list"]) {
+      const rule = rules().find((r) => r.media === null && r.selector.split(", ").includes(selector) && r.decls.display === "grid");
+      expect(rule?.decls["grid-template-columns"], selector).toBe("minmax(0, 1fr)");
+    }
+  });
+});
+
 describe("排版規則", () => {
   // 按鈕、分段（分頁）、晶片的選擇器
   const control = /button|chip|\[role="tab"\]|review-tabs/;

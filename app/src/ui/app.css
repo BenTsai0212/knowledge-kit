@@ -300,8 +300,11 @@ label {
   gap: 0.5rem;
 }
 
+/* 頁面的外層與清單的 grid 一律指定 minmax(0, 1fr)（#288）：隱含的 auto 欄至少是內容的最小寬度，
+   不換行的名稱或橫向捲動的分頁列會把欄撐寬、整頁出現橫向捲動。english-layout.test.ts 檢查 */
 main {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
 }
 
@@ -1125,6 +1128,7 @@ main.qa > .source .source-text mark.entering {
 
 .graph-side {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
 }
 
@@ -1352,6 +1356,7 @@ details.path summary {
 /* 三欄格線：日期（靠右）、2px 時間軸線與圓點、文件卡片。列之間不留空隙，時間軸線連成一條 */
 .timeline {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   list-style: none;
   padding: 0;
   margin: 1rem 0 0;
@@ -1506,6 +1511,7 @@ details.path summary {
 
 .upload {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
 }
 
@@ -1901,6 +1907,7 @@ button.secondary {
 /* 這次工作階段上傳過的文件（與頁首步驟所指的目前這一份分開） */
 .upload-recent {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.5rem;
 }
 
@@ -1911,11 +1918,13 @@ button.secondary {
 
 .review-page {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
 }
 
 .review-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
   list-style: none;
   padding: 0;
@@ -1948,6 +1957,7 @@ label.inline {
 
 .review-rows {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.35rem;
   list-style: none;
   margin: 0.35rem 0 0;
@@ -2511,6 +2521,7 @@ label.inline {
 /* 評測台（#62；版面 #244）：頁首 → 「評測設定」與「總覽」並排（窄螢幕上下堆疊）→ 每題的結果 */
 .eval-page {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
 }
 
@@ -3225,6 +3236,7 @@ label.inline {
 
 .my-uploads {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
 }
@@ -3239,6 +3251,7 @@ label.inline {
   margin: 0;
   padding: 0;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.5rem;
 }
 
