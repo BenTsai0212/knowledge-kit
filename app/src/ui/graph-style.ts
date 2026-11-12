@@ -141,7 +141,8 @@ export function graphStyle(read: ReadVariable, types: TypeStyle[], transitionMs 
     // 滑過變灰的節點時恢復 100% 不透明，標籤在要讀的時候可讀（#240 決定 3）
     { selector: "node.dimmed.hover", style: { opacity: 1 } },
     // 選取與滑過時顯示完整名稱（#288），疊在其他節點的標籤上面
-    { selector: "node.selected, node.hover", style: { label: "data(label)", "z-index": 10 } },    // 鍵盤操作（#289，docs/design.md「圖譜的鍵盤操作與螢幕報讀器」）：目前的實體是 focus 色 3px 實線圈、游標是虛線圈；
+    { selector: "node.selected, node.hover", style: { label: "data(label)", "z-index": 10 } },
+    // 鍵盤操作（#289，docs/design.md「圖譜的鍵盤操作與螢幕報讀器」）：目前的實體是 focus 色 3px 實線圈、游標是虛線圈；
     // 連到目前實體的線加粗成 primary 並標出關係名稱。鍵盤要看得到的元素不變灰（與 hover 相同恢復 100%）
     { selector: "node.kb-current", style: { "outline-width": KEYBOARD_RING, "outline-style": "solid", "outline-color": v("--color-focus"), "outline-offset": 2 } },
     { selector: "node.kb-cursor", style: { "outline-width": KEYBOARD_RING, "outline-style": "dashed", "outline-color": v("--color-focus"), "outline-offset": 2 } },

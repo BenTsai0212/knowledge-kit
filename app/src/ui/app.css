@@ -1095,6 +1095,52 @@ main.qa > .source .source-text mark.entering {
   border-radius: var(--radius-medium);
 }
 
+/* 按鍵提示列（#289）：只在外框有鍵盤焦點時出現在圖譜下方（滑鼠點畫布時不出現） */
+.graph-keys {
+  display: none;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-textMuted);
+  font-size: 0.875rem;
+}
+
+.graph-frame:focus-visible + .graph-keys {
+  display: flex;
+}
+
+.graph-keys kbd,
+.graph-help kbd {
+  display: inline-block;
+  min-width: 1.5em;
+  margin-right: 0.25rem;
+  padding: 0 0.3rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  text-align: center;
+}
+
+/* 按鍵表（?）：鍵帽與說明兩欄 */
+.graph-help dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.5rem 1rem;
+  margin: 0 0 1rem;
+}
+
+.graph-help dl > div {
+  display: contents;
+}
+
+.graph-help dd {
+  margin: 0;
+}
+
 /* 右側實體面板的鄰近圖（#195） */
 .graph-canvas.compact {
   height: 240px;
@@ -1143,6 +1189,11 @@ main.qa > .source .source-text mark.entering {
   align-items: flex-end;
   gap: 0.5rem 1.5rem;
   margin-bottom: 0.5rem;
+}
+
+/* 搜尋框的外層（#289 的 / 用來判斷焦點是否離開搜尋）不影響版面 */
+.graph-search {
+  display: contents;
 }
 
 .graph-tools .legend {
