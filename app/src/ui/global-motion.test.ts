@@ -4,8 +4,12 @@ import css from "./app.css?raw";
 import evalPage from "./EvalPage.tsx?raw";
 import fallbackNotice from "./RetrievalFallbackNotice.tsx?raw";
 import reviewPage from "./ReviewPage.tsx?raw";
+import timelinePage from "./TimelinePage.tsx?raw";
+import app from "../App.tsx?raw";
+import main from "../main.tsx?raw";
 
-// 全域與進入的動態（#246，docs/design.md「全互動對照表」的「全域」「進入」列）：toast、對話框、邀請碼錯誤、改用關鍵字檢索的提示。
+// 全域與進入的動態（#246，docs/design.md「全互動對照表」的「全域」「進入」列）：toast、對話框、邀請碼錯誤、改用關鍵字檢索的提示、
+// 切換身分（看不到的內容消失）、切換語言與 Light／Dark（交叉淡換）。
 // 時間一律是 --motion-* 變數（減少動態效果時為 0ms，motion.test.ts 檢查），keyframes 照抄參考檔（motion-reference.test.ts 檢查）
 
 const cssText = css.replace(/\/\*[\s\S]*?\*\//g, "");
@@ -66,4 +70,32 @@ it("改用關鍵字檢索的提示：從頂端往下推開內容（kExpand，exp
   expect(fallbackNotice).toContain('className="retrieval-fallback"');
   expect(rule(".retrieval-fallback")).toMatch(/animation: kExpand var\(--motion-expand\) var\(--ease-enter\) backwards;/);
   expect(rule(".retrieval-fallback > .notice")).toMatch(/min-height: 0;/);
+});
+
+describe("切換身分（#246 決定補充 2）", () => {
+  it("時間軸中新身分看不到的文件模糊淡出並收合（kGone，expand＋fast、退場曲線，依序延後 40ms）", () => {
+    expect(rule(".timeline-entry.is-gone")).toMatch(
+      /animation: kGone calc\(var\(--motion-expand\) \+ var\(--motion-fast\)\) var\(--ease-exit\) calc\(var\(--i, 0\) \* var\(--motion-stagger-sentence\) \/ 2\) forwards;/,
+    );
+    expect(rule(".timeline-entry.is-gone > *")).toMatch(/min-height: 0;/);
+  });
+
+  it("不放上鎖框或佔位：消失的只是切換前已在畫面上的文件，播完（goneDelay，減少動態效果時為 0）就移除", () => {
+    expect(timelinePage).toContain("goneDelay(prefersReducedMotion(), removed)");
+    expect(timelinePage).toContain("setTimeout(() => setGone(null), gone.ms)");
+    expect(timelinePage).toMatch(/inert=\{order !== undefined\}/);
+    expect(cssText).not.toMatch(/\.is-gone[^{]*\{[^}]*(?:content|border|background)/);
+  });
+});
+
+describe("切換語言、Light／Dark（#246）", () => {
+  it("原地交叉淡換：舊畫面 kFadeOut（fast），新畫面 kFade（base，延後 60ms）；不滑動、不縮放", () => {
+    expect(rule("::view-transition-old(root)")).toMatch(/^\s*animation: kFadeOut var\(--motion-fast\) var\(--ease-exit\) forwards;\s*$/);
+    expect(rule("::view-transition-new(root)")).toMatch(/^\s*animation: kFade var\(--motion-base\) var\(--ease-enter\) var\(--motion-stagger-list\) backwards;\s*$/);
+  });
+
+  it("切換語言與系統切換淺色／深色都經過 crossFade()", () => {
+    expect(app).toContain("onLanguage={(code) => crossFade(() => flushSync(() => (discard(), setLanguage(code))))}");
+    expect(main).toContain("followColorScheme((query) => window.matchMedia(query), document.documentElement, crossFade)");
+  });
 });

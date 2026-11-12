@@ -16,6 +16,7 @@
 | 400ms | sweep | `--motion-sweep` |
 | 520ms | settle | `--motion-settle` |
 | 延遲 60ms／80ms | stagger | `--motion-stagger-list`／`--motion-stagger-sentence`（對話框本體的 60ms、邀請碼錯誤說明的 80ms，#246） |
+| `.a-gone` 的 420ms | expand＋fast | `calc(var(--motion-expand) + var(--motion-fast))`；第 2 個起依序延後的 40ms 是 `--motion-stagger-sentence` 的一半（切換身分，#246 決定補充 2） |
 | `.a-timer` 的 5000ms | progress | toast 的倒數線跟著 `TOAST_MS`（10 秒，`ReviewPage.tsx`），經 `motionDuration()` 以 `--toast-duration` 帶入（#246 決定補充 3） |
 
 曲線同樣用 `--ease-*`：`cubic-bezier(.2,0,0,1)` 是進場、`cubic-bezier(.4,0,1,1)` 是退場、`cubic-bezier(.3,1.5,.5,1)` 是 settle、`linear` 是 `--ease-linear`（progress，#244）。入口頁主視覺等持續循環的裝飾動畫不套用刻度（`docs/design.md`「入口頁主視覺」）。
@@ -31,6 +32,7 @@
 | AI 問答 | 拒答虛線框；「可以試試」三項 | fade；rise | 600ms；820／880／940ms |
 | AI 問答 | 中斷：「回答不完整」；重試區 | rise | 300ms；360ms |
 | 全域 | 切換語言：新文字 | fade | 60ms（舊文字 fadeout 0ms） |
+| 全域 | 切換身分：看不到的內容（第 1／2／3 個） | gone | 0／40／80ms（依序加 40ms） |
 | 全域 | 語意模型下載的節點 | node | 0／200ms |
 | 全域 | 邀請碼錯誤的說明 | drop | 80ms |
 | 全域 | 評測完成的四項指標 | pop | 900／960／1020／1080ms |
@@ -65,6 +67,7 @@
 | `kSweep` | 引用段落的 `mark` 平時以 `background-color` 顯示完整螢光（減少動態時直接到位、動畫結束後留著）；刷過時底色要保持透明，只有 `background-image` 長出 | `from{background-color:transparent;background-size:0% 100%}to{background-color:transparent;background-size:100% 100%}` |
 | `kFloat` | 主視覺的 SVG 以 `viewBox="0 0 100 100"` 為單位，畫布的 `-5px` 在這裡約是場景的 5%；保留畫布的節奏，位移縮小 | `0%,100%{transform:translate(0,0)}50%{transform:translate(0,-0.8px)}` |
 | `kFlyTo` | 畫布的起點寫死畫布座標 `translate(560px,600px)`；實際畫面中「人工審核」步驟與導覽「待審」的距離依視窗大小而定，起點依實際版面計算，以 CSS 變數帶入（#242 PR 3） | `0%{opacity:0;transform:translate(var(--fly-x),var(--fly-y)) scale(.6)}12%{opacity:1}88%{opacity:1}100%{opacity:0;transform:none}` |
+| `kGone` | 畫布的 `height:40px` 是畫布上列的固定高度，實際的列（時間軸的文件）高度不固定；改以單一列的 grid 收合 `grid-template-rows: 1fr → 0fr`，內容 `min-height: 0` 裁切。`margin-top:-6px` 抵銷畫布上列與列的間距，時間軸的列之間沒有間距（間距在卡片的 `margin-bottom`，一起收合），所以不加（#246 決定補充 2） | `0%{opacity:1;filter:none;grid-template-rows:1fr}55%{opacity:0;filter:blur(4px);grid-template-rows:1fr}100%{opacity:0;filter:blur(4px);grid-template-rows:0fr}` |
 | `kGlow` | 光暈是 SVG 的圓，`box-shadow` 對 SVG 無效；改以圓的不透明度與縮放呈現 | `0%,100%{opacity:0;transform:scale(.6)}50%{opacity:1;transform:scale(1)}` |
 
 ## 參考檔以外的 keyframes

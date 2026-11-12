@@ -2,6 +2,7 @@
 // canReview 的身分另有待審與評測台（需要邀請碼；線上 demo 不顯示評測台）；展示模式（?mode=presentation）只顯示問答與圖譜；引用跳回原文。
 // 問答頁是左導覽、中間對話、右側面板（原文或回答提到的實體）的三欄（#195，docs/qa.md「畫面」）。
 import { useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { clientConfig } from "./client/load";
 import { planConflicts, runConflicts, shouldDetectConflicts, type ConflictState } from "./conflicts/run";
 import { readConflicts } from "./conflicts/store";
@@ -20,6 +21,7 @@ import { openRetriever } from "./retrieval/retrieve";
 import { readSource, type SourceDocument } from "./sources/source";
 import { clearAccessCode, loadAccessCode, saveAccessCode } from "./ui/access-code";
 import { AccessCodeForm } from "./ui/AccessCodeForm";
+import { crossFade } from "./ui/cross-fade";
 import { EntryHero } from "./ui/EntryHero";
 import { EvalPage } from "./ui/EvalPage";
 import { GraphPage } from "./ui/GraphPage";
@@ -276,7 +278,8 @@ export function App() {
           // 沒有 canReview 的身分看不到待審與評測台頁籤（離開評測台時停止評測、關閉評測專用資料庫）；展示模式只有問答與圖譜
           if (!views(access.roles.find((r) => r.id === id)?.canReview ?? false).includes(view)) setView("qa");
         }}
-        onLanguage={(code) => (discard(), setLanguage(code))}
+        // 切換語言：原地交叉淡換（#246）；View Transitions 在回呼結束時拍下新畫面，所以同步更新
+        onLanguage={(code) => crossFade(() => flushSync(() => (discard(), setLanguage(code))))}
         onChangeAccessCode={
           accessCode === null
             ? undefined

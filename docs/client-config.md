@@ -143,7 +143,7 @@ npm run check:client
 
 - **證據色客戶不可改**：`mark`、`markSoft`、`markText`、`markReading` 沿用參考情境 `client/theme.json` 的值（證據只用一個顏色，[ADR 0008](adr/0008-design-system.md)）。目前只寫在文件與 Schema 的 `description`，`check:client` 不檢查。各鍵的設計值見 [docs/design.md](design.md)「顏色 token」。
 - 提示框與可見等級標籤的淡色底色，不另外設欄位：以 `color-mix(in srgb, <狀態色或等級色> 14%, surface)` 算出。
-- **深色模式**：依系統設定（`prefers-color-scheme`）自動切換，沒有手動開關。`colors` 放在 `:root`，`darkColors` 放在 `@media (prefers-color-scheme: dark)` 內，切換完全由 CSS 處理；圓角與字型兩種模式相同。圖譜（cytoscape）不讀 CSS，由 `app/src/ui/graph-style.ts` 的 `graphStyle()` 從 CSS 變數組出樣式，`GraphView.tsx` 監聽系統切換（`watchColorScheme()`）後重新套用。實體類型與可見等級只有一個顏色，淺色、深色共用，所以要選兩種背景上都清楚的顏色（見下方「對比度」）。
+- **深色模式**：依系統設定（`prefers-color-scheme`）自動切換，沒有手動開關。`colors` 放在 `:root`，`darkColors` 放在 `:root[data-scheme="dark"]` 內：`main.tsx` 依系統設定在 `<html>` 標上 `data-scheme`，系統切換時以交叉淡換改標記（`app/src/ui/theme.ts` 的 `followColorScheme()`，#246）；`app.css` 的深色規則同樣寫在這個選擇器內，不直接用 media query。圓角與字型兩種模式相同。圖譜（cytoscape）不讀 CSS，由 `app/src/ui/graph-style.ts` 的 `graphStyle()` 從 CSS 變數組出樣式，`GraphView.tsx` 監聽標記的改變（`watchColorScheme()`）後重新套用。實體類型與可見等級只有一個顏色，淺色、深色共用，所以要選兩種背景上都清楚的顏色（見下方「對比度」）。
 - **不寫死顏色**：`app.css` 與 `app/src/` 的程式中不得出現顏色值（`#hex`、`rgb()`、`hsl()` 等）或色名；`app.css` 中帶顏色的屬性只能由 `var(--…)`、`color-mix(in srgb, …)` 與 `transparent`、`currentColor` 等關鍵字組成。結構測試在 `app/src/ui/theme.test.ts`，也確認 `app.css` 用到的 `--color-*`、`--radius-*`、`--font-*` 都由 `theme.json` 提供。需要新的顏色時，依[擴充 Schema](#擴充-schema) 在 `theme.json` 加欄位。
 
 ### 對比度
