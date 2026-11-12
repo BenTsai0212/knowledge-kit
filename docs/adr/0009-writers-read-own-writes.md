@@ -30,4 +30,6 @@
 
 - 好處：核准者的可見範圍不變（`own_*` 對 `can_review` 的身分只是既有範圍的子集）；做法一致，可由 `oracle.ts` 以「核准者 ∪ 寫入者」獨立實作並以越權測試比對。
 - 代價：policy 參照其他資料表時，可能和既有 INSERT policy 形成 PostgreSQL 展開時的遞迴（例如 `entities` 的 INSERT policy 查 `review_decisions`）。0011 以 PL/pgSQL 函式 `kk.entity_visible()` 避開（同 0006 的 `kk.is_approved()`），新增 `own_*` 時同樣只能以測試確認。
-- 後續：#286 的回報；改成個人帳號時重新檢討決定 5 的說明。
+- 後續：
+  - #286 的回報：**已套用**（migration 0012 的 `own_report`）。與 ADR 0007 決定 7 的關係：決定 7 的「有 `can_review`、且送出的段落全部看得到」不變，`own_report` 以 OR 加上「回報者是自己、且送出的段落全部看得到」；ADR 0007 決定 7 只新增一條補充，不改原文。
+  - 改成個人帳號時重新檢討決定 5 的說明。

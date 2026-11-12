@@ -52,6 +52,7 @@
    - **可見範圍以送給模型的所有段落判斷，不只引用的段落**（#209 決定 5）：回答可能用到送出但沒有引用的段落內容。有 `can_review`、且**送出的段落全部看得到**時才看得到該回報。
    - **拒答的回報只含問題文字**：不記錄回答與段落，所有能審核的身分都看得到。
    - 從回報可以打開原文與實體，並在那裡撤回；或標示「不是錯誤」。
+   - **補充（#286，[ADR 0009](0009-writers-read-own-writes.md)，migration 0012）**：回報者也讀得到自己的回報與處理結果（含處理時選填的「給回報的人的說明」），送出的段落仍要**目前**全部看得到。身分是角色層級，同一角色互相讀得到彼此的回報，仍受送出段落可見性限制。回報者仍不能處理。
 8. **分級**：合併（會擴大可見範圍）仍維持事前審核；「有把握的直接收錄」（#189 的 B 方案）不在本 ADR，另寫 ADR。
 
 ## 資料表與 RLS
@@ -81,6 +82,7 @@
   - INSERT：`reported_by` 是自己，且 `sent_passage_ids` 自己全部看得到。
 - **`answer_report_resolutions`**（只能新增）：`report_id`、`resolution`（`not_error`、`retracted`）、`resolved_by`、`resolved_at`。
   - SELECT：看得到該回報。INSERT：有 `can_review`、`resolved_by` 是自己、看得到該回報。
+- **0012 的補充**（#286，不修改 0010）：`answer_report_resolutions` 新增 `note`（給回報的人的說明，選填，1～500 字，與處理同時寫入、之後不能修改）；`answer_reports` 新增 permissive 的 SELECT policy `own_report`（`reported_by` 是自己，且送出的段落全部看得到），與 `can_see` 以 OR 合併。
 
 ## 後果
 
