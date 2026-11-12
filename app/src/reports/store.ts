@@ -1,5 +1,5 @@
 // 回答錯誤回報的資料層（ADR 0007 決定 7，docs/data-model.md「回答錯誤回報」）：寫入、讀取、處理。
-// 一律經 withIdentity()；誰能寫入、看得到、處理什麼，完全交給 RLS（migration 0010）。只用 INSERT。
+// 一律經 withIdentity()；誰能寫入、看得到、處理什麼，完全交給 RLS（migration 0010、0012）。只用 INSERT。
 import type { Database } from "../db/database";
 import { ReviewError } from "../extraction/store";
 
@@ -11,6 +11,8 @@ export type ReportResolution = "not_error" | "retracted";
 
 // 說明的字數上限（migration 0010 的 CHECK）；畫面的輸入框以此限制
 export const MAX_REPORT_NOTE_CHARS = 1000;
+// 處理時給回報的人的說明的字數上限（migration 0012 的 CHECK）
+export const MAX_RESOLUTION_NOTE_CHARS = 500;
 
 export interface NewReport {
   category: ReportCategory;
@@ -41,8 +43,13 @@ export interface AnswerReport {
   citedPassageIds: string[];
   // 只列出目前身分看得到的實體
   entityIds: string[];
-  // 尚未處理時為 null
+  // 尚未處理時以下四項都是 null
   resolution: ReportResolution | null;
+  resolvedAt: string | null;
+  // 處理者的身分 id（角色層級，畫面只顯示角色）
+  resolvedBy: string | null;
+  // 給回報的人的說明（選填）
+  resolutionNote: string | null;
 }
 
 export const newReportId = () => `ar-${crypto.randomUUID()}`;
@@ -56,7 +63,7 @@ function mapError(e: unknown): never {
   throw e;
 }
 
-// 寫入回報，回傳 id。沒有 canReview 的回報者讀不到自己寫的回報，所以不使用 RETURNING
+// 寫入回報，回傳 id。回報者讀得到自己的回報（0012），但只在送出的段落目前全部看得到時，所以不使用 RETURNING
 export async function writeReport(db: Database, identityId: string | null, report: NewReport): Promise<string> {
   const id = newReportId();
   const note = report.note?.trim() || null;
@@ -75,55 +82,81 @@ export async function writeReport(db: Database, identityId: string | null, repor
   return id;
 }
 
-// 目前身分看得到的回報（有 canReview，且送出的段落全部看得到），新的在前
+interface ReportRow {
+  id: string;
+  reported_by: string;
+  reported_at: string;
+  category: ReportCategory;
+  note: string | null;
+  question: string;
+  answer: string | null;
+  sent_passage_ids: string[];
+  cited_passage_ids: string[];
+  entity_ids: string[];
+  resolution: ReportResolution | null;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  resolution_note: string | null;
+}
+
+const UTC = (column: string) => `to_char(${column} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`;
+const SELECT_REPORTS = `
+  SELECT r.id, r.reported_by, ${UTC("r.reported_at")} AS reported_at,
+         r.category, r.note, r.question, r.answer, r.sent_passage_ids, r.cited_passage_ids,
+         coalesce(ARRAY(SELECT e.id FROM unnest(r.entity_ids) WITH ORDINALITY AS x (id, n) JOIN kk.entities e ON e.id = x.id ORDER BY x.n), '{}') AS entity_ids,
+         s.resolution, ${UTC("s.resolved_at")} AS resolved_at, s.resolved_by, s.note AS resolution_note
+    FROM kk.answer_reports r
+    LEFT JOIN kk.answer_report_resolutions s ON s.report_id = r.id`;
+
+const toReport = (r: ReportRow): AnswerReport => ({
+  id: r.id,
+  reportedBy: r.reported_by,
+  reportedAt: r.reported_at,
+  category: r.category,
+  note: r.note,
+  question: r.question,
+  answer: r.answer,
+  sentPassageIds: r.sent_passage_ids,
+  citedPassageIds: r.cited_passage_ids,
+  entityIds: r.entity_ids,
+  resolution: r.resolution,
+  resolvedAt: r.resolved_at,
+  resolvedBy: r.resolved_by,
+  resolutionNote: r.resolution_note,
+});
+
+// 目前身分看得到的回報，新的在前：有 canReview 的身分看得到送出的段落全部看得到的回報（0010），
+// 回報者另外讀得到自己的回報（0012，同樣要求送出的段落全部看得到）
 export function readReports(db: Database, identityId: string | null): Promise<AnswerReport[]> {
+  return db.withIdentity(identityId, async (tx) => (await tx.query<ReportRow>(`${SELECT_REPORTS} ORDER BY r.reported_at DESC, r.id`)).rows.map(toReport));
+}
+
+// 回答下方的狀態用：讀不到（不是自己的、之後段落看不到、不存在）時回傳 null，畫面不顯示狀態
+export function readMyReport(db: Database, identityId: string | null, reportId: string): Promise<AnswerReport | null> {
   return db.withIdentity(identityId, async (tx) => {
-    const rows = (
-      await tx.query<{
-        id: string;
-        reported_by: string;
-        reported_at: string;
-        category: ReportCategory;
-        note: string | null;
-        question: string;
-        answer: string | null;
-        sent_passage_ids: string[];
-        cited_passage_ids: string[];
-        entity_ids: string[];
-        resolution: ReportResolution | null;
-      }>(
-        `SELECT r.id, r.reported_by, to_char(r.reported_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS reported_at,
-                r.category, r.note, r.question, r.answer, r.sent_passage_ids, r.cited_passage_ids,
-                coalesce(ARRAY(SELECT e.id FROM unnest(r.entity_ids) WITH ORDINALITY AS x (id, n) JOIN kk.entities e ON e.id = x.id ORDER BY x.n), '{}') AS entity_ids,
-                s.resolution
-           FROM kk.answer_reports r
-           LEFT JOIN kk.answer_report_resolutions s ON s.report_id = r.id
-          ORDER BY r.reported_at DESC, r.id`,
-      )
-    ).rows;
-    return rows.map((r) => ({
-      id: r.id,
-      reportedBy: r.reported_by,
-      reportedAt: r.reported_at,
-      category: r.category,
-      note: r.note,
-      question: r.question,
-      answer: r.answer,
-      sentPassageIds: r.sent_passage_ids,
-      citedPassageIds: r.cited_passage_ids,
-      entityIds: r.entity_ids,
-      resolution: r.resolution,
-    }));
+    const row = (await tx.query<ReportRow>(`${SELECT_REPORTS} WHERE r.id = $1 AND r.reported_by = kk.current_identity_id()`, [reportId])).rows[0];
+    return row === undefined ? null : toReport(row);
   });
 }
 
-// 處理一個回報：「不是錯誤」，或已在原文、圖譜撤回。看不到該回報、沒有 canReview 時拒絕；已處理時是 conflict
-export async function resolveReport(db: Database, identityId: string | null, reportId: string, resolution: ReportResolution): Promise<void> {
+// 處理一個回報：「不是錯誤」，或已在原文、圖譜撤回。看不到該回報、沒有 canReview 時拒絕；已處理時是 conflict。
+// note 是給回報的人的說明（選填，0012）：與處理在同一個 INSERT 寫入，之後不能修改；空白視為沒有，超過 500 字不送出就拒絕
+export async function resolveReport(
+  db: Database,
+  identityId: string | null,
+  reportId: string,
+  resolution: ReportResolution,
+  note: string | null = null,
+): Promise<void> {
+  const text = note?.trim() || null;
+  // 與 PostgreSQL 的 length() 一樣以字元（code point）計算
+  if (text !== null && [...text].length > MAX_RESOLUTION_NOTE_CHARS) throw new ReviewError("denied");
   try {
     await db.withIdentity(identityId, (tx) =>
-      tx.query("INSERT INTO kk.answer_report_resolutions (report_id, resolution, resolved_by) VALUES ($1, $2, kk.current_identity_id())", [
+      tx.query("INSERT INTO kk.answer_report_resolutions (report_id, resolution, resolved_by, note) VALUES ($1, $2, kk.current_identity_id(), $3)", [
         reportId,
         resolution,
+        text,
       ]),
     );
   } catch (e) {

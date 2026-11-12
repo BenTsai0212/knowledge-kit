@@ -1,4 +1,4 @@
-// 回答錯誤回報的權限（ADR 0007 決定 7）：以 oracle.ts 比對每個身分看得到的回報與處理、能寫入與能處理的回報，
+// 回答錯誤回報的權限（ADR 0007 決定 7，回報者讀得到自己的回報：ADR 0009、#286）：以 oracle.ts 比對每個身分看得到的回報與處理、能寫入與能處理的回報，
 // 並以「忽略身分的資料層」做反向驗證。另以「一般員工也能審核」的設定，測試送出的段落有一段看不到時看不到該回報。
 import { describe, expect, it } from "vitest";
 import { clientConfig } from "../../src/client/load";
@@ -7,7 +7,7 @@ import { dataset } from "../../src/dataset/load";
 import { seedDataset } from "../../src/dataset/seed";
 import { openDatabase, type Database } from "../../src/db/database";
 import { ReviewError } from "../../src/extraction/store";
-import { readReports, resolveReport, writeReport, type NewReport, type ReportCategory } from "../../src/reports/store";
+import { readMyReport, readReports, resolveReport, writeReport, type NewReport, type ReportCategory } from "../../src/reports/store";
 import { datasetSample } from "../db/dataset-sample";
 import { canResolveReport, canWriteReport, expectedReportVisible, expectedVisible, REPORT_KEY_SQL, type ReportSample } from "../db/oracle";
 
@@ -54,7 +54,7 @@ async function setup(config: ClientConfig = clientConfig): Promise<World> {
   const ids: Record<string, string> = {};
   for (const r of REPORTS) {
     ids[r.key] = await writeReport(db, r.by, r.report);
-    reports.reports.push({ id: ids[r.key], sent: [...(r.report.answer?.sent ?? [])] });
+    reports.reports.push({ id: ids[r.key], by: r.by, sent: [...(r.report.answer?.sent ?? [])] });
   }
   return { db, reports, ids };
 }
@@ -86,7 +86,7 @@ describe.each([
   ["參考設定（只有主管審核）", clientConfig],
   ["一般員工也能審核", STAFF_REVIEWS],
 ])("回報與處理的可見範圍：%s", { timeout: 30_000 }, (_name, config) => {
-  it("每個身分看得到的列，正好等於 oracle（有 canReview，且送出的段落全部看得到）", async () => {
+  it("每個身分看得到的列，正好等於 oracle（有 canReview 或是回報者，且送出的段落全部看得到）", async () => {
     const w = await setup(config);
     await resolveReport(w.db, "manager", w.ids.pub, "not_error");
     await resolveReport(w.db, "manager", w.ids.conf, "retracted");
@@ -98,7 +98,11 @@ describe.each([
     }
     // 防止以全部看不到而通過
     expect(expectedReportVisible(config.access, datasetSample, w.reports, "manager").answer_reports).toHaveLength(5);
-    expect(expectedReportVisible(config.access, datasetSample, w.reports, "guest").answer_reports).toEqual([]);
+    // 訪客沒有 canReview：只讀得到自己的兩個回報與其處理（#286）
+    expect(expectedReportVisible(config.access, datasetSample, w.reports, "guest")).toEqual({
+      answer_reports: [w.ids.pub, w.ids.refusal],
+      answer_report_resolutions: [w.ids.pub],
+    });
     await w.db.close();
   });
 
@@ -116,9 +120,9 @@ describe("能審核、但看不到部分段落的身分", { timeout: 30_000 }, (
   it("送出的段落有一段看不到就看不到該回報，即使沒有引用那一段；拒答的回報看得到", async () => {
     const w = await setup(STAFF_REVIEWS);
     expect((await queryReports(w.db, "staff")).answer_reports).toEqual([w.ids.pub, w.ids.refusal, w.ids.blue].sort());
-    // 沒有 canReview 的回報者讀不到自己寫的回報
+    // 沒有 canReview 的回報者只讀得到自己寫的回報（#286），讀不到別人的
     const v = await setup();
-    expect((await queryReports(v.db, "staff")).answer_reports).toEqual([]);
+    expect((await queryReports(v.db, "staff")).answer_reports).toEqual([v.ids.blue]);
     expect((await queryReports(v.db, "manager")).answer_reports).toEqual(Object.values(v.ids).sort());
     await w.db.close();
     await v.db.close();
@@ -279,6 +283,91 @@ describe("readReports", { timeout: 30_000 }, () => {
     const id = await writeReport(w.db, "manager", { category: "other", note: null, question: "q", answer: answer([PUBLIC], [], [PUBLIC_ENTITY, MANAGER_ONLY_ENTITY]) });
     expect((await readReports(w.db, "manager")).find((r) => r.id === id)!.entityIds).toEqual([PUBLIC_ENTITY, MANAGER_ONLY_ENTITY]);
     expect((await readReports(w.db, "staff")).find((r) => r.id === id)!.entityIds).toEqual([PUBLIC_ENTITY]);
+    await w.db.close();
+  });
+});
+
+// 回報結果回到回報的人（#286）：沒有 canReview 的身分讀得到自己的回報與處理（含說明），讀不到別人的
+describe("回報者讀得到自己的回報與處理", { timeout: 30_000 }, () => {
+  it("一般員工讀得到自己的回報與處理（含說明、處理者、時間），讀不到別人的；仍不能處理", async () => {
+    const w = await setup();
+    await resolveReport(w.db, "manager", w.ids.blue, "not_error", "  引用的段落是正確的（虛構）  ");
+    await resolveReport(w.db, "manager", w.ids.pub, "retracted", "已撤回");
+    const staff = await queryReports(w.db, "staff");
+    expect(staff).toEqual({ answer_reports: [w.ids.blue], answer_report_resolutions: [w.ids.blue] });
+    const mine = await readMyReport(w.db, "staff", w.ids.blue);
+    expect(mine).toMatchObject({
+      id: w.ids.blue,
+      reportedBy: "staff",
+      resolution: "not_error",
+      resolvedBy: "manager",
+      resolutionNote: "引用的段落是正確的（虛構）",
+    });
+    expect(mine!.resolvedAt).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);
+    expect((await readReports(w.db, "staff")).map((r) => r.id)).toEqual([w.ids.blue]);
+    // 別人的回報：即使送出的段落自己全部看得到
+    expect(await readMyReport(w.db, "staff", w.ids.pub)).toBeNull();
+    expect(await readMyReport(w.db, "guest", w.ids.pub)).toMatchObject({ resolution: "retracted", resolutionNote: "已撤回" });
+    expect(await readMyReport(w.db, "guest", w.ids.blue)).toBeNull();
+    // 主管讀自己以外的回報不經 readMyReport；沒有身分讀不到
+    expect(await readMyReport(w.db, "manager", w.ids.blue)).toBeNull();
+    expect(await readMyReport(w.db, null, w.ids.blue)).toBeNull();
+    // 讀得到之後仍不能處理
+    await expect(resolveReport(w.db, "guest", w.ids.refusal, "not_error")).rejects.toMatchObject({ reason: "denied" });
+    // 還沒處理的回報：處理的欄位都是 null
+    expect(await readMyReport(w.db, "guest", w.ids.refusal)).toMatchObject({ resolution: null, resolvedAt: null, resolvedBy: null, resolutionNote: null });
+    await w.db.close();
+  });
+
+  it("送出的段落之後有一段看不到時，回報者讀不到自己的回報與處理；審核者照常讀得到", async () => {
+    // 一般員工回報後段落的可見等級被調低的情況：直接匯入一個送出了機密段落的一般員工回報與其處理（內容虛構）
+    const db = await openDatabase(clientConfig, {
+      seed: async (pg) => {
+        await seedDataset(pg, clientConfig, dataset);
+        await pg.exec(`
+          INSERT INTO kk.answer_reports (id, reported_by, category, question, answer, sent_passage_ids, cited_passage_ids)
+            VALUES ('ar-hidden', 'staff', 'other', '問題（虛構）', '回答（虛構）', ARRAY['${PUBLIC}', '${CONFIDENTIAL}'], ARRAY['${PUBLIC}']);
+          INSERT INTO kk.answer_report_resolutions (report_id, resolution, resolved_by, note) VALUES ('ar-hidden', 'not_error', 'manager', '說明（虛構）');`);
+      },
+    });
+    const sample: ReportSample = { reports: [{ id: "ar-hidden", by: "staff", sent: [PUBLIC, CONFIDENTIAL] }], resolutions: ["ar-hidden"] };
+    for (const id of IDENTITIES) {
+      expect(await queryReports(db, id), String(id)).toEqual(sorted(expectedReportVisible(clientConfig.access, datasetSample, sample, id)));
+    }
+    expect(await queryReports(db, "staff")).toEqual({ answer_reports: [], answer_report_resolutions: [] });
+    expect(await readMyReport(db, "staff", "ar-hidden")).toBeNull();
+    expect((await queryReports(db, "manager")).answer_report_resolutions).toEqual(["ar-hidden"]);
+    await db.close();
+  });
+});
+
+describe("給回報的人的說明", { timeout: 30_000 }, () => {
+  it("1～500 字可寫入；空白送 null；超過 500 字被拒（store 與資料庫的 CHECK）；空字串被 CHECK 拒絕", async () => {
+    const w = await setup();
+    await resolveReport(w.db, "manager", w.ids.pub, "not_error", "長".repeat(500));
+    await resolveReport(w.db, "manager", w.ids.refusal, "not_error", "   ");
+    await expect(resolveReport(w.db, "manager", w.ids.blue, "not_error", "長".repeat(501))).rejects.toMatchObject({ reason: "denied" });
+    const read = async (id: string) => (await readReports(w.db, "manager")).find((r) => r.id === id)!;
+    expect((await read(w.ids.pub)).resolutionNote).toHaveLength(500);
+    expect((await read(w.ids.refusal)).resolutionNote).toBeNull();
+    expect((await read(w.ids.blue)).resolution).toBeNull();
+    // 直接寫入，不經 store 的檢查
+    const insert = (note: string) =>
+      w.db.withIdentity("manager", (tx) =>
+        tx.query("INSERT INTO kk.answer_report_resolutions (report_id, resolution, resolved_by, note) VALUES ($1, 'not_error', 'manager', $2)", [w.ids.blue, note]),
+      );
+    await expect(insert("")).rejects.toThrow(/check constraint/);
+    await expect(insert("長".repeat(501))).rejects.toThrow(/check constraint/);
+    expect((await read(w.ids.blue)).resolution).toBeNull();
+    await w.db.close();
+  });
+
+  it("寫入後不能修改：沒有 UPDATE 權限；同一回報不能再處理一次來換說明", async () => {
+    const w = await setup();
+    await resolveReport(w.db, "manager", w.ids.pub, "not_error", "第一次的說明");
+    await expect(w.db.withIdentity("manager", (tx) => tx.exec("UPDATE kk.answer_report_resolutions SET note = '改過'"))).rejects.toThrow(/permission denied/);
+    await expect(resolveReport(w.db, "manager", w.ids.pub, "not_error", "第二次的說明")).rejects.toMatchObject({ reason: "conflict" });
+    expect((await readReports(w.db, "manager")).find((r) => r.id === w.ids.pub)!.resolutionNote).toBe("第一次的說明");
     await w.db.close();
   });
 });
