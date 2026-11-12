@@ -14,7 +14,7 @@ export function readOnlineDemo(env: Record<string, unknown>): OnlineDemo {
 
 export const onlineDemo: OnlineDemo = readOnlineDemo(import.meta.env);
 
-export type View = "qa" | "graph" | "timeline" | "upload" | "review" | "evals";
+export type View = "home" | "qa" | "graph" | "timeline" | "upload" | "review" | "evals";
 
 // 客戶展示模式（#129，docs/qa.md「展示模式」）：網址的 mode 參數是 "presentation"（區分大小寫）時開啟，其他值或沒有參數時關閉。
 // 只在載入時讀一次，不存進任何瀏覽器儲存。只是隱藏頁籤，不是權限防線：權限仍由 RLS 執行。
@@ -34,10 +34,13 @@ export function readEvalsMode(search: string): boolean {
 export const evalsMode: boolean = readEvalsMode(globalThis.location?.search ?? "");
 
 // 頁籤：待審只給 canReview 的身分；評測台另外要以 tools=evals 開啟（#192）。線上 demo 隱藏評測台（一次會呼叫大量問答，#100 決定 4）；
-// 展示模式只留問答與圖譜，所有身分相同（#129）。兩者同時開啟時取交集
+// 展示模式只留問答與圖譜，所有身分相同（#129）。兩者同時開啟時取交集。首頁在最前面（#283）；展示模式沒有首頁
 export function visibleViews(canReview: boolean, demo: Pick<OnlineDemo, "enabled">, presentation: boolean, evals: boolean): View[] {
-  const views: View[] = ["qa", "graph", "timeline", "upload"];
+  const views: View[] = ["home", "qa", "graph", "timeline", "upload"];
   if (canReview) views.push("review");
   if (canReview && evals && !demo.enabled) views.push("evals");
   return presentation ? views.filter((v) => v === "qa" || v === "graph") : views;
 }
+
+// 登入後的預設頁（#283，docs/design.md「日常工具」）：首頁；展示模式不顯示首頁，直接進問答
+export const defaultView = (presentation: boolean): View => (presentation ? "qa" : "home");

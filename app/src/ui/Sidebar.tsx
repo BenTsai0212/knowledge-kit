@@ -39,6 +39,7 @@ const ownName = (code: string) => new Intl.DisplayNames([code], { type: "languag
 export function Sidebar({ language, identity, identityControl, account, onIdentity, onLanguage, onChangeAccessCode, views, view, onView, tabExtra, questions, onQuestion }: Props) {
   const s = strings(language);
   const tabLabels: Record<View, string> = {
+    home: s.tabHome,
     qa: s.tabQa,
     graph: s.tabGraph,
     timeline: s.tabTimeline,

@@ -13,7 +13,7 @@
     "retrievalFallbackTitle", "retrievalFallback", "productName", "fictionalData", "demoPermissions", "identity", "language", "accessCodeTitle",
     "accessCodeLabel", "accessCodeHint", "demoAccessCodeHint", "demoQaNotice", "demoUploadNotice", "accessCodeSubmit", "changeAccessCode", "signInTitle", "signInAccount", "signInAccountOption", "signInPassword", "signInNoPassword", "signInSubmit", "signInWithCode", "signInBack", "signOut", "presetQuestions", "scenarioRole",
     "questionLabel", "questionPlaceholder", "askButton", "answering", "emptyAnswer", "emptyAnswerReason", "emptyAnswerAction", "qaIndependent", "sessionQuestions", "answerMentions", "followUpTitle", "followUpOutgoing", "followUpIncoming", "viewInGraph", "openSource", "sourceTitle",
-    "closeSource", "views", "tabQa", "tabGraph", "legend", "graphEmpty", "graphEmptyReason", "switchIdentity", "selectEntity", "graphExpanded", "graphShowAll", "graphShowOnly",
+    "closeSource", "views", "tabQa", "tabHome", "tabGraph", "legend", "graphEmpty", "graphEmptyReason", "switchIdentity", "selectEntity", "graphExpanded", "graphShowAll", "graphShowOnly",
     "graphSearch", "graphSearchNone", "graphTopConnected", "graphRelationCount", "graphDocumentCount", "graphSourceCount", "graphAskAbout", "askAboutEntity", "relatedEntities",
     "entitySources", "graphRetract", "graphRetractWillRemove", "graphRetractNoChange", "graphRetractConfirm", "graphRetractCancel", "tabTimeline", "pathTitle", "pathFrom", "pathTo", "pathChoose", "pathNotFound", "pathNotFoundReason", "pathChangeEnd",
     "timelineFilter", "timelineAll", "timelineEmpty", "timelineEmptyReason", "timelineFilterEmptyReason", "timelineShowAll", "undated", "tabUpload", "uploadNotAllowed", "uploadNotAllowedReason", "uploadEphemeral",
@@ -51,7 +51,7 @@
     "evalCategories", "evalExpect", "evalVerdicts", "evalLeaks", "evalReport",
     "colon", "progress", "parenthetical", "refusal",
     "refusalNextTitle", "refusalNextRephrase", "refusalNextAskPerson", "refusalNextUpload", "refusalNextGraph", "refusalNextOwner", "refusalNextRephraseWith", "refusalNextRephraseName", "refusalGotoUpload", "uncited", "incomplete", "answerRetry",
-    "qaProblems", "errors", "unknownError"
+    "qaProblems", "errors", "unknownError", "home"
   ],
   "properties": {
     "loading": { "$ref": "#/definitions/Text" },
@@ -115,6 +115,7 @@
     "closeSource": { "$ref": "#/definitions/Text" },
     "views": { "$ref": "#/definitions/Text" },
     "tabQa": { "$ref": "#/definitions/Text" },
+    "tabHome": { "$ref": "#/definitions/Text" },
     "tabGraph": { "$ref": "#/definitions/Text" },
     "legend": { "$ref": "#/definitions/Text" },
     "graphEmpty": { "$ref": "#/definitions/Text" },
@@ -668,6 +669,30 @@
         "question_too_long": { "$ref": "#/definitions/Text" }
       }
     },
-    "unknownError": { "$ref": "#/definitions/Text" }
+    "unknownError": { "$ref": "#/definitions/Text" },
+    "home": {
+      "description": "首頁（#283，docs/design.md「日常工具」的「首頁」）：問候依瀏覽器本地時間（早安 5–11 時、午安 12–17 時、晚安 18–4 時）",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["morning", "afternoon", "evening", "scope", "commonQuestions", "waitingTitle", "waitingDocuments", "waitingConflicts", "waitingReports", "waitingEarliest", "startReview", "waitingNone", "askedTitle", "askedNote", "askAgain", "askedEmpty"],
+      "properties": {
+        "morning": { "$ref": "#/definitions/Text" },
+        "afternoon": { "$ref": "#/definitions/Text" },
+        "evening": { "$ref": "#/definitions/Text" },
+        "scope": { "$ref": "#/definitions/Text" },
+        "commonQuestions": { "$ref": "#/definitions/Text" },
+        "waitingTitle": { "$ref": "#/definitions/Text" },
+        "waitingDocuments": { "$ref": "#/definitions/Text" },
+        "waitingConflicts": { "$ref": "#/definitions/Text" },
+        "waitingReports": { "$ref": "#/definitions/Text" },
+        "waitingEarliest": { "$ref": "#/definitions/Text" },
+        "startReview": { "$ref": "#/definitions/Text" },
+        "waitingNone": { "$ref": "#/definitions/Text" },
+        "askedTitle": { "$ref": "#/definitions/Text" },
+        "askedNote": { "$ref": "#/definitions/Text" },
+        "askAgain": { "$ref": "#/definitions/Text" },
+        "askedEmpty": { "$ref": "#/definitions/Text" }
+      }
+    }
   }
 }

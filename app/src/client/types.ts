@@ -357,6 +357,8 @@ export interface UiStrings {
   closeSource: string;
   views: string;
   tabQa: string;
+  // 首頁的頁籤（#283）
+  tabHome: string;
   tabGraph: string;
   legend: string;
   graphEmpty: string;
@@ -688,4 +690,23 @@ export interface UiStrings {
   errors: Record<AskErrorType, string>;
   // 不認得的錯誤類型
   unknownError: string;
+  // 首頁（#283，docs/design.md「日常工具」的「首頁」）：問候、可見範圍、常見問題、主管的「等你處理」、問過的問題
+  home: {
+    morning: string;
+    afternoon: string;
+    evening: string;
+    scope: string;
+    commonQuestions: string;
+    waitingTitle: string;
+    waitingDocuments: string;
+    waitingConflicts: string;
+    waitingReports: string;
+    waitingEarliest: string;
+    startReview: string;
+    waitingNone: string;
+    askedTitle: string;
+    askedNote: string;
+    askAgain: string;
+    askedEmpty: string;
+  };
 }

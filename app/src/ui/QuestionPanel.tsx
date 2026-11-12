@@ -2,6 +2,7 @@ import { clientConfig } from "../client/load";
 import { MAX_QUESTION_CHARS } from "../qa/prompt";
 import { errorMessage, fill, strings } from "../client/i18n";
 import { PRESETS_ID } from "./empty-state";
+import { roleScenarios } from "./home";
 import { Notice } from "./Notice";
 import { questionLength } from "./qa-errors";
 
@@ -15,6 +16,8 @@ interface Props {
   onAsk(question: string): void;
   // 今天用完了（daily_limit、global_daily_limit，#280）：輸入框上方的常駐說明條，停用輸入框與預設問題；沒有用完時為 null
   limit: string | null;
+  // 首頁（#283）：只列情境角色是這個身分的預設問題，名稱改為「常見問題」；省略時列出全部情境
+  role?: string;
 }
 
 // 輸入框的 id：「縮短問題」按下後把焦點移到這裡
@@ -24,8 +27,9 @@ const HINT_ID = "question-hint";
 const roleLabel = (id: string, language: string) => clientConfig.access.roles.find((r) => r.id === id)?.label[language] ?? id;
 
 // 固定在問答頁下方的輸入區（#195）：一行可橫向捲動的預設問題（依情境分組）、自由提問、「每題獨立回答」的說明
-export function QuestionPanel({ language, disabled, text, onText, onAsk, limit }: Props) {
+export function QuestionPanel({ language, disabled, text, onText, onAsk, limit, role }: Props) {
   const s = strings(language);
+  const scenarios = role === undefined ? clientConfig.scenarios.scenarios : roleScenarios(clientConfig.scenarios, role);
   const off = disabled || limit !== null;
   // 接近 500 字時顯示字數，超過時邊線換 danger、下方說明、停用提問（不送出所以不計次）
   const length = questionLength(text);
@@ -37,8 +41,8 @@ export function QuestionPanel({ language, disabled, text, onText, onAsk, limit }
           {s.qaProblems.limitBrowse}
         </Notice>
       )}
-      <div id={PRESETS_ID} className="presets" role="group" aria-label={s.presetQuestions}>
-        {clientConfig.scenarios.scenarios.map((scenario) => (
+      <div id={PRESETS_ID} className="presets" role="group" aria-label={role === undefined ? s.presetQuestions : s.home.commonQuestions}>
+        {scenarios.map((scenario) => (
           <div key={scenario.id} className="scenario" role="group" aria-label={scenario.title[language]}>
             <span className="muted">
               {scenario.title[language]} · {s.scenarioRole}

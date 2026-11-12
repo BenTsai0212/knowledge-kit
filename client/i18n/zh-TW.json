@@ -54,6 +54,7 @@
   "closeSource": "關閉",
   "views": "頁面",
   "tabQa": "問答",
+  "tabHome": "首頁",
   "tabGraph": "圖譜",
   "legend": "圖例",
   "graphEmpty": "目前沒有可顯示的實體。",
@@ -490,5 +491,23 @@
     "empty_question": "請輸入問題。",
     "question_too_long": "問題太長，請縮短後再試。"
   },
-  "unknownError": "發生未預期的錯誤，請稍後再試。"
+  "unknownError": "發生未預期的錯誤，請稍後再試。",
+  "home": {
+    "morning": "早安",
+    "afternoon": "午安",
+    "evening": "晚安",
+    "scope": "看得到的範圍",
+    "commonQuestions": "常見問題",
+    "waitingTitle": "等你處理",
+    "waitingDocuments": "待審文件",
+    "waitingConflicts": "其中說法不同",
+    "waitingReports": "回報",
+    "waitingEarliest": "最早一則回報",
+    "startReview": "開始審核",
+    "waitingNone": "目前沒有等你處理的事。",
+    "askedTitle": "問過的問題",
+    "askedNote": "只保存問題文字；「再問一次」會用現在看得到的資料重新回答。",
+    "askAgain": "再問一次",
+    "askedEmpty": "還沒有問過問題。"
+  }
 }

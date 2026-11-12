@@ -215,7 +215,7 @@ const uiStrings = {
   questionPlaceholder: "required", askButton: "required", answering: "required", emptyAnswer: "required", emptyAnswerReason: "required", emptyAnswerAction: "required",
   qaIndependent: "required", sessionQuestions: "required", answerMentions: "required", followUpTitle: "required",
   followUpOutgoing: "required", followUpIncoming: "required", viewInGraph: "required",
-  openSource: "required", sourceTitle: "required", closeSource: "required", views: "required", tabQa: "required",
+  openSource: "required", sourceTitle: "required", closeSource: "required", views: "required", tabQa: "required", tabHome: "required",
   tabGraph: "required", legend: "required", graphEmpty: "required", graphEmptyReason: "required", switchIdentity: "required", selectEntity: "required",
   graphExpanded: "required", graphShowAll: "required", graphShowOnly: "required",
   graphSearch: "required", graphSearchNone: "required", graphTopConnected: "required", graphRelationCount: "required",
@@ -284,11 +284,33 @@ const uiStrings = {
   parenthetical: "required", refusal: "required", refusalNextTitle: "required", refusalNextRephrase: "required",
   refusalNextAskPerson: "required", refusalNextUpload: "required", refusalNextGraph: "required",
   refusalNextOwner: "required", refusalNextRephraseWith: "required", refusalNextRephraseName: "required", refusalGotoUpload: "required", uncited: "required", incomplete: "required", answerRetry: "required",
-  qaProblems: "required", errors: "required", unknownError: "required",
+  qaProblems: "required", errors: "required", unknownError: "required", home: "required",
 } satisfies KeyManifest<UiStrings>;
 
 export const i18nManifests: ManifestEntry[] = [
   { schema: "i18n.schema.json", pointer: "", keys: uiStrings },
+  {
+    schema: "i18n.schema.json",
+    pointer: "/properties/home",
+    keys: {
+      morning: "required",
+      afternoon: "required",
+      evening: "required",
+      scope: "required",
+      commonQuestions: "required",
+      waitingTitle: "required",
+      waitingDocuments: "required",
+      waitingConflicts: "required",
+      waitingReports: "required",
+      waitingEarliest: "required",
+      startReview: "required",
+      waitingNone: "required",
+      askedTitle: "required",
+      askedNote: "required",
+      askAgain: "required",
+      askedEmpty: "required",
+    } satisfies KeyManifest<UiStrings["home"]>,
+  },
   {
     schema: "i18n.schema.json",
     pointer: "/properties/uploadErrors",

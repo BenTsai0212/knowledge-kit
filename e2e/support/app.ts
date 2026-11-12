@@ -26,8 +26,8 @@ export const EVALS_PATH = "/?tools=evals";
 // 展示模式（?mode=presentation）的登入頁只有邀請碼（#287 決定 2）
 export const isPresentation = (path: string) => new URL(path, "http://localhost").searchParams.get("mode") === "presentation";
 
-// 打開首頁（path 可帶網址參數，例如展示模式的 /?mode=presentation）、以「使用邀請碼體驗」輸入邀請碼（可以切換身分，#287），
-// 等資料庫載入完成（預設問題的按鈕可以按）。帳號登入見 sign-in.spec.ts
+// 打開網站（path 可帶網址參數，例如展示模式的 /?mode=presentation）、以「使用邀請碼體驗」輸入邀請碼（可以切換身分，#287），
+// 切到問答頁（登入後的預設頁是首頁，#283；展示模式直接進問答），等資料庫載入完成（預設問題的按鈕可以按）。帳號登入見 sign-in.spec.ts
 export async function openApp(page: Page, path = "/"): Promise<void> {
   await blockModelDownload(page);
   await routeFakeAsk(page);
@@ -35,6 +35,7 @@ export async function openApp(page: Page, path = "/"): Promise<void> {
   if (!isPresentation(path)) await page.getByRole("button", { name: s.signInWithCode }).click();
   await page.getByLabel(s.accessCodeLabel).fill(ACCESS_CODE);
   await page.getByRole("button", { name: s.accessCodeSubmit }).click();
+  if (!isPresentation(path)) await openTab(page, s.tabQa);
   await expect(page.getByRole("button", { name: presetQuestions[0].text, exact: true })).toBeEnabled();
 }
 

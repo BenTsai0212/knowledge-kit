@@ -3013,3 +3013,70 @@ label.inline {
   border: 1px dashed var(--color-border);
   padding: 0 0.75rem;
 }
+
+/* 首頁（#283，docs/design.md「日常工具」的「首頁」）：問候與可見範圍、提問框與常見問題、主管的「等你處理」、問過的問題 */
+.home {
+  display: grid;
+  gap: 1rem;
+  max-width: 56rem;
+}
+
+.home__top h2 {
+  margin: 0;
+}
+
+.home__scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.25rem 0 0;
+}
+
+.home h3 {
+  margin: 0 0 0.5rem;
+}
+
+.home__counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin: 0 0 0.75rem;
+}
+
+.home__counts dt {
+  color: var(--color-textMuted);
+}
+
+.home__counts dd {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.home__asked ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.home__asked li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* 清單中的問題可以截斷，完整文字在 title */
+.home__question {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home__asked button {
+  flex: none;
+}
