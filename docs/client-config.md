@@ -252,6 +252,22 @@ npm run check:client
 | `canUpload` | 是 | boolean | 能否上傳文件。可上傳的可見等級與專案同樣限於此角色看得到的範圍，由資料庫的 RLS 執行（`docs/data-model.md`「寫入規則」） |
 | `canReview` | 是 | boolean | 能否核准或退回上傳文件的萃取結果（待審區）。只能審核自己看得到的文件，由資料庫的 RLS 執行（`docs/data-model.md`「待審與核准」）。也決定網址帶 `?tools=evals` 時是否看得到評測台頁籤（[docs/evals.md](evals.md)「開啟評測台」） |
 
+### 登入（展示）
+
+登入頁有**帳號登入**與**使用邀請碼體驗**兩條路（#287，[docs/design.md](design.md)「日常工具」的「登入」）。knowledge-kit 的帳號登入只是展示，不做會員系統：
+
+- **展示帳號**：由角色的 `id` 推算為 `<id>@example.test`（`app/src/ui/sign-in.ts` 的 `demoAccount()`），不另外寫進 `access.json`。帳號欄的選項以 `signInAccountOption`（`{account}`、`{role}`）顯示。
+- **身分固定**：帳號登入後身分就是所選的角色，左側導覽不顯示身分選單、空狀態不給「切換身分」，「更換邀請碼」改為「登出」。使用邀請碼體驗與現行相同，可以切換身分。展示模式（`?mode=presentation`）的登入頁只有邀請碼，一定可以切換（#287 決定 2）。
+- **不送出、不保存**：密碼欄停用（「展示版不需要密碼」）；面板不用 `<form>`、欄位沒有 `name`。帳號與以帳號登入時的邀請碼只在記憶體，不寫入 `sessionStorage`，重新整理後回到登入頁。
+- **額度仍由邀請碼把關**：`/api/ask` 一律帶邀請碼。線上 demo 以內建的公開碼（`VITE_PUBLIC_ACCESS_CODE`）送出，帳號登入不必輸入；沒有公開碼的部署，帳號登入面板也有邀請碼欄。Worker 的檢查不變。
+
+**fork 時接上真的身分驗證**：
+
+1. 把 `app/src/ui/SignInPanel.tsx` 的帳號登入換成客戶的登入畫面（公司帳號、信箱與密碼等由客戶決定）。
+2. `App.tsx` 的 `signIn`（`{ kind: "account"; role }`）改由驗證結果決定：把登入的使用者對應到 `access.json` 的角色 `id`，再 `setIdentity()`。身分固定的規則（`sign-in.ts` 的 `canSwitchIdentity()`）不必改。
+3. `/api/ask` 的邀請碼（`x-access-code`）改成客戶的憑證，Worker 的檢查一併換成驗證該憑證（[worker/README.md](../worker/README.md)）。
+4. 不再需要時移除「使用邀請碼體驗」與展示帳號（`demoAccount()`）。
+
 ## `scenarios.json`
 
 ### `scenarios[]`（至少 1 個）
