@@ -48,3 +48,4 @@ ADR（Architecture Decision Record）記錄「決定了什麼、為什麼、放�
 | [0007](0007-retraction-and-answer-reports.md) | 使用中修正（撤回待審項目的決定、只能新增的撤回紀錄；回答錯誤回報以送出的段落判斷可見範圍） | Proposed |
 | [0008](0008-design-system.md) | 視覺設計系統（Light／Dark 共用 token，證據色固定，說法不同用洋紅） | Accepted |
 | [0009](0009-writers-read-own-writes.md) | 寫入者讀得到自己寫入的資料（新增 permissive 的 `own_*` SELECT policy，仍套用原本的可見範圍；用於上傳（0011）與回報（0012，#286）） | Accepted |
+| [0010](0010-e2e-on-pull-requests.md) | E2E 在 PR 階段執行（取代 ADR 0004 的執行時機；不列為必要檢查、不使用 secret） | Proposed |

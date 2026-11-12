@@ -435,7 +435,7 @@ export function agentNote(config, { runTmp } = {}) {
     '- 不能寫入 .git/config：不要用 git push -u、git branch --set-upstream-to 或 gh pr checkout。',
     '- 推送一律用 git push origin HEAD:<分支>，直接寫明目標分支，不要先 cd 再推送：無法判斷目標分支時，合併確認 hook 會要求確認，在無人值守下等同拒絕。',
     '- 修正模式：用 runner 專屬的本地分支，git fetch origin <分支> && git switch -c runner/<分支> origin/<分支>；推送方式同上，rebase 後用 git push --force-with-lease origin HEAD:<分支>。runner 開始前已清除舊的 runner/* 本地分支，不需要也不能使用 git reset --hard。',
-    '- 不自行啟動瀏覽器（Chrome、Playwright 等）或架設效能測量環境；需要的項目列在 PR 的人工待辦。',
+    '- 不自行啟動瀏覽器（Chrome、Playwright 等）或架設效能測量環境；需要的項目列在 PR 的人工待辦。E2E 不列人工待辦：PR 描述的「驗證」寫「E2E 以 PR 上的 `E2E` 結果為準」，推送並開 PR 後不需要等待 E2E。',
     '- 可能長時間執行的指令，用 Bash 工具的 timeout 參數設定上限；不要在背景執行可能卡住的指令；不需要在 PR 回報。',
     ...(runTmp ? [
       `- PR 描述與留言的檔案一律用 Write 工具寫在本次執行的暫存資料夾 ${runTmp}/ 底下（環境變數 RUNNER_RUN_TMP；不要用 $TMPDIR 或 /tmp，那裡有其他專案的同名檔案）。`
