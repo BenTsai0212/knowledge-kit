@@ -1,12 +1,18 @@
 // 首頁（#283，docs/design.md「日常工具」的「首頁」）：登入後的預設頁，展示模式不顯示。資料只在瀏覽器記憶體，重新整理就重來。
-// 所有數字只算目前身分讀得到的（讀取經 withIdentity()，由 RLS 篩選；#247）。
+// 所有數字與清單只算目前身分讀得到的（讀取經 withIdentity()，由 RLS 篩選；#247）。
+import { useEffect, useState } from "react";
 import { clientConfig } from "../client/load";
+import type { Database } from "../db/database";
+import { readEntitiesByIds, readRecentDocuments, type RecentDocument, type RecentEntity } from "../graph/recent";
 import { strings } from "../client/i18n";
 import { LevelBadge, ProjectBadge } from "./AccessBadges";
+import { entityName } from "./graph-labels";
 import { greetingPeriod, visibleScope, type WaitingSummary } from "./home";
 import { QuestionPanel } from "./QuestionPanel";
 
 interface Props {
+  // 資料庫還在載入時為 null
+  db: Database | null;
   language: string;
   identity: string;
   // 主管的「等你處理」：沒有 canReview 的身分不顯示（undefined）；讀取中為 null
@@ -20,10 +26,34 @@ interface Props {
   // 提問與「再問一次」：切到問答頁，用現在看得到的資料回答
   onAsk(question: string): void;
   onStartReview(): void;
+  // 最近看過的實體 id（最新的在前）；名稱與能否看到在這裡以目前身分讀取
+  viewed: readonly string[];
+  // 最近新增的文件：在時間軸打開
+  onOpenDocument(documentId: string): void;
+  // 最近看過的實體：在圖譜打開
+  onOpenEntity(entityId: string): void;
 }
 
-export function HomePage({ language, identity, waiting, asked, askDisabled, limit, draft, onDraft, onAsk, onStartReview }: Props) {
+// 最近新增的文件與最近看過的實體；切換身分、語言或看過的實體時重新讀取，之後才回來的舊結果忽略
+function useRecent(db: Database | null, identity: string, language: string, viewed: readonly string[]) {
+  const [recent, setRecent] = useState<{ documents: RecentDocument[]; entities: RecentEntity[] } | null>(null);
+  useEffect(() => {
+    if (db === null) return;
+    let cancelled = false;
+    setRecent(null);
+    void Promise.all([readRecentDocuments(db, identity, language), readEntitiesByIds(db, identity, viewed)]).then(([documents, entities]) => {
+      if (!cancelled) setRecent({ documents, entities });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [db, identity, language, viewed]);
+  return recent;
+}
+
+export function HomePage({ db, language, identity, waiting, asked, askDisabled, limit, draft, onDraft, onAsk, onStartReview, viewed, onOpenDocument, onOpenEntity }: Props) {
   const s = strings(language);
+  const recent = useRecent(db, identity, language, viewed);
   const scope = visibleScope(clientConfig.access, identity);
   const time = new Intl.DateTimeFormat(language, { dateStyle: "medium", timeStyle: "short" });
   return (
@@ -97,6 +127,55 @@ export function HomePage({ language, identity, waiting, asked, askDisabled, limi
                 </span>
                 <button type="button" disabled={askDisabled || limit !== null} aria-label={`${s.home.askAgain}${s.colon}${question}`} onClick={() => onAsk(question)}>
                   {s.home.askAgain}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section className="card home__recent" aria-labelledby="home-documents">
+        <h3 id="home-documents">{s.home.recentDocumentsTitle}</h3>
+        {recent === null ? (
+          <p className="muted">{s.loading}</p>
+        ) : recent.documents.length === 0 ? (
+          <p className="muted">{s.home.recentDocumentsEmpty}</p>
+        ) : (
+          <ul>
+            {recent.documents.map((d) => (
+              <li key={d.id}>
+                <button type="button" className="link home__name" title={d.title} onClick={() => onOpenDocument(d.id)}>
+                  {d.title}
+                </button>
+                {d.date !== null && (
+                  <time className="muted" dateTime={d.date}>
+                    {d.date}
+                  </time>
+                )}
+                <LevelBadge visibility={d.visibility} language={language} />
+                {d.project !== null && <ProjectBadge project={d.project} language={language} />}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section className="card home__recent" aria-labelledby="home-viewed">
+        <h3 id="home-viewed">{s.home.viewedTitle}</h3>
+        {recent === null ? (
+          <p className="muted">{s.loading}</p>
+        ) : recent.entities.length === 0 ? (
+          <p className="muted">{s.home.viewedEmpty}</p>
+        ) : (
+          <ul>
+            {recent.entities.map((e) => (
+              <li key={e.id}>
+                <button
+                  type="button"
+                  className="link home__name"
+                  title={entityName(e, language)}
+                  aria-label={`${s.viewInGraph}${s.colon}${entityName(e, language)}`}
+                  onClick={() => onOpenEntity(e.id)}
+                >
+                  {entityName(e, language)}
                 </button>
               </li>
             ))}

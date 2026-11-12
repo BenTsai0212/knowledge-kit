@@ -674,7 +674,7 @@
       "description": "首頁（#283，docs/design.md「日常工具」的「首頁」）：問候依瀏覽器本地時間（早安 5–11 時、午安 12–17 時、晚安 18–4 時）",
       "type": "object",
       "additionalProperties": false,
-      "required": ["morning", "afternoon", "evening", "scope", "commonQuestions", "waitingTitle", "waitingDocuments", "waitingConflicts", "waitingReports", "waitingEarliest", "startReview", "waitingNone", "askedTitle", "askedNote", "askAgain", "askedEmpty"],
+      "required": ["morning", "afternoon", "evening", "scope", "commonQuestions", "waitingTitle", "waitingDocuments", "waitingConflicts", "waitingReports", "waitingEarliest", "startReview", "waitingNone", "askedTitle", "askedNote", "askAgain", "askedEmpty", "recentDocumentsTitle", "recentDocumentsEmpty", "viewedTitle", "viewedEmpty"],
       "properties": {
         "morning": { "$ref": "#/definitions/Text" },
         "afternoon": { "$ref": "#/definitions/Text" },
@@ -691,7 +691,11 @@
         "askedTitle": { "$ref": "#/definitions/Text" },
         "askedNote": { "$ref": "#/definitions/Text" },
         "askAgain": { "$ref": "#/definitions/Text" },
-        "askedEmpty": { "$ref": "#/definitions/Text" }
+        "askedEmpty": { "$ref": "#/definitions/Text" },
+        "recentDocumentsTitle": { "$ref": "#/definitions/Text" },
+        "recentDocumentsEmpty": { "$ref": "#/definitions/Text" },
+        "viewedTitle": { "$ref": "#/definitions/Text" },
+        "viewedEmpty": { "$ref": "#/definitions/Text" }
       }
     }
   }

@@ -3080,3 +3080,27 @@ label.inline {
 .home__asked button {
   flex: none;
 }
+
+/* 最近新增的文件、最近看過的實體（#283）：文件標題與實體名稱可以截斷，完整文字在 title */
+.home__recent ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.home__recent li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.home__recent .home__name {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

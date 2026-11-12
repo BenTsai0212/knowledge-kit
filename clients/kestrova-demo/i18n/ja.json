@@ -508,6 +508,10 @@
     "askedTitle": "これまでの質問",
     "askedNote": "質問の文章だけを保存します。「もう一度質問」は現在閲覧できる資料で回答し直します。",
     "askAgain": "もう一度質問",
-    "askedEmpty": "まだ質問していません。"
+    "askedEmpty": "まだ質問していません。",
+    "recentDocumentsTitle": "最近追加された文書",
+    "recentDocumentsEmpty": "閲覧できる文書はまだありません。",
+    "viewedTitle": "最近見たもの",
+    "viewedEmpty": "グラフや回答で開いたエンティティがここに表示されます。"
   }
 }
