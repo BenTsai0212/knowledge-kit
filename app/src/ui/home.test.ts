@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { AccessFile, ScenariosFile } from "../client/types";
 import type { ReviewDocument, ReviewStatus } from "../extraction/store";
-import { greetingPeriod, MAX_ASKED, MAX_UPDATES, MAX_VIEWED, rememberQuestion, rememberViewed, roleScenarios, uploadUpdates, visibleScope, waitingSummary } from "./home";
+import { greetingPeriod, MAX_ASKED, MAX_UPDATES, MAX_VIEWED, rememberQuestion, rememberViewed, reportUpdates, roleScenarios, uploadUpdates, visibleScope, waitingSummary } from "./home";
+import type { AnswerReport } from "../reports/store";
 import { pendingCount } from "./review-helpers";
 
 describe("greetingPeriod", () => {
@@ -151,5 +152,26 @@ describe("rememberViewed", () => {
     expect(rememberViewed(["a", "b"], "b")).toEqual(["b", "a"]);
     const many = Array.from({ length: MAX_VIEWED }, (_, i) => `e${i}`);
     expect(rememberViewed(many, "new")).toEqual(["new", ...many.slice(0, MAX_VIEWED - 1)]);
+  });
+});
+
+describe("reportUpdates（#286）", () => {
+  const report = (id: string, reportedBy: string, resolvedAt: string | null) =>
+    ({ id, reportedBy, resolvedAt, resolution: resolvedAt === null ? null : "not_error" }) as AnswerReport;
+
+  it("只列自己回報、已處理的回報，處理時間新的在前", () => {
+    const reports = [
+      report("a", "staff", "2026-11-01T09:00:00Z"),
+      report("b", "staff", null),
+      report("c", "manager", "2026-11-05T09:00:00Z"),
+      report("d", "staff", "2026-11-03T09:00:00Z"),
+    ];
+    expect(reportUpdates(reports, "staff").map((r) => r.id)).toEqual(["d", "a"]);
+  });
+
+  it("最多列出 max 則", () => {
+    const reports = ["01", "02", "03", "04"].map((d) => report(d, "staff", `2026-11-${d}T09:00:00Z`));
+    expect(reportUpdates(reports, "staff")).toHaveLength(MAX_UPDATES);
+    expect(reportUpdates(reports, "staff", 1).map((r) => r.id)).toEqual(["04"]);
   });
 });

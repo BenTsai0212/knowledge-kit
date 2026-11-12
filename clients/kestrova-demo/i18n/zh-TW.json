@@ -281,6 +281,19 @@
     "not_error": "不是錯誤",
     "retracted": "已撤回"
   },
+  "reportResult": {
+    "pending": "已送出回報，主管還沒處理。",
+    "notError": "不是錯誤",
+    "retracted": "已撤回相關內容",
+    "meta": "由{role}處理於 {date}",
+    "noteLabel": "給回報的人的說明",
+    "noteInput": "給回報的人的說明（選填）",
+    "noteHint": "會顯示給回報的人",
+    "reportAgain": "仍有疑問，再回報一次",
+    "askAgain": "再問一次",
+    "resolved": "你回報的回答已處理",
+    "viewResult": "看處理結果"
+  },
   "tabEvals": "評測台",
   "evalSettings": "評測設定",
   "evalSetName": "設定 {name}",
@@ -520,7 +533,7 @@
     "viewedTitle": "最近看過",
     "viewedEmpty": "在圖譜或回答中點過的實體會列在這裡。",
     "updatesTitle": "有更新",
-    "updatesEmpty": "你上傳的文件有審核結果時會列在這裡。",
+    "updatesEmpty": "你上傳的文件有審核結果、你的回報處理完時，會列在這裡。",
     "viewProgress": "查看進度"
   },
   "myUploads": {

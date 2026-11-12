@@ -8,6 +8,8 @@ import { seesAllOf } from "./support/dataset";
 import { FAKE_ANSWER_LEAD, sseBody } from "./support/fake-ask";
 
 const NOTE = "E2E：第 1 段沒有寫這件事";
+// 給回報的人的說明（#286）：含 HTML 標籤，確認以文字顯示
+const REPLY = "E2E：<b>第 1 段</b>寫的就是這件事";
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // 送出一題並等回答（含回答提到）結束，回傳該題
@@ -59,7 +61,8 @@ test("沒有 canReview 的身分回報回答；審核者在「回報」分頁看
   await form.locator("select").selectOption("wrong_citation");
   await form.locator("textarea").fill(NOTE);
   await form.getByRole("button", { name: s.reportSubmit }).click();
-  await expect(answer.getByText(s.reportSent)).toBeVisible();
+  // 回答下方是回報結果：處理中（#286）
+  await expect(answer.getByText(s.reportResult.pending)).toBeVisible();
   await expect(answer.getByRole("button", { name: s.reportButton })).toHaveCount(0);
   // 沒有 canReview：沒有待審頁籤，看不到回報
   await expect(tab(page, s.tabReview)).toHaveCount(0);
@@ -79,11 +82,29 @@ test("沒有 canReview 的身分回報回答；審核者在「回報」分頁看
   await card.getByRole("button", { name: "1", exact: true }).click();
   await expect(sourcePanel(page)).toBeVisible();
 
+  // 給回報的人的說明（#286）：處理按鈕上方，標示會顯示給回報的人
+  await card.getByRole("textbox", { name: new RegExp(`^${escape(s.reportResult.noteInput)}`) }).fill(REPLY);
+  await expect(card).toContainText(s.reportResult.noteHint);
   await card.getByRole("button", { name: s.reportMarkNotError }).click();
   await expect(card).toContainText(s.reportResolutions.not_error);
   await expect(card.getByRole("button", { name: s.reportMarkNotError })).toHaveCount(0);
+  await expect(card.getByRole("group", { name: s.reportResult.noteLabel })).toContainText(REPLY);
   // 處理後不再算進待審筆數
   await expect(tabCount(page)).toHaveText(String(before));
+
+  // 回報的人在首頁「有更新」看到處理結果：不是錯誤、處理者的角色、說明（文字，不是 HTML）、「仍有疑問，再回報一次」
+  await switchIdentity(page, nonReviewer!.id);
+  await openTab(page, s.tabHome);
+  const item = page.getByRole("region", { name: s.home.updatesTitle }).getByRole("listitem").filter({ hasText: question! });
+  await expect(item).toContainText(s.reportResult.resolved);
+  await item.getByRole("button", { name: `${s.reportResult.viewResult}${s.colon}${question!}` }).click();
+  const result = item.getByRole("status");
+  await expect(result).toContainText(s.reportResult.notError);
+  await expect(result).toContainText(access.roles.find((r) => r.id === reviewer!.id)!.label[language]);
+  await expect(result).toContainText(REPLY);
+  await expect(result.locator("b")).toHaveCount(0);
+  await result.getByRole("button", { name: s.reportResult.reportAgain }).click();
+  await expect(item.getByRole("form", { name: s.reportButton })).toBeVisible();
 });
 
 test("拒答的回報只含問題文字，預設原因是「資料中有答案，卻拒答了」", async ({ page }) => {
@@ -104,7 +125,7 @@ test("拒答的回報只含問題文字，預設原因是「資料中有答案�
   const form = answer.getByRole("form", { name: s.reportButton });
   await expect(form.locator("select")).toHaveValue("should_answer");
   await form.getByRole("button", { name: s.reportSubmit }).click();
-  await expect(answer.getByText(s.reportSent)).toBeVisible();
+  await expect(answer.getByText(s.reportResult.pending)).toBeVisible();
   // 審核者自己回報時，待審筆數在送出後加一
   await expect(tabCount(page)).toHaveText(String(before + 1));
 
@@ -115,5 +136,18 @@ test("拒答的回報只含問題文字，預設原因是「資料中有答案�
   await expect(card.locator("button.citation")).toHaveCount(0);
   // 拒答沒有可撤回的內容，只能標示為不是錯誤
   await expect(card.getByRole("button", { name: s.reportMarkRetracted })).toHaveCount(0);
-  await expect(card.getByRole("button", { name: s.reportMarkNotError })).toBeVisible();
+  await card.getByRole("textbox", { name: new RegExp(`^${escape(s.reportResult.noteInput)}`) }).fill(REPLY);
+  await card.getByRole("button", { name: s.reportMarkNotError }).click();
+  await expect(card).toContainText(s.reportResolutions.not_error);
+
+  // 回到問答：原本的回答下方是處理結果（#286）；「仍有疑問，再回報一次」展開表單，取消後回到處理結果
+  await openTab(page, s.tabQa);
+  const result = answer.getByRole("status");
+  await expect(result).toContainText(s.reportResult.notError);
+  await expect(result).toContainText(REPLY);
+  await result.getByRole("button", { name: s.reportResult.reportAgain }).click();
+  const again = answer.getByRole("form", { name: s.reportButton });
+  await expect(again).toBeVisible();
+  await again.getByRole("button", { name: s.reportCancel }).click();
+  await expect(answer.getByRole("status")).toContainText(s.reportResult.notError);
 });

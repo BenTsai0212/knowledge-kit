@@ -1,14 +1,19 @@
 // 首頁（#283，docs/design.md「日常工具」的「首頁」）：登入後的預設頁，展示模式不顯示。資料只在瀏覽器記憶體，重新整理就重來。
-// 所有數字與清單只算目前身分讀得到的（讀取經 withIdentity()，由 RLS 篩選；#247）。一般員工的「有更新」經 readMyUploads()（#284，ADR 0009）。
+// 所有數字與清單只算目前身分讀得到的（讀取經 withIdentity()，由 RLS 篩選；#247）。一般員工的「有更新」經 readMyUploads()（#284，ADR 0009）
+// 與 readReports()（回報已處理，#286，migration 0012）。
 import { useEffect, useState } from "react";
 import { clientConfig } from "../client/load";
 import type { Database } from "../db/database";
 import { readMyUploads } from "../extraction/store";
+import { readReports, writeReport, type AnswerReport } from "../reports/store";
 import { readEntitiesByIds, readRecentDocuments, type RecentDocument, type RecentEntity } from "../graph/recent";
 import { strings } from "../client/i18n";
 import { LevelBadge, ProjectBadge } from "./AccessBadges";
 import { entityName } from "./graph-labels";
-import { greetingPeriod, uploadUpdates, visibleScope, type UploadUpdate, type WaitingSummary } from "./home";
+import { ReportForm } from "./AnswerView";
+import { greetingPeriod, MAX_UPDATES, reportUpdates, uploadUpdates, visibleScope, type UploadUpdate, type WaitingSummary } from "./home";
+import { reportAgainOf } from "./report-helpers";
+import { ReportResult } from "./ReportResult";
 import { StatusBadge } from "./MyUploads";
 import { QuestionPanel } from "./QuestionPanel";
 
@@ -19,7 +24,7 @@ interface Props {
   identity: string;
   // 主管的「等你處理」：沒有 canReview 的身分不顯示（undefined）；讀取中為 null
   waiting?: WaitingSummary | null;
-  // 一般員工的「有更新」（#284）：能上傳、不能審核的身分才有（其他為 undefined）。
+  // 一般員工的「有更新」：不能審核的身分才有（其他為 undefined）；自己上傳的文件（#284）與已處理的回報（#286）。
   // extracting：本工作階段還在萃取的文件；onOpenUpload：「查看進度」打開上傳頁的我的上傳並選取該份
   updates?: { extracting: ReadonlySet<string>; onOpenUpload(documentId: string): void };
   // 問過的問題（只有問題文字，最新的在前）
@@ -56,15 +61,17 @@ function useRecent(db: Database | null, identity: string, language: string, view
   return recent;
 }
 
-// 一般員工的「有更新」：自己上傳的文件；切換身分或萃取狀態改變時重新讀取，之後才回來的舊結果忽略
+// 一般員工的「有更新」：已處理的回報在前（處理時間新的在前），其次是自己上傳的文件，合計最多三則。
+// 切換身分或萃取狀態改變時重新讀取，之後才回來的舊結果忽略
 function useUpdates(db: Database | null, identity: string, extracting: ReadonlySet<string> | undefined) {
-  const [updates, setUpdates] = useState<UploadUpdate[] | null>(null);
+  const [updates, setUpdates] = useState<{ reports: AnswerReport[]; uploads: UploadUpdate[] } | null>(null);
   useEffect(() => {
     if (db === null || extracting === undefined) return;
     let cancelled = false;
     setUpdates(null);
-    void readMyUploads(db, identity).then((docs) => {
-      if (!cancelled) setUpdates(uploadUpdates(docs, extracting));
+    void Promise.all([readReports(db, identity), readMyUploads(db, identity)]).then(([all, docs]) => {
+      const reports = reportUpdates(all, identity);
+      if (!cancelled) setUpdates({ reports, uploads: uploadUpdates(docs, extracting, MAX_UPDATES - reports.length) });
     });
     return () => {
       cancelled = true;
@@ -77,6 +84,9 @@ export function HomePage({ db, language, identity, waiting, updates: updatesProp
   const s = strings(language);
   const recent = useRecent(db, identity, language, viewed);
   const updates = useUpdates(db, identity, updatesProps?.extracting);
+  // 「看處理結果」展開的回報，與「仍有疑問，再回報一次」的回報
+  const [openReport, setOpenReport] = useState<string | null>(null);
+  const [againReport, setAgainReport] = useState<string | null>(null);
   const scope = visibleScope(clientConfig.access, identity);
   const time = new Intl.DateTimeFormat(language, { dateStyle: "medium", timeStyle: "short" });
   return (
@@ -140,11 +150,49 @@ export function HomePage({ db, language, identity, waiting, updates: updatesProp
           <h3 id="home-updates">{s.home.updatesTitle}</h3>
           {updates === null ? (
             <p className="muted">{s.loading}</p>
-          ) : updates.length === 0 ? (
+          ) : updates.reports.length + updates.uploads.length === 0 ? (
             <p className="muted">{s.home.updatesEmpty}</p>
           ) : (
             <ul>
-              {updates.map((u) => (
+              {updates.reports.map((r) => (
+                <li key={r.id}>
+                  <div className="home__update">
+                    <strong className="home__name" title={r.question}>
+                      {r.question}
+                    </strong>
+                    <span className="badge">{s.reportResult.resolved}</span>
+                    <button
+                      type="button"
+                      className="link"
+                      aria-expanded={openReport === r.id}
+                      aria-label={`${s.reportResult.viewResult}${s.colon}${r.question}`}
+                      onClick={() => setOpenReport(openReport === r.id ? null : r.id)}
+                    >
+                      {s.reportResult.viewResult}
+                    </button>
+                  </div>
+                  {/* 回報結果沿用回答下方的卡片（docs/design.md「回報結果」） */}
+                  {openReport === r.id && (
+                    <ReportResult
+                      language={language}
+                      report={r}
+                      onReportAgain={() => setAgainReport(r.id)}
+                      onAskAgain={() => onAsk(r.question)}
+                      askDisabled={askDisabled || limit !== null}
+                    />
+                  )}
+                  {againReport === r.id && db !== null && (
+                    <ReportForm
+                      language={language}
+                      initial={r.category}
+                      open
+                      onReport={(category, note) => writeReport(db, identity, reportAgainOf(r, category, note)).then(() => undefined)}
+                      onCancel={() => setAgainReport(null)}
+                    />
+                  )}
+                </li>
+              ))}
+              {updates.uploads.map((u) => (
                 <li key={u.documentId}>
                   <div className="home__update">
                     {/* 標題可以截斷：完整文字放在 title */}

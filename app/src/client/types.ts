@@ -577,6 +577,21 @@ export interface UiStrings {
   reportMarkRetracted: string;
   reportRetractHint: string;
   reportResolutions: Record<ReportResolution, string>;
+  // 回報結果（#286，docs/design.md「日常工具」的「回報結果」）：回答下方與首頁「有更新」的狀態（pending、notError、retracted；
+  // meta 的 {role} 換成處理者的角色、{date} 換成處理日期），待審 › 回報的說明欄（noteInput、noteHint），首頁的一則（resolved、viewResult）
+  reportResult: {
+    pending: string;
+    notError: string;
+    retracted: string;
+    meta: string;
+    noteLabel: string;
+    noteInput: string;
+    noteHint: string;
+    reportAgain: string;
+    askAgain: string;
+    resolved: string;
+    viewResult: string;
+  };
   tabEvals: string;
   evalSettings: string;
   evalSetName: string;
