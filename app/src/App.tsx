@@ -20,7 +20,6 @@ import { createProvider, preparesModel, PROVIDERS, type ActiveProvider, type Pro
 import { openRetriever } from "./retrieval/retrieve";
 import { readSource, type SourceDocument } from "./sources/source";
 import { clearAccessCode, loadAccessCode, saveAccessCode } from "./ui/access-code";
-import { AccessCodeForm } from "./ui/AccessCodeForm";
 import { crossFade } from "./ui/cross-fade";
 import { EntryHero } from "./ui/EntryHero";
 import { EvalPage } from "./ui/EvalPage";
@@ -45,6 +44,8 @@ import { strings } from "./client/i18n";
 import { TimelinePage } from "./ui/TimelinePage";
 import { UploadPage } from "./ui/UploadPage";
 import { Sidebar } from "./ui/Sidebar";
+import { canSwitchIdentity, demoAccount, type SignIn } from "./ui/sign-in";
+import { SignInPanel, type Rejected } from "./ui/SignInPanel";
 
 const { client, access } = clientConfig;
 
@@ -63,8 +64,10 @@ export function App() {
   const [language, setLanguage] = useState(client.defaultLanguage);
   const [identity, setIdentity] = useState(access.roles[0].id);
   const [accessCode, setAccessCode] = useState(loadAccessCode);
-  // 被拒的邀請碼：入口頁保留在輸入框並顯示原因（#246）；沒有被拒時為 null
-  const [rejectedCode, setRejectedCode] = useState<string | null>(null);
+  // 登入的方式（#287）：只在記憶體。帳號登入不保存任何東西，重新整理後回到登入頁；分頁中留有邀請碼時是以邀請碼體驗
+  const [signIn, setSignIn] = useState<SignIn | null>(() => (accessCode === null ? null : { kind: "code" }));
+  // 被拒的邀請碼：登入頁回到同一條路，保留在輸入框並顯示原因（#246）；沒有被拒時為 null
+  const [rejectedCode, setRejectedCode] = useState<Rejected | null>(null);
   const [db, setDb] = useState<Database | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   // 這次的問答，依序往下累積；每題獨立回答，不帶上一題（#195）
@@ -190,7 +193,19 @@ export function App() {
   function rejectAccessCode() {
     clearAccessCode();
     setAccessCode(null);
-    setRejectedCode(accessCode ?? "");
+    setRejectedCode({ code: accessCode ?? "", via: signIn?.kind === "account" ? "account" : "code" });
+    // 帳號登入時回到登入頁（在問答頁籤），身分不再固定
+    if (signIn?.kind === "account") setView("qa");
+    setSignIn(null);
+  }
+
+  // 登入（#287）：帳號登入固定身分，邀請碼不寫入 sessionStorage；以邀請碼體驗與現行相同
+  function onSignIn(next: SignIn, code: string) {
+    if (next.kind === "account") (discard(), setIdentity(next.role));
+    else saveAccessCode(code);
+    setAccessCode(code);
+    setSignIn(next);
+    setRejectedCode(null);
   }
 
   async function onAsk(question: string) {
@@ -300,7 +315,10 @@ export function App() {
       <Sidebar
         language={language}
         identity={identity}
+        account={signIn?.kind === "account" ? demoAccount(signIn.role) : undefined}
         onIdentity={(id) => {
+          // 帳號登入時身分是登入的帳號，不能切換（#287）；介面上沒有選單，這裡再擋一次
+          if (!canSwitchIdentity(signIn)) return;
           discard();
           setIdentity(id);
           // 沒有 canReview 的身分看不到待審與評測台頁籤（離開評測台時停止評測、關閉評測專用資料庫）；展示模式只有問答與圖譜
@@ -312,9 +330,12 @@ export function App() {
           accessCode === null
             ? undefined
             : () => {
+                // 更換邀請碼；帳號登入時是「登出」，回到登入頁（#287 決定 3）
                 discard();
                 clearAccessCode();
                 setAccessCode(null);
+                if (signIn?.kind === "account") setView("qa");
+                setSignIn(null);
                 setRejectedCode(null);
               }
         }
@@ -350,6 +371,7 @@ export function App() {
               canReview={canReview}
               onRetracted={() => setReviewVersion((v) => v + 1)}
               initialSelected={graphFocus}
+              canSwitchIdentity={canSwitchIdentity(signIn)}
             />
           ) : view === "evals" ? (
             <EvalPage
@@ -412,6 +434,7 @@ export function App() {
                 }
                 setView(target);
               }}
+              canSwitchIdentity={canSwitchIdentity(signIn)}
             />
           ) : (
             <TimelinePage
@@ -427,18 +450,17 @@ export function App() {
           {source !== null && <SourcePanel language={language} source={source} onOpenSource={onOpenSource} onClose={() => (sources.current.cancel(), setSource(null))} />}
         </main>
       ) : accessCode === null ? (
-        // 入口頁（#228）：左側主視覺、右側邀請碼與語意模型的下載進度；窄螢幕時主視覺在上
+        // 登入頁（#228、#287）：左側主視覺、右側登入面板與語意模型的下載進度；窄螢幕時主視覺在上
         <main className="entry">
           <EntryHero />
           <div className="entry__panel">
-            <AccessCodeForm
+            <SignInPanel
               language={language}
+              identity={identity}
               rejected={rejectedCode}
-              onSubmit={(code) => {
-                saveAccessCode(code);
-                setAccessCode(code);
-                setRejectedCode(null);
-              }}
+              presentation={presentationMode}
+              onAccount={(role, code) => onSignIn({ kind: "account", role }, code)}
+              onCode={(code) => onSignIn({ kind: "code" }, code)}
             />
             <RetrievalNotice language={language} preparesModel={preparesModel(client.retrieval)} status={providerStatus} />
           </div>

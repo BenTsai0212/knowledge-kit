@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { clientConfig } from "../client/load";
-import { strings } from "../client/i18n";
+import { fill, strings } from "../client/i18n";
 import { IDENTITY_SELECT_ID } from "./empty-state";
 import type { View } from "./online-demo";
 import { ProductIcon } from "./ProductIcon";
@@ -11,6 +11,8 @@ export const BRAND_ICON_SIZE = 36;
 interface Props {
   language: string;
   identity: string;
+  // 帳號登入時的展示帳號（#287）：身分固定，顯示帳號與角色、不顯示選單，「更換邀請碼」改為「登出」；以邀請碼體驗時為 undefined
+  account?: string;
   onIdentity(identity: string): void;
   onLanguage(language: string): void;
   onChangeAccessCode?(): void;
@@ -30,8 +32,8 @@ export const tabSelector = (view: View) => `.primary-tabs [data-view="${view}"]`
 // 語言以該語言自己的名稱顯示（例如 zh-TW → 中文（台灣））
 const ownName = (code: string) => new Intl.DisplayNames([code], { type: "language" }).of(code) ?? code;
 
-// 左側導覽（#195）：公司名稱、身分、語言、更換邀請碼、頁籤，問答頁另列「這次的問題」
-export function Sidebar({ language, identity, onIdentity, onLanguage, onChangeAccessCode, views, view, onView, tabExtra, questions, onQuestion }: Props) {
+// 左側導覽（#195）：公司名稱、身分、語言、更換邀請碼（帳號登入時是登出）、頁籤，問答頁另列「這次的問題」
+export function Sidebar({ language, identity, account, onIdentity, onLanguage, onChangeAccessCode, views, view, onView, tabExtra, questions, onQuestion }: Props) {
   const s = strings(language);
   const tabLabels: Record<View, string> = {
     qa: s.tabQa,
@@ -53,18 +55,32 @@ export function Sidebar({ language, identity, onIdentity, onLanguage, onChangeAc
           <span className="brand__client">{clientConfig.client.displayName[language]}</span>
         </h1>
         <span className="badge">{s.fictionalData}</span>
-        <label>
-          {s.identity}
-          {/* 空狀態的「切換身分」把焦點移到這裡（#245） */}
-          <select id={IDENTITY_SELECT_ID} value={identity} onChange={(e) => onIdentity(e.target.value)}>
-            {clientConfig.access.roles.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.label[language]}
-              </option>
-            ))}
-          </select>
-          <span className="badge">{s.demoPermissions}</span>
-        </label>
+        {account === undefined ? (
+          <label>
+            {s.identity}
+            {/* 空狀態的「切換身分」把焦點移到這裡（#245） */}
+            <select id={IDENTITY_SELECT_ID} value={identity} onChange={(e) => onIdentity(e.target.value)}>
+              {clientConfig.access.roles.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.label[language]}
+                </option>
+              ))}
+            </select>
+            <span className="badge">{s.demoPermissions}</span>
+          </label>
+        ) : (
+          // 帳號登入：身分是登入的帳號，不能切換（docs/design.md「身分是登入的人，不是設定」）
+          <p className="identity-account">
+            {s.identity}
+            <span>
+              {fill(s.signInAccountOption, {
+                account,
+                role: clientConfig.access.roles.find((r) => r.id === identity)?.label[language] ?? identity,
+              })}
+            </span>
+            <span className="badge">{s.demoPermissions}</span>
+          </p>
+        )}
         <label>
           {s.language}
           <select value={language} onChange={(e) => onLanguage(e.target.value)}>
@@ -77,7 +93,7 @@ export function Sidebar({ language, identity, onIdentity, onLanguage, onChangeAc
         </label>
         {onChangeAccessCode && (
           <button type="button" className="link" onClick={onChangeAccessCode}>
-            {s.changeAccessCode}
+            {account === undefined ? s.changeAccessCode : s.signOut}
           </button>
         )}
       </header>
