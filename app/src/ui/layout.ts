@@ -46,6 +46,13 @@ export function sheetSnap(at: SheetStop, dy: number, sheetHeight: number): Sheet
   return sheetDragCloses(dy, sheetHeight) ? "half" : "full";
 }
 
+// 實體面板停在 56% 高時圖譜還看得到的部分（#257）：畫布從上緣到面板上緣（視窗高的 44%）；面板沒蓋到畫布或 cover 是 0 時是整個畫布。
+// canvas 是畫布在視窗中的上緣與大小（getBoundingClientRect），回傳的大小以畫布的 rendered px 計
+export function visibleArea(canvas: { top: number; width: number; height: number }, viewportHeight: number, cover: number): { width: number; height: number } {
+  const above = viewportHeight * (1 - cover) - canvas.top;
+  return { width: canvas.width, height: cover > 0 && above > 0 ? Math.min(canvas.height, above) : canvas.height };
+}
+
 // 分頁列的圖示（24×24 的線條，沿用空狀態的圖示）；首頁與「更多」另外畫
 export const NAV_ICONS: Record<View | "more", string> = {
   // 首頁：房子

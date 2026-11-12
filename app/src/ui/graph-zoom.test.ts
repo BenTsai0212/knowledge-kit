@@ -5,7 +5,7 @@ import type { Graph } from "../graph/read";
 import { clientConfig } from "../client/load";
 import { strings } from "../client/i18n";
 import { graphStyle } from "./graph-style";
-import { breadcrumb, bubbleId, CALM_LIMIT, detailOf, openEntities, ringPositions, SECOND_OPACITY, SIDE_BUBBLE, SIDE_BUBBLE_OPACITY, MAX_VIEW_ZOOM, VIEW_PADDING, viewOf, viewportFor, zoomLevel } from "./graph-zoom";
+import { breadcrumb, bubbleId, CALM_LIMIT, centeredViewport, detailOf, openEntities, ringPositions, SECOND_OPACITY, SIDE_BUBBLE, SIDE_BUBBLE_OPACITY, MAX_VIEW_ZOOM, VIEW_PADDING, panToCenter, viewOf, viewportFor, zoomLevel } from "./graph-zoom";
 import graphPage from "./GraphPage.tsx?raw";
 import zoomView from "./GraphZoomView.tsx?raw";
 
@@ -126,6 +126,38 @@ describe("換層級時的視角", () => {
     expect(viewportFor({ x1: 10, y1: 10, x2: 10, y2: 10 }, canvas).zoom).toBe(MAX_VIEW_ZOOM);
     expect(viewportFor({ x1: 0, y1: 0, x2: 60, y2: 60 }, canvas).zoom).toBe(MAX_VIEW_ZOOM);
     expect(MAX_VIEW_ZOOM).toBeLessThanOrEqual(2);
+  });
+
+  it("panToCenter：平移後節點落在 area 的中央（縮放不變）", () => {
+    const v = { zoom: 1.5, pan: panToCenter({ x: 40, y: -30 }, 1.5, { width: 390, height: 251 }) };
+    expect(rendered(v, 40, -30)).toEqual({ x: 195, y: 125.5 });
+  });
+
+  describe("centeredViewport（手機的實體面板以上，#257）", () => {
+    const area = { width: 390, height: 251 };
+    const position = { x: 100, y: 50 };
+
+    it("放得進時縮放不變，選取的節點在 area 中央", () => {
+      const v = centeredViewport(position, { x1: 60, y1: 20, x2: 140, y2: 80 }, area, 1);
+      expect(v.zoom).toBe(1);
+      expect(rendered(v, position.x, position.y)).toEqual({ x: 195, y: 125.5 });
+    });
+
+    it("聚焦集合偏向一側、放不進時縮小：節點仍在中央，外框整個在 area 內（四邊留白）", () => {
+      const box = { x1: 90, y1: 40, x2: 700, y2: 120 };
+      const v = centeredViewport(position, box, area, 1);
+      expect(v.zoom).toBeLessThan(1);
+      expect(rendered(v, position.x, position.y)).toEqual({ x: 195, y: 125.5 });
+      const [a, b] = [rendered(v, box.x1, box.y1), rendered(v, box.x2, box.y2)];
+      expect(a.x).toBeGreaterThanOrEqual(VIEW_PADDING - 1e-9);
+      expect(a.y).toBeGreaterThanOrEqual(VIEW_PADDING - 1e-9);
+      expect(b.x).toBeLessThanOrEqual(area.width - VIEW_PADDING + 1e-9);
+      expect(b.y).toBeLessThanOrEqual(area.height - VIEW_PADDING + 1e-9);
+    });
+
+    it("不放大超過 maxZoom", () => {
+      expect(centeredViewport(position, { x1: 100, y1: 50, x2: 100, y2: 50 }, area, 0.8).zoom).toBe(0.8);
+    });
   });
 
   it("元件以最終位置與全部元素（含外圍的群組泡泡）計算目標視角，不以 fit 對還在泡泡位置的節點", () => {

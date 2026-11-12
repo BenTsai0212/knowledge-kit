@@ -163,6 +163,26 @@ export function viewportFor(
   return { zoom, pan: { x: canvas.width / 2 - zoom * cx, y: canvas.height / 2 - zoom * cy } };
 }
 
+// 把 position（model 座標）移到 area（rendered px，從畫布左上角起）中央時的平移量
+export const panToCenter = (position: Point, zoom: number, area: { width: number; height: number }): Point => ({
+  x: area.width / 2 - zoom * position.x,
+  y: area.height / 2 - zoom * position.y,
+});
+
+// 手機的實體面板開著時的視角（#257）：選取的節點放在 area（面板以上的可見部分）中央；box（聚焦集合或整層）放不進去時縮小到放得進，
+// 縮放不超過 maxZoom（圖譜頁傳入目前的縮放：只縮小不放大）。以節點為中心取對稱的外框，節點置中時外框仍整個在 area 內
+export function centeredViewport(
+  position: Point,
+  box: { x1: number; y1: number; x2: number; y2: number },
+  area: { width: number; height: number },
+  maxZoom: number,
+  padding = VIEW_PADDING,
+): { zoom: number; pan: Point } {
+  const [hw, hh] = [Math.max(position.x - box.x1, box.x2 - position.x, 0), Math.max(position.y - box.y1, box.y2 - position.y, 0)];
+  const { zoom } = viewportFor({ x1: position.x - hw, y1: position.y - hh, x2: position.x + hw, y2: position.y + hh }, area, padding, maxZoom);
+  return { zoom, pan: panToCenter(position, zoom, area) };
+}
+
 // 麵包屑「全部 › 群組 › 實體」：依層級列出要顯示的段
 export function breadcrumb(level: ZoomLevel, cluster: string | null, selected: string | null): { kind: "all" | "cluster" | "entity"; id: string | null }[] {
   return [

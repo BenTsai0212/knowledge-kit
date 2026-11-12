@@ -1975,6 +1975,16 @@ details.path summary {
   border: none;
 }
 
+/* 「在問答中問／只看它」與下方「相關實體」標題之間留間距（#257 PR 1 審查） */
+.entity-sheet .entity-actions {
+  margin-bottom: 1rem;
+}
+
+/* 面板內的按鈕至少 44px 高（.bottom-sheet button），清單中的實體連結改以基線對齊，與同列的關係名稱同高（#257 PR 1 審查） */
+.entity-sheet li > button.link {
+  vertical-align: baseline;
+}
+
 /* 時間軸（#241，docs/design.md）：依實體篩選的晶片一排，可換行；晶片的樣式沿用 button.chip */
 .timeline-filter {
   display: flex;

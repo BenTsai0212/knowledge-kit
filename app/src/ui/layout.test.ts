@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { layoutFor, NAV_ICONS, phoneTabs, sheetDragCloses, sheetSnap, usesSegmented } from "./layout";
+import { layoutFor, NAV_ICONS, phoneTabs, SHEET_HALF, sheetDragCloses, sheetSnap, usesSegmented, visibleArea } from "./layout";
 import { visibleViews } from "./online-demo";
 
 const off = { enabled: false };
@@ -74,5 +74,20 @@ describe("sheetSnap（可展開的底部面板，#257）", () => {
   it("面板很矮時門檻是高度的 1/4", () => {
     expect(sheetSnap("half", -50, 200)).toBe("full");
     expect(sheetSnap("half", 50, 200)).toBe("close");
+  });
+});
+
+describe("visibleArea（實體面板以上的可見部分，#257）", () => {
+  // 390×844：畫布從頂端列與工具列下方（y=120）延伸到分頁列（高 640）
+  const canvas = { top: 120, width: 390, height: 640 };
+
+  it("面板停在 56% 時，可見部分是畫布上緣到面板上緣", () => {
+    expect(visibleArea(canvas, 844, SHEET_HALF)).toEqual({ width: 390, height: 844 * (1 - SHEET_HALF) - 120 });
+  });
+
+  it("沒有面板、面板沒蓋到畫布或整個畫布都被蓋住時是整個畫布", () => {
+    expect(visibleArea(canvas, 844, 0)).toEqual({ width: 390, height: 640 });
+    expect(visibleArea({ ...canvas, height: 100 }, 844, SHEET_HALF)).toEqual({ width: 390, height: 100 });
+    expect(visibleArea({ ...canvas, top: 500 }, 844, SHEET_HALF)).toEqual({ width: 390, height: 640 });
   });
 });
