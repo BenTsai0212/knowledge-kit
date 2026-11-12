@@ -4,8 +4,9 @@ import type { Database } from "../db/database";
 import { readRetractions, retract, ReviewError, type DocumentRetraction } from "../extraction/store";
 import { ALL, expand, keepVisible as keepVisiblePath, only, selectedOf, type Expansion } from "../graph/expansion";
 import { shortestPath } from "../graph/path";
+import { clusterGraph, filterGraph, scaleMode } from "../graph/clusters";
 import { readGraph, type Graph } from "../graph/read";
-import { excludedEntities, topConnected } from "../graph/search";
+import { topConnected } from "../graph/search";
 import { focusIdentity } from "./empty-state";
 import { EmptyState } from "./EmptyState";
 import { EntityIcon } from "./EntityIcon";
@@ -31,6 +32,8 @@ import {
   ZOOM_STEP,
 } from "./graph-keyboard";
 import { GraphView, type GraphViewApi } from "./GraphView";
+import { breadcrumb, detailOf, zoomLevel } from "./graph-zoom";
+import { GraphZoomView } from "./GraphZoomView";
 import { prefersReducedMotion } from "./motion";
 import { PathPanel } from "./PathPanel";
 import { createRequestGate } from "./requests";
@@ -59,6 +62,21 @@ const { entityTypes } = clientConfig.knowledgeModel;
 // 新的圖譜中已看不到的實體一律清除
 const keepVisible = (graph: Graph) => (id: string | null) => (id !== null && graph.entities.some((e) => e.id === id) ? id : null);
 
+// 手機（≤ 600px）用較低的門檻（docs/design.md「大量節點時的圖譜」）
+const MOBILE = "(max-width: 600px)";
+
+function useMobile(): boolean {
+  const [mobile, setMobile] = useState(() => globalThis.matchMedia?.(MOBILE).matches ?? false);
+  useEffect(() => {
+    const query = globalThis.matchMedia?.(MOBILE);
+    if (query === undefined) return;
+    const update = () => setMobile(query.matches);
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  return mobile;
+}
+
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 // 在「回到全部」的狀態按 Esc 離開圖譜（#289 決定 4）：焦點移到外框後的下一個可聚焦元素，等同 Tab
@@ -85,6 +103,11 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
   const [ends, setEnds] = useState<{ from: string | null; to: string | null }>({ from: null, to: null });
   // 類型篩選：勾選的類型（預設全選）
   const [types, setTypes] = useState<ReadonlySet<string>>(() => new Set(entityTypes.map((t) => t.id)));
+  // 大量節點時（#254）：「只顯示關聯 ≥ N」、展開的群組、細節層是否展開群內全部成員（#254 決定 3）
+  const [minRelations, setMinRelations] = useState(0);
+  const [cluster, setCluster] = useState<string | null>(null);
+  const [showMembers, setShowMembers] = useState(false);
+  const mobile = useMobile();
   const reads = useRef(createRequestGate());
   // 撤回後重新讀取圖譜
   const [version, setVersion] = useState(0);
@@ -165,15 +188,30 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
     const unknown = (graph?.entities ?? []).map((e) => e.type).filter((t) => !entityTypes.some((x) => x.id === t));
     return new Set([...types, ...unknown]);
   }, [graph, types]);
-  const excluded = useMemo(() => (graph === null ? new Set<string>() : excludedEntities(graph, filter)), [graph, filter]);
+  // 類型篩選與「只顯示關聯 ≥ N」後的圖：門檻以它的實體數重新計算；門檻以下時篩掉的實體變灰（excluded），以上時以它分群
+  const filtered = useMemo(() => (graph === null ? null : filterGraph(graph, { types: filter, minRelations })), [graph, filter, minRelations]);
+  const excluded = useMemo(() => {
+    const kept = new Set(filtered?.entities.map((e) => e.id));
+    return new Set((graph?.entities ?? []).map((e) => e.id).filter((id) => !kept.has(id)));
+  }, [graph, filtered]);
+  const clustering = useMemo(
+    () => (filtered === null || scaleMode(filtered.entities.length, mobile) === "all" ? null : clusterGraph(filtered, clientConfig.knowledgeModel)),
+    [filtered, mobile],
+  );
   const groups = useMemo(
     () => (graph === null || mode !== "list" ? [] : listGroups(graph, listedEntities(graph, excluded, expansion, isolated), excluded, language)),
     [graph, mode, excluded, expansion, isolated, language],
   );
-  // 選取改變時（點節點、搜尋、面板）游標清除
+  // 選取改變時（點節點、搜尋、面板）游標清除，細節層的成員收回
   useEffect(() => {
     setCursor(null);
+    setShowMembers(false);
   }, [selected]);
+  const zoom = clustering === null ? null : zoomLevel(clustering, cluster, selected);
+  // 進入細節層時記住所屬的群組：返回（麵包屑、Esc）時回到群組層
+  useEffect(() => {
+    if (zoom?.level === "detail") setCluster(zoom.cluster);
+  }, [zoom?.level, zoom?.cluster]);
   // 篩選後報讀顯示的實體數（只在勾選改變時）
   const announcedTypes = useRef(types);
   useEffect(() => {
@@ -199,6 +237,18 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
       return next;
     });
   const top = topConnected(graph, language, filter);
+  const z = s.graphZoom;
+  const openCluster = (id: string | null) => {
+    setCluster(id);
+    setExpansion(ALL);
+  };
+  const clusterName = (id: string) => {
+    const c = clustering?.clusters.find((x) => x.id === id);
+    return c === undefined || c.anchor === null ? z.other : nameOf(c.anchor);
+  };
+  const zoomCluster = clustering?.clusters.find((c) => c.id === zoom?.cluster);
+  const collapsed =
+    zoom?.level === "detail" && zoomCluster !== undefined && selected !== null && filtered !== null ? detailOf(filtered, zoomCluster, selected).collapsed.length : 0;
 
   // 鍵盤操作（#289）：外框取得鍵盤焦點時，目前的實體＝選取的實體，沒有選取時是關聯最多的實體（只畫圈，不展開）
   const k = s.graphKeyboard;
@@ -315,6 +365,10 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
               </li>
             ))}
           </ul>
+          <label className="graph-min">
+            {z.minRelations}
+            <input type="number" min={0} value={minRelations} onChange={(e) => setMinRelations(Math.max(0, Math.floor(Number(e.target.value) || 0)))} />
+          </label>
           <div className="graph-mode" role="group" aria-label={k.modeLabel}>
             {(["graph", "list"] as const).map((m) => (
               <button key={m} type="button" className="chip" aria-pressed={mode === m} onClick={() => setMode(m)}>
@@ -325,7 +379,30 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
         </div>
         {/* 這一列沒有展開時也保留高度：出現或消失時畫布不移動 */}
         <div className="graph-trail">
-          {expansion.length > 0 && (
+          {zoom !== null && (
+            <nav aria-label={z.breadcrumb} className="graph-crumbs">
+              <ol>
+                {breadcrumb(zoom.level, zoom.cluster, selected).map((c, i, all) => (
+                  <li key={c.kind}>
+                    <button
+                      type="button"
+                      className="link"
+                      aria-current={i === all.length - 1 ? "step" : undefined}
+                      onClick={() => (c.kind === "entity" ? undefined : openCluster(c.id))}
+                    >
+                      {c.kind === "all" ? z.all : c.kind === "cluster" ? clusterName(c.id!) : nameOf(c.id!)}
+                    </button>
+                  </li>
+                ))}
+              </ol>
+              {collapsed > 0 && !showMembers && (
+                <button type="button" className="chip" onClick={() => setShowMembers(true)}>
+                  {fill(z.moreMembers, { count: collapsed }, language)}
+                </button>
+              )}
+            </nav>
+          )}
+          {zoom === null && expansion.length > 0 && (
             <nav aria-label={s.graphExpanded}>
               <span className="muted">
                 {s.graphExpanded}
@@ -370,18 +447,36 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
               onKeyDown={onFrameKeyDown}
               ref={frame}
             >
-              <GraphView
-                graph={graph}
-                language={language}
-                selected={selected}
-                path={path}
-                expansion={expansion}
-                excluded={excluded}
-                isolated={isolated}
-                onSelect={onExpand}
-                keyboard={focused ? { current, cursor } : null}
-                api={view}
-              />
+              {zoom !== null && clustering !== null && filtered !== null ? (
+                <GraphZoomView
+                  graph={filtered}
+                  clustering={clustering}
+                  level={zoom.level}
+                  cluster={zoom.cluster}
+                  selected={zoom.level === "detail" ? selected : null}
+                  showMembers={showMembers}
+                  language={language}
+                  clusterName={clusterName}
+                  segments={(count) => fill(z.segments, { count }, language)}
+                  onSelect={onExpand}
+                  onOpenCluster={openCluster}
+                  keyboard={focused ? { current, cursor } : null}
+                  api={view}
+                />
+              ) : (
+                <GraphView
+                  graph={graph}
+                  language={language}
+                  selected={selected}
+                  path={path}
+                  expansion={expansion}
+                  excluded={excluded}
+                  isolated={isolated}
+                  onSelect={onExpand}
+                  keyboard={focused ? { current, cursor } : null}
+                  api={view}
+                />
+              )}
             </div>
             {/* 按鍵提示列：只在外框有鍵盤焦點（:focus-visible）時出現（app.css）；報讀器從按鍵表（?）讀，這裡不重複 */}
             <ul className="graph-keys" aria-hidden="true">

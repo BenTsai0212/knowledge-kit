@@ -416,6 +416,16 @@ export interface UiStrings {
     listLabel: string;
     listEmpty: string;
   };
+  // 大量節點時的圖譜（#254，docs/design.md「大量節點時的圖譜」）：麵包屑的標籤與第一層、「其他」群組的名稱、
+  // 聚合線的段數（{count}）、細節層收合的成員（{count}）、「只顯示關聯 ≥ N」的標籤
+  graphZoom: {
+    breadcrumb: string;
+    all: string;
+    other: string;
+    segments: string;
+    moreMembers: string;
+    minRelations: string;
+  };
   askAboutEntity: string;
   relatedEntities: string;
   entitySources: string;

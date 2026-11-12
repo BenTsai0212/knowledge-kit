@@ -14,7 +14,7 @@
     "accessCodeLabel", "accessCodeHint", "demoAccessCodeHint", "demoQaNotice", "demoUploadNotice", "accessCodeSubmit", "changeAccessCode", "signInTitle", "signInAccount", "signInAccountOption", "signInPassword", "signInNoPassword", "signInSubmit", "signInWithCode", "signInBack", "signOut", "presetQuestions", "scenarioRole",
     "questionLabel", "questionPlaceholder", "askButton", "answering", "emptyAnswer", "emptyAnswerReason", "emptyAnswerAction", "qaIndependent", "sessionQuestions", "answerMentions", "followUpTitle", "followUpOutgoing", "followUpIncoming", "viewInGraph", "openSource", "sourceTitle",
     "closeSource", "views", "tabQa", "tabHome", "tabGraph", "legend", "graphEmpty", "graphEmptyReason", "switchIdentity", "selectEntity", "graphExpanded", "graphShowAll", "graphShowOnly",
-    "graphSearch", "graphSearchNone", "graphTopConnected", "graphRelationCount", "graphDocumentCount", "graphSourceCount", "graphAskAbout", "graphKeyboard", "askAboutEntity", "relatedEntities",
+    "graphSearch", "graphSearchNone", "graphTopConnected", "graphRelationCount", "graphDocumentCount", "graphSourceCount", "graphAskAbout", "graphKeyboard", "graphZoom", "askAboutEntity", "relatedEntities",
     "entitySources", "graphRetract", "graphRetractWillRemove", "graphRetractNoChange", "graphRetractConfirm", "graphRetractCancel", "tabTimeline", "pathTitle", "pathFrom", "pathTo", "pathChoose", "pathNotFound", "pathNotFoundReason", "pathChangeEnd",
     "timelineFilter", "timelineAll", "timelineEmpty", "timelineEmptyReason", "timelineFilterEmptyReason", "timelineShowAll", "undated", "tabUpload", "uploadNotAllowed", "uploadNotAllowedReason", "uploadEphemeral",
     "uploadFile", "fileChoose", "fileNone", "uploadPaste", "uploadPastePlaceholder", "uploadDocTitle", "uploadLanguage", "uploadVisibility",
@@ -168,6 +168,20 @@
         "modeList": { "$ref": "#/definitions/Text" },
         "listLabel": { "$ref": "#/definitions/Text" },
         "listEmpty": { "$ref": "#/definitions/Text" }
+      }
+    },
+    "graphZoom": {
+      "description": "大量節點時的圖譜（#254，docs/design.md「大量節點時的圖譜」）：breadcrumb 是麵包屑的標籤，all 是第一層；other 是連不到容器或沒有關係的實體的群組名稱；segments 的 {count} 是聚合線的段數；moreMembers 的 {count} 是細節層收合的成員數；minRelations 是「只顯示關聯 ≥ N」的標籤",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["breadcrumb", "all", "other", "segments", "moreMembers", "minRelations"],
+      "properties": {
+        "breadcrumb": { "$ref": "#/definitions/Text" },
+        "all": { "$ref": "#/definitions/Text" },
+        "other": { "$ref": "#/definitions/Text" },
+        "segments": { "$ref": "#/definitions/Text" },
+        "moreMembers": { "$ref": "#/definitions/Text" },
+        "minRelations": { "$ref": "#/definitions/Text" }
       }
     },
     "askAboutEntity": { "$ref": "#/definitions/Text" },

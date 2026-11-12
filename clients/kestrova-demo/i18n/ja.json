@@ -103,6 +103,14 @@
     "listLabel": "グラフのリスト",
     "listEmpty": "条件に合うエンティティはありません。"
   },
+  "graphZoom": {
+    "breadcrumb": "階層",
+    "all": "すべて",
+    "other": "その他",
+    "segments": "{count} 本",
+    "moreMembers": "＋{count} 人のメンバー · 展開",
+    "minRelations": "関連が次の数以上のみ"
+  },
   "askAboutEntity": "{name}について分かっていることを教えてください。",
   "relatedEntities": "関連するエンティティ",
   "entitySources": "登場する文書",

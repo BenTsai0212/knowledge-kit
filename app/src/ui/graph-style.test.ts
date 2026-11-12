@@ -140,8 +140,8 @@ describe("圖譜套用設計系統 v1（#240）", () => {
     expect(rule("node.path")).toMatchObject({ "outline-color": colors.primary, "border-color": colors.background });
   });
 
-  it("不畫任何「有內容被隱藏」的痕跡：沒有虛線框或上鎖的樣式（鍵盤游標的虛線圈除外，#289）", () => {
-    expect(JSON.stringify(style.filter((r) => r.selector !== "node.kb-cursor"))).not.toMatch(/dashed|dotted|lock|hidden/);
+  it("不畫任何「有內容被隱藏」的痕跡：沒有虛線框或上鎖的樣式（鍵盤游標的虛線圈、細節層看得到的二度關聯除外，#289、#254）", () => {
+    expect(JSON.stringify(style.filter((r) => r.selector !== "node.kb-cursor" && r.selector !== "edge.second"))).not.toMatch(/dashed|dotted|lock|hidden/);
   });
 });
 

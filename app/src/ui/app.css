@@ -1425,6 +1425,22 @@ details.path summary {
   font-weight: 600;
 }
 
+/* 大量節點時的麵包屑「全部 › 群組 › 實體」（#254） */
+.graph-trail .graph-crumbs li + li::before {
+  content: "›";
+}
+
+/* 「只顯示關聯 ≥ N」（#254）：篩選後重新計算門檻 */
+.graph-min {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.graph-min input {
+  width: 4rem;
+}
+
 .path-select {
   display: grid;
   gap: 0.5rem;

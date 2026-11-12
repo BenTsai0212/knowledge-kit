@@ -103,6 +103,14 @@
     "listLabel": "圖譜的清單",
     "listEmpty": "沒有符合篩選的實體。"
   },
+  "graphZoom": {
+    "breadcrumb": "層級",
+    "all": "全部",
+    "other": "其他",
+    "segments": "{count} 段",
+    "moreMembers": "＋{count} 位成員 · 展開",
+    "minRelations": "只顯示關聯 ≥"
+  },
   "askAboutEntity": "{name}的相關資訊有哪些？",
   "relatedEntities": "相關實體",
   "entitySources": "出現的文件",
