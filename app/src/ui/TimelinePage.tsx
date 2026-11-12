@@ -9,7 +9,7 @@ import { createRequestGate } from "./requests";
 import { EmptyState } from "./EmptyState";
 import { goneDelay, withGone } from "./gone-motion";
 import { prefersReducedMotion, staggerIndex } from "./motion";
-import { entityTypeShape, timelineEmptyKind, timelineSections, type TimelineRow } from "./timeline-view";
+import { dateParts, entityTypeShape, timelineEmptyKind, timelineSections, type TimelineRow } from "./timeline-view";
 import { strings } from "../client/i18n";
 import { clientConfig } from "../client/load";
 
@@ -39,6 +39,22 @@ function TypeMark({ type }: { type: string }) {
       style={{ "--type-color": color ?? "var(--color-graphFallback)" } as CSSProperties}
       aria-hidden="true"
     />
+  );
+}
+
+// 日期：桌機接成「YYYY-MM-DD」；手機的日期欄（46px）年與月日分兩行，不顯示中間的「-」（#282）
+function DateText({ date }: { date: string }) {
+  const { year, monthDay } = dateParts(date);
+  return (
+    <>
+      {year !== null && (
+        <>
+          <span className="timeline-date__year">{year}</span>
+          <span className="timeline-date__sep">-</span>
+        </>
+      )}
+      <span>{monthDay}</span>
+    </>
   );
 }
 
@@ -142,7 +158,7 @@ export function TimelinePage({ db, identity, language, uploaded, focus, onFocuse
         onAnimationEnd={(e) => e.animationName.startsWith("timeline-flash") && setFlash(null)}
       >
         <time className="timeline-date" dateTime={entry.date ?? undefined}>
-          {entry.date ?? ""}
+          {entry.date !== null && <DateText date={entry.date} />}
         </time>
         <span className="timeline-rail" aria-hidden="true">
           <span className="timeline-dot" />

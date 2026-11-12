@@ -130,6 +130,9 @@ describe("頁面外層與清單的欄寬", () => {
     ".home__recent .home__name": [".home__recent ul", ".home", ...page],
     ".home__update .home__name": [".home__updates ul", ".home", ...page],
     ".my-upload__title": [".my-uploads__list", ".my-uploads", ".upload", ...page],
+    // 手機的時間軸（#282）：篩選晶片一行、橫向滑動；.timeline-page 不是 grid
+    ".app--phone .timeline-filter": [...page],
+    ".app--phone .timeline-filter button.chip": [...page],
   };
 
   // 不在畫面上占寬度的（絕對定位、只給報讀器）不算
