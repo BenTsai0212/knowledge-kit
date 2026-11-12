@@ -130,7 +130,7 @@ export function ReportList({ db, identity, language, reports, graph, onOpenSourc
                     onChange={(e) => setNotes((all) => ({ ...all, [r.id]: e.target.value }))}
                   />
                 </label>
-                <div className="dialog-actions">
+                <div className="dialog-actions report-actions">
                   <button type="button" className="secondary" disabled={busy} onClick={() => void resolve(r.id, "not_error")}>
                     {s.reportMarkNotError}
                   </button>

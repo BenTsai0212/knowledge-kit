@@ -938,6 +938,13 @@ main.qa > .source .source-text mark.entering {
   display: none;
 }
 
+/* 右側還有分頁時（#288，docs/design.md「英文版面」）：右側 36px 漸層提示還有內容。以遮罩讓內容淡出到背景，
+   淺色與深色都不需要另外的顏色（遮罩只看不透明度，var(--color-text) 只當作不透明的顏色） */
+.review-tabs.has-more {
+  -webkit-mask-image: linear-gradient(to left, transparent, var(--color-text) 36px);
+  mask-image: linear-gradient(to left, transparent, var(--color-text) 36px);
+}
+
 .review-tabs [role="tab"] {
   background: none;
   border: none;
@@ -1758,6 +1765,14 @@ details.path summary {
   margin-top: 0.75rem;
 }
 
+/* 回報處理的兩個按鈕（#288，docs/design.md「英文版面」）：窄於 360px 時上下排列，每個佔一整列 */
+@media (max-width: 360px) {
+  .report-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
 button.secondary {
   background: var(--color-surface);
   color: var(--color-primary);
@@ -2330,6 +2345,20 @@ label.inline {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+/* 窄於 480px（#288，docs/design.md「英文版面」）：兩種語言都改成整列的單選，每個決定佔一整列、文字可換行 */
+@media (max-width: 480px) {
+  .conflict-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .conflict-actions button {
+    text-align: start;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
 }
 
 /* 說法不同的決定（#243 PR 4，motion-reference.css「動態 · 審核與說法不同」），播完才寫入：

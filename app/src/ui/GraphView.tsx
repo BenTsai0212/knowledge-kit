@@ -6,8 +6,8 @@ import { ALL, focusOf, nearRelations, selectedOf, type Expansion } from "../grap
 import type { PathStep } from "../graph/path";
 import type { Graph } from "../graph/read";
 import { relationCounts } from "../graph/search";
-import { nodeLabels } from "./graph-labels";
-import { edgeWidth, graphStyle, nodeSize } from "./graph-style";
+import { clampLabel, nodeLabels, type MeasureText } from "./graph-labels";
+import { edgeWidth, graphStyle, NODE_LABEL_FONT_SIZE, NODE_LABEL_MAX_LINES, NODE_LABEL_MAX_WIDTH, nodeSize } from "./graph-style";
 import { EXPAND_MS, motionDuration, PAN_MS, watchReducedMotion } from "./motion";
 import { isDark, watchColorScheme } from "./theme";
 
@@ -34,10 +34,20 @@ const NONE: ReadonlySet<string> = new Set();
 
 const { entityTypes, relationTypes } = clientConfig.knowledgeModel;
 
+// 以節點標籤的字型量寬度（canvas 的 measureText，與 cytoscape 畫標籤的方式相同）；取不到 canvas 時每個字以 1em 估計（寧可多截斷）
+function labelMeasure(): MeasureText {
+  const font = getComputedStyle(document.documentElement).getPropertyValue("--font-body").trim() || "sans-serif";
+  const context = document.createElement("canvas").getContext?.("2d") ?? null;
+  if (context === null) return (text) => [...text].length * NODE_LABEL_FONT_SIZE;
+  context.font = `${NODE_LABEL_FONT_SIZE}px ${font}`;
+  return (text) => context.measureText(text).width;
+}
+
 // 節點的類型（type）決定形狀、填色與圖示，找不到類型時由 graphStyle() 套用 graphFallback 與通用圖示；
 // 標籤與搜尋結果相同，同名的實體加上第一個相關實體的名稱（nodeLabels()）；節點大小依看得到的關聯數，線粗依看得到的出處數
 function elements(graph: Graph, language: string, labelGraph: Graph): ElementDefinition[] {
   const labels = nodeLabels(graph, language, labelGraph);
+  const measure = labelMeasure();
   const relationLabel = new Map(relationTypes.map((t) => [t.id, t.label[language]]));
   const degree = relationCounts(graph);
   // 先排成一個圓作為起始位置，cose 不打亂起始位置（randomize: false），版面每次相同
@@ -45,8 +55,10 @@ function elements(graph: Graph, language: string, labelGraph: Graph): ElementDef
   return [
     ...graph.entities.map((e, i) => {
       const size = nodeSize(degree.get(e.id) ?? 0);
+      const label = labels.get(e.id) ?? "";
       return {
-        data: { id: e.id, type: e.type, label: labels.get(e.id), size },
+        // label 是完整名稱（選取、滑過時顯示）；shortLabel 是畫在圖上的截斷名稱（#288）
+        data: { id: e.id, type: e.type, label, shortLabel: clampLabel(label, measure, NODE_LABEL_MAX_WIDTH, NODE_LABEL_MAX_LINES), size },
         position: { x: 300 * Math.cos(i * step), y: 300 * Math.sin(i * step) },
       };
     }),

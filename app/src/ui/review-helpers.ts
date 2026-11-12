@@ -270,6 +270,12 @@ export function nextTab<T>(tabs: readonly T[], current: T, key: string): T | nul
   return null;
 }
 
+// 橫向捲動的分頁列右側還有內容（#288，docs/design.md「英文版面」）：顯示右側 36px 的漸層提示；捲到最右或放得下時不顯示。
+// 容許 1px 的小數誤差（縮放時 scrollLeft 可能是小數）
+export function overflowsEnd(el: { scrollLeft: number; clientWidth: number; scrollWidth: number }): boolean {
+  return el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+}
+
 // 實體列的標示（#243）：新增（建立新實體）、自動合併（auto）、系統建議（只有一個候選）；需要逐筆決定的沒有標示
 export function entityMark(suggestion: MergeSuggestion): "new" | "auto" | "suggested" | null {
   if (suggestion.mode === "new") return "new";
