@@ -96,6 +96,7 @@ describe("切換語言、Light／Dark（#246）", () => {
 
   it("切換語言與系統切換淺色／深色都經過 crossFade()", () => {
     expect(app).toContain("onLanguage={(code) => crossFade(() => flushSync(() => changeLanguage(code)))}");
-    expect(main).toContain("followColorScheme((query) => window.matchMedia(query), document.documentElement, crossFade)");
+    // 一般模式由 startColorScheme() 交給 followColorScheme()（展示模式固定 Light，#260）
+    expect(main).toContain("startColorScheme(presentationMode, (query) => window.matchMedia(query), document.documentElement, crossFade)");
   });
 });

@@ -22,8 +22,8 @@ interface Props {
   onOpenEntity(graph: Graph, entityId: string): void;
   // 目前在右側實體面板中的實體（#198）
   openEntity: OpenEntity | null;
-  // 「回報有錯」（ADR 0007 決定 7）
-  onReport(turn: Turn, category: ReportCategory, note: string): Promise<void>;
+  // 「回報有錯」（ADR 0007 決定 7）；沒有時不顯示（展示模式，#260）
+  onReport?(turn: Turn, category: ReportCategory, note: string): Promise<void>;
   // 回答下方的回報結果（#286）
   readReport(reportId: string): Promise<AnswerReport | null>;
   // 回答中斷時的「重新提問」（#227）：與輸入區送出相同；askDisabled 時不能按
@@ -69,7 +69,7 @@ export function Conversation({ language, turns, canUpload, onOpenSource, openPas
             onGotoUpload={onGotoUpload}
             onOpenEntity={onOpenEntity}
             openEntity={openEntity}
-            onReport={(category, note) => onReport(turn, category, note)}
+            onReport={onReport && ((category, note) => onReport(turn, category, note))}
             readReport={readReport}
             onRetry={() => onAsk(turn.question)}
             retryDisabled={askDisabled}

@@ -33,6 +33,12 @@ export function readPresentationMode(search: string): boolean {
 // 測試環境（Node）沒有 location，所以是關閉的
 export const presentationMode: boolean = readPresentationMode(globalThis.location?.search ?? "");
 
+// 展示模式時 <html> 的標記（#260）：app.css 的 :root[data-mode="presentation"] 以 --present-* 放大字級，顏色不變
+export const MODE_ATTRIBUTE = "data-mode";
+export function markPresentation(root: Pick<Element, "setAttribute">, presentation: boolean): void {
+  if (presentation) root.setAttribute(MODE_ATTRIBUTE, "presentation");
+}
+
 // 評測台（#192，docs/evals.md「開啟評測台」）：網址的 tools 參數是 "evals"（區分大小寫）時開啟，其他值或沒有參數時關閉。
 // 評測台是交付方的工具，客戶一般使用時不顯示。寫法與展示模式相同：只在載入時讀一次、不存進瀏覽器儲存、不是權限防線
 export function readEvalsMode(search: string): boolean {

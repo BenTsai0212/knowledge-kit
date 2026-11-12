@@ -365,8 +365,9 @@ export function App() {
         }}
         // 切換語言：原地交叉淡換（#246）；View Transitions 在回呼結束時拍下新畫面，所以同步更新
         onLanguage={(code) => crossFade(() => flushSync(() => changeLanguage(code)))}
+        // 展示模式不顯示「更換邀請碼」與「這次的問題」（#260，docs/design.md「隱藏與保留」）
         onChangeAccessCode={
-          accessCode === null
+          accessCode === null || presentationMode
             ? undefined
             : () => {
                 // 更換邀請碼；帳號登入時是「登出」，回到登入頁（#287 決定 3）
@@ -391,7 +392,7 @@ export function App() {
             </span>
           ),
         }}
-        questions={turns}
+        questions={presentationMode ? [] : turns}
         onQuestion={(id) => void document.getElementById(id)?.scrollIntoView({ block: "start" })}
       />
       {loadFailed ? (
@@ -541,7 +542,7 @@ export function App() {
             {db === null && <p className="card muted">{s.loading}</p>}
             {/* 線上 demo：提問會傳給模型供應商（#100 計畫第 8 項） */}
             {onlineDemo.enabled && <p className="badge warning">{s.demoQaNotice}</p>}
-            <RetrievalNotice language={language} preparesModel={preparesModel(client.retrieval)} status={providerStatus} />
+            <RetrievalNotice language={language} preparesModel={preparesModel(client.retrieval)} status={providerStatus} compact={presentationMode} />
             {adminError !== null && <AdminNotice language={language} {...adminError} />}
             <Conversation
               language={language}
@@ -552,7 +553,8 @@ export function App() {
               onGotoUpload={() => setView("upload")}
               onOpenEntity={onOpenEntity}
               openEntity={entity}
-              onReport={async (turn, category, note) => {
+              // 展示模式不顯示「回報有錯」（#260，docs/design.md「隱藏與保留」）
+              onReport={presentationMode ? undefined : async (turn, category, note) => {
                 const report = reportOf(turn, category, note);
                 // 能回報的題目一定有資料庫與回報內容（AnswerView 只在 canReport() 時顯示）；否則當作失敗
                 if (db === null || report === null) throw new Error("not reportable");
