@@ -281,6 +281,19 @@
     "not_error": "誤りではない",
     "retracted": "取り消し済み"
   },
+  "reportResult": {
+    "pending": "報告を送信しました。まだ管理者が対応していません。",
+    "notError": "誤りではない",
+    "retracted": "関連する内容を取り消しました",
+    "meta": "{role}が {date} に対応",
+    "noteLabel": "報告者へのメモ",
+    "noteInput": "報告者へのメモ（任意）",
+    "noteHint": "報告した人に表示されます",
+    "reportAgain": "まだ疑問がある場合は、もう一度報告",
+    "askAgain": "もう一度質問",
+    "resolved": "報告した回答が対応されました",
+    "viewResult": "対応結果を見る"
+  },
   "tabEvals": "評価",
   "evalSettings": "評価の設定",
   "evalSetName": "設定 {name}",
@@ -520,7 +533,7 @@
     "viewedTitle": "最近見たもの",
     "viewedEmpty": "グラフや回答で開いたエンティティがここに表示されます。",
     "updatesTitle": "更新",
-    "updatesEmpty": "アップロードした文書の審査結果がここに表示されます。",
+    "updatesEmpty": "アップロードした文書の審査結果や、報告への対応がここに表示されます。",
     "viewProgress": "進捗を見る"
   },
   "myUploads": {

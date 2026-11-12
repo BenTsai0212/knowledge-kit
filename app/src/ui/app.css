@@ -2202,6 +2202,35 @@ label.inline {
   white-space: pre-wrap;
 }
 
+/* 回報結果（#286）：回答下方與首頁「有更新」的卡片；待審 › 回報的「給回報的人的說明」 */
+.report-result {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+}
+
+.report-result p {
+  margin: 0.25rem 0 0;
+}
+
+.report-result__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.report-result__actions {
+  margin-top: 0.5rem;
+}
+
+.report-reply {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.75rem;
+}
+
 /* 待審頁籤的筆數（#48） */
 .tab-count {
   display: inline-block;

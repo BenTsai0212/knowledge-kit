@@ -281,6 +281,19 @@
     "not_error": "Not an error",
     "retracted": "Withdrawn"
   },
+  "reportResult": {
+    "pending": "Report sent. A reviewer hasn't handled it yet.",
+    "notError": "Not an error",
+    "retracted": "Related content withdrawn",
+    "meta": "Handled by {role} on {date}",
+    "noteLabel": "Note to the reporter",
+    "noteInput": "Note to the reporter (optional)",
+    "noteHint": "Shown to the person who reported it",
+    "reportAgain": "Still have doubts? Report again",
+    "askAgain": "Ask again",
+    "resolved": "Your report was resolved",
+    "viewResult": "See the result"
+  },
   "tabEvals": "Evals",
   "evalSettings": "Evaluation settings",
   "evalSetName": "Settings {name}",
@@ -520,7 +533,7 @@
     "viewedTitle": "Recently viewed",
     "viewedEmpty": "Entities you open in the graph or an answer appear here.",
     "updatesTitle": "Updates",
-    "updatesEmpty": "Review results for documents you upload appear here.",
+    "updatesEmpty": "Review results for documents you upload and replies to your reports appear here.",
     "viewProgress": "View progress"
   },
   "myUploads": {

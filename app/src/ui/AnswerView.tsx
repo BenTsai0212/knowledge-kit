@@ -4,12 +4,13 @@ import type { Graph, GraphEntity } from "../graph/read";
 import type { Answer } from "../qa/answer";
 import { errorMessage, fill, strings } from "../client/i18n";
 import { entityOptionLabel, entityTypeLabel } from "./graph-labels";
-import { MAX_REPORT_NOTE_CHARS, REPORT_CATEGORIES, type ReportCategory } from "../reports/store";
+import { MAX_REPORT_NOTE_CHARS, REPORT_CATEGORIES, type AnswerReport, type ReportCategory } from "../reports/store";
 import { refusalNextSteps, type RefusalStep, type RefusalSuggestion } from "./refusal-next-steps";
 import { canReport, defaultCategory } from "./report-helpers";
 import { answerDoneStep, answerSentences, sentenceStep, streamingSentences } from "./answer-motion";
 import { staggerIndex } from "./motion";
 import { errorCategory } from "./qa-errors";
+import { ReportStatus } from "./ReportResult";
 
 export interface AnswerState {
   question: string;
@@ -20,6 +21,8 @@ export interface AnswerState {
   // 回答提到的實體（#195）：以送出當下的身分讀出的圖譜，與從中挑出的實體（mentions.ts）。
   // 拒答時 entities 是空的，圖譜用來產生「可以試試」（#285）
   mentions?: { graph: Graph; entities: GraphEntity[] };
+  // 這一題送出的回報（#286）：回答下方顯示處理結果；再回報一次時換成新的回報
+  reportId?: string;
 }
 
 // 目前在右側實體面板中的實體（#198）：同一題的圖譜與實體 id 都相同時，「回答提到」的按鈕為選取狀態
@@ -44,6 +47,8 @@ interface Props {
   openEntity: OpenEntity | null;
   // 「回報有錯」（ADR 0007 決定 7）：寫入失敗時 reject
   onReport(category: ReportCategory, note: string): Promise<void>;
+  // 回答下方的回報結果（#286）：以目前身分讀取這一題送出的回報；讀不到時為 null
+  readReport(reportId: string): Promise<AnswerReport | null>;
   // 回答中斷或失敗時的「重新提問」：以同一個問題再問一次（新的一題）；回答中不能按
   onRetry(): void;
   retryDisabled: boolean;
@@ -60,7 +65,7 @@ const { entityTypes } = clientConfig.knowledgeModel;
 // 回答完成後已播過動態的題目：切換頁籤回來重新掛載時不再播放（#227）
 const settled = new Set<string>();
 
-export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport, onRetry, retryDisabled, onShorten, onDraft, onViewInGraph }: Props) {
+export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport, readReport, onRetry, retryDisabled, onShorten, onDraft, onViewInGraph }: Props) {
   const s = strings(language);
   const { answer } = state;
   const stepText: Record<RefusalStep, string> = {
@@ -127,6 +132,8 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
   const refusalText = answer?.kind === "refusal" ? answer.text : answer?.kind === "error" && category === "modelRefusal" ? errorMessage(language, answer.error) : null;
   const classes = ["card", "answer", still && "still", incomplete && "incomplete"].filter(Boolean).join(" ");
   const doneStep = sentences === null ? 0 : answerDoneStep(sentences.length, streamed.current);
+  // 「仍有疑問，再回報一次」：送出後換成新回報的結果
+  const [again, setAgain] = useState(false);
 
   return (
     <section id={id} ref={ref} className={classes} style={{ "--done": doneStep } as CSSProperties} aria-live="polite">
@@ -201,15 +208,34 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
           </button>
         </p>
       )}
-      {canReport(state) && <ReportForm language={language} initial={defaultCategory(state)} onReport={onReport} />}
+      {canReport(state) &&
+        (state.reportId === undefined || again ? (
+          <ReportForm
+            language={language}
+            initial={defaultCategory(state)}
+            open={again}
+            onReport={(category, note) => onReport(category, note).then(() => setAgain(false))}
+            onCancel={again ? () => setAgain(false) : undefined}
+          />
+        ) : (
+          <ReportStatus
+            language={language}
+            reportId={state.reportId}
+            read={readReport}
+            onReportAgain={() => setAgain(true)}
+            onAskAgain={onRetry}
+            askDisabled={retryDisabled}
+          />
+        ))}
     </section>
   );
 }
 
-// 「回報有錯」：按下後展開原因與選填說明；送出後只留下提示（同一題不再回報）
-function ReportForm({ language, initial, onReport }: { language: string; initial: ReportCategory; onReport: Props["onReport"] }) {
+// 「回報有錯」：按下後展開原因與選填說明；送出後只留下提示（回答下方改顯示回報結果，#286）。
+// open：一開始就展開（再回報一次）；onCancel：取消時改由呼叫端處理（回到回報結果）
+export function ReportForm({ language, initial, onReport, open: initialOpen = false, onCancel }: { language: string; initial: ReportCategory; onReport: Props["onReport"]; open?: boolean; onCancel?(): void }) {
   const s = strings(language);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialOpen);
   const [category, setCategory] = useState(initial);
   const [note, setNote] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "failed">("idle");
@@ -255,7 +281,7 @@ function ReportForm({ language, initial, onReport }: { language: string; initial
         <button type="submit" disabled={status === "sending"}>
           {s.reportSubmit}
         </button>
-        <button type="button" className="secondary" disabled={status === "sending"} onClick={() => setOpen(false)}>
+        <button type="button" className="secondary" disabled={status === "sending"} onClick={() => (onCancel ?? (() => setOpen(false)))()}>
           {s.reportCancel}
         </button>
       </div>

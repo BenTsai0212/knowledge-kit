@@ -16,7 +16,7 @@ import { readReview } from "./extraction/store";
 import { readGraph, type Graph } from "./graph/read";
 import { ask } from "./qa/answer";
 import { apiTransport } from "./qa/api";
-import { readReports, writeReport } from "./reports/store";
+import { readMyReport, readReports, writeReport } from "./reports/store";
 import { createProvider, preparesModel, PROVIDERS, type ActiveProvider, type ProgressListener } from "./retrieval/providers";
 import { openRetriever } from "./retrieval/retrieve";
 import { readSource, type SourceDocument } from "./sources/source";
@@ -500,8 +500,8 @@ export function App() {
             language={language}
             identity={identity}
             waiting={canReview ? (pending?.identity === identity ? pending.summary : null) : undefined}
-            // 一般員工的「有更新」（#284）：能上傳、不能審核的身分
-            updates={canUpload && !canReview ? { extracting: activeExtractions, onOpenUpload: (id) => (setUploadFocus(id), setView("upload")) } : undefined}
+            // 一般員工的「有更新」：不能審核的身分；自己上傳的文件（#284）與已處理的回報（#286）
+            updates={!canReview ? { extracting: activeExtractions, onOpenUpload: (id) => (setUploadFocus(id), setView("upload")) } : undefined}
             asked={asked[identity] ?? []}
             askDisabled={retriever === null || answering}
             limit={limit}
@@ -538,10 +538,13 @@ export function App() {
                 const report = reportOf(turn, category, note);
                 // 能回報的題目一定有資料庫與回報內容（AnswerView 只在 canReport() 時顯示）；否則當作失敗
                 if (db === null || report === null) throw new Error("not reportable");
-                await writeReport(db, identity, report);
+                const reportId = await writeReport(db, identity, report);
+                // 回答下方改顯示這則回報的結果（#286）
+                setTurns((all) => all.map((t) => (t.id === turn.id ? { ...t, reportId } : t)));
                 // 回報的人自己能審核時，待審頁籤的筆數加一
                 setReviewVersion((v) => v + 1);
               }}
+              readReport={(reportId) => (db === null ? Promise.resolve(null) : readMyReport(db, identity, reportId))}
               onAsk={onAsk}
               askDisabled={retriever === null || answering || limit !== null}
               onViewInGraph={(id) => (setGraphFocus(id), setView("graph"))}

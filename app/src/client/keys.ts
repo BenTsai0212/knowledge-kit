@@ -284,7 +284,7 @@ const uiStrings = {
   parenthetical: "required", refusal: "required", refusalNextTitle: "required", refusalNextRephrase: "required",
   refusalNextAskPerson: "required", refusalNextUpload: "required", refusalNextGraph: "required",
   refusalNextOwner: "required", refusalNextRephraseWith: "required", refusalNextRephraseName: "required", refusalGotoUpload: "required", uncited: "required", incomplete: "required", answerRetry: "required",
-  qaProblems: "required", errors: "required", unknownError: "required", home: "required", myUploads: "required",
+  qaProblems: "required", errors: "required", unknownError: "required", home: "required", myUploads: "required", reportResult: "required",
 } satisfies KeyManifest<UiStrings>;
 
 export const i18nManifests: ManifestEntry[] = [
@@ -317,6 +317,23 @@ export const i18nManifests: ManifestEntry[] = [
       updatesEmpty: "required",
       viewProgress: "required",
     } satisfies KeyManifest<UiStrings["home"]>,
+  },
+  {
+    schema: "i18n.schema.json",
+    pointer: "/properties/reportResult",
+    keys: {
+      pending: "required",
+      notError: "required",
+      retracted: "required",
+      meta: "required",
+      noteLabel: "required",
+      noteInput: "required",
+      noteHint: "required",
+      reportAgain: "required",
+      askAgain: "required",
+      resolved: "required",
+      viewResult: "required",
+    } satisfies KeyManifest<UiStrings["reportResult"]>,
   },
   {
     schema: "i18n.schema.json",

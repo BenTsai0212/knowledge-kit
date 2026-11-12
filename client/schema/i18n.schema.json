@@ -38,7 +38,7 @@
     "conflictOld", "conflictDecisions", "conflictToast", "conflictMarks", "conflictTitle", "conflictWaiting",
     "conflictRunning", "conflictFound", "conflictFoundHint", "conflictDropped", "conflictUnchecked", "conflictUnrelated",
     "conflictFailed", "conflictRetry",
-    "reportButton", "reportCategory", "reportCategories", "reportNote", "reportSubmit", "reportCancel", "reportSent", "reportFailed", "reviewReportsTab", "reportsEmpty", "reportsEmptyReason", "reportRefusal", "reportAnswer", "reportMeta", "reportMarkNotError", "reportMarkRetracted", "reportRetractHint", "reportResolutions",
+    "reportButton", "reportCategory", "reportCategories", "reportNote", "reportSubmit", "reportCancel", "reportSent", "reportFailed", "reviewReportsTab", "reportsEmpty", "reportsEmptyReason", "reportRefusal", "reportAnswer", "reportMeta", "reportMarkNotError", "reportMarkRetracted", "reportRetractHint", "reportResolutions", "reportResult",
     "tabEvals", "evalSettings", "evalSetName", "evalTopK", "evalMinScore", "evalUseSetB",
     "evalModelGrading", "evalInvalidSettings", "evalUploaded", "evalStart", "evalPreparing", "evalStop",
     "evalRunning", "evalProgress", "evalDone", "evalStopped", "evalAborted", "evalConfirmTitle",
@@ -389,6 +389,25 @@
       "properties": {
         "not_error": { "$ref": "#/definitions/Text" },
         "retracted": { "$ref": "#/definitions/Text" }
+      }
+    },
+    "reportResult": {
+      "description": "回報結果（#286，docs/design.md「日常工具」的「回報結果」）：meta 的 {role} 是處理者的角色、{date} 是處理日期",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pending", "notError", "retracted", "meta", "noteLabel", "noteInput", "noteHint", "reportAgain", "askAgain", "resolved", "viewResult"],
+      "properties": {
+        "pending": { "$ref": "#/definitions/Text" },
+        "notError": { "$ref": "#/definitions/Text" },
+        "retracted": { "$ref": "#/definitions/Text" },
+        "meta": { "$ref": "#/definitions/Text" },
+        "noteLabel": { "$ref": "#/definitions/Text" },
+        "noteInput": { "$ref": "#/definitions/Text" },
+        "noteHint": { "$ref": "#/definitions/Text" },
+        "reportAgain": { "$ref": "#/definitions/Text" },
+        "askAgain": { "$ref": "#/definitions/Text" },
+        "resolved": { "$ref": "#/definitions/Text" },
+        "viewResult": { "$ref": "#/definitions/Text" }
       }
     },
     "tabEvals": { "$ref": "#/definitions/Text" },

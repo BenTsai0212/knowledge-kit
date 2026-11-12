@@ -72,6 +72,15 @@ export function uploadUpdates(docs: readonly ReviewDocument[], extracting: Reado
   return updates.slice(0, max);
 }
 
+// 一般員工的「有更新」的回報已處理（#286）：自己回報、已處理的回報，處理時間新的在前。
+// 讀得到哪些回報由 RLS 決定（0012：自己的回報，送出的段落目前全部看得到）；能審核的身分讀得到別人的，所以仍以回報者篩選
+export function reportUpdates(reports: readonly AnswerReport[], identity: string, max = MAX_UPDATES): AnswerReport[] {
+  return reports
+    .filter((r) => r.reportedBy === identity && r.resolvedAt !== null)
+    .sort((a, b) => Date.parse(b.resolvedAt!) - Date.parse(a.resolvedAt!))
+    .slice(0, max);
+}
+
 // 問過的問題最多保留的筆數
 export const MAX_ASKED = 20;
 
