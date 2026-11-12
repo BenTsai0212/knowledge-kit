@@ -715,4 +715,29 @@ export interface UiStrings {
     viewedTitle: string;
     viewedEmpty: string;
   };
+  // 我的上傳（#284，docs/design.md「日常工具」的「我的上傳」）：上傳頁的兩段、每份的狀態（status*）、送出後的四步進度（step*）、
+  // 每一項的結果與重新上傳修正版
+  myUploads: {
+    tabNew: string;
+    tabMine: string;
+    sections: string;
+    empty: string;
+    statusUploaded: string;
+    statusInReview: string;
+    statusApproved: string;
+    statusPartlyRejected: string;
+    statusRejected: string;
+    stepsLabel: string;
+    stepUploaded: string;
+    stepExtracted: string;
+    stepReview: string;
+    stepPublished: string;
+    approvalNote: string;
+    itemCounts: string;
+    entities: string;
+    relations: string;
+    noItems: string;
+    reupload: string;
+    reuploadNotice: string;
+  };
 }

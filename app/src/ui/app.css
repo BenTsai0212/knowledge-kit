@@ -3104,3 +3104,126 @@ label.inline {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* 我的上傳（#284，docs/design.md「日常工具」的「我的上傳」）：上傳頁頂端的兩段沿用待審頁的底線式分頁；
+   每份一列（標題可以截斷，完整文字在 title），點了在右側顯示詳情；手機從底部升起詳情面板 */
+.upload-sections {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.upload-steps--four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.review-progress {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.review-progress p {
+  margin: 0;
+}
+
+.badge.danger {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.my-uploads {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+}
+
+.my-uploads.with-detail {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 24rem);
+}
+
+.my-uploads__list,
+.my-upload-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.my-upload {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  width: 100%;
+  text-align: start;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  padding: 0.5rem 0.75rem;
+}
+
+.my-upload[aria-pressed="true"] {
+  border-color: var(--color-primary);
+}
+
+.my-upload__title {
+  flex: 1 1 12rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.my-upload__counts {
+  font-size: 0.85rem;
+}
+
+.my-upload-detail {
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-surfaceRaised);
+  padding: 1rem;
+  animation: kSlideIn var(--motion-base) var(--ease-enter) backwards;
+}
+
+.my-upload-detail > * {
+  max-width: 100%;
+}
+
+.my-upload-detail > .dialog-header,
+.my-upload-detail > .review-progress,
+.my-upload-detail > .my-upload-items {
+  justify-self: stretch;
+}
+
+.my-upload-detail h3,
+.my-upload-detail h4 {
+  margin: 0;
+}
+
+.my-upload-items li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .my-uploads.with-detail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .my-upload-detail {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 20;
+    max-height: 75vh;
+    overflow-y: auto;
+    border-radius: var(--radius-large) var(--radius-large) 0 0;
+    box-shadow: 0 -4px 16px color-mix(in srgb, var(--color-overlay) 25%, transparent);
+    animation-name: kUp;
+  }
+}

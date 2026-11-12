@@ -519,5 +519,28 @@
     "recentDocumentsEmpty": "還沒有看得到的文件。",
     "viewedTitle": "最近看過",
     "viewedEmpty": "在圖譜或回答中點過的實體會列在這裡。"
+  },
+  "myUploads": {
+    "tabNew": "新增文件",
+    "tabMine": "我的上傳",
+    "sections": "上傳頁的分段",
+    "empty": "你還沒有上傳文件。",
+    "statusUploaded": "已上傳",
+    "statusInReview": "審核中",
+    "statusApproved": "已核准",
+    "statusPartlyRejected": "部分退回",
+    "statusRejected": "已退回",
+    "stepsLabel": "送審進度",
+    "stepUploaded": "已上傳",
+    "stepExtracted": "萃取完成",
+    "stepReview": "等主管審核",
+    "stepPublished": "出現在問答與圖譜",
+    "approvalNote": "主管核准後，內容才會出現在問答與圖譜。",
+    "itemCounts": "{entities} 個實體 · {relations} 個關係",
+    "entities": "實體",
+    "relations": "關係",
+    "noItems": "這份文件沒有萃取出實體或關係。",
+    "reupload": "重新上傳修正版",
+    "reuploadNotice": "已帶入原本的標題、語言、可見等級與專案。選擇修正後的檔案再送出，會成為一份新的文件重新送審。"
   }
 }

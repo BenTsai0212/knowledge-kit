@@ -51,7 +51,7 @@
     "evalCategories", "evalExpect", "evalVerdicts", "evalLeaks", "evalReport",
     "colon", "progress", "parenthetical", "refusal",
     "refusalNextTitle", "refusalNextRephrase", "refusalNextAskPerson", "refusalNextUpload", "refusalNextGraph", "refusalNextOwner", "refusalNextRephraseWith", "refusalNextRephraseName", "refusalGotoUpload", "uncited", "incomplete", "answerRetry",
-    "qaProblems", "errors", "unknownError", "home"
+    "qaProblems", "errors", "unknownError", "home", "myUploads"
   ],
   "properties": {
     "loading": { "$ref": "#/definitions/Text" },
@@ -702,6 +702,35 @@
         "recentDocumentsEmpty": { "$ref": "#/definitions/Text" },
         "viewedTitle": { "$ref": "#/definitions/Text" },
         "viewedEmpty": { "$ref": "#/definitions/Text" }
+      }
+    },
+    "myUploads": {
+      "description": "我的上傳（#284，docs/design.md「日常工具」的「我的上傳」）：上傳頁的「新增文件」與「我的上傳」、每份的狀態、送出後的四步進度與重新上傳修正版",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tabNew", "tabMine", "sections", "empty", "statusUploaded", "statusInReview", "statusApproved", "statusPartlyRejected", "statusRejected", "stepsLabel", "stepUploaded", "stepExtracted", "stepReview", "stepPublished", "approvalNote", "itemCounts", "entities", "relations", "noItems", "reupload", "reuploadNotice"],
+      "properties": {
+        "tabNew": { "$ref": "#/definitions/Text" },
+        "tabMine": { "$ref": "#/definitions/Text" },
+        "sections": { "$ref": "#/definitions/Text" },
+        "empty": { "$ref": "#/definitions/Text" },
+        "statusUploaded": { "$ref": "#/definitions/Text" },
+        "statusInReview": { "$ref": "#/definitions/Text" },
+        "statusApproved": { "$ref": "#/definitions/Text" },
+        "statusPartlyRejected": { "$ref": "#/definitions/Text" },
+        "statusRejected": { "$ref": "#/definitions/Text" },
+        "stepsLabel": { "$ref": "#/definitions/Text" },
+        "stepUploaded": { "$ref": "#/definitions/Text" },
+        "stepExtracted": { "$ref": "#/definitions/Text" },
+        "stepReview": { "$ref": "#/definitions/Text" },
+        "stepPublished": { "$ref": "#/definitions/Text" },
+        "approvalNote": { "$ref": "#/definitions/Text" },
+        "itemCounts": { "$ref": "#/definitions/Text" },
+        "entities": { "$ref": "#/definitions/Text" },
+        "relations": { "$ref": "#/definitions/Text" },
+        "noItems": { "$ref": "#/definitions/Text" },
+        "reupload": { "$ref": "#/definitions/Text" },
+        "reuploadNotice": { "$ref": "#/definitions/Text" }
       }
     }
   }
