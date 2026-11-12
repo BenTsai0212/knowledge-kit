@@ -53,10 +53,10 @@ async function cursorInside(page: Page): Promise<boolean> {
   }, CANVAS);
 }
 
-// 圖例的最後一個核取方塊之後就是圖譜外框（沒有展開時「已展開」那一列沒有按鈕）：從它按 Tab 進入
+// 「圖譜｜清單」切換的最後一個按鈕之後就是圖譜外框（沒有展開時「已展開」那一列沒有按鈕）：從它按 Tab 進入
 async function tabIntoGraph(page: Page) {
   await waitForGraphIdle(page, CANVAS);
-  await page.locator(".graph-page .legend input").last().focus();
+  await page.getByRole("group", { name: k.modeLabel }).getByRole("button").last().focus();
   await page.keyboard.press("Tab");
   await expect(frame(page)).toBeFocused();
 }
