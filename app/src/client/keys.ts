@@ -286,7 +286,7 @@ const uiStrings = {
   parenthetical: "required", refusal: "required", refusalNextTitle: "required", refusalNextRephrase: "required",
   refusalNextAskPerson: "required", refusalNextUpload: "required", refusalNextGraph: "required",
   refusalNextOwner: "required", refusalNextRephraseWith: "required", refusalNextRephraseName: "required", refusalGotoUpload: "required", uncited: "required", incomplete: "required", answerRetry: "required",
-  qaProblems: "required", errors: "required", unknownError: "required", home: "required", myUploads: "required", reportResult: "required",
+  qaProblems: "required", errors: "required", unknownError: "required", home: "required", myUploads: "required", presentation: "required", reportResult: "required",
 } satisfies KeyManifest<UiStrings>;
 
 export const i18nManifests: ManifestEntry[] = [
@@ -384,6 +384,16 @@ export const i18nManifests: ManifestEntry[] = [
       moreMembers: "required",
       minRelations: "required",
     } satisfies KeyManifest<UiStrings["graphZoom"]>,
+  },
+  {
+    schema: "i18n.schema.json",
+    pointer: "/properties/presentation",
+    keys: {
+      script: "required",
+      scriptProgress: "required",
+      scriptTotal: "required",
+      scriptAsked: "required",
+    } satisfies KeyManifest<UiStrings["presentation"]>,
   },
   {
     schema: "i18n.schema.json",

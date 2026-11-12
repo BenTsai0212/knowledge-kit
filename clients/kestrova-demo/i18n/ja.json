@@ -601,5 +601,11 @@
     "noItems": "この文書からはエンティティも関係も抽出されませんでした。",
     "reupload": "修正版をアップロード",
     "reuploadNotice": "元のタイトル、言語、公開範囲、プロジェクトを入力しました。修正したファイルを選んで送信すると、新しい文書として再度レビューされます。"
+  },
+  "presentation": {
+    "script": "台本",
+    "scriptProgress": "{total} 問中 {index} 問目",
+    "scriptTotal": "全 {total} 問",
+    "scriptAsked": "質問済み"
   }
 }

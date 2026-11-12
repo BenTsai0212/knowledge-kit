@@ -1,7 +1,7 @@
 // 登入頁的兩條路（#287，docs/design.md「日常工具」的「登入」）：登入頁沒有身分選單；帳號登入（展示）身分固定、不能切換；使用邀請碼體驗與展示模式進入後可以切換。
 // 這個 build 沒有公開碼（線上 demo 的帳號登入見 demo.spec.ts），所以帳號登入也要輸入邀請碼。/api/ask 一律是假的回應。
 import { expect, test, type Page } from "@playwright/test";
-import { ACCESS_CODE, accountOption, blockModelDownload, openApp, presetQuestions, s, signInPanel, switchIdentity } from "./support/app";
+import { ACCESS_CODE, accountOption, blockModelDownload, identitySegments, language, openApp, presetQuestions, s, signInPanel, switchIdentity } from "./support/app";
 import { access } from "./support/client";
 import { routeFakeAsk } from "./support/fake-ask";
 
@@ -73,6 +73,7 @@ test("展示模式：登入頁只有邀請碼，進入後是問答且可以切�
   await page.getByRole("button", { name: s.accessCodeSubmit }).click();
   await expect(page.getByRole("button", { name: presetQuestions[0].text, exact: true })).toBeEnabled();
   const other = access.roles.at(-1)!;
+  // 展示模式的身分是頂端列的分段切換（#260）
   await switchIdentity(page, other.id);
-  await expect(identityMenu(page)).toHaveValue(other.id);
+  await expect(identitySegments(page).getByRole("radio", { name: other.label[language], exact: true })).toBeChecked();
 });

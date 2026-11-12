@@ -3734,6 +3734,8 @@ label.inline {
   --present-control: 56px;
   --present-label: 16px;
   --present-source-width: 620px;
+  --present-topbar: 96px;
+  --present-script-width: 440px;
 }
 
 :root[data-mode="presentation"] body {
@@ -3771,7 +3773,7 @@ label.inline {
 
 /* 原文：從右側滑入、覆蓋在對話上（寬 620px），中間欄不讓出位置 */
 :root[data-mode="presentation"] main.qa.with-panel:has(> .source) {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: var(--present-script-width) minmax(0, 1fr);
 }
 
 :root[data-mode="presentation"] main.qa > .source {
@@ -3786,6 +3788,196 @@ label.inline {
 
 :root[data-mode="presentation"] .source-text {
   font-size: var(--present-source);
+}
+
+/* 頂端列（#260 PR 2，docs/design.md「展示模式」的「版面」）：登入後取代左導覽，內容在下方佔滿 */
+:root[data-mode="presentation"] .app:has(> .presentation-bar) {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+:root[data-mode="presentation"] .presentation-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 2rem;
+  min-height: var(--present-topbar);
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.presentation-bar__brand {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.presentation-bar h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.presentation-bar__labels {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--color-textMuted);
+}
+
+/* 「問答｜圖譜」：橫向的分段切換，選中的底線用 primary */
+.presentation-bar .primary-tabs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.presentation-bar .primary-tabs button {
+  border-left: none;
+  border-bottom: 3px solid transparent;
+  padding: 0 1.25rem;
+}
+
+.presentation-bar .primary-tabs button[aria-current="page"] {
+  border-bottom-color: var(--color-primary);
+}
+
+/* 身分分段切換：每個身分前標快捷鍵數字；選中的一段是 primary 底 */
+.identity-segments {
+  display: flex;
+  margin-left: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  overflow: hidden;
+}
+
+:root[data-mode="presentation"] .identity-segments label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--present-control);
+  position: relative;
+  padding: 0 1.25rem;
+  color: var(--color-text);
+}
+
+.identity-segments label + label {
+  border-left: 1px solid var(--color-border);
+}
+
+:root[data-mode="presentation"] .identity-segments label.is-checked {
+  background: var(--color-primary);
+  color: var(--color-onPrimary);
+  font-weight: 700;
+}
+
+.identity-segments label:has(input:focus-visible) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -4px;
+}
+
+/* 原生 radio 蓋住整段、透明：點哪裡都是點 radio，方向鍵照原生 radio 移動 */
+.identity-segments input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+:root[data-mode="presentation"] .identity-segments kbd {
+  min-width: 1.5em;
+  padding: 0 0.3rem;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-small);
+  font-family: var(--font-mono);
+  font-size: var(--present-label);
+  text-align: center;
+}
+
+/* 劇本切換身分時，目前身分的名稱以 settle 跳一下（減少動態效果時 --motion-settle 是 0ms） */
+.identity-segments__name.is-bump {
+  display: inline-block;
+  animation: kBump var(--motion-settle) var(--ease-spring);
+}
+
+.presentation-bar__language {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* 劇本：問答頁的左欄（440px）；右側面板（實體）打開時是三欄，原文覆蓋時中間欄不讓出位置 */
+:root[data-mode="presentation"] main.qa {
+  grid-template-columns: var(--present-script-width) minmax(0, 1fr);
+}
+
+:root[data-mode="presentation"] main.qa.with-panel {
+  grid-template-columns: var(--present-script-width) minmax(0, 1fr) minmax(20rem, 28rem);
+}
+
+.script {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1rem 1.5rem;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.script__position {
+  margin: 0;
+  font-weight: 700;
+}
+
+.script__scenarios {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.script__scenario h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem;
+  font-size: inherit;
+}
+
+.script ol {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:root[data-mode="presentation"] .script button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: var(--present-control);
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: left;
+}
+
+/* 目前題目：primary 框線與淡底 */
+:root[data-mode="presentation"] .script button[aria-current="step"] {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+}
+
+.script__asked {
+  flex: none;
+  color: var(--color-success);
+  font-weight: 700;
 }
 
 /* 語意模型準備中：縮成頂端的小點，完成後消失（RetrievalNotice 的 compact） */

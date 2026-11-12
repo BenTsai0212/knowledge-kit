@@ -789,6 +789,13 @@ export interface UiStrings {
   };
   // 我的上傳（#284，docs/design.md「日常工具」的「我的上傳」）：上傳頁的兩段、每份的狀態（status*）、送出後的四步進度（step*）、
   // 每一項的結果與重新上傳修正版
+  // 展示模式的劇本（#260，docs/design.md「展示模式」的「版面」）
+  presentation: {
+    script: string;
+    scriptProgress: string;
+    scriptTotal: string;
+    scriptAsked: string;
+  };
   myUploads: {
     tabNew: string;
     tabMine: string;

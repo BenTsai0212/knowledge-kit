@@ -61,9 +61,17 @@ async function inIdentitySheet(page: Page, act: (sheet: Locator) => Promise<unkn
   await expect(sheet).toBeHidden();
 }
 
-// 以左側導覽的身分選單切換身分；手機上從身分徽章打開的面板切換
+// 展示模式的頂端列（#260）：身分是分段切換（radiogroup），每個身分是一個 radio；不論寬度都取代手機的頂端列
+export const identitySegments = (page: Page) => page.getByRole("banner").getByRole("radiogroup", { name: s.identity });
+
+// 以左側導覽的身分選單切換身分；展示模式改用頂端列的身分分段切換，手機上從身分徽章打開的面板切換
 export async function switchIdentity(page: Page, id: RoleId): Promise<void> {
   const role = access.roles.find((r) => r.id === id)!;
+  const segments = identitySegments(page);
+  if ((await segments.count()) > 0) {
+    await segments.getByRole("radio", { name: role.label[language], exact: true }).check();
+    return;
+  }
   const pick = (scope: Locator) => scope.getByLabel(s.identity).selectOption({ label: role.label[language] });
   if (await identityBadge(page).isVisible()) await inIdentitySheet(page, pick);
   else await pick(page.getByRole("banner"));
