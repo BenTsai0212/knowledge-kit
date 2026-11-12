@@ -36,6 +36,15 @@ describe("對話框的退場（#246）", () => {
     expect(dialog.classList.contains(CLOSING_CLASS)).toBe(false);
   });
 
+  it("底部面板指定 base 時，base 之後才關閉（#255）", () => {
+    const dialog = fakeDialog();
+    const scheduled: number[] = [];
+    closeDialog(asDialog(dialog), false, (_fn, ms) => scheduled.push(ms), MOTION.base);
+    expect(scheduled).toEqual([MOTION.base]);
+    closeDialog(asDialog(fakeDialog()), true, (_fn, ms) => scheduled.push(ms), MOTION.base);
+    expect(scheduled).toEqual([MOTION.base]);
+  });
+
   it("減少動態效果時直接關閉，不加 is-closing", () => {
     const dialog = fakeDialog();
     const scheduled: unknown[] = [];

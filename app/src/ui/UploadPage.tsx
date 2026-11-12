@@ -151,7 +151,9 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
     // 減少動態效果時不飛（待審數量直接更新）；沒有「待審」頁籤的身分與展示模式找不到終點，也不飛
     if (window.matchMedia?.(REDUCED_MOTION).matches) return;
     const from = dialog.current?.querySelector('[data-step="review"]');
-    const to = document.querySelector(`${tabSelector("review")} .tab-count`) ?? document.querySelector(tabSelector("review"));
+    // 手機上主管的「待審」收在「更多」，飛向「更多」（#255）
+    const tab = document.querySelector(tabSelector("review")) ?? document.querySelector(tabSelector("more"));
+    const to = tab?.querySelector(".tab-count") ?? tab;
     if (!from || !to) return;
     setFly({ key: written, ...flyPath(from.getBoundingClientRect(), to.getBoundingClientRect(), FLY_SIZE) });
   }, [sent, written]);
