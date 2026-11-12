@@ -7,6 +7,7 @@ import reviewPage from "./ReviewPage.tsx?raw";
 import timelinePage from "./TimelinePage.tsx?raw";
 import app from "../App.tsx?raw";
 import bottomSheet from "./BottomSheet.tsx?raw";
+import sourceSheet from "./SourceSheet.tsx?raw";
 import main from "../main.tsx?raw";
 
 // 全域與進入的動態（#246，docs/design.md「全互動對照表」的「全域」「進入」列）：toast、對話框、邀請碼錯誤、改用關鍵字檢索的提示、
@@ -68,6 +69,21 @@ describe("底部面板（#255）", () => {
     expect(bottomSheet).toContain("closeDialog(d, prefersReducedMotion(), setTimeout, MOTION.base)");
     expect(bottomSheet).toMatch(/onCancel=\{\(e\) => \(e\.preventDefault\(\), close\(e\.currentTarget\)\)\}/);
     expect(bottomSheet).not.toMatch(/\.close\(\)/);
+  });
+});
+
+describe("手機的原文面板（#256）", () => {
+  it("從底部升起（底部面板的 kSheetUp），高 74%；實體面板高 56%", () => {
+    expect(rule(".bottom-sheet.source-sheet")).toMatch(/height: 74dvh;/);
+    expect(rule(".bottom-sheet.mention-sheet")).toMatch(/height: 56dvh;/);
+    expect(sourceSheet).toContain("<BottomSheet");
+    expect(app).toContain("{phone && sourceSheet()}");
+    expect(app).toContain("{!phone && sidePanel()}");
+  });
+
+  it("螢光等面板升起（base）後才刷過；面板開著時換段落與桌機相同（不另外延後）；減少動態效果時 base 是 0ms", () => {
+    expect(rule(".source-sheet .source-text mark.entering")).toMatch(/animation-delay: var\(--motion-base\);/);
+    expect(rule(".source-text mark")).toMatch(/animation: kSweep var\(--motion-sweep\) var\(--ease-enter\) var\(--motion-fast\) backwards;/);
   });
 });
 

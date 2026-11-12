@@ -15,7 +15,8 @@ interface Props {
   language: string;
   turns: readonly Turn[];
   canUpload: boolean;
-  onOpenSource(passageId: string): void;
+  // 引用標號：連同是哪一題（手機原文面板的「出處 N／M」，#256）
+  onOpenSource(passageId: string, turnId: string): void;
   // 目前在原文面板中的段落（#225）
   openPassage: string | null;
   onGotoUpload(): void;
@@ -33,10 +34,12 @@ interface Props {
   onDraft(question: string): void;
   // 拒答的「在圖譜看它」（#285）
   onViewInGraph(entityId: string): void;
+  // 手機原文面板的「回報有錯」（#256）：要回報的題目與要求的次數（每按一次加一）
+  reportRequest?: { turn: string; count: number } | null;
 }
 
 // 問答依序往下累積（#195）；新的一題出現時捲到該題
-export function Conversation({ language, turns, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport, readReport, onAsk, askDisabled, onDraft, onViewInGraph }: Props) {
+export function Conversation({ language, turns, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport, readReport, onAsk, askDisabled, onDraft, onViewInGraph, reportRequest = null }: Props) {
   const s = strings(language);
   const latest = turns.at(-1)?.id;
   const latestRef = useRef<HTMLElement>(null);
@@ -64,7 +67,7 @@ export function Conversation({ language, turns, canUpload, onOpenSource, openPas
             language={language}
             state={turn}
             canUpload={canUpload}
-            onOpenSource={onOpenSource}
+            onOpenSource={(passageId) => onOpenSource(passageId, turn.id)}
             openPassage={openPassage}
             onGotoUpload={onGotoUpload}
             onOpenEntity={onOpenEntity}
@@ -76,6 +79,7 @@ export function Conversation({ language, turns, canUpload, onOpenSource, openPas
             onShorten={() => onDraft(turn.question)}
             onDraft={onDraft}
             onViewInGraph={onViewInGraph}
+            reportRequest={reportRequest?.turn === turn.id ? reportRequest.count : 0}
           />
         ))
       )}

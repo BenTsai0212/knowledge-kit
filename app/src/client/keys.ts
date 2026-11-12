@@ -217,7 +217,7 @@ const uiStrings = {
   questionPlaceholder: "required", askButton: "required", answering: "required", emptyAnswer: "required", emptyAnswerReason: "required", emptyAnswerAction: "required",
   qaIndependent: "required", sessionQuestions: "required", answerMentions: "required", followUpTitle: "required",
   followUpOutgoing: "required", followUpIncoming: "required", viewInGraph: "required",
-  openSource: "required", sourceTitle: "required", closeSource: "required", views: "required", tabQa: "required", tabHome: "required",
+  openSource: "required", sourceTitle: "required", closeSource: "required", sourceStep: "required", sourcePrev: "required", sourceNext: "required", views: "required", tabQa: "required", tabHome: "required",
   tabGraph: "required", legend: "required", graphEmpty: "required", graphEmptyReason: "required", switchIdentity: "required", selectEntity: "required",
   graphExpanded: "required", graphShowAll: "required", graphShowOnly: "required",
   graphSearch: "required", graphSearchNone: "required", graphTopConnected: "required", graphRelationCount: "required",

@@ -17,11 +17,13 @@ interface Props {
   onFollowUp(question: string): void;
   onViewInGraph(entityId: string): void;
   onClose(): void;
+  // 手機（#256）：放在底部面板中，名稱與關閉按鈕在面板的標題列，這裡不另外顯示
+  inSheet?: boolean;
 }
 
 // 右側的實體面板（#195）：名稱、類型、以它為中心的鄰近圖、關係清單、接著問、在圖譜中查看。
 // 名稱與搜尋結果相同，同名的實體加上第一個相關實體的名稱（#198）；鄰近圖只畫小圖，同名以完整的 graph 判斷
-export function MentionPanel({ graph, entityId, language, onSelect, onFollowUp, onViewInGraph, onClose }: Props) {
+export function MentionPanel({ graph, entityId, language, onSelect, onFollowUp, onViewInGraph, onClose, inSheet = false }: Props) {
   const s = strings(language);
   const panel = useRef<HTMLElement>(null);
   // 鄰近圖的 graph 換了才重建 cytoscape，所以以 useMemo 保持同一個物件
@@ -35,16 +37,8 @@ export function MentionPanel({ graph, entityId, language, onSelect, onFollowUp, 
   const name = entityOptionLabel(graph, entity, language);
   const questions = followUps(graph, entityId, language);
 
-  return (
-    <aside ref={panel} className="card entity mention-panel" aria-label={name}>
-      <header>
-        <h2>
-          {name} <span className="badge">{entityTypeLabel(entity.type, language)}</span>
-        </h2>
-        <button type="button" className="link" onClick={onClose}>
-          {s.closeSource}
-        </button>
-      </header>
+  const content = (
+    <>
       <GraphView graph={nearby} labelGraph={graph} language={language} selected={entityId} path={null} compact onSelect={onSelect} />
       <h3>{s.relatedEntities}</h3>
       <ul>
@@ -75,6 +69,26 @@ export function MentionPanel({ graph, entityId, language, onSelect, onFollowUp, 
       <button type="button" className="link" onClick={() => onViewInGraph(entityId)}>
         {s.viewInGraph}
       </button>
+    </>
+  );
+  if (inSheet)
+    return (
+      <div className="entity mention-panel mention-panel--sheet">
+        <span className="badge">{entityTypeLabel(entity.type, language)}</span>
+        {content}
+      </div>
+    );
+  return (
+    <aside ref={panel} className="card entity mention-panel" aria-label={name}>
+      <header>
+        <h2>
+          {name} <span className="badge">{entityTypeLabel(entity.type, language)}</span>
+        </h2>
+        <button type="button" className="link" onClick={onClose}>
+          {s.closeSource}
+        </button>
+      </header>
+      {content}
     </aside>
   );
 }

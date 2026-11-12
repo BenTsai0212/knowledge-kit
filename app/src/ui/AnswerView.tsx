@@ -59,6 +59,8 @@ interface Props {
   onDraft(question: string): void;
   // 拒答的「在圖譜看它」（#285）：切到圖譜頁並選取該實體
   onViewInGraph(entityId: string): void;
+  // 手機原文面板的「回報有錯」（#256）：每按一次加一，打開這一題的回報表單並捲到該題；0 是沒有要求
+  reportRequest?: number;
 }
 
 const { entityTypes } = clientConfig.knowledgeModel;
@@ -66,7 +68,7 @@ const { entityTypes } = clientConfig.knowledgeModel;
 // 回答完成後已播過動態的題目：切換頁籤回來重新掛載時不再播放（#227）
 const settled = new Set<string>();
 
-export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport, readReport, onRetry, retryDisabled, onShorten, onDraft, onViewInGraph }: Props) {
+export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport, readReport, onRetry, retryDisabled, onShorten, onDraft, onViewInGraph, reportRequest = 0 }: Props) {
   const s = strings(language);
   const { answer } = state;
   const stepText: Record<RefusalStep, string> = {
@@ -135,6 +137,21 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
   const doneStep = sentences === null ? 0 : answerDoneStep(sentences.length, streamed.current);
   // 「仍有疑問，再回報一次」：送出後換成新回報的結果
   const [again, setAgain] = useState(false);
+  // 從原文面板要求回報：展開回報表單（已回報過時是「再回報一次」），焦點移到原因、捲到表單（表單在這一題的最後）
+  const focusReport = useRef(false);
+  useEffect(() => {
+    if (reportRequest === 0) return;
+    focusReport.current = true;
+    setAgain(true);
+  }, [reportRequest]);
+  useEffect(() => {
+    if (!again || !focusReport.current) return;
+    focusReport.current = false;
+    const form = document.getElementById(id)?.querySelector<HTMLElement>(".report-form");
+    form?.querySelector("select")?.focus({ preventScroll: true });
+    // 不可寫成 () => …scrollIntoView()（見 Conversation）
+    void form?.scrollIntoView({ block: "nearest" });
+  }, [again, reportRequest]);
 
   return (
     <section id={id} ref={ref} className={classes} style={{ "--done": doneStep } as CSSProperties} aria-live="polite">
@@ -213,6 +230,8 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
         canReport(state) &&
         (state.reportId === undefined || again ? (
           <ReportForm
+            // 從原文面板要求回報時重建成展開的表單（again 只在建立時讀取）
+            key={again ? "again" : "idle"}
             language={language}
             initial={defaultCategory(state)}
             open={again}

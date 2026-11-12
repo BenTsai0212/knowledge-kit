@@ -91,7 +91,8 @@ test.describe("手機寬度", () => {
     expect(nav!.y + nav!.height).toBeCloseTo(844, 0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
+    // 原文是底部面板（#256，詳細見 mobile-qa.spec.ts）
     await answers(page).first().getByRole("button", { name: "1", exact: true }).click();
-    await expect(sourcePanel(page).locator("mark")).toBeInViewport();
+    await expect(page.locator("dialog.source-sheet mark")).toBeInViewport();
   });
 });
