@@ -3119,6 +3119,8 @@ label.inline {
   margin: 0;
   padding: 0;
   display: grid;
+  /* 隱含的 auto 欄會被不換行的長標題撐寬，固定為容器寬度才會截斷（#288） */
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.5rem;
 }
 
@@ -3147,6 +3149,8 @@ label.inline {
   margin: 0;
   padding: 0;
   display: grid;
+  /* 隱含的 auto 欄會被不換行的長標題撐寬，固定為容器寬度才會截斷（#288） */
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.5rem;
 }
 
@@ -3171,6 +3175,8 @@ label.inline {
   margin: 0;
   padding: 0;
   display: grid;
+  /* 隱含的 auto 欄會被不換行的長標題撐寬，固定為容器寬度才會截斷（#288） */
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
 }
 

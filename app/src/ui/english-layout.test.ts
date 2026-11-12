@@ -102,6 +102,10 @@ describe("首頁", () => {
   it("欄寬是 minmax(0, 1fr)：截斷的長標題不會把卡片撐出畫面", () => {
     expect(rules().find((r) => r.selector === ".home" && r.media === null)?.decls["grid-template-columns"]).toBe("minmax(0, 1fr)");
   });
+
+  it.each([".home__recent ul", ".home__asked ul", ".home__updates ul"])("%s 的欄寬是 minmax(0, 1fr)：不換行的長標題以省略號截斷", (selector) => {
+    expect(rules().find((r) => r.selector === selector && r.media === null)?.decls["grid-template-columns"]).toBe("minmax(0, 1fr)");
+  });
 });
 
 describe("排版規則", () => {
