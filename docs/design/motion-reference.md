@@ -64,3 +64,11 @@
 | `kFloat` | 主視覺的 SVG 以 `viewBox="0 0 100 100"` 為單位，畫布的 `-5px` 在這裡約是場景的 5%；保留畫布的節奏，位移縮小 | `0%,100%{transform:translate(0,0)}50%{transform:translate(0,-0.8px)}` |
 | `kFlyTo` | 畫布的起點寫死畫布座標 `translate(560px,600px)`；實際畫面中「人工審核」步驟與導覽「待審」的距離依視窗大小而定，起點依實際版面計算，以 CSS 變數帶入（#242 PR 3） | `0%{opacity:0;transform:translate(var(--fly-x),var(--fly-y)) scale(.6)}12%{opacity:1}88%{opacity:1}100%{opacity:0;transform:none}` |
 | `kGlow` | 光暈是 SVG 的圓，`box-shadow` 對 SVG 無效；改以圓的不透明度與縮放呈現 | `0%,100%{opacity:0;transform:scale(.6)}50%{opacity:1;transform:scale(1)}` |
+
+## 參考檔以外的 keyframes
+
+參考檔沒有、實作另外加入的 `@keyframes`。名稱不與參考檔重複，不在照抄的檢查範圍內；寫法由 `app/src/ui/review-page.test.ts` 比對。
+
+| 名稱 | 用途 | 實作的寫法 |
+| --- | --- | --- |
+| `kOutLeft` | 待審的「退回」往左淡出（`docs/design.md`「全互動對照表」的「待審」列）。參考檔的 `kOut` 往右，留給「核准全部」（#243 決定 3） | `to{opacity:0;transform:translateX(-56px)}` |

@@ -869,6 +869,11 @@ main.qa > .source .source-text mark.entering {
   font-weight: 400;
 }
 
+/* 橫向捲動的容器會裁掉往外畫的焦點框（#243 PR 2 審查）：分頁的焦點框畫在內側 */
+.review-tabs [role="tab"]:focus-visible {
+  outline-offset: -2px;
+}
+
 .review-tabs [role="tab"][aria-selected="true"] {
   border-bottom-color: var(--color-text);
   color: var(--color-text);
@@ -1865,6 +1870,7 @@ label.inline {
 }
 
 .review-choice__card {
+  position: relative;
   display: grid;
   align-content: start;
   gap: 0.35rem;
@@ -1891,6 +1897,84 @@ label.inline {
   align-items: center;
   gap: 0.5rem;
   cursor: pointer;
+}
+
+/* 待審的列動態（#243 PR 3，motion-reference.css「動態 · 審核與說法不同」）：時間只用 --motion-*，減少動態效果時都是 0ms。
+   清單逐列升起（kRise，--i 是 staggerIndex，第 7 列起不再延遲）；核准一筆時列收合（kCollapse）；退回往左淡出（kOutLeft）；
+   撤銷後回到待審的列在原位重新展開（kExpand）。列是單一列的 grid，收合與展開時內容以 min-height: 0 裁切；
+   內容多 4px 內距、外推 4px，焦點框不會被裁掉 */
+.review-item {
+  position: relative;
+  top: 0;
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: kRise var(--motion-base) var(--ease-enter) calc(var(--i, 0) * var(--motion-stagger-list)) both;
+}
+
+.review-item > .review-item__body {
+  min-width: 0;
+}
+
+.review-item.is-collapsing > .review-item__body,
+.review-item.is-restored > .review-item__body,
+.review-expand > .review-choice {
+  min-height: 0;
+  overflow: hidden;
+  padding: 4px;
+  margin: -4px;
+}
+
+.review-item.is-collapsing {
+  animation: kCollapse var(--motion-expand) var(--ease-exit) forwards;
+}
+
+.review-item.is-leaving {
+  animation: kOutLeft var(--motion-fast) var(--ease-exit) forwards;
+}
+
+.review-item.is-restored {
+  animation: kExpand var(--motion-expand) var(--ease-enter) backwards;
+}
+
+/* 合併選擇在列內展開（kExpand）；選擇合併時，卡片頂端由左畫出連線（.a-grow：kGrow、sweep） */
+.review-expand {
+  display: grid;
+  grid-template-rows: 1fr;
+  margin-top: 0.5rem;
+  animation: kExpand var(--motion-expand) var(--ease-enter) backwards;
+}
+
+.review-choice__link {
+  position: absolute;
+  top: -1px;
+  left: 0.75rem;
+  right: 0.75rem;
+  height: 2px;
+  background: var(--color-primary);
+  transform-origin: left center;
+  animation: kGrow var(--motion-sweep) var(--ease-enter) backwards;
+}
+
+@keyframes kExpand {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+
+@keyframes kCollapse {
+  to {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+
+/* 退回往左淡出：參考檔的 kOut 往右、留給「核准全部」，往左另取名稱（motion-reference.md「參考檔以外的 keyframes」） */
+@keyframes kOutLeft {
+  to {
+    opacity: 0;
+    transform: translateX(-56px);
+  }
 }
 
 .review-prepared > summary {

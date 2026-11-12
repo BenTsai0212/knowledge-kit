@@ -4,6 +4,8 @@
 // 設計系統 v1（#243）：底線式分頁、文件卡片的頁首（右側是待確認的組數與「核准這份文件的全部」）、textMuted 的組名，
 // 沒有需要確認項目的文件可以收合。合併選擇是列內展開的兩張單選卡（合併到既有實體、建立新實體）；名稱缺少語言時列加 warning 細框、
 // 展開各語言的名稱欄位；說法不同兩種說法並排、下方三個決定按鈕。窄螢幕的分頁單行、橫向捲動。
+// 列的動態（#243 PR 3，review-motion.ts）：逐列升起；合併選擇列內展開並畫出連線；核准一筆時列收合、退回往左淡出，
+// 動畫播完才寫入；撤銷時列在原位重新展開、短提示原地換掉文字。
 // 每筆一行，按「編輯名稱」才可以修改；出處點開才顯示，預設 2 行、標出實體名稱；核准或退回後顯示短提示（#48），附「撤銷」（ADR 0007 決定 4）。
 // 每份文件另有「說法不同」區塊（#51）：新舊段落並列、三選一處理；已處理的在「已處理的說法不同」分頁。
 // 「回報」分頁是問答的回答錯誤回報（ADR 0007 決定 7，ReportList.tsx）。
@@ -46,6 +48,8 @@ import {
 } from "./review-helpers";
 import { fill, strings } from "../client/i18n";
 import { createToastTimer, type ToastTimer } from "./toast-timer";
+import { REDUCED_MOTION, staggerIndex } from "./motion";
+import { exitThenWrite, rowClass, rowExitDelay, withExit, type RowExit } from "./review-motion";
 import { entityTypeShape } from "./timeline-view";
 
 interface Props {
@@ -63,6 +67,12 @@ interface Props {
   // 回報中的實體：切到圖譜頁並選取該實體
   onViewInGraph(entityId: string): void;
 }
+
+// 撤銷的對象：決定 id 與這次寫入的項目 id（撤銷後這些列在原位重新展開，#243）
+type UndoTarget = { docId: string; decisions: string[]; items: string[] };
+
+const prefersReducedMotion = () => window.matchMedia?.(REDUCED_MOTION).matches ?? false;
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 // 短提示自動消失的時間；滑鼠停在提示上或焦點在提示內時暫停（toast-timer.ts，#48 審查）
 const TOAST_MS = 10_000;
@@ -106,11 +116,16 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   const firstOpen = useRef(new Map<string, boolean>());
   // graph：附「到圖譜查看」（只有核准；退回的項目不會出現在圖譜）。undo：這次寫入的決定，附「撤銷」（ADR 0007 決定 4）。
   // id 每次遞增，當作 key：文字與上一次相同時也重新掛載，重新播放進場動畫（#48 審查第 2 次）
-  const [toast, setToast] = useState<{ id: number; text: string; graph: boolean; undo?: { docId: string; decisions: string[] } } | null>(null);
+  // 撤銷時文字原地換掉、id 不變，不重新掛載（#243）
+  const [toast, setToast] = useState<{ id: number; text: string; graph: boolean; undo?: UndoTarget } | null>(null);
   const toastId = useRef(0);
   const toastTimer = useRef<ToastTimer | null>(null);
   // 連點時 state 還沒更新，以 ref 確保同時只有一個核准或退回在進行（比照 #42）
   const working = useRef(false);
+  // 列的動態（#243，review-motion.ts）：離開中的列（核准收合、退回往左淡出）留到新的資料讀回來；
+  // 撤銷後回到待審的列重新展開。restored 不清空：換 class 會讓列重播逐列升起，列離開時自然卸載
+  const [leaving, setLeaving] = useState<ReadonlyMap<string, RowExit>>(new Map());
+  const [restored, setRestored] = useState<ReadonlySet<string>>(new Set());
   const reads = useRef(createRequestGate());
   const [version, setVersion] = useState(0);
 
@@ -119,6 +134,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
     void Promise.all([readReview(db, identity), readGraph(db, identity), readConflicts(db, identity), readReports(db, identity)]).then(([d, g, c, r]) => {
       if (!ticket.isCurrent()) return;
       setDocs(reviewDocuments(d, c));
+      setLeaving(new Map());
       setConflicts(c);
       setGraph(g);
       setReports(r);
@@ -171,17 +187,38 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   };
   const languageNames = new Intl.DisplayNames([language], { type: "language" });
 
-  // done：成功後的短提示；undoable 時 action 回傳的決定 id 交給「撤銷」
-  async function run(docId: string, action: () => Promise<string[] | void>, done: { text: string; graph: boolean; undoable?: boolean }, skipped = 0) {
+  // done：成功後的短提示；undoable 時 action 回傳的決定 id 交給「撤銷」。
+  // motion（#243）：exit 是要退場的列與方式（先播完再寫入，失敗時列回到原狀），items 是這次寫入的項目（撤銷時重新展開），
+  // restore 是撤銷後回到待審的列；inPlace 時短提示原地換掉文字、不重新掛載
+  async function run(
+    docId: string,
+    action: () => Promise<string[] | void>,
+    done: { text: string; graph: boolean; undoable?: boolean },
+    skipped = 0,
+    motion: { exit?: { ids: string[]; kind: RowExit }; items?: string[]; restore?: string[]; inPlace?: boolean } = {},
+  ) {
     if (working.current) return;
     working.current = true;
     setBusy(true);
     setNotice(skipped > 0 ? { docId, skipped } : null);
-    setToast(null);
+    if (!motion.inPlace) setToast(null);
+    const exit = motion.exit;
     try {
-      const decisions = await action();
-      const undo = done.undoable && Array.isArray(decisions) && decisions.length > 0 ? { docId, decisions } : undefined;
-      setToast({ text: done.text, graph: done.graph, undo, id: ++toastId.current });
+      const decisions = await exitThenWrite({
+        delay: exit === undefined ? 0 : rowExitDelay(prefersReducedMotion(), exit.kind),
+        wait,
+        mark: () => {
+          if (exit !== undefined) setLeaving((cur) => withExit(cur, exit.ids, exit.kind));
+        },
+        restore: () => {
+          if (exit !== undefined) setLeaving((cur) => withExit(cur, exit.ids, null));
+        },
+        write: action,
+      });
+      const undo = done.undoable && Array.isArray(decisions) && decisions.length > 0 ? { docId, decisions, items: motion.items ?? [] } : undefined;
+      const back = motion.restore;
+      if (back !== undefined) setRestored((cur) => new Set([...cur, ...back]));
+      setToast((cur) => ({ text: done.text, graph: done.graph, undo, id: motion.inPlace && cur !== null ? cur.id : ++toastId.current }));
     } catch (e) {
       setNotice({ docId, skipped, error: e instanceof ReviewError ? s.reviewErrors[e.reason] : s.unknownError });
     } finally {
@@ -191,7 +228,13 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
     }
   }
   // skippedCount：批次核准時因名稱不完整而略過的筆數（逐筆核准時為 0，清除先前的提示）
-  const approveItems = (docId: string, items: { entities: EntityApproval[]; relations: string[]; existingRelations?: string[] }, skippedCount = 0) =>
+  // exitIds：核准時收合的列（一組或一筆，#243）；「核准這份文件的全部」不在這裡收合
+  const approveItems = (
+    docId: string,
+    items: { entities: EntityApproval[]; relations: string[]; existingRelations?: string[] },
+    skippedCount = 0,
+    exitIds: string[] = [],
+  ) =>
     run(
       docId,
       () => approve(db, identity, items, { defaultLanguage: client.defaultLanguage }),
@@ -204,18 +247,36 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
         undoable: true,
       },
       skippedCount,
+      {
+        exit: exitIds.length > 0 ? { ids: exitIds, kind: "collapse" } : undefined,
+        items: [...items.entities.map((e) => e.id), ...items.relations, ...(items.existingRelations ?? [])],
+      },
     );
-  const approveBatch = (docId: string, plan: ReturnType<typeof batchPlan>) =>
-    void approveItems(docId, { entities: plan.entities, relations: plan.relations, existingRelations: plan.existingRelations }, plan.skipped);
-  const rejectItems = (docId: string, items: { entities: string[]; relations: string[] }) =>
-    run(docId, () => reject(db, identity, items), {
-      text: toastText({ one: s.reviewToastRejectedOne, many: s.reviewToastRejected }, itemLabels(docId, items.entities, items.relations)),
-      graph: false,
-      undoable: true,
-    });
-  // 撤銷：撤回剛寫入的每一筆決定（退回時含一併退回的關係），項目回到待審
-  const undo = (target: { docId: string; decisions: string[] }) =>
-    void run(target.docId, () => retract(db, identity, target.decisions), { text: s.reviewToastUndone, graph: false });
+  const approveBatch = (docId: string, plan: ReturnType<typeof batchPlan>, exitIds: string[] = []) =>
+    void approveItems(docId, { entities: plan.entities, relations: plan.relations, existingRelations: plan.existingRelations }, plan.skipped, exitIds);
+  // 退回：列往左淡出（#243）
+  const rejectItems = (docId: string, items: { entities: string[]; relations: string[] }) => {
+    const ids = [...items.entities, ...items.relations];
+    return run(
+      docId,
+      () => reject(db, identity, items),
+      {
+        text: toastText({ one: s.reviewToastRejectedOne, many: s.reviewToastRejected }, itemLabels(docId, items.entities, items.relations)),
+        graph: false,
+        undoable: true,
+      },
+      0,
+      { exit: { ids, kind: "out" }, items: ids },
+    );
+  };
+  // 撤銷：撤回剛寫入的每一筆決定（退回時含一併退回的關係），項目回到待審、列在原位重新展開；短提示原地換掉文字（#243）
+  const undo = (target: UndoTarget) =>
+    void run(target.docId, () => retract(db, identity, target.decisions), { text: s.reviewToastUndone, graph: false }, 0, { restore: target.items, inPlace: true });
+  // 列（li）的 class 與依序出現的格數（#243）：逐列升起，第 7 列起不再延遲
+  const itemProps = (id: string, index: number) => ({
+    className: rowClass(id, leaving, restored),
+    style: { "--i": staggerIndex(index) } as CSSProperties,
+  });
 
   const nameOf = (doc: ReviewDocument, id: string) => {
     const e = doc.entities.find((x) => x.id === id);
@@ -382,30 +443,34 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
             </span>
           )}
         </div>
-        {/* 合併選擇（#243）：兩張單選卡，同一組 radio；候選有多個時「合併到既有實體」卡內逐一列出 */}
+        {/* 合併選擇（#243）：兩張單選卡，同一組 radio；候選有多個時「合併到既有實體」卡內逐一列出。
+            列內展開（kExpand）；選擇合併時卡片頂端由左畫出連線（kGrow，換對象時重畫） */}
         {shown && (
-          <div className="review-choice" id={choiceId} role="radiogroup" aria-label={pendingName(e, language)}>
-            <div className={card === "merge" ? "review-choice__card is-selected" : "review-choice__card"}>
-              <span className="review-choice__title">
-                {s.reviewMergeInto}
-                {(mark === "suggested" || mark === "auto") && <span className="review-mark">{markLabels[mark]}</span>}
-              </span>
-              {candidates.map((id) => {
-                const target = graph.entities.find((x) => x.id === id);
-                return (
-                  <label key={id} className="review-choice__option">
-                    <input type="radio" name={choiceId} checked={choice.mergeInto === id} disabled={busy} onChange={() => pick(id)} />
-                    {target ? entityOptionLabel(graph, target, language) : id}
-                  </label>
-                );
-              })}
+          <div className="review-expand">
+            <div className="review-choice" id={choiceId} role="radiogroup" aria-label={pendingName(e, language)}>
+              <div className={card === "merge" ? "review-choice__card is-selected" : "review-choice__card"}>
+                {card === "merge" && <span key={choice.mergeInto} className="review-choice__link" aria-hidden="true" />}
+                <span className="review-choice__title">
+                  {s.reviewMergeInto}
+                  {(mark === "suggested" || mark === "auto") && <span className="review-mark">{markLabels[mark]}</span>}
+                </span>
+                {candidates.map((id) => {
+                  const target = graph.entities.find((x) => x.id === id);
+                  return (
+                    <label key={id} className="review-choice__option">
+                      <input type="radio" name={choiceId} checked={choice.mergeInto === id} disabled={busy} onChange={() => pick(id)} />
+                      {target ? entityOptionLabel(graph, target, language) : id}
+                    </label>
+                  );
+                })}
+              </div>
+              <label className={card === "new" ? "review-choice__card is-selected" : "review-choice__card"}>
+                <span className="review-choice__option">
+                  <input type="radio" name={choiceId} checked={choice.mergeInto === null} disabled={busy} onChange={() => pick(null)} />
+                  <span className="review-choice__title">{s.reviewCreateNew}</span>
+                </span>
+              </label>
             </div>
-            <label className={card === "new" ? "review-choice__card is-selected" : "review-choice__card"}>
-              <span className="review-choice__option">
-                <input type="radio" name={choiceId} checked={choice.mergeInto === null} disabled={busy} onChange={() => pick(null)} />
-                <span className="review-choice__title">{s.reviewCreateNew}</span>
-              </span>
-            </label>
           </div>
         )}
         {shown && card === "merge" && <p className="muted review-hint">{s.reviewMergeHint}</p>}
@@ -611,26 +676,30 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                     {/* 需要你確認的組：一組一個實體，關係掛在它底下；「確認」一併核准已經可以核准的關係 */}
                     {g.groups.length > 0 && (
                       <ul className="review-list">
-                        {g.groups.map((group) => {
+                        {g.groups.map((group, gi) => {
                           const plan = groupPlan(doc, group, g.prepared.entities, suggestions, allChoices, client.languages);
                           const waiting = waitingRelations(doc, group, g.prepared.entities, suggestions, allChoices, client.languages);
                           const relationCount = plan === null ? 0 : plan.relations.length + plan.existingRelations.length;
                           return (
-                            <li key={group.entity.id}>
-                              {entityRow(doc, group.entity, {
-                                confirm: () => {
-                                  if (plan) void approveItems(doc.id, plan);
-                                },
-                                confirmLabel: relationCount > 0 ? fill(s.reviewConfirmWithRelations, { count: relationCount }, language) : s.reviewConfirm,
-                                confirmDisabled: plan === null,
-                              })}
-                              {group.relations.length > 0 && (
-                                <ul className="review-rows">
-                                  {group.relations.map((x) => (
-                                    <li key={x.relation.id}>{relationRow(doc, x.relation, { existing: x.existing, waiting: waiting.has(x.relation.id) })}</li>
-                                  ))}
-                                </ul>
-                              )}
+                            <li key={group.entity.id} {...itemProps(group.entity.id, gi)}>
+                              <div className="review-item__body">
+                                {entityRow(doc, group.entity, {
+                                  confirm: () => {
+                                    if (plan) void approveItems(doc.id, plan, 0, [group.entity.id]);
+                                  },
+                                  confirmLabel: relationCount > 0 ? fill(s.reviewConfirmWithRelations, { count: relationCount }, language) : s.reviewConfirm,
+                                  confirmDisabled: plan === null,
+                                })}
+                                {group.relations.length > 0 && (
+                                  <ul className="review-rows">
+                                    {group.relations.map((x, i) => (
+                                      <li key={x.relation.id} {...itemProps(x.relation.id, i)}>
+                                        <div className="review-item__body">{relationRow(doc, x.relation, { existing: x.existing, waiting: waiting.has(x.relation.id) })}</div>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
                             </li>
                           );
                         })}
@@ -645,20 +714,24 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                           {preparedMerges && <span className="muted"> {s.reviewPreparedMergeHint}</span>}
                         </summary>
                         <ul className="review-rows">
-                          {g.prepared.entities.map((e) => {
+                          {g.prepared.entities.map((e, i) => {
                             const plan = batchPlan(doc, suggestions, allChoices, client.languages, graph, new Set([e.id]));
                             return (
-                              <li key={e.id}>
-                                {entityRow(doc, e, {
-                                  confirm: () => approveBatch(doc.id, plan),
-                                  confirmLabel: s.reviewApprove,
-                                  confirmDisabled: plan.entities.length === 0,
-                                })}
+                              <li key={e.id} {...itemProps(e.id, i)}>
+                                <div className="review-item__body">
+                                  {entityRow(doc, e, {
+                                    confirm: () => approveBatch(doc.id, plan, [e.id]),
+                                    confirmLabel: s.reviewApprove,
+                                    confirmDisabled: plan.entities.length === 0,
+                                  })}
+                                </div>
                               </li>
                             );
                           })}
-                          {g.prepared.relations.map((x) => (
-                            <li key={x.relation.id}>{relationRow(doc, x.relation, { existing: x.existing })}</li>
+                          {g.prepared.relations.map((x, i) => (
+                            <li key={x.relation.id} {...itemProps(x.relation.id, g.prepared.entities.length + i)}>
+                              <div className="review-item__body">{relationRow(doc, x.relation, { existing: x.existing })}</div>
+                            </li>
                           ))}
                         </ul>
                       </details>
@@ -669,16 +742,20 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                 {rejectedEntities.length > 0 && <h3 className="review-group-title">{s.reviewEntities}</h3>}
                 {rejectedEntities.length > 0 && (
                   <ul className="review-rows">
-                    {rejectedEntities.map((e) => (
-                      <li key={e.id}>{entityRow(doc, e, {})}</li>
+                    {rejectedEntities.map((e, i) => (
+                      <li key={e.id} {...itemProps(e.id, i)}>
+                        <div className="review-item__body">{entityRow(doc, e, {})}</div>
+                      </li>
                     ))}
                   </ul>
                 )}
                 {rejectedRelations.length > 0 && <h3 className="review-group-title">{s.reviewRelations}</h3>}
                 {rejectedRelations.length > 0 && (
                   <ul className="review-rows">
-                    {rejectedRelations.map((r) => (
-                      <li key={r.id}>{relationRow(doc, r, {})}</li>
+                    {rejectedRelations.map((r, i) => (
+                      <li key={r.id} {...itemProps(r.id, i)}>
+                        <div className="review-item__body">{relationRow(doc, r, {})}</div>
+                      </li>
                     ))}
                   </ul>
                 )}
@@ -686,25 +763,27 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                 {/* 說法不同（#51）：新舊段落左右並列，附模型的差異說明（純文字）；待審分頁有三個處理按鈕，已處理分頁顯示決定 */}
                 {docConflicts.length > 0 && <h3 className="review-group-title">{s.conflictSection}</h3>}
                 <ul className="review-list">
-                  {docConflicts.map((c) => (
-                    <li key={c.id}>
-                      <p className="conflict-summary" lang={c.newPassage.language}>
-                        {c.summary}
-                      </p>
-                      {c.decision !== null && <span className="badge">{s.conflictDecisions[c.decision]}</span>}
-                      <div className="conflict-pair">
-                        {conflictSide(s.conflictNew, c.newPassage)}
-                        {conflictSide(s.conflictOld, c.oldPassage)}
-                      </div>
-                      {c.decision === null && (
-                        <div className="conflict-actions">
-                          {CONFLICT_DECISIONS.map((d) => (
-                            <button key={d} type="button" className={d === "not_conflict" ? "secondary" : undefined} disabled={busy} onClick={() => decide(doc.id, c.id, d)}>
-                              {busy ? s.reviewWorking : s.conflictDecisions[d]}
-                            </button>
-                          ))}
+                  {docConflicts.map((c, i) => (
+                    <li key={c.id} {...itemProps(c.id, i)}>
+                      <div className="review-item__body">
+                        <p className="conflict-summary" lang={c.newPassage.language}>
+                          {c.summary}
+                        </p>
+                        {c.decision !== null && <span className="badge">{s.conflictDecisions[c.decision]}</span>}
+                        <div className="conflict-pair">
+                          {conflictSide(s.conflictNew, c.newPassage)}
+                          {conflictSide(s.conflictOld, c.oldPassage)}
                         </div>
-                      )}
+                        {c.decision === null && (
+                          <div className="conflict-actions">
+                            {CONFLICT_DECISIONS.map((d) => (
+                              <button key={d} type="button" className={d === "not_conflict" ? "secondary" : undefined} disabled={busy} onClick={() => decide(doc.id, c.id, d)}>
+                                {busy ? s.reviewWorking : s.conflictDecisions[d]}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </li>
                   ))}
                 </ul>

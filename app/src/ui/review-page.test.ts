@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import css from "./app.css?raw";
 import reviewPage from "./ReviewPage.tsx?raw";
+import referenceDoc from "../../../docs/design/motion-reference.md?raw";
 
 const cssText = css.replace(/\/\*[\s\S]*?\*\//g, "");
 
@@ -75,5 +76,35 @@ describe("逐筆決定與說法不同（#243 PR 2）", () => {
   it("說法不同：兩種說法並排，下方是決定按鈕", () => {
     expect(rule(".conflict-pair")["grid-template-columns"]).toBe("1fr 1fr");
     expect(reviewPage.indexOf('className="conflict-pair"')).toBeLessThan(reviewPage.indexOf('className="conflict-actions"'));
+  });
+});
+
+describe("列的動態（#243 PR 3）", () => {
+  it("逐列升起、核准收合、退回往左淡出、撤銷重新展開；時間只用 --motion-*", () => {
+    expect(rule(".review-item").animation).toBe("kRise var(--motion-base) var(--ease-enter) calc(var(--i, 0) * var(--motion-stagger-list)) both");
+    expect(rule(".review-item.is-collapsing").animation).toBe("kCollapse var(--motion-expand) var(--ease-exit) forwards");
+    expect(rule(".review-item.is-leaving").animation).toBe("kOutLeft var(--motion-fast) var(--ease-exit) forwards");
+    expect(rule(".review-item.is-restored").animation).toBe("kExpand var(--motion-expand) var(--ease-enter) backwards");
+    expect(rule(".review-expand").animation).toBe("kExpand var(--motion-expand) var(--ease-enter) backwards");
+    expect(rule(".review-choice__link").animation).toBe("kGrow var(--motion-sweep) var(--ease-enter) backwards");
+    expect(reviewPage).toContain("staggerIndex(");
+  });
+
+  it("kOutLeft 是往左的 kOut，寫在 motion-reference.md", () => {
+    const flat = (text: string) => text.replace(/\s+/g, "").replace(/;\}/g, "}");
+    expect(flat(cssText)).toContain("@keyframeskOutLeft{to{opacity:0;transform:translateX(-56px)}}");
+    expect(referenceDoc).toContain("| `kOutLeft` |");
+    expect(referenceDoc).toContain("`to{opacity:0;transform:translateX(-56px)}`");
+  });
+
+  it("撤銷時短提示原地換掉文字，不重新掛載", () => {
+    expect(reviewPage).toContain("restore: target.items, inPlace: true");
+    expect(reviewPage).toContain("id: motion.inPlace && cur !== null ? cur.id : ++toastId.current");
+  });
+});
+
+describe("窄螢幕的分頁焦點框（#243 PR 2 審查）", () => {
+  it("焦點框畫在內側，不被橫向捲動的容器裁掉", () => {
+    expect(rule('.review-tabs [role="tab"]:focus-visible')["outline-offset"]).toBe("-2px");
   });
 });
