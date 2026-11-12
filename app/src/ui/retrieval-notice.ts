@@ -20,6 +20,10 @@ export function retrievalNotice(preparesModel: boolean, status: ProviderStatus):
   return { kind: "downloading", loaded: progress.loaded, total: progress.total };
 }
 
+// 展示模式（#260，docs/design.md「隱藏與保留」）：準備中（載入、下載）縮成頂端一個小點，完成後消失；降級的提示照常顯示
+export const showsAsDot = (notice: RetrievalNoticeState | null, compact: boolean): boolean =>
+  compact && (notice?.kind === "loading" || notice?.kind === "downloading");
+
 // 以 MB（1024 × 1024 bytes）顯示、到小數一位；ADR 0006 的「約 129 MB」用同一個單位
 export const megabytes = (bytes: number) => (bytes / (1024 * 1024)).toFixed(1);
 

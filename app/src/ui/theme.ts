@@ -50,6 +50,19 @@ export function followColorScheme(
   return () => query.removeEventListener("change", listener);
 }
 
+// 展示模式（#260，docs/design.md「字級與主題」）：預設 Light、不跟隨系統（投影機在有燈光的會議室裡，深色畫面容易灰掉）。
+// 一般模式依系統設定（followColorScheme）。回傳取消監聽的函式
+export function startColorScheme(
+  presentation: boolean,
+  matchMedia: (query: string) => MediaQueryList,
+  root: Pick<Element, "setAttribute">,
+  change: (apply: () => void) => void,
+): () => void {
+  if (!presentation) return followColorScheme(matchMedia, root, change);
+  root.setAttribute(SCHEME_ATTRIBUTE, "light");
+  return () => {};
+}
+
 // root 的淺色／深色標記改變後呼叫 onChange（例如重新套用 cytoscape 的配色）；回傳取消監聽的函式
 export function watchColorScheme(root: Node, onChange: () => void, Observer: typeof MutationObserver = MutationObserver): () => void {
   const observer = new Observer(() => onChange());

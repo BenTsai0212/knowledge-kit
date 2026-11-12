@@ -3439,3 +3439,83 @@ label.inline {
     animation-name: kUp;
   }
 }
+
+/* 展示模式（#260，docs/design.md「展示模式」的「字級與主題」）：main.tsx 在 <html> 標上 data-mode="presentation"。
+   只覆蓋字級與尺寸（--present-*），顏色 token 不變；一般模式的規則不讀這些變數，所以不受影響（presentation.test.ts 檢查）。
+   圖譜節點標籤（18px、選取 26px）畫在 cytoscape 上，由 graph-style.ts 處理（#260 PR 3） */
+:root[data-mode="presentation"] {
+  --present-body: 20px;
+  --present-question: 36px;
+  --present-question-weight: 700;
+  --present-answer: 28px;
+  --present-answer-line-height: 1.7;
+  --present-citation: 36px;
+  --present-source: 22px;
+  --present-control: 56px;
+  --present-label: 16px;
+  --present-source-width: 620px;
+}
+
+:root[data-mode="presentation"] body {
+  font-size: var(--present-body);
+}
+
+:root[data-mode="presentation"] .answer > h2 {
+  font-size: var(--present-question);
+  font-weight: var(--present-question-weight);
+}
+
+:root[data-mode="presentation"] .answer-text {
+  font-size: var(--present-answer);
+  line-height: var(--present-answer-line-height);
+}
+
+/* 引用標號：36px 高，與回答文字置中對齊（不再上標），仍是證據色系 */
+:root[data-mode="presentation"] button.citation {
+  min-width: var(--present-citation);
+  height: var(--present-citation);
+  line-height: var(--present-citation);
+  font-size: var(--present-body);
+  vertical-align: middle;
+}
+
+/* 頁籤、身分、按鈕：56px 高（文字連結與引用標號除外） */
+:root[data-mode="presentation"] :is(button:not(.link, .citation), select, .primary-tabs button) {
+  min-height: var(--present-control);
+}
+
+/* 「虛構資料」「展示用權限」等標示：16px，不縮小（RFC 0001） */
+:root[data-mode="presentation"] :is(.badge, .access-badge) {
+  font-size: var(--present-label);
+}
+
+/* 原文：從右側滑入、覆蓋在對話上（寬 620px），中間欄不讓出位置 */
+:root[data-mode="presentation"] main.qa.with-panel:has(> .source) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+:root[data-mode="presentation"] main.qa > .source {
+  position: fixed;
+  inset: 0 0 0 auto;
+  z-index: 20;
+  width: min(var(--present-source-width), 100vw);
+  margin: 0;
+  border-radius: 0;
+  box-shadow: -4px 0 16px color-mix(in srgb, var(--color-overlay) 25%, transparent);
+}
+
+:root[data-mode="presentation"] .source-text {
+  font-size: var(--present-source);
+}
+
+/* 語意模型準備中：縮成頂端的小點，完成後消失（RetrievalNotice 的 compact） */
+.model-dot {
+  position: fixed;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 10;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+}

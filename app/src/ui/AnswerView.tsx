@@ -46,7 +46,8 @@ interface Props {
   onOpenEntity(graph: Graph, entityId: string): void;
   openEntity: OpenEntity | null;
   // 「回報有錯」（ADR 0007 決定 7）：寫入失敗時 reject
-  onReport(category: ReportCategory, note: string): Promise<void>;
+  // 沒有時不顯示「回報有錯」與回報結果（展示模式，#260）
+  onReport?(category: ReportCategory, note: string): Promise<void>;
   // 回答下方的回報結果（#286）：以目前身分讀取這一題送出的回報；讀不到時為 null
   readReport(reportId: string): Promise<AnswerReport | null>;
   // 回答中斷或失敗時的「重新提問」：以同一個問題再問一次（新的一題）；回答中不能按
@@ -208,7 +209,8 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
           </button>
         </p>
       )}
-      {canReport(state) &&
+      {onReport !== undefined &&
+        canReport(state) &&
         (state.reportId === undefined || again ? (
           <ReportForm
             language={language}
@@ -233,7 +235,7 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
 
 // 「回報有錯」：按下後展開原因與選填說明；送出後只留下提示（回答下方改顯示回報結果，#286）。
 // open：一開始就展開（再回報一次）；onCancel：取消時改由呼叫端處理（回到回報結果）
-export function ReportForm({ language, initial, onReport, open: initialOpen = false, onCancel }: { language: string; initial: ReportCategory; onReport: Props["onReport"]; open?: boolean; onCancel?(): void }) {
+export function ReportForm({ language, initial, onReport, open: initialOpen = false, onCancel }: { language: string; initial: ReportCategory; onReport: NonNullable<Props["onReport"]>; open?: boolean; onCancel?(): void }) {
   const s = strings(language);
   const [open, setOpen] = useState(initialOpen);
   const [category, setCategory] = useState(initial);
