@@ -36,7 +36,7 @@
 - 看板：開啟 auto-add（Workflows 設定，複製看板時不會帶過來）。
 - repo 設定：開啟合併後自動刪除分支（Settings → General → Automatically delete head branches）。
 - Actions 的外部貢獻者核准：fork 不會帶過來，Settings → Actions → General →「Approval for running fork pull request workflows from contributors」選「Require approval for all external contributors」。沒有這項設定時，公開 repo 收到外部 PR 會直接執行 workflow。
-- main 的分支保護：fork 不會帶過來，自行建立 ruleset（Settings → Rules → Rulesets）：需要 PR、必要檢查（`checks`、`clients`、`sensitive-names`、`gitleaks`、`pr-body`）、禁止強制推送與刪除。E2E 只在 push 到 main 後執行，不要列為必要檢查。
+- main 的分支保護：fork 不會帶過來，自行建立 ruleset（Settings → Rules → Rulesets）：需要 PR、必要檢查（`checks`、`clients`、`sensitive-names`、`gitleaks`、`pr-body`）、禁止強制推送與刪除。E2E 在 PR 與 push 到 main 時執行，不要列為必要檢查（ADR 0010）。
 
 ## 檢查
 

@@ -1,15 +1,23 @@
-# Playwright（#66，ADR 0004；說明見 docs/testing.md）。push 到 main 後執行，另可用 workflow_dispatch 對分支手動執行。
-# 不使用任何 secret：/api/ask 一律由測試以 page.route 回傳假的回應。失敗時上傳 trace 與截圖。
+# Playwright（#66，ADR 0004、ADR 0010；說明見 docs/testing.md）。PR（目標 main）、push 到 main 時執行，另可用 workflow_dispatch 對分支手動執行（#306）。
+# 不使用任何 secret：/api/ask 一律由測試以 page.route 回傳假的回應；觸發是 pull_request（不是 pull_request_target），fork 的 PR 只有唯讀權限。
+# 失敗時上傳 trace 與截圖；成功時上傳 HTML 報告（english-layout.spec.ts 等附截圖的測試在報告中查看）。
 # 參考情境 client/ 與 clients/ 底下的每個客戶各跑一格（#77），另以線上 demo 的設定跑參考情境一格（#100）；略過的測試與原因寫在 job summary，參考情境有略過時失敗。
 name: E2E
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
+
+# 同一個 PR 推新的 commit 時取消舊的執行。push 到 main 與手動執行以 run_id 為群組（每次都不同），不會被取消，也不會在排隊時被較新的執行取代
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
+  cancel-in-progress: true
 
 # @huggingface/transformers 帶進的 onnxruntime-node 在 linux/x64 安裝時會從 NuGet 下載 CUDA；app 用不到它，略過（#163）
 env:
@@ -63,6 +71,13 @@ jobs:
             test-results/
             playwright-report/
           retention-days: 14
+      - name: 上傳報告
+        if: success()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-${{ matrix.client || 'client' }}
+          path: playwright-report/
+          retention-days: 7
 
   # 線上 demo 的設定（#100）：參考情境以 VITE_ONLINE_DEMO=1 build，只執行 e2e/demo.spec.ts（playwright.config.ts）。
   # 公開試用碼是測試用的虛構值，build 與測試用同一個值
@@ -96,3 +111,10 @@ jobs:
             test-results/
             playwright-report/
           retention-days: 14
+      - name: 上傳報告
+        if: success()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-online-demo
+          path: playwright-report/
+          retention-days: 7

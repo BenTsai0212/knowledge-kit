@@ -249,5 +249,5 @@ gh issue edit N --add-label needs-human
 ## Agent 不做的事
 
 - 不合併 PR，不手動關閉 Issue。
-- 不 push 到 `main`。main 有分支保護（ruleset），只能經 PR 合併，必要檢查是 `checks`、`clients`、`sensitive-names`、`gitleaks`、`pr-body`；E2E 只在 push 到 main 後執行，不在必要檢查中。
+- 不 push 到 `main`。main 有分支保護（ruleset），只能經 PR 合併，必要檢查是 `checks`、`clients`、`sensitive-names`、`gitleaks`、`pr-body`；E2E 在 PR 與 push 到 main 時執行，不在必要檢查中（ADR 0010）。
 - 不處理 Issue 範圍以外的工作；發現其他問題時列在回報中。

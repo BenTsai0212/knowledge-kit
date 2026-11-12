@@ -419,6 +419,7 @@ test('agentNote：推送寫法只有一種；不啟動瀏覽器；時間上限�
   assert.equal(note.split('git push origin HEAD:<分支>').length - 1, 1, '推送寫法只出現一次');
   assert.doesNotMatch(note, /git push origin <分支>/);
   assert.match(note, /不自行啟動瀏覽器（Chrome、Playwright 等）/);
+  assert.match(note, /E2E 以 PR 上的 `E2E` 結果為準/);
   assert.match(note, /人工待辦/);
   assert.match(note, /用 Bash 工具的 timeout 參數設定上限；不要在背景執行可能卡住的指令；不需要在 PR 回報/);
   assert.doesNotMatch(note, /perl|alarm/);

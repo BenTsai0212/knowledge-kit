@@ -10,7 +10,7 @@
 | `workflows/ci.yml` | `clients` | `npm run check:clients`（[docs/client-config.md](client-config.md)「客戶檢查」） | 每個 PR 與 push 到 `main` |
 | `workflows/pr-body.yml` | `pr-body` | PR 描述要連到 Issue（`tools/workflow/check-pr-body.mjs`，見 [tools/workflow/README.md](../tools/workflow/README.md)） | PR 開啟、編輯、更新與標籤變更 |
 | `workflows/sensitive.yml` | `sensitive-names`、`gitleaks` | 見下方[敏感資料檢查](#敏感資料檢查) | 每個 PR 與 push 到 `main`；手動觸發時掃描整段歷史 |
-| `workflows/e2e.yml` | `list`、`playwright`、`demo` | 見下方 [Playwright](#playwright) 的「CI」 | 只在 push 到 `main` 後，另可手動執行 |
+| `workflows/e2e.yml` | `list`、`playwright`、`demo` | 見下方 [Playwright](#playwright) 的「CI」 | 每個 PR（目標 `main`）與 push 到 `main`，另可手動執行；不是必要檢查 |
 
 `ci.yml` 與 `e2e.yml` 設定 `ONNXRUNTIME_NODE_INSTALL=skip`：`@huggingface/transformers` 帶進的 `onnxruntime-node` 在 linux/x64 安裝時會從 NuGet 下載 CUDA，app 用不到它（#163）。
 
@@ -180,14 +180,19 @@ VITE_ONLINE_DEMO=1 VITE_PUBLIC_ACCESS_CODE=e2e-public-code npm run test:e2e
 
 ### CI
 
-`.github/workflows/e2e.yml` 只在 push 到 `main` 後執行，不在 PR 執行（ADR 0004）。要對分支執行時，用 `workflow_dispatch`：Actions → E2E → Run workflow，或 `gh workflow run e2e.yml --ref <分支>`。`workflow_dispatch` 只對預設分支上已有的 workflow 有效，所以 `e2e.yml` 合併到 `main` 之前無法手動執行。
+`.github/workflows/e2e.yml` 在每個 PR（目標 `main`）與 push 到 `main` 時執行（ADR 0010，取代 ADR 0004 的「只在 push 到 `main` 後執行」）；不列為分支保護的必要檢查。PR 的 E2E 結果就是審查時的判準：runner 不在本機啟動瀏覽器，PR 描述的「驗證」寫「E2E 以 PR 上的 `E2E` 結果為準」。要對其他分支執行時，用 `workflow_dispatch`：Actions → E2E → Run workflow，或 `gh workflow run e2e.yml --ref <分支>`。
+
+- `concurrency`：同一個 PR 推新的 commit 時取消舊的執行；push 到 `main` 與手動執行每次各自一個群組（`run_id`），不會被取消。
+- 觸發是 `pull_request`（不是 `pull_request_target`），fork 來的 PR 也只以唯讀的 token 執行，拿不到 secret；workflow 本來就不用 secret，所以 fork 的 PR 也能照常執行。
 
 - `list` job 列出參考情境（`""`）與 `clients/` 底下的客戶（`scripts/check-clients.mjs` 的 `listClients()`），`playwright` job 以 matrix 對每一個各執行一格（`KK_CLIENT` 設為該名稱，build 後執行測試；`fail-fast: false`）。
-- `demo` job 以線上 demo 的設定（`VITE_ONLINE_DEMO=1`、虛構的 `VITE_PUBLIC_ACCESS_CODE`）build 參考情境，執行 `demo.spec.ts`；失敗時的 artifact 是 `playwright-online-demo`。
+- `demo` job 以線上 demo 的設定（`VITE_ONLINE_DEMO=1`、虛構的 `VITE_PUBLIC_ACCESS_CODE`）build 參考情境，執行 `demo.spec.ts`；失敗時的 artifact 是 `playwright-online-demo`，成功時是 `playwright-report-online-demo`。
 - 權限只有 `contents: read`，不使用任何 secret。
-- main 上失敗時由決策中心另開修正 Issue（workflow 不會自動開 Issue）。
+- PR 上失敗時：程式造成的失敗由決策中心貼修正要求；GitHub 端異常造成的失敗由決策中心重跑（[decision-center.md](workflow/decision-center.md) 第 4 節）。main 上失敗時由決策中心另開修正 Issue（workflow 不會自動開 Issue）。
 
-### 失敗時查看 artifact
+### 查看 artifact
+
+成功時 workflow 上傳名為 `playwright-report-<客戶>` 的 artifact（參考情境是 `playwright-report-client`；內容是 `playwright-report/`，保留 7 天）。附截圖的測試（例如 `english-layout.spec.ts`）不論成敗都能在 PR 上下載報告，以 `npx playwright show-report playwright-report` 查看截圖。
 
 失敗時 workflow 上傳名為 `playwright-<客戶>` 的 artifact（參考情境是 `playwright-client`；內容是 `test-results/` 與 `playwright-report/`，保留 14 天）：
 

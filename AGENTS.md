@@ -21,7 +21,7 @@ Node 22 以上，先 `npm install`（CI 用 `npm ci`）。CI 的 job 見 `docs/t
 
 - 開發與檢查：`npm run dev`（Vite，`app/`）、`npm run build`（`dist/`）；本機 Worker 是 build 後 `npx wrangler dev`，secret 放在不進版本控制的 `.dev.vars`（`worker/README.md`）；`npm run typecheck`（`app/`、`worker/`、根目錄設定檔、`e2e/` 各一份 tsconfig）、`npm test`（Vitest，`app/**/*.test.ts`、`worker/**/*.test.ts`、`scripts/**/*.test.mjs`）、`npm test --prefix tools/workflow`
 - 客戶：`npm run check:client`、`npm run check:clients [名稱]`；`KK_CLIENT=<名稱>` 讓 `dev`、`build`、`check:client` 改用 `clients/<名稱>/`，`npm test` 與 `typecheck` 永遠用 `client/`；客戶檢查以參數指定，不加 `KK_CLIENT`（`docs/client-config.md`「多客戶與切換」）
-- Playwright：`npx playwright install chromium` → `npm run build` → `npm run test:e2e`；`/api/ask` 一律是 `page.route` 的假回應。runner 不在本機啟動瀏覽器，結果以 CI 的 `E2E` workflow 為準（`docs/testing.md`「Playwright」）
+- Playwright：`npx playwright install chromium` → `npm run build` → `npm run test:e2e`；`/api/ask` 一律是 `page.route` 的假回應。runner 不在本機啟動瀏覽器，結果以 PR 上的 `E2E` workflow 為準（`docs/testing.md`「Playwright」）
 - 敏感資料：`npm run check:sensitive`（另有 `--history`、`--github`、`--file <檔案>`）；本機清單 `.sensitive-names.local` 由人設定，agent 不讀取、不建立（`docs/testing.md`「敏感資料檢查」）
 - Issue 與 PR：一律以 `node tools/workflow/read-trusted.mjs --issue N`／`--pr N` 讀取，不用 gh 的 `view` 子命令讀本文與留言（#127）；貼出前 `node tools/workflow/check-post-body.mjs --issue N --kind <種類> <檔案>`；其他工具（`check-pr-body.mjs`、`harness-retro.mjs`）見 `tools/workflow/README.md`
 - runner 與線上 demo：`node tools/workflow/runner/agent-runner.mjs --dry-run`／`--now`（`tools/workflow/runner/README.md`）；**排程（launchd）的安裝與移除由人執行**，agent 不安裝、不移除〔#52 啟用自動化模組｜停用自動化模組時〕。線上 demo 的**部署、secret 的設定與回退由人執行**，agent 不執行 `wrangler login`／`secret`／`deploy`（`--dry-run` 除外）（`docs/deploy.md`）
