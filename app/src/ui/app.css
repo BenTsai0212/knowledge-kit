@@ -300,8 +300,11 @@ label {
   gap: 0.5rem;
 }
 
+/* 頁面的外層與清單的 grid 一律指定 minmax(0, 1fr)（#288）：隱含的 auto 欄至少是內容的最小寬度，
+   不換行的名稱或橫向捲動的分頁列會把欄撐寬、整頁出現橫向捲動。english-layout.test.ts 檢查 */
 main {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
 }
 
@@ -938,6 +941,13 @@ main.qa > .source .source-text mark.entering {
   display: none;
 }
 
+/* 右側還有分頁時（#288，docs/design.md「英文版面」）：右側 36px 漸層提示還有內容。以遮罩讓內容淡出到背景，
+   淺色與深色都不需要另外的顏色（遮罩只看不透明度，var(--color-text) 只當作不透明的顏色） */
+.review-tabs.has-more {
+  -webkit-mask-image: linear-gradient(to left, transparent, var(--color-text) 36px);
+  mask-image: linear-gradient(to left, transparent, var(--color-text) 36px);
+}
+
 .review-tabs [role="tab"] {
   background: none;
   border: none;
@@ -1118,6 +1128,7 @@ main.qa > .source .source-text mark.entering {
 
 .graph-side {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
 }
 
@@ -1345,6 +1356,7 @@ details.path summary {
 /* 三欄格線：日期（靠右）、2px 時間軸線與圓點、文件卡片。列之間不留空隙，時間軸線連成一條 */
 .timeline {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   list-style: none;
   padding: 0;
   margin: 1rem 0 0;
@@ -1499,6 +1511,7 @@ details.path summary {
 
 .upload {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
 }
 
@@ -1758,6 +1771,14 @@ details.path summary {
   margin-top: 0.75rem;
 }
 
+/* 回報處理的兩個按鈕（#288，docs/design.md「英文版面」）：窄於 360px 時上下排列，每個佔一整列 */
+@media (max-width: 360px) {
+  .report-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
 button.secondary {
   background: var(--color-surface);
   color: var(--color-primary);
@@ -1886,6 +1907,7 @@ button.secondary {
 /* 這次工作階段上傳過的文件（與頁首步驟所指的目前這一份分開） */
 .upload-recent {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.5rem;
 }
 
@@ -1896,11 +1918,13 @@ button.secondary {
 
 .review-page {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
 }
 
 .review-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
   list-style: none;
   padding: 0;
@@ -1933,6 +1957,7 @@ label.inline {
 
 .review-rows {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.35rem;
   list-style: none;
   margin: 0.35rem 0 0;
@@ -2332,6 +2357,20 @@ label.inline {
   gap: 0.5rem;
 }
 
+/* 窄於 480px（#288，docs/design.md「英文版面」）：兩種語言都改成整列的單選，每個決定佔一整列、文字可換行 */
+@media (max-width: 480px) {
+  .conflict-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .conflict-actions button {
+    text-align: start;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
 /* 說法不同的決定（#243 PR 4，motion-reference.css「動態 · 審核與說法不同」），播完才寫入：
    並存：兩卡之間（並排與上下排列都在中央的空隙）畫出等號（.a-grow：kGrow、sweep，第 2 條晚 stagger-sentence），
    兩邊依序標上關聯（kRise，expand 起、間隔 stagger-list）。
@@ -2482,6 +2521,7 @@ label.inline {
 /* 評測台（#62；版面 #244）：頁首 → 「評測設定」與「總覽」並排（窄螢幕上下堆疊）→ 每題的結果 */
 .eval-page {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
 }
 
@@ -3044,8 +3084,10 @@ label.inline {
 }
 
 /* 首頁（#283，docs/design.md「日常工具」的「首頁」）：問候與可見範圍、提問框與常見問題、主管的「等你處理」、問過的問題 */
+/* 欄寬是 minmax(0, 1fr)：不截斷的長標題（最近新增的文件、問過的問題）不會把欄撐寬，各卡片不超出畫面（#288） */
 .home {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   max-width: 56rem;
 }
@@ -3088,6 +3130,8 @@ label.inline {
   margin: 0;
   padding: 0;
   display: grid;
+  /* 隱含的 auto 欄會被不換行的長標題撐寬，固定為容器寬度才會截斷（#288） */
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.5rem;
 }
 
@@ -3116,6 +3160,8 @@ label.inline {
   margin: 0;
   padding: 0;
   display: grid;
+  /* 隱含的 auto 欄會被不換行的長標題撐寬，固定為容器寬度才會截斷（#288） */
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.5rem;
 }
 
@@ -3140,6 +3186,8 @@ label.inline {
   margin: 0;
   padding: 0;
   display: grid;
+  /* 隱含的 auto 欄會被不換行的長標題撐寬，固定為容器寬度才會截斷（#288） */
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
 }
 
@@ -3188,6 +3236,7 @@ label.inline {
 
 .my-uploads {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
 }
@@ -3202,6 +3251,7 @@ label.inline {
   margin: 0;
   padding: 0;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.5rem;
 }
 

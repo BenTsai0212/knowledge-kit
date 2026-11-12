@@ -227,7 +227,7 @@
     "denied": "You don't have permission to handle this item.",
     "conflict": "This item has already been handled. Please refresh."
   },
-  "reviewDecidedTab": "Resolved differences",
+  "reviewDecidedTab": "Resolved",
   "reviewDecidedEmpty": "No differences have been resolved.",
   "conflictSection": "Differing statements",
   "conflictNew": "New statement",

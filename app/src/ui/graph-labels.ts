@@ -48,6 +48,53 @@ export function nodeLabels(graph: Graph, language: string, labelGraph: Graph = g
   return new Map(graph.entities.map((e) => [e.id, entityOptionLabel(labelGraph, byId.get(e.id) ?? e, language)]));
 }
 
+// 量文字寬度（px），例如 canvas 的 measureText
+export type MeasureText = (text: string) => number;
+
+const ELLIPSIS = "…";
+
+// 一行放得下的最長開頭（逐字），至少一個字，避免無限迴圈
+function fitPrefix(text: string, measure: MeasureText, maxWidth: number, suffix = ""): string {
+  const chars = [...text];
+  let n = chars.length;
+  while (n > 1 && measure(chars.slice(0, n).join("") + suffix) > maxWidth) n--;
+  return chars.slice(0, n).join("");
+}
+
+// 圖上節點名稱的顯示文字（#288，docs/design.md「英文版面」）：最寬 maxWidth、最多 maxLines 行，超過以「…」截斷。
+// 英文在空白處換行，太長的單字與中文逐字換行；行之間以 \n 分隔（cytoscape 的 text-wrap: wrap 照 \n 換行）。
+// 只用在畫面上的標籤：完整名稱在選取、滑過（graph-style.ts）與實體面板顯示，搜尋與報讀器用的也是完整名稱
+export function clampLabel(text: string, measure: MeasureText, maxWidth: number, maxLines = 2): string {
+  const tokens = text.trim().match(/\S+\s*/g) ?? [];
+  const lines: string[] = [];
+  let line = "";
+  const push = () => {
+    lines.push(line.trimEnd());
+    line = "";
+  };
+  for (let token of tokens) {
+    if (measure((line + token).trimEnd()) <= maxWidth) {
+      line += token;
+      continue;
+    }
+    if (line !== "") push();
+    // 一個詞放不下一行時逐字切開
+    while (measure(token.trimEnd()) > maxWidth) {
+      const head = fitPrefix(token, measure, maxWidth);
+      line = head;
+      push();
+      token = token.slice(head.length);
+    }
+    line = token;
+  }
+  if (line.trim() !== "") push();
+  if (lines.length <= maxLines) return lines.join("\n");
+  const kept = lines.slice(0, maxLines);
+  const last = kept[maxLines - 1];
+  kept[maxLines - 1] = measure(last + ELLIPSIS) <= maxWidth ? last + ELLIPSIS : fitPrefix(last, measure, maxWidth, ELLIPSIS).trimEnd() + ELLIPSIS;
+  return kept.join("\n");
+}
+
 export interface DisplaySource extends SourcePassage {
   // 不是介面語言的出處才有：該段語言的名稱，依介面語言顯示（例如英文介面的 zh-TW → Chinese (Taiwan)）
   languageLabel?: string;

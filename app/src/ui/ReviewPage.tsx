@@ -41,6 +41,7 @@ import {
   mergeCandidates,
   missingNameLanguages,
   nextTab,
+  overflowsEnd,
   reviewDocuments,
   reviewGroups,
   reviewTabCounts,
@@ -134,6 +135,21 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   const [settling, setSettling] = useState<ReadonlyMap<string, ConflictDecision>>(new Map());
   const reads = useRef(createRequestGate());
   const [version, setVersion] = useState(0);
+  // 分頁列右側還有內容時的漸層提示（#288）：捲動、分頁列大小改變（視窗寬度、數量）與每次繪製後重新判斷
+  const tabList = useRef<HTMLDivElement>(null);
+  const [moreTabs, setMoreTabs] = useState(false);
+  const checkTabs = () => {
+    if (tabList.current !== null) setMoreTabs(overflowsEnd(tabList.current));
+  };
+  useEffect(checkTabs);
+  const loaded = docs !== null && graph !== null;
+  useEffect(() => {
+    const el = tabList.current;
+    if (el === null || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => setMoreTabs(overflowsEnd(el)));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [loaded]);
 
   useEffect(() => {
     const ticket = reads.current.begin();
@@ -566,7 +582,14 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
     <div className="review-page">
       <div className="review-toolbar">
         {/* 第二層：底線式分頁（#243），數量直接接在名稱後（0 時不顯示） */}
-        <div className="review-tabs" role="tablist" aria-label={s.reviewStatusTabs} onKeyDown={tabKey}>
+        <div
+          ref={tabList}
+          className={moreTabs ? "review-tabs has-more" : "review-tabs"}
+          role="tablist"
+          aria-label={s.reviewStatusTabs}
+          onKeyDown={tabKey}
+          onScroll={checkTabs}
+        >
           {TABS.map((t) => (
             <button
               key={t}

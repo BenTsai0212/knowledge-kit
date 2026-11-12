@@ -8,8 +8,11 @@ import type { EntityType } from "../client/types";
 import { iconDataUri } from "./entity-icons";
 import { heroShape, type HeroShape } from "./entry-hero";
 
-// 節點標籤超過這個寬度時在空白處換行（#207）；完整名稱仍在面板與搜尋結果中
-export const NODE_LABEL_MAX_WIDTH = 140;
+// 節點名稱最寬 112px、最多兩行，超過以「…」截斷（#288，docs/design.md「英文版面」；截斷在 graph-labels.ts 的 clampLabel()）。
+// 截斷後的文字在 shortLabel，完整名稱在 label：選取與滑過時顯示完整名稱，實體面板與搜尋結果也是完整名稱
+export const NODE_LABEL_MAX_WIDTH = 112;
+export const NODE_LABEL_MAX_LINES = 2;
+export const NODE_LABEL_FONT_SIZE = 12;
 
 // 讀取 CSS 變數，例如 (name) => getComputedStyle(document.documentElement).getPropertyValue(name)
 export type ReadVariable = (name: string) => string;
@@ -77,10 +80,10 @@ export function graphStyle(read: ReadVariable, types: TypeStyle[], transitionMs 
     {
       selector: "node",
       style: {
-        label: "data(label)",
+        label: "data(shortLabel)",
         color: v("--color-text"),
         "font-family": v("--font-body"),
-        "font-size": 12,
+        "font-size": NODE_LABEL_FONT_SIZE,
         "text-valign": "bottom",
         "text-margin-y": 6,
         // 長標籤換行；文字與襯底的對比就是 text 與 surface 的對比，由 check:client 檢查（#207）
@@ -135,5 +138,7 @@ export function graphStyle(read: ReadVariable, types: TypeStyle[], transitionMs 
     { selector: "edge.path", style: { width: 5, "line-color": v("--color-primary"), "target-arrow-color": v("--color-primary") } },
     // 滑過變灰的節點時恢復 100% 不透明，標籤在要讀的時候可讀（#240 決定 3）
     { selector: "node.dimmed.hover", style: { opacity: 1 } },
+    // 選取與滑過時顯示完整名稱（#288），疊在其他節點的標籤上面
+    { selector: "node.selected, node.hover", style: { label: "data(label)", "z-index": 10 } },
   ];
 }
