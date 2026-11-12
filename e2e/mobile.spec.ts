@@ -1,9 +1,25 @@
 // 手機的共同結構（#255，docs/design.md「手機與平板」）：390×844 時是頂端列（60px）＋底部分頁列（72px），不顯示左側導覽；
 // 分頁列依身分分配（一般員工 5 頁，主管把時間軸、待審、評測台收進「更多」），展示模式登入後改用展示模式的頂端列（#260）；底部面板的開關與焦點。
-// 身分與語言面板的內容（單選卡與說明）在 #255 的下一個 PR。往下拖曳的手感與 safe area 由人在實機確認。/api/ask 一律是假的回應。
+// 身分與語言面板：身分單選卡（附 roles[].scope）、語言的分段切換、帳號登入時不能切換（#255 PR 2）。
+// 往下拖曳的手感與 safe area 由人在實機確認。/api/ask 一律是假的回應。
 import { expect, test, type Page } from "@playwright/test";
-import { EVALS_PATH, identityBadge, identitySheet, openApp, s, switchIdentity } from "./support/app";
-import { access, client, language, NO_NON_REVIEWER, NO_REVIEWER, nonReviewer, reviewer } from "./support/client";
+import {
+  ACCESS_CODE,
+  accountOption,
+  blockModelDownload,
+  EVALS_PATH,
+  identityBadge,
+  identitySheet,
+  languageOption,
+  openApp,
+  roleCard,
+  roleCardTarget,
+  s,
+  signInPanel,
+  switchIdentity,
+} from "./support/app";
+import { access, client, language, NO_NON_REVIEWER, NO_REVIEWER, nonReviewer, readClientJson, reviewer } from "./support/client";
+import { routeFakeAsk } from "./support/fake-ask";
 
 test.use({ viewport: { width: 390, height: 844 } });
 
@@ -100,12 +116,69 @@ test("底部面板：從身分徽章打開，焦點移入；關閉按鈕、Esc�
   await expect(identityBadge(page)).toBeFocused();
 });
 
-test("在面板中切換身分：徽章換成新的身分", async ({ page }) => {
-  const other = access.roles.find((r) => r.id !== access.roles[0].id);
-  test.skip(other === undefined, "access.json 只有一個身分");
+test("身分與語言面板：每個身分一張單選卡，附 access.json 的「看得到什麼」；選另一張後徽章換成新的身分", async ({ page }) => {
   await openApp(page);
-  await switchIdentity(page, other!.id);
-  await expect(identityBadge(page)).toHaveText(other!.label[language]);
+  await identityBadge(page).click();
+  const sheet = identitySheet(page);
+  await expect(sheet).toBeVisible();
+  const cards = sheet.getByRole("radio");
+  await expect(cards).toHaveCount(access.roles.length);
+  for (const role of access.roles) {
+    await expect(roleCard(sheet, role.id)).toHaveAccessibleDescription(role.scope[language]);
+    // 觸控目標是整張卡（label.role-card）。boundingBox() 不會自動重試，先確認卡片存在，失敗時立即而明確
+    const target = roleCardTarget(sheet, role.id);
+    await expect(target).toBeVisible();
+    expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  }
+  await expect(roleCard(sheet, access.roles[0].id)).toBeChecked();
+  await expect(sheet.getByRole("button", { name: s.changeAccessCode })).toBeVisible();
+
+  const other = access.roles.find((r) => r.id !== access.roles[0].id);
+  if (other !== undefined) {
+    // 點卡片上的說明文字也會選取
+    await roleCardTarget(sheet, other.id).locator(".role-card__scope").click();
+    await expect(roleCard(sheet, other.id)).toBeChecked();
+    await expect(identityBadge(page)).toHaveText(other.label[language]);
+  }
+  expect(await noHorizontalScroll(page)).toBe(true);
+});
+
+test("身分與語言面板：語言是分段切換，選中的語言 aria-pressed，切換後面板換成該語言", async ({ page }) => {
+  await openApp(page);
+  await identityBadge(page).click();
+  const sheet = identitySheet(page);
+  const options = sheet.getByRole("group", { name: s.language }).getByRole("button");
+  await expect(options).toHaveCount(client.languages.length);
+  await expect(languageOption(sheet, language)).toHaveAttribute("aria-pressed", "true");
+  await expect(languageOption(sheet, language)).toBeVisible();
+  expect((await languageOption(sheet, language).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  const other = client.languages.find((code) => code !== language);
+  test.skip(other === undefined, "client.json 只有一種語言");
+  const t = readClientJson<typeof s>(`i18n/${other}.json`);
+  await languageOption(sheet, other!).click();
+  await expect(sheet.getByRole("heading", { name: t.identityAndLanguage })).toBeVisible();
+  await expect(sheet.getByRole("group", { name: t.language }).locator(`button[lang="${other}"]`)).toHaveAttribute("aria-pressed", "true");
+  await expect(sheet.getByRole("radio", { name: access.roles[0].label[other!], exact: true })).toHaveAccessibleDescription(access.roles[0].scope[other!]);
+});
+
+test("帳號登入時：面板只顯示帳號與角色、不能切換身分，按鈕是「登出」", async ({ page }) => {
+  const role = access.roles[0];
+  await blockModelDownload(page);
+  await routeFakeAsk(page);
+  await page.goto("/");
+  const panel = signInPanel(page);
+  await panel.getByLabel(s.signInAccount).selectOption({ label: accountOption(role.id) });
+  await panel.getByLabel(s.accessCodeLabel).fill(ACCESS_CODE);
+  await panel.getByRole("button", { name: s.signInSubmit, exact: true }).click();
+  await identityBadge(page).click();
+  const sheet = identitySheet(page);
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByRole("radio")).toHaveCount(0);
+  await expect(sheet).toContainText(accountOption(role.id));
+  await expect(sheet.getByRole("button", { name: s.changeAccessCode })).toHaveCount(0);
+  await sheet.getByRole("button", { name: s.signOut }).click();
+  await expect(sheet).toBeHidden();
+  await expect(signInPanel(page)).toBeVisible();
 });
 
 // 展示模式登入後不論寬度都是展示模式的頂端列（#260）：其中的「問答｜圖譜」是畫面上唯一的切換，沒有手機的分頁列與分段切換

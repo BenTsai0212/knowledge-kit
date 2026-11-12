@@ -5,6 +5,6 @@
   ],
   "projects": [{ "id": "bluewing", "label": { "zh-TW": "青翼專案" } }],
   "roles": [
-    { "id": "staff", "label": { "zh-TW": "一般員工" }, "visibility": "secret", "projects": ["bluewing", "unknown"], "canUpload": true, "canReview": false }
+    { "id": "staff", "label": { "zh-TW": "一般員工" }, "scope": { "zh-TW": "公開文件" }, "visibility": "secret", "projects": ["bluewing", "unknown"], "canUpload": true, "canReview": false }
   ]
 }

@@ -8,9 +8,9 @@
     { "id": "qinglan-tender", "label": { "zh-TW": "青嵐新院區標案", "en": "Qinglan New Wing Tender" } }
   ],
   "roles": [
-    { "id": "partner", "label": { "zh-TW": "經銷夥伴", "en": "Distribution Partner" }, "visibility": "public", "projects": [], "canUpload": false, "canReview": false },
-    { "id": "engineer", "label": { "zh-TW": "技術服務工程師", "en": "Service Engineer" }, "visibility": "internal", "projects": [], "canUpload": true, "canReview": false },
-    { "id": "sales", "label": { "zh-TW": "業務", "en": "Sales Representative" }, "visibility": "internal", "projects": ["qinglan-tender"], "canUpload": true, "canReview": false },
-    { "id": "gm", "label": { "zh-TW": "總經理", "en": "General Manager" }, "visibility": "confidential", "projects": ["qinglan-tender"], "canUpload": true, "canReview": true }
+    { "id": "partner", "label": { "zh-TW": "經銷夥伴", "en": "Distribution Partner" }, "scope": { "zh-TW": "公開文件", "en": "Public documents" }, "visibility": "public", "projects": [], "canUpload": false, "canReview": false },
+    { "id": "engineer", "label": { "zh-TW": "技術服務工程師", "en": "Service Engineer" }, "scope": { "zh-TW": "公開與內部文件", "en": "Public and internal documents" }, "visibility": "internal", "projects": [], "canUpload": true, "canReview": false },
+    { "id": "sales", "label": { "zh-TW": "業務", "en": "Sales Representative" }, "scope": { "zh-TW": "公開與內部文件，以及青嵐新院區標案", "en": "Public and internal documents, plus the Qinglan New Wing Tender" }, "visibility": "internal", "projects": ["qinglan-tender"], "canUpload": true, "canReview": false },
+    { "id": "gm", "label": { "zh-TW": "總經理", "en": "General Manager" }, "scope": { "zh-TW": "公開、內部與機密文件，以及青嵐新院區標案", "en": "Public, internal and confidential documents, plus the Qinglan New Wing Tender" }, "visibility": "confidential", "projects": ["qinglan-tender"], "canUpload": true, "canReview": true }
   ]
 }

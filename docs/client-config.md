@@ -248,6 +248,7 @@ npm run check:client
 | --- | --- | --- | --- |
 | `id` | 是 | `Id`，不可重複 | 例如 `staff` |
 | `label` | 是 | `LocalizedText` | 顯示名稱（切換身分時顯示） |
+| `scope` | 是 | `LocalizedText` | 一句「看得到什麼」的說明，手機的身分與語言面板在每個身分的單選卡下方顯示（例如「公開文件」）。**只寫看得到的範圍，不寫看不到什麼**（[docs/design.md](design.md)「沒權限」，#247）；文字由人撰寫，不由 `visibility` 與 `projects` 自動組成（#255 決定 2） |
 | `visibility` | 是 | 可見等級 `id` | 此角色最高可看到的等級；必須存在於 `visibilityLevels` |
 | `projects` | 是 | 專案 `id` 陣列，可為空、不重複 | 此角色可看到的專案；必須存在於 `projects` |
 | `canUpload` | 是 | boolean | 能否上傳文件。可上傳的可見等級與專案同樣限於此角色看得到的範圍，由資料庫的 RLS 執行（`docs/data-model.md`「寫入規則」） |

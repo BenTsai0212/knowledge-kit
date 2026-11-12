@@ -9,8 +9,8 @@
     { "id": "longpier", "label": { "zh-TW": "長堤專案", "en": "Project Longpier" } }
   ],
   "roles": [
-    { "id": "guest", "label": { "zh-TW": "訪客", "en": "Guest" }, "visibility": "public", "projects": [], "canUpload": false, "canReview": false },
-    { "id": "staff", "label": { "zh-TW": "一般員工", "en": "Staff" }, "visibility": "internal", "projects": ["bluewing"], "canUpload": true, "canReview": false },
-    { "id": "manager", "label": { "zh-TW": "主管", "en": "Manager" }, "visibility": "confidential", "projects": ["bluewing", "longpier"], "canUpload": true, "canReview": true }
+    { "id": "guest", "label": { "zh-TW": "訪客", "en": "Guest" }, "scope": { "zh-TW": "公開文件", "en": "Public documents" }, "visibility": "public", "projects": [], "canUpload": false, "canReview": false },
+    { "id": "staff", "label": { "zh-TW": "一般員工", "en": "Staff" }, "scope": { "zh-TW": "公開與內部文件，以及青翼專案", "en": "Public and internal documents, plus Project Bluewing" }, "visibility": "internal", "projects": ["bluewing"], "canUpload": true, "canReview": false },
+    { "id": "manager", "label": { "zh-TW": "主管", "en": "Manager" }, "scope": { "zh-TW": "公開、內部與機密文件，以及青翼、長堤專案", "en": "Public, internal and confidential documents, plus Projects Bluewing and Longpier" }, "visibility": "confidential", "projects": ["bluewing", "longpier"], "canUpload": true, "canReview": true }
   ]
 }

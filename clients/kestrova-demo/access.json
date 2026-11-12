@@ -9,8 +9,8 @@
     { "id": "harborline", "label": { "zh-TW": "港灣專案", "en": "Project Harborline", "ja": "港湾プロジェクト" } }
   ],
   "roles": [
-    { "id": "guest", "label": { "zh-TW": "訪客", "en": "Guest", "ja": "ゲスト" }, "visibility": "public", "projects": [], "canUpload": false, "canReview": false },
-    { "id": "staff", "label": { "zh-TW": "一般員工", "en": "Staff", "ja": "一般社員" }, "visibility": "internal", "projects": ["mistwalk"], "canUpload": true, "canReview": false },
-    { "id": "manager", "label": { "zh-TW": "主管", "en": "Manager", "ja": "管理職" }, "visibility": "confidential", "projects": ["mistwalk", "harborline"], "canUpload": true, "canReview": true }
+    { "id": "guest", "label": { "zh-TW": "訪客", "en": "Guest", "ja": "ゲスト" }, "scope": { "zh-TW": "公開文件", "en": "Public documents", "ja": "公開文書" }, "visibility": "public", "projects": [], "canUpload": false, "canReview": false },
+    { "id": "staff", "label": { "zh-TW": "一般員工", "en": "Staff", "ja": "一般社員" }, "scope": { "zh-TW": "公開與內部文件，以及霧行專案", "en": "Public and internal documents, plus Project Mistwalk", "ja": "公開・社内の文書と霧行プロジェクト" }, "visibility": "internal", "projects": ["mistwalk"], "canUpload": true, "canReview": false },
+    { "id": "manager", "label": { "zh-TW": "主管", "en": "Manager", "ja": "管理職" }, "scope": { "zh-TW": "公開、內部與機密文件，以及霧行、港灣專案", "en": "Public, internal and confidential documents, plus Projects Mistwalk and Harborline", "ja": "公開・社内・機密の文書と霧行・港湾プロジェクト" }, "visibility": "confidential", "projects": ["mistwalk", "harborline"], "canUpload": true, "canReview": true }
   ]
 }

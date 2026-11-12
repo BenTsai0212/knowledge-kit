@@ -7,7 +7,7 @@ import { clientConfig } from "../client/load";
 import { fill, strings } from "../client/i18n";
 import { BottomSheet } from "./BottomSheet";
 import { IDENTITY_SELECT_ID } from "./empty-state";
-import { IdentityControls } from "./IdentityControls";
+import { IdentitySheet } from "./IdentitySheet";
 import { NAV_ICONS, phoneTabs, usesSegmented } from "./layout";
 import type { View } from "./online-demo";
 import { ProductIcon } from "./ProductIcon";
@@ -90,12 +90,10 @@ export function MobileNav(props: NavProps) {
         </nav>
       )}
       <BottomSheet open={sheet === "identity" && signedIn} onClose={() => setSheet(null)} title={s.identityAndLanguage} language={language} className="identity-sheet">
-        <div className="toolbar">
-          <IdentityControls
-            {...props}
-            onChangeAccessCode={props.onChangeAccessCode && (() => (setSheet(null), props.onChangeAccessCode?.()))}
-          />
-        </div>
+        <IdentitySheet
+          {...props}
+          onChangeAccessCode={props.onChangeAccessCode && (() => (setSheet(null), props.onChangeAccessCode?.()))}
+        />
       </BottomSheet>
       {more.length > 0 && (
         <BottomSheet open={sheet === "more"} onClose={() => setSheet(null)} title={s.navMore} language={language} className="more-sheet">
