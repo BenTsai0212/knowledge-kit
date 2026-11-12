@@ -1093,6 +1093,19 @@ main.qa > .source .source-text mark.entering {
   animation: kSheetUp var(--motion-base) var(--ease-enter) backwards;
 }
 
+/* 可展開的底部面板（#257 的實體面板）：停在 56% 高，往上拉到全高；拖曳中的高度由 BottomSheet 寫在行內 */
+.bottom-sheet.is-expandable {
+  height: 56dvh;
+  max-height: 100dvh;
+  transition: height var(--motion-base) var(--ease-enter);
+}
+
+.bottom-sheet.is-expandable.is-full {
+  height: 100dvh;
+  padding-top: env(safe-area-inset-top);
+  border-radius: 0;
+}
+
 .bottom-sheet::backdrop {
   background: var(--color-overlay);
   animation: kFade var(--motion-base) var(--ease-enter) backwards;
@@ -1711,7 +1724,7 @@ details.path summary {
   margin: 0.75rem 0 0.5rem;
 }
 
-/* 手機寬度（#199）：圖譜頁改為單欄（搜尋 → 圖 → 面板），圖的高度較低。正式的手機設計之後另外處理 */
+/* 窄的寬度（#199）：圖譜頁改為單欄（搜尋 → 圖 → 面板），圖的高度較低。手機（≤ 600px）改用下方的 graph-page--phone */
 @media (max-width: 640px) {
   .graph-page {
     grid-template-columns: minmax(0, 1fr);
@@ -1720,6 +1733,106 @@ details.path summary {
   .graph-page .graph-canvas {
     height: 360px;
   }
+}
+
+/* 手機的圖譜（#257，docs/design.md「圖譜（手機）」）：GraphPage 依 layout.ts 加上 graph-page--phone。
+   圖譜佔滿頂端列與分頁列之間（.app--phone 的 padding-bottom 已留分頁列與 safe area），頁面本身不捲動；
+   畫布 touch-action: none，單指平移與雙指縮放交給 cytoscape（只改相機，不切換語意縮放的層級，#254） */
+.app.app--phone:has(.graph-page--phone) {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.app.app--phone:has(.graph-page--phone) > main {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.graph-page.graph-page--phone {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 0;
+}
+
+.graph-page--phone .graph-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0.5rem 1rem 0;
+  border: none;
+  border-radius: 0;
+}
+
+/* 上方：搜尋佔一整行，下一行是「篩選與找路徑」與「圖譜｜清單」；觸控目標至少 44px */
+.graph-page--phone .graph-tools {
+  gap: 0.5rem;
+}
+
+.graph-page--phone .entity-search {
+  flex: 1 1 100%;
+}
+
+.graph-page--phone .graph-tools button,
+.graph-page--phone .graph-tools input,
+.graph-page--phone .graph-trail button {
+  min-height: 44px;
+}
+
+.graph-page--phone .graph-frame {
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 12rem;
+}
+
+/* 展示模式登入後的手機寬度沒有分頁列（不是 app--phone），頁面照常捲動，畫布維持窄寬度的高度 */
+.app:not(.app--phone) .graph-page--phone .graph-frame {
+  min-height: 360px;
+}
+
+.graph-page--phone .graph-canvas {
+  height: auto;
+  touch-action: none;
+}
+
+.graph-page--phone .graph-list {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  margin-bottom: 0.5rem;
+}
+
+.graph-filters .card {
+  padding: 0;
+  border: none;
+}
+
+/* 實體面板（可展開的底部面板）：標題只給報讀器，畫面上由面板內的類型徽章與名稱開頭；內容不再加卡片外框 */
+.entity-sheet .bottom-sheet__header h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.entity-sheet .bottom-sheet__header button {
+  grid-column: 2;
+}
+
+.entity-sheet .entity.card {
+  padding: 0;
+  border: none;
 }
 
 /* 時間軸（#241，docs/design.md）：依實體篩選的晶片一排，可換行；晶片的樣式沿用 button.chip */

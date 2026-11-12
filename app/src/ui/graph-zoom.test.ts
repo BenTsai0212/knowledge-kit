@@ -161,7 +161,7 @@ describe("樣式與效能設定", () => {
   });
 
   it("門檻以下用現行的 GraphView；新的文字都在 client/i18n/", () => {
-    expect(graphPage).toContain("scaleMode(filtered.entities.length, mobile)");
+    expect(graphPage).toContain("scaleMode(filtered.entities.length, phone)");
     for (const language of ["zh-TW", "en"]) expect(Object.keys(strings(language).graphZoom).sort()).toEqual(["all", "breadcrumb", "minRelations", "moreMembers", "other", "segments"]);
   });
 });

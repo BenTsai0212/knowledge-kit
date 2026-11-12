@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { layoutFor, NAV_ICONS, phoneTabs, sheetDragCloses, usesSegmented } from "./layout";
+import { layoutFor, NAV_ICONS, phoneTabs, sheetDragCloses, sheetSnap, usesSegmented } from "./layout";
 import { visibleViews } from "./online-demo";
 
 const off = { enabled: false };
@@ -52,5 +52,27 @@ describe("sheetDragCloses（底部面板往下拖曳）", () => {
   it("往上拖或沒有移動時不關閉", () => {
     expect(sheetDragCloses(0, 0)).toBe(false);
     expect(sheetDragCloses(-200, 400)).toBe(false);
+  });
+});
+
+describe("sheetSnap（可展開的底部面板，#257）", () => {
+  it("停在 56% 時：往上拉過門檻到全高，往下拉過門檻關閉，否則彈回", () => {
+    expect(sheetSnap("half", -96, 470)).toBe("full");
+    expect(sheetSnap("half", -95, 470)).toBe("half");
+    expect(sheetSnap("half", 96, 470)).toBe("close");
+    expect(sheetSnap("half", 95, 470)).toBe("half");
+    expect(sheetSnap("half", 0, 470)).toBe("half");
+  });
+
+  it("全高時：往下拉過門檻回到 56%（不直接關閉），往上拉不變", () => {
+    expect(sheetSnap("full", 96, 844)).toBe("half");
+    expect(sheetSnap("full", 400, 844)).toBe("half");
+    expect(sheetSnap("full", 95, 844)).toBe("full");
+    expect(sheetSnap("full", -200, 844)).toBe("full");
+  });
+
+  it("面板很矮時門檻是高度的 1/4", () => {
+    expect(sheetSnap("half", -50, 200)).toBe("full");
+    expect(sheetSnap("half", 50, 200)).toBe("close");
   });
 });

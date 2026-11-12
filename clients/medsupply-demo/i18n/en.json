@@ -74,6 +74,7 @@
   "graphDocumentCount": "Documents: {count}",
   "graphSourceCount": "Sources: {count}",
   "graphAskAbout": "Ask about it",
+  "graphFilters": "Filters & paths",
   "graphKeyboard": {
     "roleDescription": "knowledge graph",
     "label": "Arrow keys move along relations, Enter goes there",
