@@ -105,6 +105,13 @@ test("沒有 canReview 的身分回報回答；審核者在「回報」分頁看
   await expect(result.locator("b")).toHaveCount(0);
   await result.getByRole("button", { name: s.reportResult.reportAgain }).click();
   await expect(item.getByRole("form", { name: s.reportButton })).toBeVisible();
+
+  // 對話依身分保存（#303）：回到問答，原本的回答下方重新讀取，顯示處理結果
+  await openTab(page, s.tabQa);
+  await expect(answer.getByRole("heading", { name: question! })).toBeVisible();
+  const status = answer.getByRole("status");
+  await expect(status).toContainText(s.reportResult.notError);
+  await expect(status).toContainText(REPLY);
 });
 
 test("拒答的回報只含問題文字，預設原因是「資料中有答案，卻拒答了」", async ({ page }) => {

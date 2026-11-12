@@ -61,6 +61,8 @@ const activeProvider = () => (sharedProvider ??= createProvider(client.retrieval
 const views = (canReview: boolean) => visibleViews(canReview, onlineDemo, presentationMode, evalsMode);
 // 沒有看過的實體時傳給首頁的空清單（固定同一個陣列，首頁不會因此重新讀取）
 const NONE: readonly string[] = [];
+// 還沒有對話的身分（固定同一個陣列）
+const NO_TURNS: readonly Turn[] = [];
 
 
 export function App() {
@@ -75,8 +77,12 @@ export function App() {
   const [rejectedCode, setRejectedCode] = useState<Rejected | null>(null);
   const [db, setDb] = useState<Database | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
-  // 這次的問答，依序往下累積；每題獨立回答，不帶上一題（#195）
-  const [turns, setTurns] = useState<readonly Turn[]>([]);
+  // 這次的問答，依序往下累積；每題獨立回答，不帶上一題（#195）。依身分分開、只在記憶體（#303）：切換身分時只顯示該身分自己的對話，
+  // 切回來時看得到原本的問答；切換語言清掉目前身分的，換邀請碼、邀請碼被拒與登出清掉全部
+  const [conversations, setConversations] = useState<Readonly<Record<string, readonly Turn[]>>>({});
+  const turns = conversations[identity] ?? NO_TURNS;
+  const setTurnsOf = (owner: string, change: (all: readonly Turn[]) => readonly Turn[]) =>
+    setConversations((all) => ({ ...all, [owner]: change(all[owner] ?? NO_TURNS) }));
   // 首頁的「問過的問題」（#283）：依身分分開，只存問題文字（不存回答）；切換身分或語言不清除，登出時清除
   const [asked, setAsked] = useState<Readonly<Record<string, readonly string[]>>>({});
   // 首頁的「最近看過」（#283）：依身分分開，只存實體 id（圖譜選取的、問答右側面板打開的）；名稱與能否看到在首頁以目前身分讀取。登出時清除
@@ -192,19 +198,29 @@ export function App() {
 
   const retriever = useMemo(() => (db === null ? null : openRetriever(db, client.retrieval, activeProvider())), [db]);
 
-  // 切換身分或語言：清掉對話、右側面板與輸入框（可能有「接著問」填入的實體名稱），之後才到的結果一律忽略
+  // 切換身分或語言：取消並移除進行中的回答（之後才到的結果一律忽略），清掉右側面板與輸入框（可能有「接著問」填入的實體名稱）。
+  // 已完成的問答留在原本的身分（#303）；切換語言時另以 changeLanguage() 清掉
   function discard() {
     questions.current.cancel();
     sources.current.cancel();
-    setTurns([]);
+    setTurnsOf(identity, (all) => all.filter((t) => t.answer !== undefined));
     setSource(null);
     setEntity(null);
     setDraft("");
     setGraphFocus(null);
   }
 
-  // 邀請碼被拒：清除，回到輸入畫面（#26 決定 3）；輸入框保留被拒的碼（#246）
+  // 切換語言：目前身分的對話是以原本的語言回答的，一併清掉（其他身分的留著）
+  function changeLanguage(code: string) {
+    discard();
+    setTurnsOf(identity, () => NO_TURNS);
+    setLanguage(code);
+  }
+
+  // 邀請碼被拒：清除，回到輸入畫面（#26 決定 3）；輸入框保留被拒的碼（#246）。所有身分的對話一併清掉（#303）
   function rejectAccessCode() {
+    questions.current.cancel();
+    setConversations({});
     clearAccessCode();
     setAccessCode(null);
     setRejectedCode({ code: accessCode ?? "", via: signIn?.kind === "account" ? "account" : "code" });
@@ -215,7 +231,7 @@ export function App() {
 
   // 登入（#287）：帳號登入固定身分，邀請碼不寫入 sessionStorage；以邀請碼體驗與現行相同
   function onSignIn(next: SignIn, code: string) {
-    if (next.kind === "account") (discard(), setIdentity(next.role));
+    if (next.kind === "account") (discard(), setConversations({}), setIdentity(next.role));
     else saveAccessCode(code);
     setAccessCode(code);
     setSignIn(next);
@@ -227,7 +243,9 @@ export function App() {
     if (retriever === null || accessCode === null || answering || limit !== null) return;
     // 以送出當下的身分與語言提問；只送出這一題的文字
     const ticket = questions.current.begin();
+    const owner = identity;
     const id = `turn-${nextTurn.current++}`;
+    const setTurns = (change: (all: readonly Turn[]) => readonly Turn[]) => setTurnsOf(owner, change);
     const update = (turn: Turn) => setTurns((all) => all.map((t) => (t.id === id ? turn : t)));
     setTurns((all) => [...all, { id, question, streaming: "" }]);
     setAsked((all) => ({ ...all, [identity]: rememberQuestion(all[identity] ?? [], question) }));
@@ -241,7 +259,6 @@ export function App() {
     if (!ticket.isCurrent()) return;
     if (result.kind === "error" && result.error === "invalid_access_code") {
       rejectAccessCode();
-      setTurns((all) => all.filter((t) => t.id !== id));
       return;
     }
     if (turnError(result) === "network") setOffline(true);
@@ -347,13 +364,14 @@ export function App() {
           if (!views(access.roles.find((r) => r.id === id)?.canReview ?? false).includes(view)) setView("qa");
         }}
         // 切換語言：原地交叉淡換（#246）；View Transitions 在回呼結束時拍下新畫面，所以同步更新
-        onLanguage={(code) => crossFade(() => flushSync(() => (discard(), setLanguage(code))))}
+        onLanguage={(code) => crossFade(() => flushSync(() => changeLanguage(code)))}
         onChangeAccessCode={
           accessCode === null
             ? undefined
             : () => {
                 // 更換邀請碼；帳號登入時是「登出」，回到登入頁（#287 決定 3）
                 discard();
+                setConversations({});
                 clearAccessCode();
                 setAccessCode(null);
                 if (signIn?.kind === "account") setView("qa");
@@ -454,7 +472,7 @@ export function App() {
               onGoto={(target, document) => {
                 if (document !== undefined) {
                   // 時間軸只列出介面語言的文件，所以切換成這份文件的語言
-                  if (document.language !== language) (discard(), setLanguage(document.language));
+                  if (document.language !== language) changeLanguage(document.language);
                   setFocusDocument(document.id);
                 }
                 setView(target);
@@ -540,7 +558,7 @@ export function App() {
                 if (db === null || report === null) throw new Error("not reportable");
                 const reportId = await writeReport(db, identity, report);
                 // 回答下方改顯示這則回報的結果（#286）
-                setTurns((all) => all.map((t) => (t.id === turn.id ? { ...t, reportId } : t)));
+                setTurnsOf(identity, (all) => all.map((t) => (t.id === turn.id ? { ...t, reportId } : t)));
                 // 回報的人自己能審核時，待審頁籤的筆數加一
                 setReviewVersion((v) => v + 1);
               }}

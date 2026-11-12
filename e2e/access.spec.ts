@@ -62,6 +62,30 @@ test("串流回答中切換身分：回答不再出現，之後到的內容也�
   await expect(page.getByText(s.emptyAnswer)).toBeVisible();
 });
 
+test("對話依身分分開保存：切到另一個身分時畫面上沒有前一個身分的問答，切回來看得到（#303）", async ({ page }) => {
+  test.skip(roles.length < 2, "只有一個身分");
+  const [a, b] = roles;
+  const question = `E2E：只有 ${a} 問過的問題`;
+  await openApp(page);
+  await switchIdentity(page, a);
+  await page.getByPlaceholder(s.questionPlaceholder).fill(question);
+  await page.getByRole("button", { name: s.askButton, exact: true }).click();
+  const answer = page.locator("section.answer");
+  await expect(answer.getByRole("heading", { name: question })).toBeVisible();
+  await expect(answer.getByText(s.answering)).toHaveCount(0);
+
+  await switchIdentity(page, b);
+  await expect(answer).toHaveCount(0);
+  await expect(page.getByText(question)).toHaveCount(0);
+  await expect(page.getByText(s.emptyAnswer)).toBeVisible();
+
+  await switchIdentity(page, a);
+  await expect(answer).toHaveCount(1);
+  await expect(answer.getByRole("heading", { name: question })).toBeVisible();
+  await expect(answer.getByText(s.answering)).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: s.sessionQuestions }).getByRole("link")).toHaveText([question]);
+});
+
 test("待審只給 canReview 的身分；沒有 tools=evals 時，所有身分都看不到評測台", async ({ page }) => {
   await openApp(page);
   for (const role of access.roles) {
