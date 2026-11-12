@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evalsMode, onlineDemo, presentationMode, readEvalsMode, readOnlineDemo, readPresentationMode, visibleViews, defaultView } from "./online-demo";
+import { demoCompare, evalsMode, onlineDemo, readDemoCompare, presentationMode, readEvalsMode, readOnlineDemo, readPresentationMode, visibleViews, defaultView } from "./online-demo";
 
 describe("readOnlineDemo", () => {
   it("預設關閉：未設定或不是 \"1\" 時都關閉，也不帶公開碼", () => {
@@ -16,6 +16,27 @@ describe("readOnlineDemo", () => {
 
   it("測試環境沒有設定開關，所以是關閉的", () => {
     expect(onlineDemo.enabled).toBe(false);
+  });
+});
+
+describe("readDemoCompare", () => {
+  it("預設關閉：未設定或不是 \"1\" 時都關閉", () => {
+    expect(readDemoCompare({})).toBe(false);
+    for (const value of ["0", "true", "", " 1", "1 ", true, 1]) expect(readDemoCompare({ VITE_DEMO_COMPARE: value })).toBe(false);
+  });
+
+  it("只有 VITE_DEMO_COMPARE 是 \"1\" 時開啟", () => {
+    expect(readDemoCompare({ VITE_DEMO_COMPARE: "1" })).toBe(true);
+    expect(readDemoCompare({ VITE_DEMO_COMPARE: "1", VITE_ONLINE_DEMO: "0" })).toBe(true);
+  });
+
+  it("線上 demo 一律關閉，即使 VITE_DEMO_COMPARE 是 \"1\"", () => {
+    expect(readDemoCompare({ VITE_DEMO_COMPARE: "1", VITE_ONLINE_DEMO: "1" })).toBe(false);
+    expect(readDemoCompare({ VITE_ONLINE_DEMO: "1" })).toBe(false);
+  });
+
+  it("測試環境沒有設定開關，所以是關閉的", () => {
+    expect(demoCompare).toBe(false);
   });
 });
 

@@ -14,6 +14,14 @@ export function readOnlineDemo(env: Record<string, unknown>): OnlineDemo {
 
 export const onlineDemo: OnlineDemo = readOnlineDemo(import.meta.env);
 
+// 展示模式的身分對照（#261，docs/qa.md「身分對照」）：營運開關，預設關閉。一題會送出「身分數」次，計入每日提問次數，
+// 所以只有 VITE_DEMO_COMPARE 是 "1" 時開啟；線上 demo（VITE_ONLINE_DEMO 是 "1"）一律關閉。build 時代入，執行時不能更改
+export function readDemoCompare(env: Record<string, unknown>): boolean {
+  return env.VITE_DEMO_COMPARE === "1" && !readOnlineDemo(env).enabled;
+}
+
+export const demoCompare: boolean = readDemoCompare(import.meta.env);
+
 export type View = "home" | "qa" | "graph" | "timeline" | "upload" | "review" | "evals";
 
 // 客戶展示模式（#129，docs/qa.md「展示模式」）：網址的 mode 參數是 "presentation"（區分大小寫）時開啟，其他值或沒有參數時關閉。
