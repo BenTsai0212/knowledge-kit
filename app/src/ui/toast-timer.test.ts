@@ -65,4 +65,22 @@ describe("createToastTimer", () => {
     vi.advanceTimersByTime(60_000);
     expect(expire).not.toHaveBeenCalled();
   });
+
+  it("onRun：第一個 hold 時通知暫停，全部離開、重新計時時通知播放；cancel 後不再通知", () => {
+    const run = vi.fn();
+    const timer = createToastTimer(10_000, vi.fn(), run);
+    expect(run).not.toHaveBeenCalled();
+    timer.hold("hover");
+    timer.hold("focus");
+    expect(run.mock.calls).toEqual([[false]]);
+    timer.release("hover");
+    expect(run.mock.calls).toEqual([[false]]);
+    timer.release("focus");
+    expect(run.mock.calls).toEqual([[false], [true]]);
+    timer.release("focus");
+    timer.cancel();
+    timer.hold("hover");
+    timer.release("hover");
+    expect(run.mock.calls).toEqual([[false], [true]]);
+  });
 });

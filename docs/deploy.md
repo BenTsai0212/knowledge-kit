@@ -85,7 +85,7 @@ npm run check:client && npm test
 ## 更新
 
 - **新版本**：重複「部署步驟」的 1、2（secret 沿用）。部署後再跑一次驗收清單。
-- **更換公開碼**：先 `wrangler secret put ACCESS_CODES --env demo`，再用新碼重新 build 與部署。兩步之間，舊畫面的訪客會收到 `invalid_access_code`，回到邀請碼表單（不再預先填入），可以手動輸入新碼。
+- **更換公開碼**：先 `wrangler secret put ACCESS_CODES --env demo`，再用新碼重新 build 與部署。兩步之間，舊畫面的訪客會收到 `invalid_access_code`，回到邀請碼表單（輸入框保留被拒的舊碼並說明原因），改成新碼即可。
 - **調整次數上限**：開 PR 修改 `env.demo.vars`，合併後部署。
 
 ## 回退與緊急停止

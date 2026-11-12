@@ -12,9 +12,12 @@ interface Props {
 export function RetrievalFallbackNotice({ language, fallback }: Props) {
   if (fallback === null) return null;
   const s = strings(language);
+  // 從頂端往下推開下方的內容（kExpand，expand；#246），之後常駐
   return (
-    <Notice kind="warning" title={s.retrievalFallbackTitle}>
-      {s.retrievalFallback[fallback.reason]}
-    </Notice>
+    <div className="retrieval-fallback">
+      <Notice kind="warning" title={s.retrievalFallbackTitle}>
+        {s.retrievalFallback[fallback.reason]}
+      </Notice>
+    </div>
   );
 }

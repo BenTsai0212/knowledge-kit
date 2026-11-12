@@ -6,7 +6,7 @@ import { FAKE_ENTITY_NAME, routeFakeAsk } from "./fake-ask";
 export { language, s };
 
 // 邀請碼：假的 /api/ask 不檢查，任意虛構字串即可（只存在 sessionStorage）
-const ACCESS_CODE = "e2e-access-code";
+export const ACCESS_CODE = "e2e-access-code";
 
 export type RoleId = string;
 

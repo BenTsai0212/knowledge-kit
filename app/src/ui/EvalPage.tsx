@@ -14,6 +14,8 @@ import { apiTransport } from "../qa/api";
 import { preparesModel, type ActiveProvider } from "../retrieval/providers";
 import { openRetriever } from "../retrieval/retrieve";
 import { answerSentences } from "./answer-motion";
+import { closeDialog } from "./dialog-motion";
+import { prefersReducedMotion } from "./motion";
 import { bankSummary, createEvalDatabases, differs, effectiveForm, evalReport, outcome, parseReportSource, parseSettings, progressCells, settingsForm, setSummary, TOP_K_MAX, verdicts, type Outcome, type SettingsForm } from "./eval-helpers";
 import { EmptyState } from "./EmptyState";
 import { FilePicker } from "./FilePicker";
@@ -113,7 +115,7 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
     const d = dialog.current;
     if (d === null) return;
     if (phase === "confirm" && !d.open) d.showModal();
-    if (phase !== "confirm" && d.open) d.close();
+    if (phase !== "confirm" && d.open) closeDialog(d, prefersReducedMotion());
   }, [phase]);
 
   const parsed = forms.slice(0, useB ? 2 : 1).map((f) => parseSettings(f.topK, f.minScore));
@@ -469,7 +471,14 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
         )}
       </div>
 
-      <dialog ref={dialog} className="upload-dialog" aria-label={s.evalConfirmTitle} onClose={() => phase === "confirm" && void cancel()}>
+      {/* 對話框（#246）：遮罩淡入、本體 98%→100% 延後 60ms；Esc 也先播放退場再關閉 */}
+      <dialog
+        ref={dialog}
+        className="dialog"
+        aria-label={s.evalConfirmTitle}
+        onCancel={(e) => (e.preventDefault(), closeDialog(e.currentTarget, prefersReducedMotion()))}
+        onClose={() => phase === "confirm" && void cancel()}
+      >
         <h2>{s.evalConfirmTitle}</h2>
         <p>{fill(s.evalConfirmCalls, estimate)}</p>
         <p className="muted">{s.evalConfirmLimit}</p>
