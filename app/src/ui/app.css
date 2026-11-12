@@ -925,7 +925,7 @@ main.qa > .source .source-text mark.entering {
   padding-bottom: calc(72px + env(safe-area-inset-bottom));
 }
 
-/* 展示模式只有兩個頁籤，沒有分頁列，只留 safe area */
+/* 只有兩個頁籤（展示模式的登入頁），沒有分頁列，只留 safe area */
 .app.app--phone:has(> .mobile-segmented) {
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -1048,7 +1048,7 @@ main.qa > .source .source-text mark.entering {
   stroke-linejoin: round;
 }
 
-/* 只有兩個頁籤時（展示模式）：頂端列下方的分段切換 */
+/* 只有兩個頁籤時（展示模式的登入頁；登入後是 PresentationBar）：頂端列下方的分段切換 */
 .mobile-segmented {
   display: flex;
   gap: 0.25rem;
@@ -3978,6 +3978,52 @@ label.inline {
   flex: none;
   color: var(--color-success);
   font-weight: 700;
+}
+
+/* 手機寬度（≤ 600px，layout.ts 的 PHONE_MAX）：展示模式登入後仍是同一個頂端列（不換成手機的導覽，畫面上只有一個「問答｜圖譜」切換）。
+   頂端列的每一項各佔一行、分段切換佔滿寬度、身分可換行；劇本改成在對話上方堆疊，整頁沒有橫向捲動 */
+@media (max-width: 600px) {
+  :root[data-mode="presentation"] .presentation-bar {
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .presentation-bar__labels {
+    flex-wrap: wrap;
+  }
+
+  .presentation-bar .primary-tabs,
+  .identity-segments {
+    flex: 1 1 100%;
+  }
+
+  .presentation-bar .primary-tabs button {
+    flex: 1 1 0;
+  }
+
+  .identity-segments {
+    flex-wrap: wrap;
+    margin-left: 0;
+  }
+
+  :root[data-mode="presentation"] .identity-segments label {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0 0.75rem;
+  }
+
+  :root[data-mode="presentation"] main.qa,
+  :root[data-mode="presentation"] main.qa.with-panel,
+  :root[data-mode="presentation"] main.qa.with-panel:has(> .source) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .script {
+    overflow-y: visible;
+    padding: 1rem;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
 }
 
 /* 語意模型準備中：縮成頂端的小點，完成後消失（RetrievalNotice 的 compact） */

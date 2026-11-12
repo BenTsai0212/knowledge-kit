@@ -1,5 +1,5 @@
 // 手機的共同結構（#255，docs/design.md「手機與平板」）：390×844 時是頂端列（60px）＋底部分頁列（72px），不顯示左側導覽；
-// 分頁列依身分分配（一般員工 5 頁，主管把時間軸、待審、評測台收進「更多」），展示模式改用分段切換；底部面板的開關與焦點。
+// 分頁列依身分分配（一般員工 5 頁，主管把時間軸、待審、評測台收進「更多」），展示模式登入後改用展示模式的頂端列（#260）；底部面板的開關與焦點。
 // 身分與語言面板的內容（單選卡與說明）在 #255 的下一個 PR。往下拖曳的手感與 safe area 由人在實機確認。/api/ask 一律是假的回應。
 import { expect, test, type Page } from "@playwright/test";
 import { EVALS_PATH, identityBadge, identitySheet, openApp, s, switchIdentity } from "./support/app";
@@ -108,12 +108,17 @@ test("在面板中切換身分：徽章換成新的身分", async ({ page }) => 
   await expect(identityBadge(page)).toHaveText(other!.label[language]);
 });
 
-test("展示模式：沒有分頁列，頂端列下方是問答與圖譜的分段切換", async ({ page }) => {
+// 展示模式登入後不論寬度都是展示模式的頂端列（#260）：其中的「問答｜圖譜」是畫面上唯一的切換，沒有手機的分頁列與分段切換
+test("展示模式：沒有分頁列，頂端列只有一個問答與圖譜的分段切換", async ({ page }) => {
   await openApp(page, "/?mode=presentation");
   await expect(tabBar(page)).toHaveCount(0);
-  const segmented = page.locator(".mobile-segmented");
+  const segmented = page.getByRole("navigation", { name: s.views, exact: true });
+  await expect(segmented).toHaveCount(1);
+  await expect(segmented).toHaveClass(/segmented/);
   await expect(segmented.getByRole("button")).toHaveText([s.tabQa, s.tabGraph]);
   await expect(segmented.getByRole("button", { name: s.tabQa })).toHaveAttribute("aria-current", "page");
+  // 問答頁的劇本（440px）在手機寬度改成上下堆疊，不造成橫向捲動
+  expect(await noHorizontalScroll(page)).toBe(true);
   await segmented.getByRole("button", { name: s.tabGraph }).click();
   await expect(segmented.getByRole("button", { name: s.tabGraph })).toHaveAttribute("aria-current", "page");
   expect((await segmented.getByRole("button").first().boundingBox())!.height).toBeGreaterThanOrEqual(44);

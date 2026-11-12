@@ -381,7 +381,8 @@ export function App() {
   }, [entity?.id]);
 
   const Nav = layout === "phone" ? MobileNav : Sidebar;
-  // 展示模式登入後是頂端列（#260），不論寬度都取代 Nav，所以不會與手機的分段切換（layout.ts 的 usesSegmented）同時出現
+  // 展示模式登入後是頂端列（#260），不論寬度都取代 Nav（手機寬度的排列見 app.css），所以畫面上只有它的「問答｜圖譜」切換，
+  // 不會與手機的分段切換（layout.ts 的 usesSegmented，只剩展示模式的登入頁）同時出現
   const presentationBar = presentationMode && accessCode !== null;
   return (
     <div className={layout === "phone" && !presentationBar ? "app app--phone" : "app"}>
