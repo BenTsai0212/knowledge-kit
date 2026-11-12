@@ -25,6 +25,8 @@ export const EDGE_MIX = 75;
 // 變灰的元素：45% 不透明；按「只看它」之後 15%（#240 決定 1、3）
 export const DIMMED_OPACITY = 0.45;
 export const ISOLATED_OPACITY = 0.15;
+// 鍵盤的目前實體與游標的圈（#289）
+export const KEYBOARD_RING = 3;
 
 // 關聯數 0 → 32px，每多一個關聯加 4px，最多 64px
 export function nodeSize(degree: number): number {
@@ -139,6 +141,15 @@ export function graphStyle(read: ReadVariable, types: TypeStyle[], transitionMs 
     // 滑過變灰的節點時恢復 100% 不透明，標籤在要讀的時候可讀（#240 決定 3）
     { selector: "node.dimmed.hover", style: { opacity: 1 } },
     // 選取與滑過時顯示完整名稱（#288），疊在其他節點的標籤上面
-    { selector: "node.selected, node.hover", style: { label: "data(label)", "z-index": 10 } },
+    { selector: "node.selected, node.hover", style: { label: "data(label)", "z-index": 10 } },    // 鍵盤操作（#289，docs/design.md「圖譜的鍵盤操作與螢幕報讀器」）：目前的實體是 focus 色 3px 實線圈、游標是虛線圈；
+    // 連到目前實體的線加粗成 primary 並標出關係名稱。鍵盤要看得到的元素不變灰（與 hover 相同恢復 100%）
+    { selector: "node.kb-current", style: { "outline-width": KEYBOARD_RING, "outline-style": "solid", "outline-color": v("--color-focus"), "outline-offset": 2 } },
+    { selector: "node.kb-cursor", style: { "outline-width": KEYBOARD_RING, "outline-style": "dashed", "outline-color": v("--color-focus"), "outline-offset": 2 } },
+    // 目前實體與游標和選取、滑過一樣顯示完整名稱（#288 的截斷不套用；報讀也一律用完整名稱）
+    { selector: "node.kb-current, node.kb-cursor", style: { opacity: 1, label: "data(label)", "z-index": 10 } },
+    {
+      selector: "edge.kb-near",
+      style: { label: "data(label)", width: 4, "line-color": v("--color-primary"), "target-arrow-color": v("--color-primary"), opacity: 1 },
+    },
   ];
 }

@@ -9,6 +9,7 @@ import {
   edgeWidth,
   graphStyle,
   ISOLATED_OPACITY,
+  KEYBOARD_RING,
   mix,
   NODE_LABEL_MAX_WIDTH,
   NODE_SHAPES,
@@ -139,7 +140,32 @@ describe("圖譜套用設計系統 v1（#240）", () => {
     expect(rule("node.path")).toMatchObject({ "outline-color": colors.primary, "border-color": colors.background });
   });
 
-  it("不畫任何「有內容被隱藏」的痕跡：沒有虛線框或上鎖的樣式", () => {
-    expect(JSON.stringify(style)).not.toMatch(/dashed|dotted|lock|hidden/);
+  it("不畫任何「有內容被隱藏」的痕跡：沒有虛線框或上鎖的樣式（鍵盤游標的虛線圈除外，#289）", () => {
+    expect(JSON.stringify(style.filter((r) => r.selector !== "node.kb-cursor"))).not.toMatch(/dashed|dotted|lock|hidden/);
+  });
+});
+
+describe("鍵盤操作的標示（#289）", () => {
+  it("目前的實體是 focus 色 3px 實線圈，游標是虛線圈；Light／Dark 都用 focus", () => {
+    expect(KEYBOARD_RING).toBe(3);
+    for (const [rules, palette] of [[style, colors], [darkStyle, darkColors]] as const) {
+      expect(rule("node.kb-current", rules)).toMatchObject({ "outline-width": 3, "outline-style": "solid", "outline-color": palette.focus });
+      expect(rule("node.kb-cursor", rules)).toMatchObject({ "outline-width": 3, "outline-style": "dashed", "outline-color": palette.focus });
+    }
+  });
+
+  it("連到目前實體的線加粗成 primary 並標出關係名稱；鍵盤標示的元素不變灰", () => {
+    expect(rule("edge.kb-near")).toEqual({ label: "data(label)", width: 4, "line-color": colors.primary, "target-arrow-color": colors.primary, opacity: 1 });
+    expect(rule("node.kb-current, node.kb-cursor")).toMatchObject({ opacity: 1 });
+    // 排在變灰之後，蓋過變灰的不透明度
+    const order = (selector: string) => style.findIndex((r) => r.selector === selector);
+    expect(order("edge.kb-near")).toBeGreaterThan(order(".dimmed.isolated"));
+    expect(order("node.kb-current, node.kb-cursor")).toBeGreaterThan(order(".dimmed.isolated"));
+  });
+
+  it("圖上畫截斷名稱（#288），選取、滑過與鍵盤的目前實體／游標顯示完整名稱", () => {
+    expect(rule("node")).toMatchObject({ label: "data(shortLabel)" });
+    expect(rule("node.selected, node.hover")).toMatchObject({ label: "data(label)", "z-index": 10 });
+    expect(rule("node.kb-current, node.kb-cursor")).toEqual({ opacity: 1, label: "data(label)", "z-index": 10 });
   });
 });

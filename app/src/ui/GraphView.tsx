@@ -1,6 +1,6 @@
 // 以 cytoscape 畫出圖譜。cytoscape 以動態 import 載入：只用問答的人不必下載（build 時分成獨立的 chunk）。
 import type { CollectionReturnValue, Core, EdgeSingular, ElementDefinition } from "cytoscape";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { clientConfig } from "../client/load";
 import { ALL, focusOf, nearRelations, selectedOf, type Expansion } from "../graph/expansion";
 import type { PathStep } from "../graph/path";
@@ -28,6 +28,20 @@ interface Props {
   compact?: boolean;
   // 判斷同名實體用的圖（#198）：鄰近圖傳入完整的可見圖；沒有傳入時用 graph
   labelGraph?: Graph;
+  // 鍵盤操作（#289，圖譜頁）：目前的實體與游標；圖譜外框有鍵盤焦點時才傳入
+  keyboard?: KeyboardMarks | null;
+  // 鍵盤操作讀取節點位置（順時針排序用）
+  api?: RefObject<GraphViewApi | null>;
+}
+
+export interface KeyboardMarks {
+  current: string | null;
+  cursor: string | null;
+}
+
+export interface GraphViewApi {
+  // 節點在版面上的位置（model 座標，不受平移與縮放影響）；圖還沒畫好時是空的
+  positions(): Map<string, { x: number; y: number }>;
 }
 
 const NONE: ReadonlySet<string> = new Set();
@@ -98,6 +112,18 @@ function markSelected(cy: Core, graph: Graph, selected: string | null) {
     if (selected !== null) cy.$id(selected).addClass("selected");
     cy.edges().removeClass("near");
     cy.edges().filter((e) => near.has(e.data("relation"))).addClass("near");
+  });
+}
+
+// 鍵盤的目前實體（實線圈）、游標（虛線圈），以及連到目前實體的線（加粗、標關係名稱）
+function markKeyboard(cy: Core, keyboard: KeyboardMarks | null) {
+  cy.batch(() => {
+    cy.elements().removeClass("kb-current kb-cursor kb-near");
+    if (keyboard === null || keyboard.current === null) return;
+    const current = cy.$id(keyboard.current);
+    current.addClass("kb-current");
+    current.connectedEdges().addClass("kb-near");
+    if (keyboard.cursor !== null) cy.$id(keyboard.cursor).addClass("kb-cursor");
   });
 }
 
@@ -181,7 +207,7 @@ function trackContainer(element: HTMLElement, cy: Core): () => void {
   };
 }
 
-export function GraphView({ graph, language, selected, path, onSelect, expansion, excluded = NONE, isolated = false, compact = false, labelGraph = graph }: Props) {
+export function GraphView({ graph, language, selected, path, onSelect, expansion, excluded = NONE, isolated = false, compact = false, labelGraph = graph, keyboard = null, api }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const cy = useRef<Core | null>(null);
   // tap 事件在 cytoscape 實例建立時註冊，以 ref 取得最新的 onSelect
@@ -214,6 +240,7 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
       markFocus(instance, graph, expansion ?? ALL, path, excluded, isolated);
       applied.current = expansion ?? ALL;
       markPath(instance, path);
+      markKeyboard(instance, keyboard);
     });
     return () => {
       cancelled = true;
@@ -253,5 +280,18 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
     applied.current = next;
   }, [expansion, path, excluded, isolated]);
 
-  return <div ref={container} className={compact ? "graph-canvas compact" : "graph-canvas"} />;
+  useEffect(() => {
+    if (cy.current !== null) markKeyboard(cy.current, keyboard);
+  }, [keyboard?.current, keyboard?.cursor, keyboard === null]);
+
+  useEffect(() => {
+    if (api === undefined) return;
+    api.current = { positions: () => new Map((cy.current?.nodes() ?? []).map((n) => [n.id(), { ...n.position() }])) };
+    return () => {
+      api.current = null;
+    };
+  }, [api]);
+
+  // 圖譜頁的畫布對報讀器隱藏，改讀外框的報讀區（#289）；鄰近圖不變
+  return <div ref={container} className={compact ? "graph-canvas compact" : "graph-canvas"} aria-hidden={compact ? undefined : true} />;
 }

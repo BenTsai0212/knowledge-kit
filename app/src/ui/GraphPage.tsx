@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FocusEvent as ReactFocusEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { clientConfig } from "../client/load";
 import type { Database } from "../db/database";
 import { readRetractions, retract, ReviewError, type DocumentRetraction } from "../extraction/store";
@@ -12,7 +12,8 @@ import { EntityIcon } from "./EntityIcon";
 import { EntityPanel } from "./EntityPanel";
 import { EntitySearch } from "./EntitySearch";
 import { entityOptionLabel } from "./graph-labels";
-import { GraphView } from "./GraphView";
+import { announceEnter, announceGo, announceMove, announceShown, createAnnouncer, entryEntity, keyAction, moveCursor, neighborsClockwise } from "./graph-keyboard";
+import { GraphView, type GraphViewApi } from "./GraphView";
 import { PathPanel } from "./PathPanel";
 import { createRequestGate } from "./requests";
 import { fill, strings } from "../client/i18n";
@@ -40,6 +41,16 @@ const { entityTypes } = clientConfig.knowledgeModel;
 // 新的圖譜中已看不到的實體一律清除
 const keepVisible = (graph: Graph) => (id: string | null) => (id !== null && graph.entities.some((e) => e.id === id) ? id : null);
 
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+// 在「回到全部」的狀態按 Esc 離開圖譜（#289 決定 4）：焦點移到外框後的下一個可聚焦元素，等同 Tab
+function focusAfter(element: HTMLElement) {
+  const next = [...document.querySelectorAll<HTMLElement>(FOCUSABLE)].find(
+    (el) => !element.contains(el) && el.getClientRects().length > 0 && (element.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0,
+  );
+  next?.focus();
+}
+
 // 圖譜頁：切換身分或語言時重新讀取；之後才回來的舊結果忽略；已展開的路徑截到第一個看不到的實體之前，路徑的兩端已看不到時清除。
 // 逐步展開（#199）：點節點從它展開，已展開的路徑累積；「回到全部」顯示全貌。
 // 中間是搜尋框、類型篩選（圖例）與圖，右側是實體面板（沒有選取時列出關聯最多的實體當起點）與多跳路徑
@@ -61,6 +72,17 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
   const [version, setVersion] = useState(0);
   // 選取的實體可以撤回的文件（沒有 canReview 時不讀取）
   const [retractions, setRetractions] = useState<{ entityId: string; list: DocumentRetraction[] } | null>(null);
+  // 鍵盤操作（#289）：沒有選取時鍵盤的「目前」只畫圈、報讀，按 Enter 前不展開、不改實體面板（#289 決定 2）；
+  // 有選取時目前的實體就是選取的實體。游標是目前實體的某個相關實體；focused＝外框有鍵盤焦點（:focus-visible）
+  const [keyboardCurrent, setKeyboardCurrent] = useState<string | null>(null);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [focused, setFocused] = useState(false);
+  const [announcement, setAnnouncement] = useState("");
+  const announcer = useMemo(() => createAnnouncer(setAnnouncement), []);
+  useEffect(() => {
+    return announcer.cancel;
+  }, [announcer]);
+  const view = useRef<GraphViewApi | null>(null);
 
   useEffect(() => {
     const ticket = reads.current.begin();
@@ -72,6 +94,8 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
       // 切換身分時只截掉看不到的部分，「只看它」的狀態不變
       setExpansionState((current) => keepVisiblePath(g, current));
       setEnds(({ from, to }) => ({ from: keep(from), to: keep(to) }));
+      setKeyboardCurrent(keep);
+      setCursor(keep);
     });
     return () => reads.current.cancel();
   }, [db, identity, language, version]);
@@ -105,6 +129,16 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
     return new Set([...types, ...unknown]);
   }, [graph, types]);
   const excluded = useMemo(() => (graph === null ? new Set<string>() : excludedEntities(graph, filter)), [graph, filter]);
+  // 選取改變時（點節點、搜尋、面板）游標清除
+  useEffect(() => {
+    setCursor(null);
+  }, [selected]);
+  // 篩選後報讀顯示的實體數（只在勾選改變時）
+  const announcedTypes = useRef(types);
+  useEffect(() => {
+    if (graph !== null && announcedTypes.current !== types) announcer.say(announceShown(graph, excluded, language));
+    announcedTypes.current = types;
+  }, [types]);
 
   if (graph === null) return <p className="card muted">{s.loading}</p>;
   // 原因只說明目前身分的資料，不暗示有看不到的實體；切換身分旁不說明會多看到什麼（#245 決定）
@@ -124,6 +158,56 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
       return next;
     });
   const top = topConnected(graph, language, filter);
+
+  // 鍵盤操作（#289）：外框取得鍵盤焦點時，目前的實體＝選取的實體，沒有選取時是關聯最多的實體（只畫圈，不展開）
+  const k = s.graphKeyboard;
+  const current = selected ?? keyboardCurrent;
+  const enter = () => {
+    const entry = entryEntity(graph, selected, excluded, language);
+    if (selected === null) setKeyboardCurrent(entry);
+    setCursor(null);
+    setFocused(true);
+    announcer.say(announceEnter(graph, entry, excluded, language));
+    return entry;
+  };
+  const onFrameFocus = (e: ReactFocusEvent<HTMLDivElement>) => {
+    // 只處理鍵盤進入外框；用滑鼠點畫布時不畫圈、不報讀，之後按鍵時才進入
+    if (e.target === e.currentTarget && e.currentTarget.matches(":focus-visible")) enter();
+  };
+  const onFrameKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget) return;
+    const action = keyAction(e);
+    if (action === null || !["prev", "next", "go", "back", "reset"].includes(action)) return;
+    e.preventDefault();
+    const at = focused && current !== null ? current : enter();
+    if (at === null) return;
+    if (action === "prev" || action === "next") {
+      const neighbors = neighborsClockwise(graph, at, view.current?.positions() ?? new Map(), excluded);
+      const index = moveCursor(neighbors.length, cursor === null ? null : neighbors.findIndex((n) => n.entity.id === cursor), action === "next" ? 1 : -1);
+      if (index === null) return announcer.say(k.noNeighbors);
+      setCursor(neighbors[index].entity.id);
+      announcer.say(announceMove(graph, neighbors, index, language));
+    } else if (action === "go") {
+      // 前往游標所在的實體（沒有游標時是目前的實體）：等同點節點，實體面板同步，焦點留在外框
+      const target = cursor ?? at;
+      onExpand(target);
+      setKeyboardCurrent(target);
+      setCursor(null);
+      announcer.say(announceGo(graph, target, language));
+    } else if (action === "back") {
+      // 上一個實體＝展開路徑的上一段，與麵包屑一致（#289 決定 3）
+      if (expansion.length < 2) return announcer.say(k.atStart);
+      const previous = expansion[expansion.length - 2];
+      setExpansion(expansion.slice(0, -1));
+      setKeyboardCurrent(previous);
+      announcer.say(announceGo(graph, previous, language));
+    } else if (expansion.length > 0) {
+      // Esc：回到全部，目前的實體保留在鍵盤的「目前」
+      setKeyboardCurrent(at);
+      setExpansion(ALL);
+      announcer.say(announceShown(graph, excluded, language));
+    } else focusAfter(e.currentTarget);
+  };
 
   return (
     <div className="graph-page">
@@ -172,7 +256,35 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
             </nav>
           )}
         </div>
-        <GraphView graph={graph} language={language} selected={selected} path={path} expansion={expansion} excluded={excluded} isolated={isolated} onSelect={onExpand} />
+        {/* 外框（#289）：在 Tab 順序中只佔一個位置，方向鍵交給圖譜；畫布本身對報讀器隱藏，每一步寫進報讀區 */}
+        <div
+          className="graph-frame"
+          tabIndex={0}
+          role="application"
+          aria-roledescription={k.roleDescription}
+          aria-label={k.label}
+          onFocus={onFrameFocus}
+          onBlur={(e) => {
+            if (e.target === e.currentTarget) setFocused(false);
+          }}
+          onKeyDown={onFrameKeyDown}
+        >
+          <GraphView
+            graph={graph}
+            language={language}
+            selected={selected}
+            path={path}
+            expansion={expansion}
+            excluded={excluded}
+            isolated={isolated}
+            onSelect={onExpand}
+            keyboard={focused ? { current, cursor } : null}
+            api={view}
+          />
+        </div>
+        <p className="visually-hidden" aria-live="polite" data-testid="graph-announcer">
+          {announcement}
+        </p>
       </section>
       <div className="graph-side">
         {selected === null ? (

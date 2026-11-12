@@ -1090,6 +1090,11 @@ main.qa > .source .source-text mark.entering {
   background-size: 24px 24px;
 }
 
+/* 圖譜外框（#289）：可聚焦（role="application"），焦點框沿用最上方共用的 :focus-visible，圓角與畫布相同 */
+.graph-frame {
+  border-radius: var(--radius-medium);
+}
+
 /* 右側實體面板的鄰近圖（#195） */
 .graph-canvas.compact {
   height: 240px;
