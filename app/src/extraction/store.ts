@@ -1,5 +1,5 @@
 // 萃取結果的資料層（docs/data-model.md「待審與核准」）：寫入待審、讀取待審區、核准、退回、撤回。
-// 一律經 withIdentity()；誰能寫入、看得到、核准與撤回什麼，完全交給 RLS（migration 0006、0009）。只用 INSERT。
+// 一律經 withIdentity()；誰能寫入、看得到、核准與撤回什麼，完全交給 RLS（migration 0006、0009、0011）。只用 INSERT。
 import type { Transaction } from "@electric-sql/pglite";
 import type { LanguageCode, LocalizedText } from "../client/types";
 import type { Database } from "../db/database";
@@ -78,7 +78,7 @@ function mapError(e: unknown): never {
   throw e;
 }
 
-// 上傳者寫入自己文件的萃取結果；寫入後上傳者讀不到（只有核准者看得到），所以不使用 RETURNING
+// 上傳者寫入自己文件的萃取結果（寫入後上傳者讀得到自己的文件的待審項目，0011）
 export async function writePending(db: Database, identityId: string | null, documentId: string, input: PendingInput): Promise<void> {
   try {
     await db.withIdentity(identityId, async (tx) => {
@@ -169,99 +169,120 @@ const statusOf = (decision: string | null): ReviewStatus => (decision === null ?
 // 未撤回的決定（每個項目最多一筆）
 const ACTIVE = (alias: string) => `NOT EXISTS (SELECT 1 FROM kk.review_retractions x WHERE x.decision_id = ${alias}.id)`;
 
-// 待審區：目前身分看得到的待審項目與目前有效的決定，依文件分組（沒有 canReview 時為空）。
-// 沒有決定、或所有決定都已撤回的項目是待審
+// 待審區：目前身分看得到的待審項目與目前有效的決定，依文件分組。
+// 沒有決定、或所有決定都已撤回的項目是待審。上傳者也讀得到自己上傳的文件（0011），
+// 所以呼叫端只在 canReview 時把結果當成待審區（App.tsx、ReviewPage.tsx）
 export function readReview(db: Database, identityId: string | null): Promise<ReviewDocument[]> {
-  return db.withIdentity(identityId, async (tx) => {
-    const entities = (
-      await tx.query<{
-        id: string;
-        document_id: string;
-        title: string;
-        language: string;
-        visibility: string;
-        project: string | null;
-        entity_type: string;
-        names: LocalizedText;
-        decision: string | null;
-        decision_id: string | null;
-        merge_into: string | null;
-      }>(
-        `SELECT p.id, p.document_id, d.title, d.language, d.visibility_level_id AS visibility, d.project_id AS project,
-                p.entity_type, p.names, r.decision, r.id AS decision_id, r.merge_into
-           FROM kk.pending_entities p JOIN kk.documents d ON d.id = p.document_id
-           LEFT JOIN kk.review_decisions r ON r.item_id = p.id AND ${ACTIVE("r")}
-          ORDER BY p.document_id, p.id`,
-      )
-    ).rows;
-    const relations = (
-      await tx.query<{
-        id: string;
-        document_id: string;
-        relation_type: string;
-        from_pending_id: string;
-        to_pending_id: string;
-        decision: string | null;
-        decision_id: string | null;
-      }>(
-        `SELECT p.id, p.document_id, p.relation_type, p.from_pending_id, p.to_pending_id, r.decision, r.id AS decision_id
-           FROM kk.pending_relations p LEFT JOIN kk.review_decisions r ON r.item_id = p.id AND ${ACTIVE("r")}
-          ORDER BY p.document_id, p.id`,
-      )
-    ).rows;
-    const entityRows = (await tx.query<SourceRow>(SOURCES("pending_entity_sources", "pending_entity_id"))).rows;
-    const relationRows = (await tx.query<SourceRow>(SOURCES("pending_relation_sources", "pending_relation_id"))).rows;
-    const entitySources = group(entityRows);
-    const relationSources = group(relationRows);
+  return db.withIdentity(identityId, (tx) => pendingDocuments(tx, false));
+}
 
-    const documents = new Map<string, ReviewDocument>();
-    for (const e of entities) {
-      const doc = documents.get(e.document_id) ?? {
-        id: e.document_id,
-        title: e.title,
-        language: e.language,
-        visibility: e.visibility,
-        project: e.project,
-        entities: [],
-        relations: [],
-      };
-      doc.entities.push({
-        id: e.id,
-        type: e.entity_type,
-        names: e.names,
-        sources: entitySources.get(e.id) ?? [],
-        status: statusOf(e.decision),
-        decisionId: e.decision_id,
-        mergedInto: e.merge_into,
-      });
-      documents.set(e.document_id, doc);
-    }
-    for (const r of relations) {
-      const doc = documents.get(r.document_id);
-      if (doc === undefined) continue;
-      const endpoints = doc.entities.filter((e) => e.id === r.from_pending_id || e.id === r.to_pending_id);
-      const status = statusOf(r.decision);
-      doc.relations.push({
-        id: r.id,
-        type: r.relation_type,
-        from: r.from_pending_id,
-        to: r.to_pending_id,
-        sources: relationSources.get(r.id) ?? [],
-        status,
-        decisionId: r.decision_id,
-        rejectedWithEntity: status === "rejected" && endpoints.some((e) => e.status === "rejected"),
-      });
-    }
-    // 依項目在文件中出現的順序排列（review-order.ts）：撤銷、重新讀取或重新萃取後順序不變（#243 PR 3 審查）
-    const entityFirst = firstSources(entityRows);
-    const relationFirst = firstSources(relationRows);
-    const namesOf = (doc: ReviewDocument, id: string) => Object.values(doc.entities.find((e) => e.id === id)?.names ?? {});
-    for (const doc of documents.values()) {
-      doc.entities = byAppearance(doc.entities, (e) => appearanceKey(entityFirst.get(e.id), [Object.values(e.names)]));
-      doc.relations = byAppearance(doc.relations, (r) => appearanceKey(relationFirst.get(r.id), [namesOf(doc, r.from), namesOf(doc, r.to)]));
-    }
-    return [...documents.values()];
+// 我的上傳（#284）：目前身分上傳、看得到的文件，每份附上待審項目與目前有效的決定（0011，ADR 0009）。
+// 還沒有萃取出項目的文件也列出（項目為空）。文件沒有上傳時間，依文件日期由新到舊、再依 id 排列
+export function readMyUploads(db: Database, identityId: string | null): Promise<ReviewDocument[]> {
+  return db.withIdentity(identityId, async (tx) => {
+    const docs = (
+      await tx.query<{ id: string; title: string; language: string; visibility: string; project: string | null }>(
+        `SELECT d.id, d.title, d.language, d.visibility_level_id AS visibility, d.project_id AS project
+           FROM kk.documents d WHERE d.uploaded_by = kk.current_identity_id()
+          ORDER BY d.document_date DESC NULLS LAST, d.id`,
+      )
+    ).rows;
+    const pending = new Map((await pendingDocuments(tx, true)).map((d) => [d.id, d]));
+    return docs.map((d) => pending.get(d.id) ?? { ...d, entities: [], relations: [] });
   });
+}
+
+// ownOnly：只讀目前身分上傳的文件
+async function pendingDocuments(tx: Transaction, ownOnly: boolean): Promise<ReviewDocument[]> {
+  const entities = (
+    await tx.query<{
+      id: string;
+      document_id: string;
+      title: string;
+      language: string;
+      visibility: string;
+      project: string | null;
+      entity_type: string;
+      names: LocalizedText;
+      decision: string | null;
+      decision_id: string | null;
+      merge_into: string | null;
+    }>(
+      `SELECT p.id, p.document_id, d.title, d.language, d.visibility_level_id AS visibility, d.project_id AS project,
+              p.entity_type, p.names, r.decision, r.id AS decision_id, r.merge_into
+         FROM kk.pending_entities p JOIN kk.documents d ON d.id = p.document_id
+         LEFT JOIN kk.review_decisions r ON r.item_id = p.id AND ${ACTIVE("r")}
+        ${ownOnly ? "WHERE d.uploaded_by = kk.current_identity_id()" : ""}
+        ORDER BY p.document_id, p.id`,
+    )
+  ).rows;
+  const relations = (
+    await tx.query<{
+      id: string;
+      document_id: string;
+      relation_type: string;
+      from_pending_id: string;
+      to_pending_id: string;
+      decision: string | null;
+      decision_id: string | null;
+    }>(
+      `SELECT p.id, p.document_id, p.relation_type, p.from_pending_id, p.to_pending_id, r.decision, r.id AS decision_id
+         FROM kk.pending_relations p LEFT JOIN kk.review_decisions r ON r.item_id = p.id AND ${ACTIVE("r")}
+        ORDER BY p.document_id, p.id`,
+    )
+  ).rows;
+  const entityRows = (await tx.query<SourceRow>(SOURCES("pending_entity_sources", "pending_entity_id"))).rows;
+  const relationRows = (await tx.query<SourceRow>(SOURCES("pending_relation_sources", "pending_relation_id"))).rows;
+  const entitySources = group(entityRows);
+  const relationSources = group(relationRows);
+
+  const documents = new Map<string, ReviewDocument>();
+  for (const e of entities) {
+    const doc = documents.get(e.document_id) ?? {
+      id: e.document_id,
+      title: e.title,
+      language: e.language,
+      visibility: e.visibility,
+      project: e.project,
+      entities: [],
+      relations: [],
+    };
+    doc.entities.push({
+      id: e.id,
+      type: e.entity_type,
+      names: e.names,
+      sources: entitySources.get(e.id) ?? [],
+      status: statusOf(e.decision),
+      decisionId: e.decision_id,
+      mergedInto: e.merge_into,
+    });
+    documents.set(e.document_id, doc);
+  }
+  for (const r of relations) {
+    const doc = documents.get(r.document_id);
+    if (doc === undefined) continue;
+    const endpoints = doc.entities.filter((e) => e.id === r.from_pending_id || e.id === r.to_pending_id);
+    const status = statusOf(r.decision);
+    doc.relations.push({
+      id: r.id,
+      type: r.relation_type,
+      from: r.from_pending_id,
+      to: r.to_pending_id,
+      sources: relationSources.get(r.id) ?? [],
+      status,
+      decisionId: r.decision_id,
+      rejectedWithEntity: status === "rejected" && endpoints.some((e) => e.status === "rejected"),
+    });
+  }
+  // 依項目在文件中出現的順序排列（review-order.ts）：撤銷、重新讀取或重新萃取後順序不變（#243 PR 3 審查）
+  const entityFirst = firstSources(entityRows);
+  const relationFirst = firstSources(relationRows);
+  const namesOf = (doc: ReviewDocument, id: string) => Object.values(doc.entities.find((e) => e.id === id)?.names ?? {});
+  for (const doc of documents.values()) {
+    doc.entities = byAppearance(doc.entities, (e) => appearanceKey(entityFirst.get(e.id), [Object.values(e.names)]));
+    doc.relations = byAppearance(doc.relations, (r) => appearanceKey(relationFirst.get(r.id), [namesOf(doc, r.from), namesOf(doc, r.to)]));
+  }
+  return [...documents.values()];
 }
 
 // 待審關係 r 的兩端：兩個待審實體目前有效的核准，解析成核准後的實體（合併對象或新建的實體）
@@ -462,8 +483,9 @@ export function vanishing(
   return { entities, relations };
 }
 
-// 實體經審核進來的出處，依文件列出可以撤回的決定與撤回後會消失的內容。決定只有 canReview、看得到文件的身分讀得到（0006），
-// 其他身分回傳空陣列；參考情境與資料集的出處沒有決定，不列出
+// 實體經審核進來的出處，依文件列出可以撤回的決定與撤回後會消失的內容。決定只有 canReview、看得到文件的身分（0006）
+// 與上傳者（自己上傳的文件，0011）讀得到；上傳者不能撤回，所以呼叫端只在 canReview 時讀取（GraphPage.tsx）。
+// 參考情境與資料集的出處沒有決定，不列出
 export function readRetractions(db: Database, identityId: string | null, entityId: string): Promise<DocumentRetraction[]> {
   return db.withIdentity(identityId, async (tx) => {
     const decisions = (

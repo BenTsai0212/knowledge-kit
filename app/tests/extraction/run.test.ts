@@ -39,7 +39,7 @@ const PROJECT = { key: "e2", type: "project", names: { "zh-TW": "青翼專案", 
 const WORKS_ON = { type: "works-on", from: "e1", to: "e2", sources: [1] };
 
 describe("runExtraction", { timeout: 30_000 }, () => {
-  it("短文件：一批、以上傳者的身分寫入待審；核准者看得到，上傳者看不到", async () => {
+  it("短文件：一批、以上傳者的身分寫入待審；核准者看得到，上傳者只看得到自己上傳的這份（ADR 0009）", async () => {
     const { db, upload, state } = await setup(["測試人員甲參與青翼專案的使用者測試。"]);
     const transport = fakeTransport(() => reply([PERSON, PROJECT], [WORKS_ON]));
     const states: ExtractionState[] = [];
@@ -65,7 +65,8 @@ describe("runExtraction", { timeout: 30_000 }, () => {
       ]),
     );
     expect(doc.relations).toHaveLength(1);
-    expect(await readReview(db, "staff")).toEqual([]);
+    expect((await readReview(db, "staff")).map((d) => [d.id, d.entities.length, d.relations.length])).toEqual([[upload.documentId, 2, 1]]);
+    expect(await readReview(db, "guest")).toEqual([]);
     await db.close();
   });
 

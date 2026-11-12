@@ -7,7 +7,7 @@ import { dataset } from "../../src/dataset/load";
 import { seedDataset } from "../../src/dataset/seed";
 import { openDatabase, type Database } from "../../src/db/database";
 import { suggestMerge } from "../../src/extraction/merge";
-import { approve, readRetractions, readReview, reject, retract, ReviewError, writePending, type PendingInput } from "../../src/extraction/store";
+import { approve, readMyUploads, readRetractions, readReview, reject, retract, ReviewError, writePending, type PendingInput } from "../../src/extraction/store";
 import { shortestPath } from "../../src/graph/path";
 import { readGraph } from "../../src/graph/read";
 import { readTimeline } from "../../src/graph/timeline";
@@ -85,6 +85,7 @@ async function setup(config: ClientConfig = clientConfig): Promise<World> {
     ],
   };
   const review: ReviewSample = {
+    uploads: { [dm.documentId]: "manager", [ds.documentId]: "staff" },
     pendingEntities: [
       ...fromDm.entities.map((e) => ({ id: e.id, doc: dm.documentId, type: e.type, sources: e.sources })),
       ...fromDs.entities.map((e) => ({ id: e.id, doc: ds.documentId, type: e.type, sources: e.sources })),
@@ -129,7 +130,7 @@ const expectedGraph = (w: World, id: string | null) => {
 };
 
 describe("寫入待審（上傳者）", { timeout: 30_000 }, () => {
-  it("只能寫入自己上傳的文件；寫入後，沒有 canReview 的上傳者讀不到", async () => {
+  it("只能寫入自己上傳的文件；寫入後，沒有 canReview 的上傳者只讀得到自己上傳的文件的待審項目（ADR 0009）", async () => {
     const w = await setup();
     const one = (doc: string, passage: string): PendingInput => ({
       entities: [{ id: `pe-x-${doc.slice(-6)}`, type: "team", names: { "zh-TW": "x", en: "x" }, sources: [passage] }],
@@ -140,7 +141,11 @@ describe("寫入待審（上傳者）", { timeout: 30_000 }, () => {
     await expect(writePending(w.db, null, w.ds.documentId, one(w.ds.documentId, w.ds.passageIds[0]))).rejects.toMatchObject({ reason: "denied" });
     // 出處不屬於這份文件 → 外鍵拒絕
     await expect(writePending(w.db, "staff", w.ds.documentId, one(w.ds.documentId, w.dm.passageIds[0]))).rejects.toMatchObject({ reason: "denied" });
-    expect(Object.values(await queryReview(w.db, "staff")).flat()).toEqual([]);
+    expect(await queryReview(w.db, "staff")).toMatchObject({
+      pending_entities: ["pe-s1", "pe-s2"],
+      pending_relations: ["pr-s1"],
+      review_decisions: [],
+    });
     await w.db.close();
   });
 
@@ -629,3 +634,134 @@ describe("撤回（ADR 0007）", { timeout: 60_000 }, () => {
     await w.db.close();
   });
 });
+
+describe("上傳者讀得到自己上傳的文件（ADR 0009，#284）", { timeout: 60_000 }, () => {
+  const matchesOracle = async (w: World, label: string) => {
+    for (const id of IDENTITIES) {
+      expect(await queryReview(w.db, id), `${label} ${id}`).toEqual(sorted(expectedReviewVisible(w.config.access, w.sample, w.review, id)));
+    }
+  };
+
+  it("核准、退回、撤回後，上傳者讀得到自己文件的決定，讀不到別人上傳的；沒有上傳過的身分讀到空的", async () => {
+    const w = await setup();
+    await matchesOracle(w, "決定前");
+    await approve(w.db, "manager", { entities: [{ id: "pe-m1" }, { id: "pe-s2", mergeInto: "project-bluewing" }], relations: [] }, DEFAULT);
+    await reject(w.db, "manager", { entities: ["pe-s1"], relations: [] });
+    w.review.decisions.push(
+      { item: "pe-m1", decision: "approve" },
+      { item: "pe-s2", decision: "approve", mergeInto: "project-bluewing" },
+      { item: "pe-s1", decision: "reject" },
+      { item: "pr-s1", decision: "reject" },
+    );
+    await matchesOracle(w, "決定後");
+    const staff = await queryReview(w.db, "staff");
+    expect(staff.review_decisions).toEqual(["pe-s1", "pe-s2", "pr-s1"]);
+    expect(staff.pending_entities).toEqual(["pe-s1", "pe-s2"]);
+    for (const id of ["guest", null, "nobody"]) expect(Object.values(await queryReview(w.db, id)).flat(), String(id)).toEqual([]);
+
+    await retract(w.db, "manager", ["pe-s1", "pr-s1"]);
+    w.review.retractions.push("pe-s1", "pr-s1");
+    await matchesOracle(w, "撤回後");
+    expect((await queryReview(w.db, "staff")).review_retractions).toEqual(["pe-s1", "pr-s1"]);
+    await w.db.close();
+  });
+
+  it("上傳者讀得到也不能核准、退回或撤回自己文件的項目", async () => {
+    const w = await setup();
+    await approve(w.db, "manager", { entities: [{ id: "pe-s1", mergeInto: "person-lin-zhiming-rd" }], relations: [] }, DEFAULT);
+    w.review.decisions.push({ item: "pe-s1", decision: "approve", mergeInto: "person-lin-zhiming-rd" });
+    expect(expectedReviewVisible(w.config.access, w.sample, w.review, "staff").review_decisions).toEqual(["pe-s1"]);
+    expect(canRetract(w.config.access, w.sample, w.review, "staff", "pe-s1")).toBe(false);
+    expect(canDecide(w.config.access, w.sample, w.review, "staff", "pe-s2", { decision: "approve" })).toBe(false);
+    await expect(retract(w.db, "staff", ["pe-s1"])).rejects.toMatchObject({ reason: "denied" });
+    await expect(approve(w.db, "staff", { entities: [{ id: "pe-s2" }], relations: [] }, DEFAULT)).rejects.toMatchObject({ reason: "denied" });
+    await expect(reject(w.db, "staff", { entities: ["pe-s2"], relations: [] })).rejects.toMatchObject({ reason: "denied" });
+    await w.db.close();
+  });
+
+  it("合併對象看不到時，上傳者讀不到那筆決定（撤回合併後，#284 決定 2）", async () => {
+    const w = await setup();
+    // 長堤專案一般員工看不到；合併一般員工上傳的青翼文件後看得到，撤回後又看不到
+    await approve(w.db, "manager", { entities: [{ id: "pe-s2", mergeInto: "project-longpier" }], relations: [] }, DEFAULT);
+    w.review.decisions.push({ item: "pe-s2", decision: "approve", mergeInto: "project-longpier" });
+    await matchesOracle(w, "合併後");
+    expect((await queryReview(w.db, "staff")).review_decisions).toEqual(["pe-s2"]);
+    await retract(w.db, "manager", ["pe-s2"]);
+    w.review.retractions.push("pe-s2");
+    await matchesOracle(w, "撤回後");
+    const staff = await queryReview(w.db, "staff");
+    expect(staff.review_decisions).toEqual([]);
+    // 撤回紀錄只看文件，仍讀得到（ADR 0007 決定 6）；主管仍讀得到決定
+    expect(staff.review_retractions).toEqual(["pe-s2"]);
+    expect((await queryReview(w.db, "manager")).review_decisions).toEqual(["pe-s2"]);
+    await w.db.close();
+  });
+
+  it("文件看不到時，上傳者讀不到自己上傳的那份的待審項目與決定", async () => {
+    // 一般員工上傳後可見範圍被調低的情況：直接匯入一份一般員工上傳、但等級是機密的文件（內容虛構）
+    const config = clientConfig;
+    const db = await openDatabase(config, {
+      seed: async (pg) => {
+        await seedDataset(pg, config, dataset);
+        await pg.exec(HIDDEN_UPLOAD_SQL);
+      },
+    });
+    const sample: Sample = {
+      ...datasetSample,
+      docs: [...datasetSample.docs, { id: "upload-hidden", level: "confidential", project: null }],
+      passages: [...datasetSample.passages, { id: "upload-hidden-01", doc: "upload-hidden", level: "confidential", project: null }],
+    };
+    const review: ReviewSample = {
+      uploads: { "upload-hidden": "staff" },
+      pendingEntities: [{ id: "pe-h1", doc: "upload-hidden", type: "person", sources: ["upload-hidden-01"] }],
+      pendingRelations: [],
+      decisions: [{ item: "pe-h1", decision: "reject" }],
+      retractions: [],
+    };
+    for (const id of IDENTITIES) {
+      expect(await queryReview(db, id), String(id)).toEqual(sorted(expectedReviewVisible(config.access, sample, review, id)));
+    }
+    expect(Object.values(await queryReview(db, "staff")).flat()).toEqual([]);
+    expect(await readMyUploads(db, "staff")).toEqual([]);
+    expect((await queryReview(db, "manager")).review_decisions).toEqual(["pe-h1"]);
+    await db.close();
+  });
+
+  it("readMyUploads：只列自己上傳的文件與每一項的結果；還沒有項目的文件也列出", async () => {
+    const w = await setup();
+    const empty = await uploadDocument(
+      w.db,
+      "staff",
+      { title: "青翼週報（虛構）", language: "zh-TW", visibility: "internal", project: "bluewing", date: "2026-09-01", passages: ["本週沒有新進度。"] },
+      OPTIONS,
+    );
+    await approve(w.db, "manager", { entities: [{ id: "pe-s2", mergeInto: "project-bluewing" }], relations: [] }, DEFAULT);
+    await reject(w.db, "manager", { entities: ["pe-s1"], relations: [] });
+
+    const staff = await readMyUploads(w.db, "staff");
+    expect(staff.map((d) => d.id)).toEqual([w.ds.documentId, empty.documentId]);
+    expect(staff[0]).toMatchObject({ title: "青翼試用紀錄（虛構）", visibility: "internal", project: "bluewing" });
+    expect(staff[0].entities.map((e) => [e.id, e.status, e.mergedInto])).toEqual([
+      ["pe-s1", "rejected", null],
+      ["pe-s2", "approved", "project-bluewing"],
+    ]);
+    expect(staff[0].relations.map((r) => [r.id, r.status, r.rejectedWithEntity])).toEqual([["pr-s1", "rejected", true]]);
+    expect(staff[1]).toMatchObject({ entities: [], relations: [] });
+    // 有 canReview 的主管也只列自己上傳的
+    expect((await readMyUploads(w.db, "manager")).map((d) => d.id)).toEqual([w.dm.documentId]);
+    for (const id of ["guest", null, "nobody"]) expect(await readMyUploads(w.db, id), String(id)).toEqual([]);
+    await w.db.close();
+  });
+});
+
+// 一般員工上傳、但等級高於一般員工可見範圍的文件，附一個待審實體與主管的退回（內容虛構）
+const HIDDEN_UPLOAD_SQL = `
+  INSERT INTO kk.documents (id, title, language, visibility_level_id, project_id, uploaded_by)
+    VALUES ('upload-hidden', '調整後的文件（虛構）', 'zh-TW', 'confidential', NULL, 'staff');
+  INSERT INTO kk.passages (id, document_id, ordinal, language, content, visibility_level_id, project_id)
+    VALUES ('upload-hidden-01', 'upload-hidden', 0, 'zh-TW', '測試人員丙加入營運部。', 'confidential', NULL);
+  INSERT INTO kk.pending_entities (id, document_id, entity_type, names)
+    VALUES ('pe-h1', 'upload-hidden', 'person', '{"zh-TW":"測試人員丙","en":"Test Person C"}');
+  INSERT INTO kk.pending_entity_sources (pending_entity_id, document_id, passage_id) VALUES ('pe-h1', 'upload-hidden', 'upload-hidden-01');
+  INSERT INTO kk.review_decisions (item_id, decision, decided_by) VALUES ('pe-h1', 'reject', 'manager');
+`;
