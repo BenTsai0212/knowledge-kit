@@ -2,10 +2,10 @@ import { Fragment, useEffect, useRef, useState, type CSSProperties, type Ref } f
 import { clientConfig } from "../client/load";
 import type { Graph, GraphEntity } from "../graph/read";
 import type { Answer } from "../qa/answer";
-import { errorMessage, strings } from "../client/i18n";
+import { errorMessage, fill, strings } from "../client/i18n";
 import { entityOptionLabel, entityTypeLabel } from "./graph-labels";
 import { MAX_REPORT_NOTE_CHARS, REPORT_CATEGORIES, type ReportCategory } from "../reports/store";
-import { refusalNextSteps, type RefusalStep } from "./refusal-next-steps";
+import { refusalNextSteps, type RefusalStep, type RefusalSuggestion } from "./refusal-next-steps";
 import { canReport, defaultCategory } from "./report-helpers";
 import { answerDoneStep, answerSentences, sentenceStep, streamingSentences } from "./answer-motion";
 import { staggerIndex } from "./motion";
@@ -17,7 +17,8 @@ export interface AnswerState {
   streaming: string;
   // 結束後的結果
   answer?: Answer;
-  // 回答提到的實體（#195）：以送出當下的身分讀出的圖譜，與從中挑出的實體（mentions.ts）
+  // 回答提到的實體（#195）：以送出當下的身分讀出的圖譜，與從中挑出的實體（mentions.ts）。
+  // 拒答時 entities 是空的，圖譜用來產生「可以試試」（#285）
   mentions?: { graph: Graph; entities: GraphEntity[] };
 }
 
@@ -48,6 +49,10 @@ interface Props {
   retryDisabled: boolean;
   // prompt_too_long 的「縮短問題」：問題填回輸入框（#280）
   onShorten(): void;
+  // 拒答的「換個問法」（#285）：問句填進輸入框，不送出
+  onDraft(question: string): void;
+  // 拒答的「在圖譜看它」（#285）：切到圖譜頁並選取該實體
+  onViewInGraph(entityId: string): void;
 }
 
 const { entityTypes } = clientConfig.knowledgeModel;
@@ -55,7 +60,7 @@ const { entityTypes } = clientConfig.knowledgeModel;
 // 回答完成後已播過動態的題目：切換頁籤回來重新掛載時不再播放（#227）
 const settled = new Set<string>();
 
-export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport, onRetry, retryDisabled, onShorten }: Props) {
+export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport, onRetry, retryDisabled, onShorten, onDraft, onViewInGraph }: Props) {
   const s = strings(language);
   const { answer } = state;
   const stepText: Record<RefusalStep, string> = {
@@ -63,6 +68,49 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
     askPerson: s.refusalNextAskPerson,
     upload: s.refusalNextUpload,
   };
+  const graph = state.mentions?.graph;
+  const name = (entity: GraphEntity) => entityOptionLabel(graph!, entity, language);
+  // 「可以試試」的一項：實體的名稱一律來自送出當下身分的圖譜（RLS 已篩選）
+  const suggestion = (x: RefusalSuggestion) => {
+    switch (x.kind) {
+      case "step":
+        return (
+          <>
+            {stepText[x.step]}
+            {x.step === "upload" && (
+              <>
+                {" "}
+                <button type="button" onClick={onGotoUpload}>
+                  {s.refusalGotoUpload}
+                </button>
+              </>
+            )}
+          </>
+        );
+      case "graph":
+        return (
+          <>
+            {fill(s.refusalNextGraph, { name: name(x.entity) })}{" "}
+            <button type="button" className="link" onClick={() => onViewInGraph(x.entity.id)}>
+              {s.viewInGraph}
+            </button>
+          </>
+        );
+      case "owner":
+        return fill(s.refusalNextOwner, { owner: name(x.owner), name: name(x.entity), role: x.role });
+      case "rephrase":
+        if (x.question === null) return fill(s.refusalNextRephraseName, { name: name(x.entity) });
+        return (
+          <>
+            {fill(s.refusalNextRephraseWith, { name: name(x.entity) })}{" "}
+            <button type="button" className="chip" onClick={() => onDraft(x.question!)}>
+              {x.question}
+            </button>
+          </>
+        );
+    }
+  };
+  const suggestionKey = (x: RefusalSuggestion) => (x.kind === "step" ? x.step : `${x.kind}:${x.entity.id}`);
   const still = useRef(settled.has(id)).current;
   useEffect(() => {
     if (answer !== undefined) settled.add(id);
@@ -105,21 +153,13 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
       {refusalText !== null && (
         <div className="refusal">
           <p className="answer-text">{refusalText}</p>
-          {/* 下一步只依上傳能力決定，「資料沒寫」與「沒有權限」相同（docs/qa.md「拒答」）；模型無法回答比照拒答（#280） */}
+          {/* 下一步只依問題、上傳能力與看得到的圖譜決定，「資料沒寫」與「沒有權限」相同（docs/qa.md「拒答」、#285）；模型無法回答比照拒答（#280） */}
           <div className="refusal-next">
             <p className="muted">{s.refusalNextTitle}</p>
             <ul>
-              {refusalNextSteps({ canUpload }).map((step, i) => (
-                <li key={step} style={{ "--i": staggerIndex(i) } as CSSProperties}>
-                  {stepText[step]}
-                  {step === "upload" && (
-                    <>
-                      {" "}
-                      <button type="button" onClick={onGotoUpload}>
-                        {s.refusalGotoUpload}
-                      </button>
-                    </>
-                  )}
+              {refusalNextSteps({ canUpload, graph, question: state.question, language }).map((x, i) => (
+                <li key={suggestionKey(x)} style={{ "--i": staggerIndex(i) } as CSSProperties}>
+                  {suggestion(x)}
                 </li>
               ))}
             </ul>

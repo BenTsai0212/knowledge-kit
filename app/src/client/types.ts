@@ -166,6 +166,8 @@ export interface RelationType {
   to: Id[];
   // 「接著問」的問句範本（#198）；省略時用翻譯檔的通用範本
   questions?: RelationQuestions;
+  // 起點是終點的負責人時，起點的稱呼（#285）：拒答的「可以試試」以這類關係列出負責人；省略時不是負責的關係
+  owner?: LocalizedText;
 }
 
 // 參數：{name} 中心實體的名稱（必填）、{type} 另一端的實體類型
@@ -644,6 +646,12 @@ export interface UiStrings {
   refusalNextRephrase: string;
   refusalNextAskPerson: string;
   refusalNextUpload: string;
+  // 問題中有看得到的實體時（#285）：{name} 實體名稱；{owner} 負責人名稱、{role} 負責人的稱呼（knowledge-model.json 的 owner）
+  refusalNextGraph: string;
+  refusalNextOwner: string;
+  // 後面接「接著問」的第一題（按了填進輸入框）；沒有接著問時用 refusalNextRephraseName
+  refusalNextRephraseWith: string;
+  refusalNextRephraseName: string;
   refusalGotoUpload: string;
   // 不是拒答、但沒有任何有效引用的回答
   uncited: string;

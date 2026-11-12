@@ -65,6 +65,10 @@
               "outgoing": { "$ref": "common.schema.json#/definitions/LocalizedText" },
               "incoming": { "$ref": "common.schema.json#/definitions/LocalizedText" }
             }
+          },
+          "owner": {
+            "description": "起點（from）是終點（to）的負責人時，起點的稱呼（例如「負責人」）。拒答的「可以試試」以這類關係列出問題中實體的負責人（#285）；缺介面語言時用關係的 label",
+            "$ref": "common.schema.json#/definitions/LocalizedText"
           }
         }
       }

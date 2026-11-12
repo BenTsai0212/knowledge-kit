@@ -78,7 +78,8 @@
       "questions": {
         "outgoing": { "zh-TW": "{name}負責哪些{type}？", "en": "What does {name} lead?", "ja": "{name}が責任者を務めているのは？" },
         "incoming": { "zh-TW": "誰負責{name}？", "en": "Who leads {name}?", "ja": "{name}の責任者は？" }
-      }
+      },
+      "owner": { "zh-TW": "負責人", "en": "lead", "ja": "責任者" }
     },
     {
       "id": "works-on",

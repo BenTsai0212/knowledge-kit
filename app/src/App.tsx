@@ -224,8 +224,11 @@ export function App() {
       return;
     }
     if (result.kind !== "error") setAdminError(null);
-    // 回答提到的實體：以送出當下的身分讀圖譜（RLS 篩選），讀完才結束這一題，期間仍停用送出；讀取失敗時不列
-    const graph = result.kind === "answer" && !result.uncited && db !== null ? await readGraph(db, identity).catch(() => null) : null;
+    // 回答提到的實體與拒答的「可以試試」（#285）：以送出當下的身分讀圖譜（RLS 篩選），讀完才結束這一題，期間仍停用送出；
+    // 讀取失敗時不列實體，拒答只給通用建議
+    const refused = result.kind === "refusal" || (result.kind === "error" && category === "modelRefusal");
+    const wantsGraph = (result.kind === "answer" && !result.uncited) || refused;
+    const graph = wantsGraph && db !== null ? await readGraph(db, identity).catch(() => null) : null;
     if (!ticket.isCurrent()) return;
     const mentions = graph === null ? undefined : { graph, entities: mentionedEntities(graph, result) };
     update({ id, question, streaming: "", answer: result, mentions });
@@ -469,7 +472,8 @@ export function App() {
               }}
               onAsk={onAsk}
               askDisabled={retriever === null || answering || limit !== null}
-              onShorten={(question) => {
+              onViewInGraph={(id) => (setGraphFocus(id), setView("graph"))}
+              onDraft={(question) => {
                 setDraft(question);
                 document.getElementById(QUESTION_INPUT_ID)?.focus();
               }}

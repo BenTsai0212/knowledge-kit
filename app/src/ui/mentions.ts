@@ -10,8 +10,9 @@ import { entityOptionLabel, entityTypeLabel, relationTypeLabel } from "./graph-l
 // 每個實體的「接著問」最多幾題（#195 決定 2）
 export const MAX_FOLLOW_UPS = 3;
 
-// 名稱在文字中第一次出現的位置（不分大小寫）；主要名稱與各語言的顯示名稱任一出現即可，都沒有時 -1
-function firstMention(text: string, entity: GraphEntity): number {
+// 名稱在文字中第一次出現的位置（不分大小寫，text 須已轉成小寫）；主要名稱與各語言的顯示名稱任一出現即可，都沒有時 -1。
+// 拒答的「可以試試」也用它找問題中的實體（refusal-next-steps.ts）
+export function firstMention(text: string, entity: GraphEntity): number {
   const positions = [entity.name, ...Object.values(entity.names)]
     .filter((name) => name.trim() !== "")
     .map((name) => text.indexOf(name.toLowerCase()))

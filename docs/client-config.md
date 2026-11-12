@@ -212,6 +212,7 @@ npm run check:client
 | `from` | 是 | 實體類型 `id` 陣列，至少 1 個 | 關係的起點可以是哪些類型；必須存在於 `entityTypes` |
 | `to` | 是 | 實體類型 `id` 陣列，至少 1 個 | 關係的終點可以是哪些類型；必須存在於 `entityTypes` |
 | `questions` | 否 | `{ outgoing?, incoming? }`，至少一個，值為 `LocalizedText` | 實體面板「接著問」的問句範本（#198）：`outgoing` 用於面板中心是關係的起點（`from`）時，`incoming` 用於中心是終點（`to`）時 |
+| `owner` | 否 | `LocalizedText` | 起點是終點的負責人時，起點的稱呼，例如 `leads` 的 `{ "zh-TW": "負責人", "en": "lead" }`。拒答的「可以試試」以這類關係列出問題中實體的負責人（#285，[docs/qa.md](qa.md)「拒答」）；缺介面語言時用 `label`。省略時這種關係不算負責 |
 
 **問句範本**（`questions`，[docs/qa.md](qa.md)「回答提到」的接著問）：
 

@@ -69,6 +69,25 @@ export function entityNames(role: RoleId, language: string): { visible: string[]
   return { visible, hidden, connected };
 }
 
+// 拒答的「可以試試」用（#285）：文字中提到的、該身分看得到的實體名稱，依第一次出現的位置排列（同一位置時主要名稱長的在前）。
+// 比對方式與 app/src/ui/mentions.ts 的 firstMention() 相同：主要名稱與各語言的名稱任一出現即可，不分大小寫；回傳實際出現的那個名稱
+export function visibleNamesIn(text: string, role: RoleId): string[] {
+  const seen = new Set(expectedVisible(access, sample, role).entities);
+  const lower = text.toLowerCase();
+  return entities
+    .filter((e) => seen.has(e.id))
+    .flatMap((e) => {
+      const hits = [e.name, ...Object.values(e.names)]
+        .filter((n) => n.trim() !== "")
+        .map((n) => ({ n, at: lower.indexOf(n.toLowerCase()) }))
+        .filter((x) => x.at >= 0)
+        .sort((a, b) => a.at - b.at);
+      return hits.length === 0 ? [] : [{ name: hits[0].n, at: hits[0].at, length: e.name.length }];
+    })
+    .sort((a, b) => a.at - b.at || b.length - a.length)
+    .map((x) => x.name);
+}
+
 // 同名的實體（#198）：該身分看得到、顯示名稱相同的實體 id，每組至少兩個（參考情境是兩位林志明）
 export function sameNameEntities(role: RoleId, language: string): { name: string; ids: string[] }[] {
   const seen = new Set(expectedVisible(access, sample, role).entities);

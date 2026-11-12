@@ -53,7 +53,8 @@
       "questions": {
         "outgoing": { "zh-TW": "{name}負責哪些{type}？", "en": "What does {name} lead?" },
         "incoming": { "zh-TW": "誰負責{name}？", "en": "Who leads {name}?" }
-      }
+      },
+      "owner": { "zh-TW": "負責人", "en": "lead" }
     }
   ]
 }
