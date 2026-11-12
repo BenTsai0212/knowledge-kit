@@ -378,6 +378,22 @@ export interface UiStrings {
   graphDocumentCount: string;
   graphSourceCount: string;
   graphAskAbout: string;
+  // 圖譜的鍵盤操作與報讀（#289，docs/design.md「圖譜的鍵盤操作與螢幕報讀器」）：外框的 aria-roledescription 與 aria-label、
+  // 報讀的句型（enter 接 current；move 的 {relations} 是以 sentenceJoin 接起來的 relation 句子，同一方向的多種關係以 relationJoin 合併）
+  graphKeyboard: {
+    roleDescription: string;
+    label: string;
+    enter: string;
+    current: string;
+    move: string;
+    go: string;
+    atStart: string;
+    noNeighbors: string;
+    shown: string;
+    relation: string;
+    relationJoin: string;
+    sentenceJoin: string;
+  };
   askAboutEntity: string;
   relatedEntities: string;
   entitySources: string;
