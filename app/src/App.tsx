@@ -2,6 +2,7 @@
 // canReview 的身分另有待審與評測台（需要邀請碼；線上 demo 不顯示評測台）；展示模式（?mode=presentation）只顯示問答與圖譜；引用跳回原文。
 // 登入後的預設頁是首頁（#283；需要邀請碼，展示模式沒有首頁）。
 // 問答頁是左導覽、中間對話、右側面板（原文或回答提到的實體）的三欄（#195，docs/qa.md「畫面」）。
+// 展示模式（#260）：左導覽換成頂端列（PresentationBar），問答頁的左欄是劇本（ScriptPanel）。
 import { useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { clientConfig } from "./client/load";
@@ -48,6 +49,9 @@ import { UploadPage } from "./ui/UploadPage";
 import { Sidebar } from "./ui/Sidebar";
 import { MobileNav } from "./ui/MobileNav";
 import { useLayout } from "./ui/layout";
+import { PresentationBar, type IdentityBump } from "./ui/PresentationBar";
+import { ScriptPanel } from "./ui/ScriptPanel";
+import { switchesIdentity, type ScriptItem } from "./ui/script";
 import { canSwitchIdentity, demoAccount, identityControl, type SignIn } from "./ui/sign-in";
 import { SignInPanel, type Rejected } from "./ui/SignInPanel";
 
@@ -97,6 +101,10 @@ export function App() {
   // 輸入框的文字（「接著問」填進來），與「在圖譜中查看」要選取的實體
   const [draft, setDraft] = useState("");
   const [graphFocus, setGraphFocus] = useState<string | null>(null);
+  // 展示模式的劇本（#260 決定 3）：目前題目是最後點的劇本題，只在記憶體；劇本切換身分時頂端列的身分徽章跳一下
+  const [scriptCurrent, setScriptCurrent] = useState<string | null>(null);
+  // （count 換 key 重播動畫；以頂端列手動切換身分時清除，不跳）
+  const [identityBump, setIdentityBump] = useState<IdentityBump | null>(null);
   // 本次工作階段上傳的文件（時間軸加上「上傳」標籤），以及從上傳頁跳到時間軸時要捲動到的文件（#42）
   const [uploaded, setUploaded] = useState<ReadonlySet<string>>(new Set());
   const [focusDocument, setFocusDocument] = useState<string | null>(null);
@@ -242,20 +250,41 @@ export function App() {
     setView(defaultView(presentationMode));
   }
 
-  async function onAsk(question: string) {
+  // 切換身分：捨棄進行中的提問（discard）；目前頁籤在新身分看不到時回到問答
+  function changeIdentity(id: string) {
+    // 帳號登入時身分是登入的帳號，不能切換（#287）；介面上沒有選單，這裡再擋一次
+    if (!canSwitchIdentity(signIn)) return;
+    discard();
+    setIdentity(id);
+    // 沒有 canReview 的身分看不到待審與評測台頁籤（離開評測台時停止評測、關閉評測專用資料庫）；展示模式只有問答與圖譜
+    if (!views(access.roles.find((r) => r.id === id)?.canReview ?? false).includes(view)) setView("qa");
+  }
+
+  // 點劇本的題目（#260）：先切到情境的身分（沿用切換身分，捨棄進行中的提問），再以該身分送出
+  function onScript(item: ScriptItem) {
+    if (retriever === null || accessCode === null || answering || limit !== null) return;
+    if (switchesIdentity(item, identity)) {
+      changeIdentity(item.role);
+      setIdentityBump((last) => ({ role: item.role, count: (last?.count ?? 0) + 1 }));
+    }
+    setScriptCurrent(item.key);
+    void onAsk(item.text[language], item.role);
+  }
+
+  // owner：送出的身分。劇本先切換身分時，這次 render 的 identity 還是切換前的，所以由呼叫端傳入
+  async function onAsk(question: string, owner = identity) {
     if (retriever === null || accessCode === null || answering || limit !== null) return;
     // 以送出當下的身分與語言提問；只送出這一題的文字
     const ticket = questions.current.begin();
-    const owner = identity;
     const id = `turn-${nextTurn.current++}`;
     const setTurns = (change: (all: readonly Turn[]) => readonly Turn[]) => setTurnsOf(owner, change);
     const update = (turn: Turn) => setTurns((all) => all.map((t) => (t.id === id ? turn : t)));
     setTurns((all) => [...all, { id, question, streaming: "" }]);
-    setAsked((all) => ({ ...all, [identity]: rememberQuestion(all[identity] ?? [], question) }));
+    setAsked((all) => ({ ...all, [owner]: rememberQuestion(all[owner] ?? [], question) }));
     const ctx = { retriever, transport: apiTransport({ accessCode }), model: client.model, displayName: client.displayName };
     const result = await ask(
       ctx,
-      { identityId: identity, text: question, language },
+      { identityId: owner, text: question, language },
       (streaming) => ticket.isCurrent() && update({ id, question, streaming }),
       ticket.signal,
     );
@@ -279,7 +308,7 @@ export function App() {
     // 讀取失敗時不列實體，拒答只給通用建議
     const refused = result.kind === "refusal" || (result.kind === "error" && category === "modelRefusal");
     const wantsGraph = (result.kind === "answer" && !result.uncited) || refused;
-    const graph = wantsGraph && db !== null ? await readGraph(db, identity).catch(() => null) : null;
+    const graph = wantsGraph && db !== null ? await readGraph(db, owner).catch(() => null) : null;
     if (!ticket.isCurrent()) return;
     const mentions = graph === null ? undefined : { graph, entities: mentionedEntities(graph, result) };
     update({ id, question, streaming: "", answer: result, mentions });
@@ -352,54 +381,63 @@ export function App() {
   }, [entity?.id]);
 
   const Nav = layout === "phone" ? MobileNav : Sidebar;
+  // 展示模式登入後是頂端列（#260），不論寬度都取代 Nav（手機寬度的排列見 app.css），所以畫面上只有它的「問答｜圖譜」切換，
+  // 不會與手機的分段切換（layout.ts 的 usesSegmented，只剩展示模式的登入頁）同時出現
+  const presentationBar = presentationMode && accessCode !== null;
   return (
-    <div className={layout === "phone" ? "app app--phone" : "app"}>
-      {/* 手機是頂端列＋底部分頁列，其他寬度是左側導覽（#255；平板的圖示導覽列之後加入）；只渲染其中一種 */}
-      <Nav
-        language={language}
-        identity={identity}
-        identityControl={identityControl(signIn)}
-        account={signIn?.kind === "account" ? demoAccount(signIn.role) : undefined}
-        onIdentity={(id) => {
-          // 帳號登入時身分是登入的帳號，不能切換（#287）；介面上沒有選單，這裡再擋一次
-          if (!canSwitchIdentity(signIn)) return;
-          discard();
-          setIdentity(id);
-          // 沒有 canReview 的身分看不到待審與評測台頁籤（離開評測台時停止評測、關閉評測專用資料庫）；展示模式只有問答與圖譜
-          if (!views(access.roles.find((r) => r.id === id)?.canReview ?? false).includes(view)) setView("qa");
-        }}
-        // 切換語言：原地交叉淡換（#246）；View Transitions 在回呼結束時拍下新畫面，所以同步更新
-        onLanguage={(code) => crossFade(() => flushSync(() => changeLanguage(code)))}
-        // 展示模式不顯示「更換邀請碼」與「這次的問題」（#260，docs/design.md「隱藏與保留」）
-        onChangeAccessCode={
-          accessCode === null || presentationMode
-            ? undefined
-            : () => {
-                // 更換邀請碼；帳號登入時是「登出」，回到登入頁（#287 決定 3）
-                discard();
-                setConversations({});
-                clearAccessCode();
-                setAccessCode(null);
-                if (signIn?.kind === "account") setView("qa");
-                setSignIn(null);
-                setRejectedCode(null);
-                setAsked({});
-                setViewed({});
-              }
-        }
-        views={views(canReview)}
-        view={view}
-        onView={(next) => (setGraphFocus(null), setView(next))}
-        tabExtra={{
-          review: pending?.identity === identity && (
-            <span key={bump} className={bump > 0 ? "tab-count is-bump" : "tab-count"}>
-              {pending.count}
-            </span>
-          ),
-        }}
-        questions={presentationMode ? [] : turns}
-        onQuestion={(id) => void document.getElementById(id)?.scrollIntoView({ block: "start" })}
-      />
+    <div className={layout === "phone" && !presentationBar ? "app app--phone" : "app"}>
+      {/* 只渲染一種導覽結構：展示模式登入後是頂端列，沒有「更換邀請碼」與「這次的問題」（docs/design.md「隱藏與保留」）；
+          其他情況手機是頂端列＋底部分頁列、其他寬度是左側導覽（#255；平板的圖示導覽列之後加入）。展示模式的登入頁照常用 Nav */}
+      {presentationBar ? (
+        <PresentationBar
+          language={language}
+          identity={identity}
+          onIdentity={(id) => (setIdentityBump(null), changeIdentity(id))}
+          onLanguage={(code) => crossFade(() => flushSync(() => changeLanguage(code)))}
+          views={views(canReview)}
+          view={view}
+          onView={(next) => (setGraphFocus(null), setView(next))}
+          bump={identityBump}
+        />
+      ) : (
+        <Nav
+          language={language}
+          identity={identity}
+          identityControl={identityControl(signIn)}
+          account={signIn?.kind === "account" ? demoAccount(signIn.role) : undefined}
+          onIdentity={changeIdentity}
+          // 切換語言：原地交叉淡換（#246）；View Transitions 在回呼結束時拍下新畫面，所以同步更新
+          onLanguage={(code) => crossFade(() => flushSync(() => changeLanguage(code)))}
+          onChangeAccessCode={
+            accessCode === null
+              ? undefined
+              : () => {
+                  // 更換邀請碼；帳號登入時是「登出」，回到登入頁（#287 決定 3）
+                  discard();
+                  setConversations({});
+                  clearAccessCode();
+                  setAccessCode(null);
+                  if (signIn?.kind === "account") setView("qa");
+                  setSignIn(null);
+                  setRejectedCode(null);
+                  setAsked({});
+                  setViewed({});
+                }
+          }
+          views={views(canReview)}
+          view={view}
+          onView={(next) => (setGraphFocus(null), setView(next))}
+          tabExtra={{
+            review: pending?.identity === identity && (
+              <span key={bump} className={bump > 0 ? "tab-count is-bump" : "tab-count"}>
+                {pending.count}
+              </span>
+            ),
+          }}
+          questions={turns}
+          onQuestion={(id) => void document.getElementById(id)?.scrollIntoView({ block: "start" })}
+        />
+      )}
       {loadFailed ? (
         <main className="page">
           <p className="card error">{s.loadFailed}</p>
@@ -542,6 +580,9 @@ export function App() {
       ) : (
         // 中間是對話與固定在下方的輸入區，右側是原文或實體面板（關閉時中間欄變寬）
         <main className={source === null && entity === null ? "qa" : "qa with-panel"}>
+          {presentationMode && (
+            <ScriptPanel language={language} conversations={conversations} current={scriptCurrent} disabled={retriever === null || answering || limit !== null} onAsk={onScript} />
+          )}
           <div className="qa-center">
             {offline && <Notice kind="warning" title={s.qaProblems.offline} />}
             {db === null && <p className="card muted">{s.loading}</p>}
@@ -578,7 +619,15 @@ export function App() {
                 document.getElementById(QUESTION_INPUT_ID)?.focus();
               }}
             />
-            <QuestionPanel language={language} disabled={retriever === null || answering} text={draft} onText={setDraft} onAsk={onAsk} limit={limit} />
+            <QuestionPanel
+              language={language}
+              disabled={retriever === null || answering}
+              text={draft}
+              onText={setDraft}
+              onAsk={(question) => void onAsk(question)}
+              limit={limit}
+              presets={!presentationMode}
+            />
           </div>
           {source !== null && <SourcePanel language={language} source={source} onOpenSource={onOpenSource} onClose={() => (sources.current.cancel(), setSource(null))} />}
           {entity !== null && (

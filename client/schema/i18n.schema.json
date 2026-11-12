@@ -51,7 +51,7 @@
     "evalCategories", "evalExpect", "evalVerdicts", "evalLeaks", "evalReport",
     "colon", "progress", "parenthetical", "refusal",
     "refusalNextTitle", "refusalNextRephrase", "refusalNextAskPerson", "refusalNextUpload", "refusalNextGraph", "refusalNextOwner", "refusalNextRephraseWith", "refusalNextRephraseName", "refusalGotoUpload", "uncited", "incomplete", "answerRetry",
-    "qaProblems", "errors", "unknownError", "home", "myUploads"
+    "qaProblems", "errors", "unknownError", "home", "myUploads", "presentation"
   ],
   "properties": {
     "loading": { "$ref": "#/definitions/Text" },
@@ -779,6 +779,18 @@
         "updatesTitle": { "$ref": "#/definitions/Text" },
         "updatesEmpty": { "$ref": "#/definitions/Text" },
         "viewProgress": { "$ref": "#/definitions/Text" }
+      }
+    },
+    "presentation": {
+      "description": "展示模式的劇本（#260，docs/design.md「展示模式」的「版面」）：scriptProgress 的 {index}、{total} 是目前題目的位置與劇本的總題數；scriptTotal 的 {total} 是還沒點過劇本時的總題數；scriptAsked 是已問過的題目給輔助技術的說明",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["script", "scriptProgress", "scriptTotal", "scriptAsked"],
+      "properties": {
+        "script": { "$ref": "#/definitions/Text" },
+        "scriptProgress": { "$ref": "#/definitions/Text" },
+        "scriptTotal": { "$ref": "#/definitions/Text" },
+        "scriptAsked": { "$ref": "#/definitions/Text" }
       }
     },
     "myUploads": {

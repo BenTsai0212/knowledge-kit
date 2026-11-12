@@ -18,6 +18,8 @@ interface Props {
   limit: string | null;
   // 首頁（#283）：只列情境角色是這個身分的預設問題，名稱改為「常見問題」；省略時列出全部情境
   role?: string;
+  // 展示模式（#260）：預設問題由左欄的劇本取代，輸入區只留自由提問
+  presets?: boolean;
 }
 
 // 輸入框的 id：「縮短問題」按下後把焦點移到這裡
@@ -27,7 +29,7 @@ const HINT_ID = "question-hint";
 const roleLabel = (id: string, language: string) => clientConfig.access.roles.find((r) => r.id === id)?.label[language] ?? id;
 
 // 固定在問答頁下方的輸入區（#195）：一行可橫向捲動的預設問題（依情境分組）、自由提問、「每題獨立回答」的說明
-export function QuestionPanel({ language, disabled, text, onText, onAsk, limit, role }: Props) {
+export function QuestionPanel({ language, disabled, text, onText, onAsk, limit, role, presets = true }: Props) {
   const s = strings(language);
   const scenarios = role === undefined ? clientConfig.scenarios.scenarios : roleScenarios(clientConfig.scenarios, role);
   const off = disabled || limit !== null;
@@ -41,7 +43,7 @@ export function QuestionPanel({ language, disabled, text, onText, onAsk, limit, 
           {s.qaProblems.limitBrowse}
         </Notice>
       )}
-      <div id={PRESETS_ID} className="presets" role="group" aria-label={role === undefined ? s.presetQuestions : s.home.commonQuestions}>
+      {presets && <div id={PRESETS_ID} className="presets" role="group" aria-label={role === undefined ? s.presetQuestions : s.home.commonQuestions}>
         {role !== undefined ? (
           // 首頁：不顯示情境名稱與情境角色（docs/design.md「展示功能的位置」：改成「常見問題」，依身分顯示）
           scenarios.length > 0 && (
@@ -70,7 +72,7 @@ export function QuestionPanel({ language, disabled, text, onText, onAsk, limit, 
             ))}
           </div>
         ))}
-      </div>
+      </div>}
       <form
         className="free-question"
         onSubmit={(e) => {

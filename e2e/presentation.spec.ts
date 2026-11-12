@@ -1,7 +1,7 @@
 // 客戶展示模式（#129，docs/qa.md「展示模式」）：?mode=presentation 只顯示問答與圖譜兩個頁籤，能審查的身分也一樣。/api/ask 一律是假的回應。
 import { expect, test, type Page } from "@playwright/test";
-import { openApp, openTab, presetQuestions, s, sourcePanel, switchIdentity } from "./support/app";
-import { access } from "./support/client";
+import { identitySegments, language, openApp, openTab, presetQuestions, s, sourcePanel, switchIdentity } from "./support/app";
+import { access, client, scenarios } from "./support/client";
 import { FAKE_ANSWER_LEAD } from "./support/fake-ask";
 
 test.beforeEach(async ({ page }) => {
@@ -100,4 +100,70 @@ test("一般模式（不帶參數）：字級與隱藏的元素不變", async ({
   await expect(answer.getByRole("button", { name: s.reportButton })).toBeVisible();
   await expect(page.getByRole("navigation", { name: s.sessionQuestions })).toBeVisible();
   await expect(page.getByRole("button", { name: s.changeAccessCode })).toBeVisible();
+});
+
+// 頂端列與劇本（#260 PR 2，docs/design.md「展示模式」的「版面」）
+test("頂端列：客戶名稱、標示、「問答｜圖譜」、身分分段切換（快捷鍵數字、56px 高）與語言；沒有左導覽與輸入區的預設問題", async ({ page }) => {
+  const banner = page.getByRole("banner");
+  await expect(banner.getByRole("heading", { level: 1 })).toHaveText(client.displayName[language]);
+  await expect(banner.getByText(s.fictionalData, { exact: true })).toBeVisible();
+  await expect(banner.getByText(s.demoPermissions, { exact: true })).toBeVisible();
+  const tabs = banner.getByRole("navigation", { name: s.views }).getByRole("button");
+  await expect(tabs).toHaveText([s.tabQa, s.tabGraph]);
+  await expect(tabs.first()).toHaveCSS("min-height", "56px");
+  const segments = identitySegments(page);
+  for (const [index, role] of access.roles.entries()) {
+    await expect(segments.getByRole("radio", { name: role.label[language], exact: true })).toHaveCount(1);
+    const segment = segments.locator("label").nth(index);
+    await expect(segment.locator("kbd")).toHaveText(String(index + 1));
+    await expect(segment).toHaveCSS("min-height", "56px");
+  }
+  await expect(segments.getByRole("radio", { name: access.roles[0].label[language], exact: true })).toBeChecked();
+  await expect(banner.getByLabel(s.language)).toBeVisible();
+  await expect(page.locator(".sidebar")).toHaveCount(0);
+  await expect(page.getByRole("group", { name: s.presetQuestions })).toHaveCount(0);
+});
+
+test("劇本：依情境分組；點另一個身分情境的題目時先切到該身分再送出，標 ✓ 與「第 N／M 題」", async ({ page }) => {
+  const script = page.getByRole("navigation", { name: s.presentation.script });
+  await expect(script.getByRole("heading", { level: 2 })).toHaveCount(scenarios.scenarios.length);
+  for (const scenario of scenarios.scenarios) {
+    await expect(script.getByRole("heading", { level: 2, name: scenario.title[language] })).toBeVisible();
+  }
+  const current = access.roles[0].id;
+  const index = presetQuestions.findIndex((q) => q.role !== current);
+  test.skip(index === -1, "scenarios.json 的情境都是第一個身分，沒有需要切換身分的題目");
+  const target = presetQuestions[index];
+  const role = access.roles.find((r) => r.id === target.role)!;
+
+  const button = script.getByRole("button", { name: target.text, exact: true });
+  await expect(button).toHaveCSS("min-height", "56px");
+  await button.click();
+  await expect(identitySegments(page).getByRole("radio", { name: role.label[language], exact: true })).toBeChecked();
+  await expect(page.locator(".identity-segments__name.is-bump")).toHaveText(role.label[language]);
+  const answer = page.locator("section.answer");
+  await expect(answer.locator("h2")).toHaveText(target.text);
+  await expect(answer).toContainText(FAKE_ANSWER_LEAD);
+
+  await expect(button).toHaveAttribute("aria-current", "step");
+  await expect(button).toContainText("✓");
+  await expect(button).toHaveAccessibleDescription(s.presentation.scriptAsked);
+  const progress = s.presentation.scriptProgress.replace("{index}", String(index + 1)).replace("{total}", String(presetQuestions.length));
+  await expect(script.getByText(progress, { exact: true })).toBeVisible();
+
+  // 切回原本的身分：✓ 仍在（依各身分的對話判斷，#303）
+  await switchIdentity(page, current);
+  await expect(button).toContainText("✓");
+});
+
+// 手機寬度（#255）：展示模式登入後仍是頂端列，不會同時出現手機的頂端列、分段切換或分頁列（App 只渲染一種導覽）
+test.describe("手機寬度", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("只有展示模式的頂端列，沒有手機的導覽", async ({ page }) => {
+    await expect(identitySegments(page)).toBeVisible();
+    await expect(page.locator(".presentation-bar")).toHaveCount(1);
+    await expect(page.locator(":is(.mobile-topbar, .mobile-segmented, .mobile-tabbar, .sidebar)")).toHaveCount(0);
+    await expect(page.locator(".app")).not.toHaveClass(/app--phone/);
+  });
 });

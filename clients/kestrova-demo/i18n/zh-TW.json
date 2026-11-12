@@ -601,5 +601,11 @@
     "noItems": "這份文件沒有萃取出實體或關係。",
     "reupload": "重新上傳修正版",
     "reuploadNotice": "已帶入原本的標題、語言、可見等級與專案。選擇修正後的檔案再送出，會成為一份新的文件重新送審。"
+  },
+  "presentation": {
+    "script": "劇本",
+    "scriptProgress": "第 {index}／{total} 題",
+    "scriptTotal": "共 {total} 題",
+    "scriptAsked": "已問過"
   }
 }
