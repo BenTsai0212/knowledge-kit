@@ -103,6 +103,29 @@ describe("列的動態（#243 PR 3）", () => {
   });
 });
 
+describe("核准全部與說法不同的動態（#243 PR 4）", () => {
+  it("核准全部：各列依序往右離開（kOut），結果彈出（kPopS、settle）", () => {
+    const away = "kOut var(--motion-base) var(--ease-exit) calc(var(--o, 0) * var(--motion-stagger-list)) forwards";
+    expect(rule(".review-item.is-away,\n.review-prepared > summary.is-away").animation).toBe(away);
+    expect(rule(".review-result").animation).toBe("kPopS var(--motion-settle) var(--ease-spring) var(--result-delay) backwards");
+    expect(reviewPage).toContain('kind: all ? "away" : "collapse"');
+    expect(reviewPage).toContain("approveAll(doc.id, batchPlan(");
+  });
+
+  it("並存：等號（kGrow）與兩邊的關聯（kRise）；取代：舊說法變淡（kDim）、刪除線（kGrow）", () => {
+    expect(rule(".conflict-equals > span").animation).toBe("kGrow var(--motion-sweep) var(--ease-enter) backwards");
+    expect(rule(".conflict-equals > span:last-child")["animation-delay"]).toBe("var(--motion-stagger-sentence)");
+    expect(rule(".conflict-linked").animation).toBe(
+      "kRise var(--motion-base) var(--ease-enter) calc(var(--motion-expand) + var(--i, 0) * var(--motion-stagger-list)) backwards",
+    );
+    expect(rule(".conflict-side.is-superseded").animation).toBe("kDim var(--motion-base) var(--ease-exit) calc(var(--motion-sweep) / 2) forwards");
+    expect(rule(".conflict-strike").animation).toBe("kGrow var(--motion-sweep) var(--ease-enter) backwards");
+    expect(reviewPage).toContain("{ conflict: { id: conflictId, decision } }");
+    // 關聯的文字與時間軸的段落標示相同（i18n 的 conflictMarks.conflict，docs/conflicts.md）
+    expect(reviewPage).toContain("fill(s.conflictMarks.conflict, { title: opts.linked.other.documentTitle }, language)");
+  });
+});
+
 describe("窄螢幕的分頁焦點框（#243 PR 2 審查）", () => {
   it("焦點框畫在內側，不被橫向捲動的容器裁掉", () => {
     expect(rule('.review-tabs [role="tab"]:focus-visible')["outline-offset"]).toBe("-2px");

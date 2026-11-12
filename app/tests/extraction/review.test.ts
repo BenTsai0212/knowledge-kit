@@ -363,6 +363,22 @@ describe("圖譜已有的關係（#189 決定 1）", { timeout: 30_000 }, () => 
     await w.db.close();
   });
 
+  it("待審區依項目在文件中出現的順序排列，核准後撤銷仍是同一個順序（#243 PR 3 審查）", async () => {
+    const w = await walkthrough();
+    const order = async () => {
+      const doc = (await readReview(w.db, "manager")).find((d) => d.id === w.documentId)!;
+      return { entities: doc.entities.map((e) => e.id), relations: doc.relations.map((r) => r.id) };
+    };
+    // id 的字母順序是張雅婷在前，段落中是「營運部」在前
+    const before = await order();
+    expect(before.entities).toEqual(["pe-w-ops", "pe-w-zhang"]);
+    const decisions = await approve(w.db, "manager", { entities: [w.merged[1]], relations: [] }, DEFAULT);
+    expect(await order()).toEqual(before);
+    await retract(w.db, "manager", decisions);
+    expect(await order()).toEqual(before);
+    await w.db.close();
+  });
+
   it("畫面算出的圖譜已有在交易中已經不成立時，整筆不寫入", async () => {
     const w = await walkthrough();
     // 張雅婷改成建立新實體：兩端不再和既有關係相同
