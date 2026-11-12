@@ -518,7 +518,10 @@
     "recentDocumentsTitle": "最近追加された文書",
     "recentDocumentsEmpty": "閲覧できる文書はまだありません。",
     "viewedTitle": "最近見たもの",
-    "viewedEmpty": "グラフや回答で開いたエンティティがここに表示されます。"
+    "viewedEmpty": "グラフや回答で開いたエンティティがここに表示されます。",
+    "updatesTitle": "更新",
+    "updatesEmpty": "アップロードした文書の審査結果がここに表示されます。",
+    "viewProgress": "進捗を見る"
   },
   "myUploads": {
     "tabNew": "文書を追加",

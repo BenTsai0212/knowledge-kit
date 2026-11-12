@@ -60,6 +60,9 @@ interface Props {
   onGoto(view: "qa" | "timeline", document?: { id: string; language: string }): void;
   // 帳號登入時身分固定（#287）：空狀態不給「切換身分」
   canSwitchIdentity: boolean;
+  // 首頁「有更新」的「查看進度」（#284）：打開「我的上傳」並選取這份文件；讀過後呼叫 onFocused
+  focus?: string | null;
+  onFocused?(): void;
 }
 
 const { access, client, knowledgeModel } = clientConfig;
@@ -82,7 +85,7 @@ type Confirm = {
   error?: UploadFailure;
 };
 
-export function UploadPage({ db, identity, language, onUploaded, extractions, onRetryExtraction, onRetryConflicts, onGoto, canSwitchIdentity }: Props) {
+export function UploadPage({ db, identity, language, onUploaded, extractions, onRetryExtraction, onRetryConflicts, onGoto, canSwitchIdentity, focus = null, onFocused }: Props) {
   const s = strings(language);
   // 萃取的狀態，以及（開啟比對時）比對的狀態
   const jobStatus = (job: Job) => (
@@ -113,7 +116,12 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   // 拖著檔案進入拖放區（#242）：框線變實線、底色變淺、圖示上浮
   const [dragOver, setDragOver] = useState(false);
-  const [section, setSection] = useState<Section>("new");
+  const [section, setSection] = useState<Section>(focus === null ? "new" : "mine");
+  // 一開始要選取的文件只在建立時讀一次，之後清掉，下次從導覽打開時回到「新增文件」
+  const [initialMine] = useState(focus);
+  useEffect(() => {
+    if (initialMine !== null) onFocused?.();
+  }, [initialMine, onFocused]);
   // 重新上傳修正版時帶入的原本設定（#284）；再上傳一份時移除提示
   const [reupload, setReupload] = useState<Reupload | null>(null);
   const ids = useId();
@@ -475,6 +483,7 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
               return job === undefined ? null : jobStatus(job);
             }}
             onReupload={startReupload}
+            initialSelected={initialMine}
           />
         </div>
       )}

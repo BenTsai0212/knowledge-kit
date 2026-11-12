@@ -518,7 +518,10 @@
     "recentDocumentsTitle": "Recently added",
     "recentDocumentsEmpty": "No documents you can see yet.",
     "viewedTitle": "Recently viewed",
-    "viewedEmpty": "Entities you open in the graph or an answer appear here."
+    "viewedEmpty": "Entities you open in the graph or an answer appear here.",
+    "updatesTitle": "Updates",
+    "updatesEmpty": "Review results for documents you upload appear here.",
+    "viewProgress": "View progress"
   },
   "myUploads": {
     "tabNew": "Add a document",

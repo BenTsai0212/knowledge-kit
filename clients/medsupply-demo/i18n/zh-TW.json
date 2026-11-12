@@ -518,7 +518,10 @@
     "recentDocumentsTitle": "最近新增的文件",
     "recentDocumentsEmpty": "還沒有看得到的文件。",
     "viewedTitle": "最近看過",
-    "viewedEmpty": "在圖譜或回答中點過的實體會列在這裡。"
+    "viewedEmpty": "在圖譜或回答中點過的實體會列在這裡。",
+    "updatesTitle": "有更新",
+    "updatesEmpty": "你上傳的文件有審核結果時會列在這裡。",
+    "viewProgress": "查看進度"
   },
   "myUploads": {
     "tabNew": "新增文件",
