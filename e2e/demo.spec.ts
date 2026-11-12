@@ -15,10 +15,11 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
 });
 
-// 以「使用邀請碼體驗」進入（#287），不輸入邀請碼，直接按送出；等資料庫載入完成（預設問題的按鈕可以按）
+// 以「使用邀請碼體驗」進入（#287），不輸入邀請碼，直接按送出；從首頁切到問答頁（#283），等資料庫載入完成（預設問題的按鈕可以按）
 async function start(page: Page, opened = false): Promise<void> {
   if (!opened) await page.getByRole("button", { name: s.signInWithCode }).click();
   await page.getByRole("button", { name: s.accessCodeSubmit }).click();
+  await openTab(page, s.tabQa);
   await expect(page.getByRole("button", { name: presetQuestions[0].text, exact: true })).toBeEnabled();
 }
 

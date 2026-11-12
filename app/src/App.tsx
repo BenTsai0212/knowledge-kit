@@ -1,5 +1,6 @@
 // 主畫面：PGlite 在瀏覽器中載入並匯入資料集；左側導覽切換身分、語言與頁籤；問答（需要邀請碼）、圖譜、時間軸、上傳（後三者不呼叫模型）四個頁籤，
 // canReview 的身分另有待審與評測台（需要邀請碼；線上 demo 不顯示評測台）；展示模式（?mode=presentation）只顯示問答與圖譜；引用跳回原文。
+// 登入後的預設頁是首頁（#283；需要邀請碼，展示模式沒有首頁）。
 // 問答頁是左導覽、中間對話、右側面板（原文或回答提到的實體）的三欄（#195，docs/qa.md「畫面」）。
 import { useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
@@ -35,9 +36,10 @@ import { RetrievalNotice } from "./ui/RetrievalNotice";
 import { reportOf } from "./ui/report-helpers";
 import { PREPARING, sameDisplay, type ProviderStatus } from "./ui/retrieval-notice";
 import { ReviewPage } from "./ui/ReviewPage";
-import { pendingCount } from "./ui/review-helpers";
+import { rememberQuestion, waitingSummary, type WaitingSummary } from "./ui/home";
+import { HomePage } from "./ui/HomePage";
 import { createExtractionRunner } from "./ui/extraction-runner";
-import { evalsMode, onlineDemo, presentationMode, visibleViews, type View } from "./ui/online-demo";
+import { defaultView, evalsMode, onlineDemo, presentationMode, visibleViews, type View } from "./ui/online-demo";
 import { createRequestGate } from "./ui/requests";
 import { SourcePanel } from "./ui/SourcePanel";
 import { strings } from "./client/i18n";
@@ -60,7 +62,8 @@ const views = (canReview: boolean) => visibleViews(canReview, onlineDemo, presen
 
 
 export function App() {
-  const [view, setView] = useState<View>("qa");
+  // 登入後的預設頁是首頁，展示模式是問答（#283）；還沒登入時兩者都顯示登入頁
+  const [view, setView] = useState<View>(() => defaultView(presentationMode));
   const [language, setLanguage] = useState(client.defaultLanguage);
   const [identity, setIdentity] = useState(access.roles[0].id);
   const [accessCode, setAccessCode] = useState(loadAccessCode);
@@ -72,6 +75,8 @@ export function App() {
   const [loadFailed, setLoadFailed] = useState(false);
   // 這次的問答，依序往下累積；每題獨立回答，不帶上一題（#195）
   const [turns, setTurns] = useState<readonly Turn[]>([]);
+  // 首頁的「問過的問題」（#283）：依身分分開，只存問題文字（不存回答）；切換身分或語言不清除，登出時清除
+  const [asked, setAsked] = useState<Readonly<Record<string, readonly string[]>>>({});
   const nextTurn = useRef(0);
   const [source, setSource] = useState<SourceDocument | null>(null);
   // 右側面板一次顯示原文或實體其中一個；實體面板只用該題送出當下的圖譜（#195）
@@ -105,7 +110,8 @@ export function App() {
   // 拒答的下一步是否列出上傳（#192）：能上傳、且上傳頁籤看得到（展示模式沒有上傳頁籤）
   const canUpload = (access.roles.find((r) => r.id === identity)?.canUpload ?? false) && views(canReview).includes("upload");
   const [reviewVersion, setReviewVersion] = useState(0);
-  const [pending, setPending] = useState<{ identity: string; count: number } | null>(null);
+  // 首頁的「等你處理」用同一次讀取的結果（#283），導覽列的數字是其中的 total（與 pendingCount() 相同）
+  const [pending, setPending] = useState<{ identity: string; count: number; summary: WaitingSummary } | null>(null);
   // 待審數量增加時跳一下（kBump，#242 PR 3）：換 key 重播動畫；第一次讀取與切換身分時不跳
   const [bump, setBump] = useState(0);
   const lastPending = useRef(pending);
@@ -156,7 +162,8 @@ export function App() {
     if (db === null || !canReview) return;
     let cancelled = false;
     void Promise.all([readReview(db, identity), readConflicts(db, identity), readReports(db, identity)]).then(([docs, conflicts, reports]) => {
-      if (!cancelled) setPending({ identity, count: pendingCount(docs, conflicts, reports) });
+      const summary = waitingSummary(docs, conflicts, reports);
+      if (!cancelled) setPending({ identity, count: summary.total, summary });
     });
     return () => {
       cancelled = true;
@@ -206,6 +213,7 @@ export function App() {
     setAccessCode(code);
     setSignIn(next);
     setRejectedCode(null);
+    setView(defaultView(presentationMode));
   }
 
   async function onAsk(question: string) {
@@ -215,6 +223,7 @@ export function App() {
     const id = `turn-${nextTurn.current++}`;
     const update = (turn: Turn) => setTurns((all) => all.map((t) => (t.id === id ? turn : t)));
     setTurns((all) => [...all, { id, question, streaming: "" }]);
+    setAsked((all) => ({ ...all, [identity]: rememberQuestion(all[identity] ?? [], question) }));
     const ctx = { retriever, transport: apiTransport({ accessCode }), model: client.model, displayName: client.displayName };
     const result = await ask(
       ctx,
@@ -338,6 +347,7 @@ export function App() {
                 if (signIn?.kind === "account") setView("qa");
                 setSignIn(null);
                 setRejectedCode(null);
+                setAsked({});
               }
         }
         views={views(canReview)}
@@ -357,7 +367,7 @@ export function App() {
         <main className="page">
           <p className="card error">{s.loadFailed}</p>
         </main>
-      ) : view !== "qa" && (view !== "evals" || accessCode !== null) ? (
+      ) : view !== "qa" && view !== "home" && (view !== "evals" || accessCode !== null) ? (
         <main className="page">
           {db === null ? (
             <p className="card muted">{s.loading}</p>
@@ -465,6 +475,23 @@ export function App() {
             />
             <RetrievalNotice language={language} preparesModel={preparesModel(client.retrieval)} status={providerStatus} />
           </div>
+        </main>
+      ) : view === "home" ? (
+        <main className="page">
+          {offline && <Notice kind="warning" title={s.qaProblems.offline} />}
+          <HomePage
+            language={language}
+            identity={identity}
+            waiting={canReview ? (pending?.identity === identity ? pending.summary : null) : undefined}
+            asked={asked[identity] ?? []}
+            askDisabled={retriever === null || answering}
+            limit={limit}
+            draft={draft}
+            onDraft={setDraft}
+            // 提問與「再問一次」都切到問答頁，以現在的身分與看得到的資料回答
+            onAsk={(question) => (setView("qa"), void onAsk(question))}
+            onStartReview={() => setView("review")}
+          />
         </main>
       ) : (
         // 中間是對話與固定在下方的輸入區，右側是原文或實體面板（關閉時中間欄變寬）

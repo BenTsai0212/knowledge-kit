@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evalsMode, onlineDemo, presentationMode, readEvalsMode, readOnlineDemo, readPresentationMode, visibleViews } from "./online-demo";
+import { evalsMode, onlineDemo, presentationMode, readEvalsMode, readOnlineDemo, readPresentationMode, visibleViews, defaultView } from "./online-demo";
 
 describe("readOnlineDemo", () => {
   it("預設關閉：未設定或不是 \"1\" 時都關閉，也不帶公開碼", () => {
@@ -61,19 +61,19 @@ describe("visibleViews", () => {
   const on = { enabled: true };
 
   it("待審只給 canReview 的身分；沒有 tools=evals 時，canReview 的身分也看不到評測台", () => {
-    expect(visibleViews(false, off, false, false)).toEqual(["qa", "graph", "timeline", "upload"]);
-    expect(visibleViews(true, off, false, false)).toEqual(["qa", "graph", "timeline", "upload", "review"]);
+    expect(visibleViews(false, off, false, false)).toEqual(["home", "qa", "graph", "timeline", "upload"]);
+    expect(visibleViews(true, off, false, false)).toEqual(["home", "qa", "graph", "timeline", "upload", "review"]);
   });
 
   it("tools=evals 時評測台只給 canReview 的身分", () => {
-    expect(visibleViews(false, off, false, true)).toEqual(["qa", "graph", "timeline", "upload"]);
-    expect(visibleViews(true, off, false, true)).toEqual(["qa", "graph", "timeline", "upload", "review", "evals"]);
+    expect(visibleViews(false, off, false, true)).toEqual(["home", "qa", "graph", "timeline", "upload"]);
+    expect(visibleViews(true, off, false, true)).toEqual(["home", "qa", "graph", "timeline", "upload", "review", "evals"]);
   });
 
   it("線上 demo 只隱藏評測台（tools=evals 也一樣），上傳與待審保留", () => {
     for (const evals of [false, true]) {
-      expect(visibleViews(false, on, false, evals)).toEqual(["qa", "graph", "timeline", "upload"]);
-      expect(visibleViews(true, on, false, evals)).toEqual(["qa", "graph", "timeline", "upload", "review"]);
+      expect(visibleViews(false, on, false, evals)).toEqual(["home", "qa", "graph", "timeline", "upload"]);
+      expect(visibleViews(true, on, false, evals)).toEqual(["home", "qa", "graph", "timeline", "upload", "review"]);
     }
   });
 
@@ -92,6 +92,21 @@ describe("visibleViews", () => {
         const demoOnly = visibleViews(canReview, on, false, evals);
         const presentationOnly = visibleViews(canReview, off, true, evals);
         expect(both).toEqual(demoOnly.filter((v) => presentationOnly.includes(v)));
+      }
+    }
+  });
+});
+
+describe("defaultView", () => {
+  it("登入後先到首頁；展示模式直接進問答（#283）", () => {
+    expect(defaultView(false)).toBe("home");
+    expect(defaultView(true)).toBe("qa");
+  });
+
+  it("預設頁一定是看得到的頁籤", () => {
+    for (const presentation of [false, true]) {
+      for (const canReview of [false, true]) {
+        expect(visibleViews(canReview, { enabled: false }, presentation, false)).toContain(defaultView(presentation));
       }
     }
   });

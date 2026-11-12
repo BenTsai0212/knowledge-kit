@@ -54,6 +54,7 @@
   "closeSource": "閉じる",
   "views": "表示",
   "tabQa": "質問応答",
+  "tabHome": "ホーム",
   "tabGraph": "関係図",
   "legend": "凡例",
   "graphEmpty": "表示するエンティティはありません。",
@@ -490,5 +491,23 @@
     "empty_question": "質問を入力してください。",
     "question_too_long": "質問が長すぎます。短くしてから再度お試しください。"
   },
-  "unknownError": "問題が発生しました。しばらくしてから再度お試しください。"
+  "unknownError": "問題が発生しました。しばらくしてから再度お試しください。",
+  "home": {
+    "morning": "おはようございます",
+    "afternoon": "こんにちは",
+    "evening": "こんばんは",
+    "scope": "閲覧できる範囲",
+    "commonQuestions": "よくある質問",
+    "waitingTitle": "対応待ち",
+    "waitingDocuments": "レビュー待ちの文書",
+    "waitingConflicts": "うち記載の相違",
+    "waitingReports": "報告",
+    "waitingEarliest": "最も古い報告",
+    "startReview": "レビューを始める",
+    "waitingNone": "対応待ちの項目はありません。",
+    "askedTitle": "これまでの質問",
+    "askedNote": "質問の文章だけを保存します。「もう一度質問」は現在閲覧できる資料で回答し直します。",
+    "askAgain": "もう一度質問",
+    "askedEmpty": "まだ質問していません。"
+  }
 }
