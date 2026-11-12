@@ -83,10 +83,12 @@ test.describe("手機寬度", () => {
     await openApp(page);
     await switchIdentity(page, question.role);
     await askPreset(page, 1);
-    // 左導覽在對話上方，整頁沒有橫向捲動
+    // 頂端列在對話上方、分頁列在視窗底部（#255），整頁沒有橫向捲動
+    const top = await page.getByRole("banner").boundingBox();
     const nav = await page.getByRole("navigation", { name: s.views }).boundingBox();
     const answer = await answers(page).first().boundingBox();
-    expect(nav!.y).toBeLessThan(answer!.y);
+    expect(top!.y).toBeLessThan(answer!.y);
+    expect(nav!.y + nav!.height).toBeCloseTo(844, 0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
     await answers(page).first().getByRole("button", { name: "1", exact: true }).click();

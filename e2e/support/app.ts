@@ -46,10 +46,53 @@ export function accountOption(id: RoleId): string {
   return s.signInAccountOption.replace("{account}", demoAccount(id)).replace("{role}", role.label[language]);
 }
 
-// 以左側導覽的身分選單切換身分
+// 手機（≤ 600px，#255）：頂端列的身分徽章與它打開的身分與語言面板
+export const identityBadge = (page: Page) => page.locator(".mobile-topbar .identity-badge");
+// 以 class 找面板：切換語言後面板的名稱也會換成新的語言
+export const identitySheet = (page: Page) => page.locator("dialog.identity-sheet");
+
+// 在身分與語言面板中操作，完成後按 Esc 等面板收起
+async function inIdentitySheet(page: Page, act: (sheet: Locator) => Promise<unknown>): Promise<void> {
+  await identityBadge(page).click();
+  const sheet = identitySheet(page);
+  await expect(sheet).toBeVisible();
+  await act(sheet);
+  await page.keyboard.press("Escape");
+  await expect(sheet).toBeHidden();
+}
+
+// 以左側導覽的身分選單切換身分；手機上從身分徽章打開的面板切換
 export async function switchIdentity(page: Page, id: RoleId): Promise<void> {
   const role = access.roles.find((r) => r.id === id)!;
-  await page.getByRole("banner").getByLabel(s.identity).selectOption({ label: role.label[language] });
+  const pick = (scope: Locator) => scope.getByLabel(s.identity).selectOption({ label: role.label[language] });
+  if (await identityBadge(page).isVisible()) await inIdentitySheet(page, pick);
+  else await pick(page.getByRole("banner"));
+}
+
+// 切換介面語言（code 是語言代碼）；手機上同樣從身分與語言面板切換
+export async function switchLanguage(page: Page, code: string): Promise<void> {
+  const pick = (scope: Locator) => scope.getByLabel(s.language).selectOption(code);
+  if (await identityBadge(page).isVisible()) await inIdentitySheet(page, pick);
+  else await pick(page.getByRole("banner"));
+}
+
+// 切到某一頁（以 data-view 找，不看介面語言）：左側導覽、手機的分頁列，或手機上收在「更多」裡的頁面；這個身分沒有這一頁時回傳 false
+export async function gotoView(page: Page, view: string): Promise<boolean> {
+  const button = page.locator(`:is(.primary-tabs, .mobile-tabbar) [data-view="${view}"]`);
+  if ((await button.count()) > 0) {
+    await button.click();
+    return true;
+  }
+  const more = page.locator('.mobile-tabbar [data-view="more"]');
+  if ((await more.count()) === 0) return false;
+  await more.click();
+  const item = page.locator(`.more-list [data-view="${view}"]`);
+  if ((await item.count()) === 0) {
+    await page.keyboard.press("Escape");
+    return false;
+  }
+  await item.click();
+  return true;
 }
 
 // 以 label 開頭比對的正規表示式

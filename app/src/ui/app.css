@@ -916,6 +916,270 @@ main.qa > .source .source-text mark.entering {
   }
 }
 
+/* 手機的共同結構（#255，docs/design.md「手機與平板」）：≤ 600px 時 App 依 layout.ts 加上 app--phone，
+   以頂端列＋底部分頁列取代左側導覽。整頁捲動，底部留分頁列（72px）與 safe area 的空間 */
+.app.app--phone {
+  display: block;
+  height: auto;
+  min-height: 100dvh;
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+}
+
+/* 展示模式只有兩個頁籤，沒有分頁列，只留 safe area */
+.app.app--phone:has(> .mobile-segmented) {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.mobile-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 0 1rem 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.mobile-topbar__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  height: 60px;
+}
+
+.mobile-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.mobile-brand__client {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 身分徽章：text 底、background 字，按下打開身分與語言面板 */
+.identity-badge {
+  flex: none;
+  max-width: 50%;
+  min-height: 44px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-color: var(--color-text);
+  border-radius: var(--radius-pill);
+  background: var(--color-text);
+  color: var(--color-background);
+  padding: 0 1rem;
+}
+
+.mobile-topbar__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+/* 底部分頁列（72px）：圖示＋名稱，選中用 primary；觸控目標至少 44px */
+.mobile-tabbar {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 10;
+  display: flex;
+  height: calc(72px + env(safe-area-inset-bottom));
+  padding: 0 0.25rem env(safe-area-inset-bottom);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.mobile-tabbar button {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: var(--color-textMuted);
+  padding: 0.25rem;
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+.mobile-tabbar button[aria-current="page"] {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.mobile-tabbar__label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 待審的數字疊在圖示右上 */
+.mobile-tabbar .tab-count {
+  position: absolute;
+  top: 0.5rem;
+  left: calc(50% + 0.5rem);
+  margin: 0;
+  min-width: 1.25rem;
+  font-size: 0.7rem;
+}
+
+.nav-icon {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 只有兩個頁籤時（展示模式）：頂端列下方的分段切換 */
+.mobile-segmented {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0.75rem 1rem 0;
+  padding: 0.25rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-surfaceRaised);
+}
+
+.mobile-segmented button {
+  flex: 1 1 0;
+  min-height: 44px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--color-textMuted);
+}
+
+.mobile-segmented button[aria-current="page"] {
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+/* 底部面板（BottomSheet.tsx）：圓角 24px、40×5px 拖曳把手、背後 overlay；開關用 base（退場由 closeDialog() 加上 is-closing），
+   減少動態效果時時間是 0ms、直接到位 */
+.bottom-sheet {
+  inset: auto 0 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: 90dvh;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  border: none;
+  border-radius: 24px 24px 0 0;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.bottom-sheet[open] {
+  animation: kSheetUp var(--motion-base) var(--ease-enter) backwards;
+}
+
+.bottom-sheet::backdrop {
+  background: var(--color-overlay);
+  animation: kFade var(--motion-base) var(--ease-enter) backwards;
+}
+
+.bottom-sheet.is-closing {
+  animation: kSheetDown var(--motion-base) var(--ease-exit) forwards;
+}
+
+.bottom-sheet.is-closing::backdrop {
+  animation: kFadeOut var(--motion-base) var(--ease-exit) forwards;
+}
+
+@keyframes kSheetUp {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes kSheetDown {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+.bottom-sheet__body {
+  display: grid;
+  gap: 1rem;
+  padding: 0 1rem calc(1rem + env(safe-area-inset-bottom));
+}
+
+/* 標題列也可以拖曳：touch-action 交給 pointer 事件 */
+.bottom-sheet__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  touch-action: none;
+}
+
+.bottom-sheet__handle {
+  grid-column: 1 / -1;
+  justify-self: center;
+  width: 40px;
+  height: 5px;
+  border-radius: var(--radius-pill);
+  background: var(--color-border);
+}
+
+.bottom-sheet__header h2 {
+  margin: 0;
+}
+
+.bottom-sheet button,
+.bottom-sheet select {
+  min-height: 44px;
+}
+
+/* 「更多」：其餘頁面的清單，一列一個 */
+.more-list {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.more-list button {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  border: none;
+  border-radius: var(--radius-medium);
+  background: none;
+  color: var(--color-text);
+  padding: 0.5rem 0.75rem;
+  text-align: start;
+}
+
+.more-list button[aria-current="page"] {
+  background: var(--color-surfaceRaised);
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
 /* 待審頁的第二層：底線式分頁（#243）。整列一條 border 底線，選中的分頁是 2px text 底線、粗體；數量直接接在名稱後。
    一律單行，窄螢幕超出時橫向捲動（不換行，底線不斷開）；分頁列往下 1px 疊在整列的底線上，捲動容器不裁掉選中的底線 */
 .review-toolbar {

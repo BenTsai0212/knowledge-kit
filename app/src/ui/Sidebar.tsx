@@ -1,15 +1,17 @@
 import type { ReactNode } from "react";
 import { clientConfig } from "../client/load";
-import { fill, strings } from "../client/i18n";
+import { strings } from "../client/i18n";
 import { IDENTITY_SELECT_ID } from "./empty-state";
 import type { View } from "./online-demo";
+import { IdentityControls } from "./IdentityControls";
 import { ProductIcon } from "./ProductIcon";
 import type { IdentityControl } from "./sign-in";
 
 // 頁首 icon 的尺寸：大於 32px，用完整版（含主色節點）
 export const BRAND_ICON_SIZE = 36;
 
-interface Props {
+// 導覽共用的內容：桌機的左側導覽與手機的頂端列＋分頁列（#255）都用這一份
+export interface NavProps {
   language: string;
   identity: string;
   // 身分欄（#287）：登入頁不顯示（none）、以邀請碼體驗或展示模式進入後是選單（menu）、帳號登入時顯示帳號與角色（account）
@@ -29,24 +31,19 @@ interface Props {
   onQuestion(id: string): void;
 }
 
-// 導覽的頁籤：上傳頁的「已送審」標記以此找到「待審」的位置（#242 PR 3）
-export const tabSelector = (view: View) => `.primary-tabs [data-view="${view}"]`;
+// 導覽的頁籤：上傳頁的「已送審」標記以此找到「待審」的位置（#242 PR 3）；手機的分頁列也適用，主管的「待審」收在「更多」（#255）
+export const tabSelector = (view: View | "more") => `:is(.primary-tabs, .mobile-tabbar) [data-view="${view}"]`;
 
-// 語言以該語言自己的名稱顯示（例如 zh-TW → 中文（台灣））
-const ownName = (code: string) => new Intl.DisplayNames([code], { type: "language" }).of(code) ?? code;
+// 頁籤的名稱（左側導覽、手機的分頁列與「更多」共用）
+export function tabLabels(language: string): Record<View, string> {
+  const s = strings(language);
+  return { home: s.tabHome, qa: s.tabQa, graph: s.tabGraph, timeline: s.tabTimeline, upload: s.tabUpload, review: s.tabReview, evals: s.tabEvals };
+}
 
 // 左側導覽（#195）：公司名稱、身分、語言、更換邀請碼（帳號登入時是登出）、頁籤，問答頁另列「這次的問題」
-export function Sidebar({ language, identity, identityControl, account, onIdentity, onLanguage, onChangeAccessCode, views, view, onView, tabExtra, questions, onQuestion }: Props) {
+export function Sidebar({ language, identity, identityControl, account, onIdentity, onLanguage, onChangeAccessCode, views, view, onView, tabExtra, questions, onQuestion }: NavProps) {
   const s = strings(language);
-  const tabLabels: Record<View, string> = {
-    home: s.tabHome,
-    qa: s.tabQa,
-    graph: s.tabGraph,
-    timeline: s.tabTimeline,
-    upload: s.tabUpload,
-    review: s.tabReview,
-    evals: s.tabEvals,
-  };
+  const labels = tabLabels(language);
   return (
     <div className="sidebar">
       <header className="toolbar">
@@ -59,53 +56,21 @@ export function Sidebar({ language, identity, identityControl, account, onIdenti
           <span className="brand__client">{clientConfig.client.displayName[language]}</span>
         </h1>
         <span className="badge">{s.fictionalData}</span>
-        {identityControl === "menu" && (
-          <label>
-            {s.identity}
-            {/* 空狀態的「切換身分」把焦點移到這裡（#245） */}
-            <select id={IDENTITY_SELECT_ID} value={identity} onChange={(e) => onIdentity(e.target.value)}>
-              {clientConfig.access.roles.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.label[language]}
-                </option>
-              ))}
-            </select>
-            <span className="badge">{s.demoPermissions}</span>
-          </label>
-        )}
-        {identityControl === "account" && (
-          // 帳號登入：身分是登入的帳號，不能切換（docs/design.md「身分是登入的人，不是設定」）
-          <p className="identity-account">
-            {s.identity}
-            <span>
-              {fill(s.signInAccountOption, {
-                account: account ?? "",
-                role: clientConfig.access.roles.find((r) => r.id === identity)?.label[language] ?? identity,
-              })}
-            </span>
-            <span className="badge">{s.demoPermissions}</span>
-          </p>
-        )}
-        <label>
-          {s.language}
-          <select value={language} onChange={(e) => onLanguage(e.target.value)}>
-            {clientConfig.client.languages.map((code) => (
-              <option key={code} value={code}>
-                {ownName(code)}
-              </option>
-            ))}
-          </select>
-        </label>
-        {onChangeAccessCode && (
-          <button type="button" className="link" onClick={onChangeAccessCode}>
-            {account === undefined ? s.changeAccessCode : s.signOut}
-          </button>
-        )}
+        <IdentityControls
+          language={language}
+          identity={identity}
+          identityControl={identityControl}
+          account={account}
+          onIdentity={onIdentity}
+          onLanguage={onLanguage}
+          onChangeAccessCode={onChangeAccessCode}
+          selectId={IDENTITY_SELECT_ID}
+        />
       </header>
       <nav className="primary-tabs" aria-label={s.views}>
         {views.map((id) => (
           <button key={id} type="button" data-view={id} aria-current={view === id ? "page" : undefined} onClick={() => onView(id)}>
-            {tabLabels[id]}
+            {labels[id]}
             {tabExtra?.[id]}
           </button>
         ))}

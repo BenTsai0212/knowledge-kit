@@ -46,6 +46,8 @@ import { strings } from "./client/i18n";
 import { TimelinePage } from "./ui/TimelinePage";
 import { UploadPage } from "./ui/UploadPage";
 import { Sidebar } from "./ui/Sidebar";
+import { MobileNav } from "./ui/MobileNav";
+import { useLayout } from "./ui/layout";
 import { canSwitchIdentity, demoAccount, identityControl, type SignIn } from "./ui/sign-in";
 import { SignInPanel, type Rejected } from "./ui/SignInPanel";
 
@@ -149,6 +151,7 @@ export function App() {
     return () => window.removeEventListener("online", online);
   }, [offline]);
   const s = strings(language);
+  const layout = useLayout();
   // 回答串流中：停用送出與預設問題，不以新提問中斷前一題（#195 決定 3）
   const answering = turns.some((t) => t.answer === undefined);
 
@@ -348,9 +351,11 @@ export function App() {
     if (entity !== null) onViewed(entity.id);
   }, [entity?.id]);
 
+  const Nav = layout === "phone" ? MobileNav : Sidebar;
   return (
-    <div className="app">
-      <Sidebar
+    <div className={layout === "phone" ? "app app--phone" : "app"}>
+      {/* 手機是頂端列＋底部分頁列，其他寬度是左側導覽（#255；平板的圖示導覽列之後加入）；只渲染其中一種 */}
+      <Nav
         language={language}
         identity={identity}
         identityControl={identityControl(signIn)}

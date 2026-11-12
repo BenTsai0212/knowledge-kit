@@ -6,6 +6,7 @@ import fallbackNotice from "./RetrievalFallbackNotice.tsx?raw";
 import reviewPage from "./ReviewPage.tsx?raw";
 import timelinePage from "./TimelinePage.tsx?raw";
 import app from "../App.tsx?raw";
+import bottomSheet from "./BottomSheet.tsx?raw";
 import main from "../main.tsx?raw";
 
 // 全域與進入的動態（#246，docs/design.md「全互動對照表」的「全域」「進入」列）：toast、對話框、邀請碼錯誤、改用關鍵字檢索的提示、
@@ -50,6 +51,23 @@ describe("對話框（#246）", () => {
     expect(evalPage).toContain('className="dialog"');
     expect(evalPage).toContain("closeDialog(d, prefersReducedMotion())");
     expect(evalPage).not.toMatch(/\bd\.close\(\)/);
+  });
+});
+
+describe("底部面板（#255）", () => {
+  it("開關用 base：從底部升起、遮罩淡入；關閉時往下退場（退場曲線）", () => {
+    expect(rule(".bottom-sheet[open]")).toMatch(/animation: kSheetUp var\(--motion-base\) var\(--ease-enter\) backwards;/);
+    expect(rule(".bottom-sheet::backdrop")).toMatch(/background: var\(--color-overlay\);[\s\S]*animation: kFade var\(--motion-base\) var\(--ease-enter\) backwards;/);
+    expect(rule(".bottom-sheet.is-closing")).toMatch(/animation: kSheetDown var\(--motion-base\) var\(--ease-exit\) forwards;/);
+    expect(rule(".bottom-sheet.is-closing::backdrop")).toMatch(/animation: kFadeOut var\(--motion-base\) var\(--ease-exit\) forwards;/);
+  });
+
+  it("圓角 24px、40×5px 把手；Esc 與關閉都經過 closeDialog()（減少動態效果時直接關閉），不直接 close()", () => {
+    expect(rule(".bottom-sheet")).toMatch(/border-radius: 24px 24px 0 0;/);
+    expect(rule(".bottom-sheet__handle")).toMatch(/width: 40px;\s*height: 5px;/);
+    expect(bottomSheet).toContain("closeDialog(d, prefersReducedMotion(), setTimeout, MOTION.base)");
+    expect(bottomSheet).toMatch(/onCancel=\{\(e\) => \(e\.preventDefault\(\), close\(e\.currentTarget\)\)\}/);
+    expect(bottomSheet).not.toMatch(/\.close\(\)/);
   });
 });
 

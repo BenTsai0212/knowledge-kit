@@ -212,6 +212,7 @@ const uiStrings = {
   demoUploadNotice: "required", accessCodeSubmit: "required", changeAccessCode: "required",
   signInTitle: "required", signInAccount: "required", signInAccountOption: "required", signInPassword: "required", signInNoPassword: "required",
   signInSubmit: "required", signInWithCode: "required", signInBack: "required", signOut: "required",
+  identityBadge: "required", identityAndLanguage: "required", navMore: "required",
   presetQuestions: "required", scenarioRole: "required", questionLabel: "required",
   questionPlaceholder: "required", askButton: "required", answering: "required", emptyAnswer: "required", emptyAnswerReason: "required", emptyAnswerAction: "required",
   qaIndependent: "required", sessionQuestions: "required", answerMentions: "required", followUpTitle: "required",

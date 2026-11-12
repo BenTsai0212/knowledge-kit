@@ -2,7 +2,7 @@
 // 截圖附在測試報告（CI 的 playwright-report）供人確認。圖譜的節點名稱最多兩行；待審頁分頁列超出時有右側的漸層提示。
 // 以能審查的身分（看得到待審頁）切到英文；客戶沒有英文時略過
 import { expect, test, type Page } from "@playwright/test";
-import { openApp, s, switchIdentity } from "./support/app";
+import { gotoView, openApp, switchIdentity, switchLanguage } from "./support/app";
 import { client, reviewingUploader, reviewer } from "./support/client";
 import type { Cy } from "./support/graph";
 import { waitForGraphIdle } from "./support/graph";
@@ -24,13 +24,12 @@ for (const width of [375, 1440]) {
       test.skip(who === undefined, "access.json 沒有 canReview 的身分");
       await openApp(page);
       await switchIdentity(page, who!.id);
-      await page.getByRole("banner").getByLabel(s.language).selectOption("en");
+      await switchLanguage(page, "en");
       await expect(page.locator("html")).toHaveAttribute("lang", "en");
 
       for (const view of VIEWS) {
-        const button = page.locator(`.primary-tabs [data-view="${view}"]`);
-        if ((await button.count()) === 0) continue;
-        await button.click();
+        // 手機上主管的待審與時間軸收在「更多」（#255）
+        if (!(await gotoView(page, view))) continue;
         if (view === "graph") await waitForGraphIdle(page, GRAPH_CANVAS);
         expect(await noHorizontalScroll(page), `${view} 沒有橫向捲動`).toBe(true);
         await testInfo.attach(`${view}-${width}px.png`, { body: await page.screenshot({ fullPage: true }), contentType: "image/png" });

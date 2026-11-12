@@ -115,6 +115,10 @@ describe("頁面外層與清單的欄寬", () => {
   const page = ["main"];
   const ancestors: Record<string, string[]> = {
     ".brand__wordmark": [".app"],
+    // 手機的頂端列與分頁列（#255）：flex 容器，.app--phone 是 display: block
+    ".mobile-brand__client": [".app"],
+    ".identity-badge": [".app"],
+    ".mobile-tabbar__label": [".app"],
     ".presets": [".app", "main.qa", ".home", ...page],
     ".scenario": [".app", "main.qa", ".home", ...page],
     ".review-tabs": [".review-page", ".upload", ...page],
