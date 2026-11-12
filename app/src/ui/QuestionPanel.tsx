@@ -1,7 +1,9 @@
 import { clientConfig } from "../client/load";
 import { MAX_QUESTION_CHARS } from "../qa/prompt";
-import { strings } from "../client/i18n";
+import { errorMessage, fill, strings } from "../client/i18n";
 import { PRESETS_ID } from "./empty-state";
+import { Notice } from "./Notice";
+import { questionLength } from "./qa-errors";
 
 interface Props {
   language: string;
@@ -11,15 +13,30 @@ interface Props {
   text: string;
   onText(text: string): void;
   onAsk(question: string): void;
+  // 今天用完了（daily_limit、global_daily_limit，#280）：輸入框上方的常駐說明條，停用輸入框與預設問題；沒有用完時為 null
+  limit: string | null;
 }
+
+// 輸入框的 id：「縮短問題」按下後把焦點移到這裡
+export const QUESTION_INPUT_ID = "question-input";
+const HINT_ID = "question-hint";
 
 const roleLabel = (id: string, language: string) => clientConfig.access.roles.find((r) => r.id === id)?.label[language] ?? id;
 
 // 固定在問答頁下方的輸入區（#195）：一行可橫向捲動的預設問題（依情境分組）、自由提問、「每題獨立回答」的說明
-export function QuestionPanel({ language, disabled, text, onText, onAsk }: Props) {
+export function QuestionPanel({ language, disabled, text, onText, onAsk, limit }: Props) {
   const s = strings(language);
+  const off = disabled || limit !== null;
+  // 接近 500 字時顯示字數，超過時邊線換 danger、下方說明、停用提問（不送出所以不計次）
+  const length = questionLength(text);
+  const blocked = off || text.trim() === "" || length.over;
   return (
     <section className="card composer">
+      {limit !== null && (
+        <Notice kind="info" icon="◷" title={errorMessage(language, limit)}>
+          {s.qaProblems.limitBrowse}
+        </Notice>
+      )}
       <div id={PRESETS_ID} className="presets" role="group" aria-label={s.presetQuestions}>
         {clientConfig.scenarios.scenarios.map((scenario) => (
           <div key={scenario.id} className="scenario" role="group" aria-label={scenario.title[language]}>
@@ -29,7 +46,7 @@ export function QuestionPanel({ language, disabled, text, onText, onAsk }: Props
               {roleLabel(scenario.role, language)}
             </span>
             {scenario.questions.map((q) => (
-              <button key={q.id} type="button" disabled={disabled} onClick={() => onAsk(q.text[language])}>
+              <button key={q.id} type="button" disabled={off} onClick={() => onAsk(q.text[language])}>
                 {q.text[language]}
               </button>
             ))}
@@ -40,7 +57,7 @@ export function QuestionPanel({ language, disabled, text, onText, onAsk }: Props
         className="free-question"
         onSubmit={(e) => {
           e.preventDefault();
-          if (disabled || text.trim() === "") return;
+          if (blocked) return;
           onAsk(text);
           onText("");
         }}
@@ -48,17 +65,28 @@ export function QuestionPanel({ language, disabled, text, onText, onAsk }: Props
         <label>
           {s.questionLabel}
           <textarea
+            id={QUESTION_INPUT_ID}
             value={text}
-            maxLength={MAX_QUESTION_CHARS}
             rows={2}
+            disabled={limit !== null}
             placeholder={s.questionPlaceholder}
+            aria-invalid={length.over || undefined}
+            aria-describedby={length.show ? HINT_ID : undefined}
             onChange={(e) => onText(e.target.value)}
           />
         </label>
-        <button type="submit" disabled={disabled || text.trim() === ""}>
+        <button type="submit" disabled={blocked}>
           {s.askButton}
         </button>
       </form>
+      {length.show && (
+        <p id={HINT_ID} className="question-hint" aria-live="polite">
+          {length.over && <span>{errorMessage(language, "question_too_long")}</span>}
+          <span className={length.over ? "question-count over" : "question-count"}>
+            {fill(s.qaProblems.charCount, { count: text.trim().length, max: MAX_QUESTION_CHARS })}
+          </span>
+        </p>
+      )}
       <p className="muted qa-independent">{s.qaIndependent}</p>
     </section>
   );

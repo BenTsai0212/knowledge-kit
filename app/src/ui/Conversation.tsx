@@ -27,10 +27,12 @@ interface Props {
   // 回答中斷時的「重新提問」（#227）：與輸入區送出相同；askDisabled 時不能按
   onAsk(question: string): void;
   askDisabled: boolean;
+  // prompt_too_long 的「縮短問題」：問題填回輸入框（#280）
+  onShorten(question: string): void;
 }
 
 // 問答依序往下累積（#195）；新的一題出現時捲到該題
-export function Conversation({ language, turns, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport, onAsk, askDisabled }: Props) {
+export function Conversation({ language, turns, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport, onAsk, askDisabled, onShorten }: Props) {
   const s = strings(language);
   const latest = turns.at(-1)?.id;
   const latestRef = useRef<HTMLElement>(null);
@@ -66,6 +68,7 @@ export function Conversation({ language, turns, canUpload, onOpenSource, openPas
             onReport={(category, note) => onReport(turn, category, note)}
             onRetry={() => onAsk(turn.question)}
             retryDisabled={askDisabled}
+            onShorten={() => onShorten(turn.question)}
           />
         ))
       )}

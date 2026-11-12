@@ -445,6 +445,16 @@
   "uncited": "未附出處",
   "incomplete": "回答不完整",
   "answerRetry": "重新提問",
+  "qaProblems": {
+    "offline": "目前連不到伺服器。連線恢復後這則提示會自動消失。",
+    "notSent": "沒有送出",
+    "shorten": "縮短問題",
+    "charCount": "{count}／{max}",
+    "limitBrowse": "圖譜、時間軸與原文仍可以瀏覽。",
+    "adminTitle": "這個 demo 暫時無法回答問題",
+    "adminDetails": "給管理者的細節",
+    "reload": "重新整理頁面"
+  },
   "errors": {
     "forbidden_origin": "這個網址無法使用問答功能。",
     "invalid_access_code": "邀請碼不正確，請重新輸入。",

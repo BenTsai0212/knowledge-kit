@@ -9,6 +9,7 @@ import { refusalNextSteps, type RefusalStep } from "./refusal-next-steps";
 import { canReport, defaultCategory } from "./report-helpers";
 import { answerDoneStep, answerSentences, sentenceStep, streamingSentences } from "./answer-motion";
 import { staggerIndex } from "./motion";
+import { errorCategory } from "./qa-errors";
 
 export interface AnswerState {
   question: string;
@@ -45,6 +46,8 @@ interface Props {
   // 回答中斷或失敗時的「重新提問」：以同一個問題再問一次（新的一題）；回答中不能按
   onRetry(): void;
   retryDisabled: boolean;
+  // prompt_too_long 的「縮短問題」：問題填回輸入框（#280）
+  onShorten(): void;
 }
 
 const { entityTypes } = clientConfig.knowledgeModel;
@@ -52,10 +55,7 @@ const { entityTypes } = clientConfig.knowledgeModel;
 // 回答完成後已播過動態的題目：切換頁籤回來重新掛載時不再播放（#227）
 const settled = new Set<string>();
 
-// 不重試的錯誤：問題本身的錯誤，重新送出結果相同
-const NOT_RETRYABLE = new Set(["empty_question", "question_too_long"]);
-
-export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport, onRetry, retryDisabled }: Props) {
+export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport, onRetry, retryDisabled, onShorten }: Props) {
   const s = strings(language);
   const { answer } = state;
   const stepText: Record<RefusalStep, string> = {
@@ -72,7 +72,11 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
   const sentences = answer === undefined ? streamingSentences(state.streaming) : answer.kind === "answer" ? answerSentences(answer.text) : null;
   if (answer === undefined) streamed.current = sentences!.length;
   const incomplete = answer?.kind === "answer" && answer.incomplete;
-  const retryable = incomplete || (answer?.kind === "error" && !NOT_RETRYABLE.has(answer.error));
+  // 錯誤依「使用者可以做什麼」分類（#280）：只有暫時的問題能重新提問；問題要改、模型無法回答重新送出結果相同
+  const category = answer?.kind === "error" ? errorCategory(answer.error) : null;
+  const retryable = incomplete || category === "transient";
+  // 模型無法回答（upstream_refusal）比照拒答：虛線框與「可以試試」
+  const refusalText = answer?.kind === "refusal" ? answer.text : answer?.kind === "error" && category === "modelRefusal" ? errorMessage(language, answer.error) : null;
   const classes = ["card", "answer", still && "still", incomplete && "incomplete"].filter(Boolean).join(" ");
   const doneStep = sentences === null ? 0 : answerDoneStep(sentences.length, streamed.current);
 
@@ -98,10 +102,10 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
         </p>
       )}
       {answer === undefined && <p className="muted">{s.answering}</p>}
-      {answer?.kind === "refusal" && (
+      {refusalText !== null && (
         <div className="refusal">
-          <p className="answer-text">{answer.text}</p>
-          {/* 下一步只依上傳能力決定，「資料沒寫」與「沒有權限」相同（docs/qa.md「拒答」） */}
+          <p className="answer-text">{refusalText}</p>
+          {/* 下一步只依上傳能力決定，「資料沒寫」與「沒有權限」相同（docs/qa.md「拒答」）；模型無法回答比照拒答（#280） */}
           <div className="refusal-next">
             <p className="muted">{s.refusalNextTitle}</p>
             <ul>
@@ -122,7 +126,20 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
           </div>
         </div>
       )}
-      {answer?.kind === "error" && <p className="error">{errorMessage(language, answer.error)}</p>}
+      {/* 錯誤是中性的卡片，不用 danger（#280）；prompt_too_long 沒有送出，下一步是縮短問題 */}
+      {answer?.kind === "error" && category !== "modelRefusal" && (
+        <div className="problem" role="status">
+          <p>{errorMessage(language, answer.error)}</p>
+          {answer.error === "prompt_too_long" && (
+            <p className="problem-actions">
+              <span className="badge">{s.qaProblems.notSent}</span>
+              <button type="button" className="secondary" onClick={onShorten}>
+                {s.qaProblems.shorten}
+              </button>
+            </p>
+          )}
+        </div>
+      )}
       {answer?.kind === "answer" && (
         <>
           {answer.uncited && <p className="badge warning">{s.uncited}</p>}

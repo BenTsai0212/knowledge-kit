@@ -51,7 +51,7 @@
     "evalCategories", "evalExpect", "evalVerdicts", "evalLeaks", "evalReport",
     "colon", "progress", "parenthetical", "refusal",
     "refusalNextTitle", "refusalNextRephrase", "refusalNextAskPerson", "refusalNextUpload", "refusalGotoUpload", "uncited", "incomplete", "answerRetry",
-    "errors", "unknownError"
+    "qaProblems", "errors", "unknownError"
   ],
   "properties": {
     "loading": { "$ref": "#/definitions/Text" },
@@ -607,6 +607,22 @@
     "uncited": { "$ref": "#/definitions/Text" },
     "incomplete": { "$ref": "#/definitions/Text" },
     "answerRetry": { "$ref": "#/definitions/Text" },
+    "qaProblems": {
+      "description": "問答的錯誤與額度（#280，docs/design.md「錯誤與額度」）；charCount 的參數是 {count}、{max}",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["offline", "notSent", "shorten", "charCount", "limitBrowse", "adminTitle", "adminDetails", "reload"],
+      "properties": {
+        "offline": { "$ref": "#/definitions/Text" },
+        "notSent": { "$ref": "#/definitions/Text" },
+        "shorten": { "$ref": "#/definitions/Text" },
+        "charCount": { "$ref": "#/definitions/Text" },
+        "limitBrowse": { "$ref": "#/definitions/Text" },
+        "adminTitle": { "$ref": "#/definitions/Text" },
+        "adminDetails": { "$ref": "#/definitions/Text" },
+        "reload": { "$ref": "#/definitions/Text" }
+      }
+    },
     "errors": {
       "type": "object",
       "additionalProperties": false,

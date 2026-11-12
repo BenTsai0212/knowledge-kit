@@ -28,7 +28,10 @@ import { GraphPage } from "./ui/GraphPage";
 import { mentionedEntities } from "./ui/mentions";
 import { MentionPanel } from "./ui/MentionPanel";
 import { Conversation, type Turn } from "./ui/Conversation";
-import { QuestionPanel } from "./ui/QuestionPanel";
+import { QUESTION_INPUT_ID, QuestionPanel } from "./ui/QuestionPanel";
+import { AdminNotice } from "./ui/AdminNotice";
+import { Notice } from "./ui/Notice";
+import { errorCategory, turnError } from "./ui/qa-errors";
 import { RetrievalNotice } from "./ui/RetrievalNotice";
 import { reportOf } from "./ui/report-helpers";
 import { PREPARING, sameDisplay, type ProviderStatus } from "./ui/retrieval-notice";
@@ -112,6 +115,17 @@ export function App() {
   const [evalRun, setEvalRun] = useState<EvalRun | null>(null);
   // VectorProvider 的準備狀態：準備中的下載進度，與準備失敗、改用 keyword-hash 時的原因（docs/retrieval.md「準備中的提示」「降級」）
   const [providerStatus, setProviderStatus] = useState<ProviderStatus>(PREPARING);
+  // 問答的錯誤（#280，docs/design.md「錯誤與額度」）：今天用完了（只記在這個分頁的記憶體，重新整理後由 Worker 決定）、
+  // 需要管理者（對話區頂端，附錯誤代碼與時間）、連不到伺服器（頁面頂端，online 事件後消失）
+  const [limit, setLimit] = useState<string | null>(null);
+  const [adminError, setAdminError] = useState<{ error: string; at: Date } | null>(null);
+  const [offline, setOffline] = useState(false);
+  useEffect(() => {
+    if (!offline) return;
+    const online = () => setOffline(false);
+    window.addEventListener("online", online);
+    return () => window.removeEventListener("online", online);
+  }, [offline]);
   const s = strings(language);
   // 回答串流中：停用送出與預設問題，不以新提問中斷前一題（#195 決定 3）
   const answering = turns.some((t) => t.answer === undefined);
@@ -180,7 +194,7 @@ export function App() {
   }
 
   async function onAsk(question: string) {
-    if (retriever === null || accessCode === null || answering) return;
+    if (retriever === null || accessCode === null || answering || limit !== null) return;
     // 以送出當下的身分與語言提問；只送出這一題的文字
     const ticket = questions.current.begin();
     const id = `turn-${nextTurn.current++}`;
@@ -199,6 +213,17 @@ export function App() {
       setTurns((all) => all.filter((t) => t.id !== id));
       return;
     }
+    if (turnError(result) === "network") setOffline(true);
+    // 今天用完了與需要管理者：說明在輸入框上方或對話區頂端，這一題不留在對話中；問題文字回到輸入框，不搞丟
+    const category = result.kind === "error" ? errorCategory(result.error) : null;
+    if (result.kind === "error" && (category === "dailyLimit" || category === "admin")) {
+      if (category === "dailyLimit") setLimit(result.error);
+      else setAdminError({ error: result.error, at: new Date() });
+      setTurns((all) => all.filter((t) => t.id !== id));
+      setDraft((current) => (current === "" ? question : current));
+      return;
+    }
+    if (result.kind !== "error") setAdminError(null);
     // 回答提到的實體：以送出當下的身分讀圖譜（RLS 篩選），讀完才結束這一題，期間仍停用送出；讀取失敗時不列
     const graph = result.kind === "answer" && !result.uncited && db !== null ? await readGraph(db, identity).catch(() => null) : null;
     if (!ticket.isCurrent()) return;
@@ -419,10 +444,12 @@ export function App() {
         // 中間是對話與固定在下方的輸入區，右側是原文或實體面板（關閉時中間欄變寬）
         <main className={source === null && entity === null ? "qa" : "qa with-panel"}>
           <div className="qa-center">
+            {offline && <Notice kind="warning" title={s.qaProblems.offline} />}
             {db === null && <p className="card muted">{s.loading}</p>}
             {/* 線上 demo：提問會傳給模型供應商（#100 計畫第 8 項） */}
             {onlineDemo.enabled && <p className="badge warning">{s.demoQaNotice}</p>}
             <RetrievalNotice language={language} preparesModel={preparesModel(client.retrieval)} status={providerStatus} />
+            {adminError !== null && <AdminNotice language={language} {...adminError} />}
             <Conversation
               language={language}
               turns={turns}
@@ -441,9 +468,13 @@ export function App() {
                 setReviewVersion((v) => v + 1);
               }}
               onAsk={onAsk}
-              askDisabled={retriever === null || answering}
+              askDisabled={retriever === null || answering || limit !== null}
+              onShorten={(question) => {
+                setDraft(question);
+                document.getElementById(QUESTION_INPUT_ID)?.focus();
+              }}
             />
-            <QuestionPanel language={language} disabled={retriever === null || answering} text={draft} onText={setDraft} onAsk={onAsk} />
+            <QuestionPanel language={language} disabled={retriever === null || answering} text={draft} onText={setDraft} onAsk={onAsk} limit={limit} />
           </div>
           {source !== null && <SourcePanel language={language} source={source} onOpenSource={onOpenSource} onClose={() => (sources.current.cancel(), setSource(null))} />}
           {entity !== null && (
