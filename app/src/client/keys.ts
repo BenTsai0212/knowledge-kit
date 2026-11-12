@@ -420,7 +420,8 @@ export const i18nManifests: ManifestEntry[] = [
     keys: {
       download: "required", previous: "required", previousInvalid: "required", set: "required", title: "required", editNote: "required", headline: "required", headlineMet: "required",
       headlineUnmet: "required", headlineIncomplete: "required", headlineBothMet: "required", headlineSecondUnmet: "required", unmetItem: "required", metricsTitle: "required", result: "required", meets: "required",
-      second: "required", bothMeet: "required", yes: "required", no: "required", undetermined: "required", stabilityTitle: "required", stabilityWith: "required", stabilityDiffering: "required",
+      second: "required", bothMeet: "required", passMark: "required", failMark: "required", metLabel: "required", unmetLabel: "required",
+      bothLabel: "required", evaluatedOn: "required", footer: "required", thresholdLegend: "required", undetermined: "required", stabilityTitle: "required", stabilityWith: "required", stabilityDiffering: "required",
       noteBankDiffers: "required", noteBankUnknown: "required", noteIncomplete: "required", noteSettingsDiffer: "required", noteCurrentIncomplete: "required", rolesTitle: "required", roleLine: "required", leakExplain: "required",
       limitsTitle: "required", limitQuestions: "required", limitAccess: "required", limitScope: "required", appendixTitle: "required", matrixTitle: "required", matrixCell: "required", role: "required",
       category: "required", restrictedNote: "required", failuresTitle: "required", number: "required", failed: "required", reason: "required", action: "required", noFailures: "required",
