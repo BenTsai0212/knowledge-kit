@@ -13,6 +13,7 @@ import {
   languageOption,
   openApp,
   roleCard,
+  roleCardTarget,
   s,
   signInPanel,
   switchIdentity,
@@ -123,10 +124,11 @@ test("身分與語言面板：每個身分一張單選卡，附 access.json 的�
   const cards = sheet.getByRole("radio");
   await expect(cards).toHaveCount(access.roles.length);
   for (const role of access.roles) {
-    const card = roleCard(sheet, role.id);
-    await expect(card).toHaveAccessibleDescription(role.scope[language]);
-    // 觸控目標是整張卡
-    expect((await sheet.locator(".role-card", { has: card }).boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await expect(roleCard(sheet, role.id)).toHaveAccessibleDescription(role.scope[language]);
+    // 觸控目標是整張卡（label.role-card）。boundingBox() 不會自動重試，先確認卡片存在，失敗時立即而明確
+    const target = roleCardTarget(sheet, role.id);
+    await expect(target).toBeVisible();
+    expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   }
   await expect(roleCard(sheet, access.roles[0].id)).toBeChecked();
   await expect(sheet.getByRole("button", { name: s.changeAccessCode })).toBeVisible();
@@ -134,7 +136,7 @@ test("身分與語言面板：每個身分一張單選卡，附 access.json 的�
   const other = access.roles.find((r) => r.id !== access.roles[0].id);
   if (other !== undefined) {
     // 點卡片上的說明文字也會選取
-    await sheet.locator(".role-card", { has: roleCard(sheet, other.id) }).locator(".role-card__scope").click();
+    await roleCardTarget(sheet, other.id).locator(".role-card__scope").click();
     await expect(roleCard(sheet, other.id)).toBeChecked();
     await expect(identityBadge(page)).toHaveText(other.label[language]);
   }
@@ -148,6 +150,7 @@ test("身分與語言面板：語言是分段切換，選中的語言 aria-press
   const options = sheet.getByRole("group", { name: s.language }).getByRole("button");
   await expect(options).toHaveCount(client.languages.length);
   await expect(languageOption(sheet, language)).toHaveAttribute("aria-pressed", "true");
+  await expect(languageOption(sheet, language)).toBeVisible();
   expect((await languageOption(sheet, language).boundingBox())!.height).toBeGreaterThanOrEqual(44);
   const other = client.languages.find((code) => code !== language);
   test.skip(other === undefined, "client.json 只有一種語言");

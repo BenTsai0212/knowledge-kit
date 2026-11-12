@@ -67,6 +67,12 @@ export const identitySegments = (page: Page) => page.getByRole("banner").getByRo
 // 身分與語言面板（手機）裡的身分單選卡與語言的分段切換（#255 PR 2）。語言按鈕以 lang 屬性找，不看語言名稱的寫法
 export const roleCard = (sheet: Locator, id: RoleId) =>
   sheet.getByRole("radio", { name: access.roles.find((r) => r.id === id)!.label[language], exact: true });
+// 單選卡的整張卡（label.role-card，觸控目標）。filter({ has }) 的內層 locator 是相對於外層元素查詢，
+// 所以內層從 page 開始寫，不能沿用從 sheet 開始的 roleCard()（否則會在卡片裡找面板，永遠找不到）
+export const roleCardTarget = (sheet: Locator, id: RoleId) =>
+  sheet.locator(".role-card").filter({
+    has: sheet.page().getByRole("radio", { name: access.roles.find((r) => r.id === id)!.label[language], exact: true }),
+  });
 export const languageOption = (sheet: Locator, code: string) => sheet.getByRole("group", { name: s.language }).locator(`button[lang="${code}"]`);
 
 // 以左側導覽的身分選單切換身分；展示模式改用頂端列的身分分段切換，手機上從身分徽章打開的面板選身分的單選卡
