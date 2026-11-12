@@ -4,6 +4,7 @@ import { fill, strings } from "../client/i18n";
 import { IDENTITY_SELECT_ID } from "./empty-state";
 import type { View } from "./online-demo";
 import { ProductIcon } from "./ProductIcon";
+import type { IdentityControl } from "./sign-in";
 
 // 頁首 icon 的尺寸：大於 32px，用完整版（含主色節點）
 export const BRAND_ICON_SIZE = 36;
@@ -11,7 +12,9 @@ export const BRAND_ICON_SIZE = 36;
 interface Props {
   language: string;
   identity: string;
-  // 帳號登入時的展示帳號（#287）：身分固定，顯示帳號與角色、不顯示選單，「更換邀請碼」改為「登出」；以邀請碼體驗時為 undefined
+  // 身分欄（#287）：登入頁不顯示（none）、以邀請碼體驗或展示模式進入後是選單（menu）、帳號登入時顯示帳號與角色（account）
+  identityControl: IdentityControl;
+  // 帳號登入時的展示帳號（#287）：身分固定，「更換邀請碼」改為「登出」；以邀請碼體驗時為 undefined
   account?: string;
   onIdentity(identity: string): void;
   onLanguage(language: string): void;
@@ -33,7 +36,7 @@ export const tabSelector = (view: View) => `.primary-tabs [data-view="${view}"]`
 const ownName = (code: string) => new Intl.DisplayNames([code], { type: "language" }).of(code) ?? code;
 
 // 左側導覽（#195）：公司名稱、身分、語言、更換邀請碼（帳號登入時是登出）、頁籤，問答頁另列「這次的問題」
-export function Sidebar({ language, identity, account, onIdentity, onLanguage, onChangeAccessCode, views, view, onView, tabExtra, questions, onQuestion }: Props) {
+export function Sidebar({ language, identity, identityControl, account, onIdentity, onLanguage, onChangeAccessCode, views, view, onView, tabExtra, questions, onQuestion }: Props) {
   const s = strings(language);
   const tabLabels: Record<View, string> = {
     qa: s.tabQa,
@@ -55,7 +58,7 @@ export function Sidebar({ language, identity, account, onIdentity, onLanguage, o
           <span className="brand__client">{clientConfig.client.displayName[language]}</span>
         </h1>
         <span className="badge">{s.fictionalData}</span>
-        {account === undefined ? (
+        {identityControl === "menu" && (
           <label>
             {s.identity}
             {/* 空狀態的「切換身分」把焦點移到這裡（#245） */}
@@ -68,13 +71,14 @@ export function Sidebar({ language, identity, account, onIdentity, onLanguage, o
             </select>
             <span className="badge">{s.demoPermissions}</span>
           </label>
-        ) : (
+        )}
+        {identityControl === "account" && (
           // 帳號登入：身分是登入的帳號，不能切換（docs/design.md「身分是登入的人，不是設定」）
           <p className="identity-account">
             {s.identity}
             <span>
               {fill(s.signInAccountOption, {
-                account,
+                account: account ?? "",
                 role: clientConfig.access.roles.find((r) => r.id === identity)?.label[language] ?? identity,
               })}
             </span>
