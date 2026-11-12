@@ -407,6 +407,12 @@ export interface UiStrings {
     helpZoom: string;
     helpReset: string;
     helpKeys: string;
+    // 「圖譜｜清單」切換與清單模式（#289）
+    modeLabel: string;
+    modeGraph: string;
+    modeList: string;
+    listLabel: string;
+    listEmpty: string;
   };
   askAboutEntity: string;
   relatedEntities: string;

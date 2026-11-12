@@ -133,10 +133,10 @@
     "graphSourceCount": { "$ref": "#/definitions/Text" },
     "graphAskAbout": { "$ref": "#/definitions/Text" },
     "graphKeyboard": {
-      "description": "圖譜的鍵盤操作與報讀（#289，docs/design.md「圖譜的鍵盤操作與螢幕報讀器」）：enter 的 {entities}、{relations} 是看得到的實體與關係數；current、go 的 {name}、{type}、{count}；move 的 {index}、{total}、{name}、{relations}；relation 的 {from}、{relation}、{to}；onlyOn、onlyOff 的 {name}；help* 是按鍵表與提示列的說明",
+      "description": "圖譜的鍵盤操作與報讀（#289，docs/design.md「圖譜的鍵盤操作與螢幕報讀器」）：enter 的 {entities}、{relations} 是看得到的實體與關係數；current、go 的 {name}、{type}、{count}；move 的 {index}、{total}、{name}、{relations}；relation 的 {from}、{relation}、{to}；onlyOn、onlyOff 的 {name}；help* 是按鍵表與提示列的說明；mode* 是「圖譜｜清單」切換，list* 是清單模式",
       "type": "object",
       "additionalProperties": false,
-      "required": ["roleDescription", "label", "enter", "current", "move", "go", "atStart", "noNeighbors", "shown", "relation", "relationJoin", "sentenceJoin", "onlyOn", "onlyOff", "helpTitle", "helpTab", "helpMove", "helpGo", "helpBack", "helpOnly", "helpAsk", "helpSearch", "helpZoom", "helpReset", "helpKeys"],
+      "required": ["roleDescription", "label", "enter", "current", "move", "go", "atStart", "noNeighbors", "shown", "relation", "relationJoin", "sentenceJoin", "onlyOn", "onlyOff", "helpTitle", "helpTab", "helpMove", "helpGo", "helpBack", "helpOnly", "helpAsk", "helpSearch", "helpZoom", "helpReset", "helpKeys", "modeLabel", "modeGraph", "modeList", "listLabel", "listEmpty"],
       "properties": {
         "roleDescription": { "$ref": "#/definitions/Text" },
         "label": { "$ref": "#/definitions/Text" },
@@ -162,7 +162,12 @@
         "helpSearch": { "$ref": "#/definitions/Text" },
         "helpZoom": { "$ref": "#/definitions/Text" },
         "helpReset": { "$ref": "#/definitions/Text" },
-        "helpKeys": { "$ref": "#/definitions/Text" }
+        "helpKeys": { "$ref": "#/definitions/Text" },
+        "modeLabel": { "$ref": "#/definitions/Text" },
+        "modeGraph": { "$ref": "#/definitions/Text" },
+        "modeList": { "$ref": "#/definitions/Text" },
+        "listLabel": { "$ref": "#/definitions/Text" },
+        "listEmpty": { "$ref": "#/definitions/Text" }
       }
     },
     "askAboutEntity": { "$ref": "#/definitions/Text" },

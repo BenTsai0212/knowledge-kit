@@ -96,7 +96,12 @@
     "helpSearch": "Search names",
     "helpZoom": "Zoom in, zoom out, show all",
     "helpReset": "Back to all",
-    "helpKeys": "Key list"
+    "helpKeys": "Key list",
+    "modeLabel": "View",
+    "modeGraph": "Graph",
+    "modeList": "List",
+    "listLabel": "Graph as a list",
+    "listEmpty": "No entities match the filters."
   },
   "askAboutEntity": "What do we know about {name}?",
   "relatedEntities": "Related entities",

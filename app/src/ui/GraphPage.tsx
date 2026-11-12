@@ -11,6 +11,8 @@ import { EmptyState } from "./EmptyState";
 import { EntityIcon } from "./EntityIcon";
 import { EntityPanel } from "./EntityPanel";
 import { EntitySearch } from "./EntitySearch";
+import { GraphList } from "./GraphList";
+import { listedEntities, listGroups, loadGraphMode, saveGraphMode, type GraphMode } from "./graph-list";
 import { entityOptionLabel } from "./graph-labels";
 import { closeDialog } from "./dialog-motion";
 import {
@@ -112,6 +114,12 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
   useEffect(() => {
     if (refocus > 0) frame.current?.focus();
   }, [refocus]);
+  // 「圖譜｜清單」（#289）：一直都在，選擇記在這個瀏覽器；篩選、搜尋、「只看它」與目前的實體兩種檢視共用
+  const [mode, setModeState] = useState<GraphMode>(() => loadGraphMode());
+  const setMode = (next: GraphMode) => {
+    setModeState(next);
+    saveGraphMode(next);
+  };
 
   useEffect(() => {
     const ticket = reads.current.begin();
@@ -158,6 +166,10 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
     return new Set([...types, ...unknown]);
   }, [graph, types]);
   const excluded = useMemo(() => (graph === null ? new Set<string>() : excludedEntities(graph, filter)), [graph, filter]);
+  const groups = useMemo(
+    () => (graph === null || mode !== "list" ? [] : listGroups(graph, listedEntities(graph, excluded, expansion, isolated), excluded, language)),
+    [graph, mode, excluded, expansion, isolated, language],
+  );
   // 選取改變時（點節點、搜尋、面板）游標清除
   useEffect(() => {
     setCursor(null);
@@ -303,6 +315,13 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
               </li>
             ))}
           </ul>
+          <div className="graph-mode" role="group" aria-label={k.modeLabel}>
+            {(["graph", "list"] as const).map((m) => (
+              <button key={m} type="button" className="chip" aria-pressed={mode === m} onClick={() => setMode(m)}>
+                {m === "graph" ? k.modeGraph : k.modeList}
+              </button>
+            ))}
+          </div>
         </div>
         {/* 這一列沒有展開時也保留高度：出現或消失時畫布不移動 */}
         <div className="graph-trail">
@@ -333,74 +352,81 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
             </nav>
           )}
         </div>
-        {/* 外框（#289）：在 Tab 順序中只佔一個位置，方向鍵交給圖譜；畫布本身對報讀器隱藏，每一步寫進報讀區 */}
-        <div
-          className="graph-frame"
-          tabIndex={0}
-          role="application"
-          aria-roledescription={k.roleDescription}
-          aria-label={k.label}
-          onFocus={onFrameFocus}
-          onBlur={(e) => {
-            if (e.target === e.currentTarget) setFocused(false);
-          }}
-          onKeyDown={onFrameKeyDown}
-          ref={frame}
-        >
-          <GraphView
-            graph={graph}
-            language={language}
-            selected={selected}
-            path={path}
-            expansion={expansion}
-            excluded={excluded}
-            isolated={isolated}
-            onSelect={onExpand}
-            keyboard={focused ? { current, cursor } : null}
-            api={view}
-          />
-        </div>
-        {/* 按鍵提示列：只在外框有鍵盤焦點（:focus-visible）時出現（app.css）；報讀器從按鍵表（?）讀，這裡不重複 */}
-        <ul className="graph-keys" aria-hidden="true">
-          {KEY_HELP.filter((h) => h.hint).map((h) => (
-            <li key={h.text}>
-              {h.keys.map((key) => (
-                <kbd key={key}>{key}</kbd>
-              ))}{" "}
-              {k[h.text]}
-            </li>
-          ))}
-        </ul>
+        {mode === "list" ? (
+          <GraphList groups={groups} language={language} current={current} onSelect={onExpand} />
+        ) : (
+          <>
+            {/* 外框（#289）：在 Tab 順序中只佔一個位置，方向鍵交給圖譜；畫布本身對報讀器隱藏，每一步寫進報讀區 */}
+            <div
+              className="graph-frame"
+              tabIndex={0}
+              role="application"
+              aria-roledescription={k.roleDescription}
+              aria-label={k.label}
+              onFocus={onFrameFocus}
+              onBlur={(e) => {
+                if (e.target === e.currentTarget) setFocused(false);
+              }}
+              onKeyDown={onFrameKeyDown}
+              ref={frame}
+            >
+              <GraphView
+                graph={graph}
+                language={language}
+                selected={selected}
+                path={path}
+                expansion={expansion}
+                excluded={excluded}
+                isolated={isolated}
+                onSelect={onExpand}
+                keyboard={focused ? { current, cursor } : null}
+                api={view}
+              />
+            </div>
+            {/* 按鍵提示列：只在外框有鍵盤焦點（:focus-visible）時出現（app.css）；報讀器從按鍵表（?）讀，這裡不重複 */}
+            <ul className="graph-keys" aria-hidden="true">
+              {KEY_HELP.filter((h) => h.hint).map((h) => (
+                <li key={h.text}>
+                  {h.keys.map((key) => (
+                    <kbd key={key}>{key}</kbd>
+                  ))}{" "}
+                  {k[h.text]}
+                </li>
+              ))}
+            </ul>
+            {/* 按鍵表（?）：沿用置中的對話框；Esc 或「關閉」播放退場後關閉，焦點回到外框 */}
+            <dialog
+              ref={help}
+              className="dialog graph-help"
+              aria-labelledby="graph-help-title"
+              onCancel={(e) => (e.preventDefault(), closeDialog(e.currentTarget, prefersReducedMotion()))}
+              onClose={() => frame.current?.focus()}
+            >
+              <h2 id="graph-help-title">{k.helpTitle}</h2>
+              <dl>
+                {KEY_HELP.map((h) => (
+                  <div key={h.text}>
+                    <dt>
+                      {h.keys.map((key) => (
+                        <kbd key={key}>{key}</kbd>
+                      ))}
+                    </dt>
+                    <dd>{k[h.text]}</dd>
+                  </div>
+                ))}
+              </dl>
+              <div className="dialog-actions">
+                <button type="button" onClick={() => help.current !== null && closeDialog(help.current, prefersReducedMotion())}>
+                  {s.dialogClose}
+                </button>
+              </div>
+            </dialog>
+          </>
+        )}
+        {/* 報讀區：兩種檢視共用（類型篩選改變時報讀顯示的實體數） */}
         <p className="visually-hidden" aria-live="polite" data-testid="graph-announcer">
           {announcement}
         </p>
-        {/* 按鍵表（?）：沿用置中的對話框；Esc 或「關閉」播放退場後關閉，焦點回到外框 */}
-        <dialog
-          ref={help}
-          className="dialog graph-help"
-          aria-labelledby="graph-help-title"
-          onCancel={(e) => (e.preventDefault(), closeDialog(e.currentTarget, prefersReducedMotion()))}
-          onClose={() => frame.current?.focus()}
-        >
-          <h2 id="graph-help-title">{k.helpTitle}</h2>
-          <dl>
-            {KEY_HELP.map((h) => (
-              <div key={h.text}>
-                <dt>
-                  {h.keys.map((key) => (
-                    <kbd key={key}>{key}</kbd>
-                  ))}
-                </dt>
-                <dd>{k[h.text]}</dd>
-              </div>
-            ))}
-          </dl>
-          <div className="dialog-actions">
-            <button type="button" onClick={() => help.current !== null && closeDialog(help.current, prefersReducedMotion())}>
-              {s.dialogClose}
-            </button>
-          </div>
-        </dialog>
       </section>
       <div className="graph-side">
         {selected === null ? (

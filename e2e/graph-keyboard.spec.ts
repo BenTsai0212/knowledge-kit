@@ -1,5 +1,6 @@
 // 圖譜的鍵盤操作與報讀（#289，docs/design.md「圖譜的鍵盤操作與螢幕報讀器」）：以 Tab 進入圖譜、方向鍵移動、Enter 前往、
-// Backspace 回到全部、? 按鍵表、/ 搜尋、Tab 離開；報讀區的文字與目前身分看得到的數量（#247）；減少動態效果時平移直接到位。
+// Backspace 回到全部、? 按鍵表、/ 搜尋、Tab 離開；報讀區的文字與目前身分看得到的數量（#247）；減少動態效果時平移直接到位；
+// 清單模式（「圖譜｜清單」切換、關係句的連結、記在這個瀏覽器）。
 // 圖譜不呼叫模型。節點以 cytoscape 的實例（容器的 _cyreg）讀取 class 與位置（e2e/support/graph.ts）。
 import { expect, test, type Page } from "@playwright/test";
 import { openApp, openTab, s, switchIdentity } from "./support/app";
@@ -176,3 +177,49 @@ for (const reducedMotion of ["reduce", "no-preference"] as const) {
     });
   });
 }
+
+test("清單模式：切換、篩選共用、關係句的連結跳到該項、選取與圖譜共用、選擇記在這個瀏覽器", async ({ page }) => {
+  await openApp(page);
+  if (reviewer !== undefined) await switchIdentity(page, reviewer.id);
+  await openTab(page, s.tabGraph);
+  const modes = page.getByRole("group", { name: k.modeLabel });
+  await modes.getByRole("button", { name: k.modeList }).click();
+  await expect(modes.getByRole("button", { name: k.modeList })).toHaveAttribute("aria-pressed", "true");
+  const list = page.getByRole("region", { name: k.listLabel });
+  await expect(list).toBeVisible();
+  await expect(frame(page)).toHaveCount(0);
+
+  // 類型篩選共用：取消勾選第一種類型時，該類型的群組（h3）不見
+  const firstType = page.locator(".graph-page .legend label").first();
+  const typeLabel = (await firstType.innerText()).trim();
+  await expect(list.getByRole("heading", { level: 3, name: typeLabel })).toBeVisible();
+  await firstType.click();
+  await expect(list.getByRole("heading", { level: 3, name: typeLabel })).toHaveCount(0);
+  await firstType.click();
+
+  // 關係句中的實體名稱是連結：跳到清單中的那一項（焦點移到它的名稱按鈕）
+  const link = list.locator(".graph-list-relations a").first();
+  const anchor = (await link.getAttribute("href"))!.slice(1);
+  await link.click();
+  const item = list.locator(`[id="${anchor}"]`);
+  await expect(item.locator(":scope > .graph-list-name")).toBeFocused();
+
+  // 名稱按鈕打開實體面板，它成為目前的實體
+  const name = (await item.locator(":scope > .graph-list-name").innerText()).trim();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("region", { name, exact: true })).toBeVisible();
+  await expect(item).toHaveAttribute("aria-current", "true");
+
+  // 切回圖譜：選取的實體保留
+  await modes.getByRole("button", { name: k.modeGraph }).click();
+  await expect(frame(page)).toBeVisible();
+  await expect.poll(() => selectedNodes(page, CANVAS)).toEqual([anchor.slice("graph-list-".length)]);
+
+  // 選擇記在這個瀏覽器：另開一頁時仍是清單
+  await modes.getByRole("button", { name: k.modeList }).click();
+  const other = await page.context().newPage();
+  await openApp(other);
+  await openTab(other, s.tabGraph);
+  await expect(other.getByRole("region", { name: k.listLabel })).toBeVisible();
+  await expect(other.getByRole("group", { name: k.modeLabel }).getByRole("button", { name: k.modeList })).toHaveAttribute("aria-pressed", "true");
+});
