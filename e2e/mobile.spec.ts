@@ -85,9 +85,12 @@ test("底部面板：從身分徽章打開，焦點移入；關閉按鈕、Esc�
   await expect(sheet).toBeHidden();
   await expect(identityBadge(page)).toBeFocused();
 
-  // 從把手往下拖超過門檻
+  // 從把手往下拖超過門檻。進場動畫（base）播放中把手還在往上移，等動畫結束再量把手的位置，與使用者看到把手才按下相同
   await identityBadge(page).click();
   await expect(sheet).toBeVisible();
+  await sheet.evaluate(async (el) => {
+    await Promise.all(el.getAnimations().map((a) => a.finished));
+  });
   const grip = (await sheet.locator(".bottom-sheet__handle").boundingBox())!;
   await page.mouse.move(grip.x + grip.width / 2, grip.y + 2);
   await page.mouse.down();

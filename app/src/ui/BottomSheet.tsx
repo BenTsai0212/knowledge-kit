@@ -1,9 +1,9 @@
 // 底部面板（#255，docs/design.md「手機的共同結構」）：原生 <dialog> 的 showModal()（焦點移入、Esc、::backdrop 用 overlay），
 // 圓角 24px、上方 40×5px 拖曳把手；往下拖、按關閉或 Esc 關閉，關閉後焦點回到打開它的元件。
-// 開關用 base：進場是 app.css 的 kUp，退場由 closeDialog() 播放反向動畫後才 close()；減少動態效果時直接到位。
+// 開關用 base：進場是 app.css 的 kSheetUp，退場由 closeDialog() 播放反向動畫後才 close()；減少動態效果時直接到位。
 import { useEffect, useId, useRef, type PointerEvent, type ReactNode } from "react";
 import { strings } from "../client/i18n";
-import { closeDialog } from "./dialog-motion";
+import { CLOSING_CLASS, closeDialog } from "./dialog-motion";
 import { sheetDragCloses } from "./layout";
 import { MOTION, prefersReducedMotion } from "./motion";
 
@@ -39,7 +39,10 @@ export function BottomSheet({ open, onClose, title, language, className, childre
 
   // 拖曳把手與標題列：往下拖時面板跟著手指，放開時超過門檻就關閉，否則彈回
   const onPointerDown = (e: PointerEvent<HTMLElement>) => {
-    if ((e.target as HTMLElement).closest("button") !== null) return;
+    const d = dialog.current;
+    if (d === null || d.classList.contains(CLOSING_CLASS) || (e.target as HTMLElement).closest("button") !== null) return;
+    // 進場動畫（kSheetUp）播放中時 CSS 動畫會蓋過行內的 transform，面板不會跟著手指；先讓動畫直接到位
+    d.getAnimations?.().forEach((a) => a.finish());
     drag.current = { start: e.clientY, dy: 0 };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
