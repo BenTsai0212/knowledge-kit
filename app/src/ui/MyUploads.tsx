@@ -20,6 +20,8 @@ interface Props {
   // 本工作階段上傳的文件的萃取狀態（失敗時的提示與重試）；沒有時為 null
   jobStatus(documentId: string): ReactNode;
   onReupload(reupload: Reupload): void;
+  // 一開始選取的文件（首頁「有更新」的「查看進度」，#284）
+  initialSelected?: string | null;
 }
 
 // 每份的狀態與每一項的結果共用同一組文字
@@ -73,11 +75,11 @@ export function ReviewProgress({ counts, language }: { counts: ReviewCounts; lan
 
 const pendingName = (names: Record<string, string>, language: string, fallback: string) => names[language] || Object.values(names)[0] || fallback;
 
-export function MyUploads({ db, identity, language, extracting, refreshKey, jobStatus, onReupload }: Props) {
+export function MyUploads({ db, identity, language, extracting, refreshKey, jobStatus, onReupload, initialSelected = null }: Props) {
   const s = strings(language);
   const m = s.myUploads;
   const [docs, setDocs] = useState<ReviewDocument[] | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(initialSelected);
   const reads = useRef(createRequestGate());
 
   useEffect(() => {

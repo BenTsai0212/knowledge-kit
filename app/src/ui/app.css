@@ -3105,6 +3105,34 @@ label.inline {
   white-space: nowrap;
 }
 
+/* 一般員工的「有更新」（#284）：每則一行（標題可以截斷，完整文字在 title）、狀態與一個動作；審核中的說明在下一行 */
+.home__updates ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.home__update {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.home__update .home__name {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home__updates li > p {
+  margin: 0.25rem 0 0;
+}
+
 /* 我的上傳（#284，docs/design.md「日常工具」的「我的上傳」）：上傳頁頂端的兩段沿用待審頁的底線式分頁；
    每份一列（標題可以截斷，完整文字在 title），點了在右側顯示詳情；手機從底部升起詳情面板 */
 .upload-sections {

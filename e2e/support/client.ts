@@ -32,8 +32,11 @@ export const nonReviewer = highest(access.roles.filter((r) => !r.canReview));
 export const uploader = highest(access.roles.filter((r) => r.canUpload));
 // 能上傳也能審查的身分中看得最多的（參考情境是 manager）
 export const reviewingUploader = highest(access.roles.filter((r) => r.canUpload && r.canReview));
+// 能上傳、不能審查的身分中看得最多的（參考情境是 staff）
+export const nonReviewingUploader = highest(access.roles.filter((r) => r.canUpload && !r.canReview));
 
 export const NO_REVIEWER = "access.json 沒有 canReview 的身分";
 export const NO_NON_REVIEWER = "access.json 沒有不能審查（canReview: false）的身分";
 export const NO_UPLOADER = "access.json 沒有 canUpload 的身分";
 export const NO_REVIEWING_UPLOADER = "access.json 沒有同時 canUpload 與 canReview 的身分";
+export const NO_NON_REVIEWING_UPLOADER = "access.json 沒有能上傳、不能審查的身分";

@@ -313,6 +313,9 @@ export const i18nManifests: ManifestEntry[] = [
       recentDocumentsEmpty: "required",
       viewedTitle: "required",
       viewedEmpty: "required",
+      updatesTitle: "required",
+      updatesEmpty: "required",
+      viewProgress: "required",
     } satisfies KeyManifest<UiStrings["home"]>,
   },
   {

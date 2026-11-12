@@ -1,8 +1,10 @@
-// 首頁的純函式（#283，docs/design.md「日常工具」的「首頁」）：問候的時段、主管「等你處理」的數字、問過的問題、依身分的常見問題與可見範圍。
+// 首頁的純函式（#283，docs/design.md「日常工具」的「首頁」）：問候的時段、主管「等你處理」的數字、一般員工的「有更新」（#284）、
+// 問過的問題、依身分的常見問題與可見範圍。
 import type { AccessFile, ScenariosFile } from "../client/types";
 import type { ConflictItem } from "../conflicts/store";
 import type { ReviewDocument } from "../extraction/store";
 import type { AnswerReport } from "../reports/store";
+import { myUploadStatus, reviewCounts, type MyUploadStatus } from "./my-uploads";
 import { pendingCount } from "./review-helpers";
 
 export type GreetingPeriod = "morning" | "afternoon" | "evening";
@@ -42,6 +44,32 @@ export function waitingSummary(
     earliestReport: earliest,
     total: pendingCount(docs, conflicts, reports),
   };
+}
+
+// 一般員工的「有更新」最多列出的筆數（docs/design.md「首頁」的手機：只列三則）
+export const MAX_UPDATES = 3;
+
+export interface UploadUpdate {
+  documentId: string;
+  title: string;
+  status: Exclude<MyUploadStatus, "uploaded">;
+  // 「在圖譜中查看」要打開的實體（第一個核准的實體：合併對象或新建的實體）；沒有時為 null，動作是「查看進度」
+  entityId: string | null;
+}
+
+// 一般員工的「有更新」（#284）：自己上傳的文件（readMyUploads() 的順序，新的在前）的審核中、已核准、部分退回、已退回。
+// 還沒有萃取出項目的（已上傳）不列入（#284 決定 4）。只有已核准時的動作是在圖譜查看，其他是查看進度（看退回的項目或重新上傳）
+export function uploadUpdates(docs: readonly ReviewDocument[], extracting: ReadonlySet<string>, max = MAX_UPDATES): UploadUpdate[] {
+  const updates: UploadUpdate[] = [];
+  for (const doc of docs) {
+    const status = myUploadStatus(reviewCounts(doc, extracting.has(doc.id)));
+    if (status === "uploaded") continue;
+    // 核准為新實體時，正式資料的 id 是決定的 id（store.ts 的 newPendingEntityId 說明）
+    const approved = doc.entities.find((e) => e.status === "approved");
+    const entityId = status === "approved" && approved !== undefined ? (approved.mergedInto ?? approved.decisionId) : null;
+    updates.push({ documentId: doc.id, title: doc.title, status, entityId });
+  }
+  return updates.slice(0, max);
 }
 
 // 問過的問題最多保留的筆數

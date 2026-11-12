@@ -1,13 +1,15 @@
 // 首頁（#283，docs/design.md「日常工具」的「首頁」）：登入後的預設頁，展示模式不顯示。資料只在瀏覽器記憶體，重新整理就重來。
-// 所有數字與清單只算目前身分讀得到的（讀取經 withIdentity()，由 RLS 篩選；#247）。
+// 所有數字與清單只算目前身分讀得到的（讀取經 withIdentity()，由 RLS 篩選；#247）。一般員工的「有更新」經 readMyUploads()（#284，ADR 0009）。
 import { useEffect, useState } from "react";
 import { clientConfig } from "../client/load";
 import type { Database } from "../db/database";
+import { readMyUploads } from "../extraction/store";
 import { readEntitiesByIds, readRecentDocuments, type RecentDocument, type RecentEntity } from "../graph/recent";
 import { strings } from "../client/i18n";
 import { LevelBadge, ProjectBadge } from "./AccessBadges";
 import { entityName } from "./graph-labels";
-import { greetingPeriod, visibleScope, type WaitingSummary } from "./home";
+import { greetingPeriod, uploadUpdates, visibleScope, type UploadUpdate, type WaitingSummary } from "./home";
+import { StatusBadge } from "./MyUploads";
 import { QuestionPanel } from "./QuestionPanel";
 
 interface Props {
@@ -17,6 +19,9 @@ interface Props {
   identity: string;
   // 主管的「等你處理」：沒有 canReview 的身分不顯示（undefined）；讀取中為 null
   waiting?: WaitingSummary | null;
+  // 一般員工的「有更新」（#284）：能上傳、不能審核的身分才有（其他為 undefined）。
+  // extracting：本工作階段還在萃取的文件；onOpenUpload：「查看進度」打開上傳頁的我的上傳並選取該份
+  updates?: { extracting: ReadonlySet<string>; onOpenUpload(documentId: string): void };
   // 問過的問題（只有問題文字，最新的在前）
   asked: readonly string[];
   askDisabled: boolean;
@@ -51,9 +56,27 @@ function useRecent(db: Database | null, identity: string, language: string, view
   return recent;
 }
 
-export function HomePage({ db, language, identity, waiting, asked, askDisabled, limit, draft, onDraft, onAsk, onStartReview, viewed, onOpenDocument, onOpenEntity }: Props) {
+// 一般員工的「有更新」：自己上傳的文件；切換身分或萃取狀態改變時重新讀取，之後才回來的舊結果忽略
+function useUpdates(db: Database | null, identity: string, extracting: ReadonlySet<string> | undefined) {
+  const [updates, setUpdates] = useState<UploadUpdate[] | null>(null);
+  useEffect(() => {
+    if (db === null || extracting === undefined) return;
+    let cancelled = false;
+    setUpdates(null);
+    void readMyUploads(db, identity).then((docs) => {
+      if (!cancelled) setUpdates(uploadUpdates(docs, extracting));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [db, identity, extracting]);
+  return updates;
+}
+
+export function HomePage({ db, language, identity, waiting, updates: updatesProps, asked, askDisabled, limit, draft, onDraft, onAsk, onStartReview, viewed, onOpenDocument, onOpenEntity }: Props) {
   const s = strings(language);
   const recent = useRecent(db, identity, language, viewed);
+  const updates = useUpdates(db, identity, updatesProps?.extracting);
   const scope = visibleScope(clientConfig.access, identity);
   const time = new Intl.DateTimeFormat(language, { dateStyle: "medium", timeStyle: "short" });
   return (
@@ -109,6 +132,41 @@ export function HomePage({ db, language, identity, waiting, asked, askDisabled, 
                 {s.home.startReview}
               </button>
             </>
+          )}
+        </section>
+      )}
+      {updatesProps !== undefined && (
+        <section className="card home__updates" aria-labelledby="home-updates">
+          <h3 id="home-updates">{s.home.updatesTitle}</h3>
+          {updates === null ? (
+            <p className="muted">{s.loading}</p>
+          ) : updates.length === 0 ? (
+            <p className="muted">{s.home.updatesEmpty}</p>
+          ) : (
+            <ul>
+              {updates.map((u) => (
+                <li key={u.documentId}>
+                  <div className="home__update">
+                    {/* 標題可以截斷：完整文字放在 title */}
+                    <strong className="home__name" title={u.title}>
+                      {u.title}
+                    </strong>
+                    <StatusBadge status={u.status} language={language} />
+                    {u.entityId !== null ? (
+                      <button type="button" className="link" aria-label={`${s.viewInGraph}${s.colon}${u.title}`} onClick={() => onOpenEntity(u.entityId!)}>
+                        {s.viewInGraph}
+                      </button>
+                    ) : (
+                      <button type="button" className="link" aria-label={`${s.home.viewProgress}${s.colon}${u.title}`} onClick={() => updatesProps.onOpenUpload(u.documentId)}>
+                        {s.home.viewProgress}
+                      </button>
+                    )}
+                  </div>
+                  {/* 審核中：主管核准後才會出現在問答與圖譜 */}
+                  {u.status === "in_review" && <p className="muted">{s.myUploads.approvalNote}</p>}
+                </li>
+              ))}
+            </ul>
           )}
         </section>
       )}

@@ -92,6 +92,8 @@ export function App() {
   // 本次工作階段上傳的文件（時間軸加上「上傳」標籤），以及從上傳頁跳到時間軸時要捲動到的文件（#42）
   const [uploaded, setUploaded] = useState<ReadonlySet<string>>(new Set());
   const [focusDocument, setFocusDocument] = useState<string | null>(null);
+  // 首頁「有更新」的「查看進度」（#284）：打開上傳頁的「我的上傳」時要選取的文件
+  const [uploadFocus, setUploadFocus] = useState<string | null>(null);
   // 萃取在背景執行，由 App 管理：切換身分、語言或頁籤都不中斷（#44 決定的補充 1）
   const [extractions, setExtractions] = useState<Record<string, { title: string; date: string | null; state: ExtractionState }>>({});
   const latestExtractions = useRef(extractions);
@@ -458,6 +460,8 @@ export function App() {
                 setView(target);
               }}
               canSwitchIdentity={canSwitchIdentity(signIn)}
+              focus={uploadFocus}
+              onFocused={() => setUploadFocus(null)}
             />
           ) : (
             <TimelinePage
@@ -496,6 +500,8 @@ export function App() {
             language={language}
             identity={identity}
             waiting={canReview ? (pending?.identity === identity ? pending.summary : null) : undefined}
+            // 一般員工的「有更新」（#284）：能上傳、不能審核的身分
+            updates={canUpload && !canReview ? { extracting: activeExtractions, onOpenUpload: (id) => (setUploadFocus(id), setView("upload")) } : undefined}
             asked={asked[identity] ?? []}
             askDisabled={retriever === null || answering}
             limit={limit}

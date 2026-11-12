@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AccessFile, ScenariosFile } from "../client/types";
 import type { ReviewDocument, ReviewStatus } from "../extraction/store";
-import { greetingPeriod, MAX_ASKED, MAX_VIEWED, rememberQuestion, rememberViewed, roleScenarios, visibleScope, waitingSummary } from "./home";
+import { greetingPeriod, MAX_ASKED, MAX_UPDATES, MAX_VIEWED, rememberQuestion, rememberViewed, roleScenarios, uploadUpdates, visibleScope, waitingSummary } from "./home";
 import { pendingCount } from "./review-helpers";
 
 describe("greetingPeriod", () => {
@@ -55,6 +55,43 @@ describe("waitingSummary", () => {
 
   it("沒有等著處理的事時都是 0", () => {
     expect(waitingSummary([doc("b", ["approved"])], [{ decision: "supersede" }], [])).toEqual({ documents: 0, conflicts: 0, reports: 0, earliestReport: null, total: 0 });
+  });
+});
+
+describe("uploadUpdates", () => {
+  const decided = (d: ReviewDocument, decisions: Record<string, { decisionId: string; mergedInto?: string }>): ReviewDocument => ({
+    ...d,
+    entities: d.entities.map((e) => ({ ...e, decisionId: decisions[e.id]?.decisionId ?? null, mergedInto: decisions[e.id]?.mergedInto ?? null })),
+  });
+
+  it("列出審核中、已核准、部分退回、已退回；還沒有萃取出項目的不列入（#284 決定 4）", () => {
+    const docs = [doc("pending", ["pending", "approved"]), doc("empty", []), doc("ok", ["approved"]), doc("some", ["approved", "rejected"]), doc("none", ["rejected"])];
+    expect(uploadUpdates(docs, new Set(), 10).map((u) => [u.documentId, u.status])).toEqual([
+      ["pending", "in_review"],
+      ["ok", "approved"],
+      ["some", "partly_rejected"],
+      ["none", "rejected"],
+    ]);
+  });
+
+  it("還在萃取的文件是審核中", () => {
+    expect(uploadUpdates([doc("a", ["approved"])], new Set(["a"]))[0].status).toBe("in_review");
+  });
+
+  it("已核准時打開第一個核准的實體：新建的是決定的 id，合併的是合併對象", () => {
+    const created = decided(doc("a", ["rejected", "approved", "approved"]), { "a-0": { decisionId: "a-0" }, "a-1": { decisionId: "a-1~2" }, "a-2": { decisionId: "a-2" } });
+    const merged = decided(doc("b", ["approved"]), { "b-0": { decisionId: "b-0", mergedInto: "wang-xiaoming" } });
+    const ok = decided(doc("c", ["approved", "approved"]), { "c-0": { decisionId: "c-0~2" }, "c-1": { decisionId: "c-1" } });
+    expect(uploadUpdates([merged, ok], new Set()).map((u) => u.entityId)).toEqual(["wang-xiaoming", "c-0~2"]);
+    // 部分退回與審核中的動作是查看進度
+    expect(uploadUpdates([created], new Set())[0]).toMatchObject({ status: "partly_rejected", entityId: null });
+    expect(uploadUpdates([doc("d", ["pending"])], new Set())[0].entityId).toBeNull();
+  });
+
+  it(`依 readMyUploads() 的順序，最多 ${MAX_UPDATES} 則`, () => {
+    const docs = Array.from({ length: MAX_UPDATES + 2 }, (_, i) => doc(`d${i}`, ["pending"]));
+    expect(uploadUpdates(docs, new Set()).map((u) => u.documentId)).toEqual(docs.slice(0, MAX_UPDATES).map((d) => d.id));
+    expect(uploadUpdates([], new Set())).toEqual([]);
   });
 });
 

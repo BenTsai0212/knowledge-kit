@@ -714,6 +714,10 @@ export interface UiStrings {
     recentDocumentsEmpty: string;
     viewedTitle: string;
     viewedEmpty: string;
+    // 一般員工的「有更新」（#284）：自己上傳的文件的審核結果；動作是「在圖譜中查看」（viewInGraph）或「查看進度」
+    updatesTitle: string;
+    updatesEmpty: string;
+    viewProgress: string;
   };
   // 我的上傳（#284，docs/design.md「日常工具」的「我的上傳」）：上傳頁的兩段、每份的狀態（status*）、送出後的四步進度（step*）、
   // 每一項的結果與重新上傳修正版

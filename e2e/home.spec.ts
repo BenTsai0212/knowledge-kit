@@ -1,9 +1,9 @@
 // 首頁（#283，docs/design.md「日常工具」的「首頁」）：登入後的預設頁；常見問題依身分；問過的問題只存文字，「再問一次」重新回答；
-// 主管有「等你處理」。展示模式不顯示首頁（presentation.spec.ts、sign-in.spec.ts）。/api/ask 一律是假的回應。
+// 主管有「等你處理」，能上傳、不能審核的身分有「有更新」（#284）。展示模式不顯示首頁（presentation.spec.ts、sign-in.spec.ts）。/api/ask 一律是假的回應。
 import { expect, test } from "@playwright/test";
-import { ACCESS_CODE, blockModelDownload, language, presetQuestions, s, switchIdentity, tab } from "./support/app";
-import { access, NO_NON_REVIEWER, NO_REVIEWER, nonReviewer, reviewer } from "./support/client";
-import { FAKE_ANSWER_LEAD, routeFakeAsk } from "./support/fake-ask";
+import { ACCESS_CODE, blockModelDownload, language, openTab, presetQuestions, s, switchIdentity, tab, upload, waitForReview } from "./support/app";
+import { access, NO_NON_REVIEWER, NO_NON_REVIEWING_UPLOADER, NO_REVIEWER, nonReviewer, nonReviewingUploader, reviewer } from "./support/client";
+import { FAKE_ANSWER_LEAD, FAKE_ENTITY_NAME, routeFakeAsk } from "./support/fake-ask";
 
 const greetings = [s.home.morning, s.home.afternoon, s.home.evening];
 
@@ -65,4 +65,44 @@ test("「等你處理」只給能審核的身分；「開始審核」到待審�
     await start.click();
     await expect(tab(page, s.tabReview)).toHaveAttribute("aria-current", "page");
   }
+});
+
+test("有更新：一般員工上傳後是審核中，「查看進度」到我的上傳；主管核准後是已核准，「在圖譜中查看」打開核准的實體", async ({ page }) => {
+  test.skip(nonReviewingUploader === undefined || reviewer === undefined, reviewer === undefined ? NO_REVIEWER : NO_NON_REVIEWING_UPLOADER);
+  const title = "E2E updates note";
+  const updates = page.getByRole("region", { name: s.home.updatesTitle });
+  await switchIdentity(page, nonReviewingUploader!.id);
+  await expect(updates).toBeVisible();
+  await expect(updates.getByText(s.home.updatesEmpty)).toBeVisible();
+  // 主管沒有「有更新」
+  await switchIdentity(page, reviewer!.id);
+  await expect(page.getByRole("region", { name: s.home.askedTitle })).toBeVisible();
+  await expect(updates).toHaveCount(0);
+
+  await switchIdentity(page, nonReviewingUploader!.id);
+  await upload(page, { title });
+  await openTab(page, s.tabHome);
+  const item = updates.getByRole("listitem").filter({ hasText: title });
+  // 萃取完成後重新讀取：審核中，附「主管核准後才會出現」的說明
+  await expect(item.getByText(s.myUploads.statusInReview, { exact: true })).toBeVisible();
+  await expect(item.getByText(s.myUploads.approvalNote)).toBeVisible();
+  await item.getByRole("button", { name: `${s.home.viewProgress}${s.colon}${title}` }).click();
+  await expect(tab(page, s.tabUpload)).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("tab", { name: s.myUploads.tabMine })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("complementary", { name: title })).toBeVisible();
+
+  // 主管核准整份文件
+  await switchIdentity(page, reviewer!.id);
+  await waitForReview(page);
+  const card = page.locator("section.review-doc").filter({ hasText: FAKE_ENTITY_NAME });
+  await card.getByRole("button", { name: s.reviewApproveDocument }).click();
+  await expect(card).toHaveCount(0);
+
+  await switchIdentity(page, nonReviewingUploader!.id);
+  await openTab(page, s.tabHome);
+  await expect(item.getByText(s.myUploads.statusApproved, { exact: true })).toBeVisible();
+  await expect(item.getByText(s.myUploads.approvalNote)).toHaveCount(0);
+  await item.getByRole("button", { name: `${s.viewInGraph}${s.colon}${title}` }).click();
+  await expect(tab(page, s.tabGraph)).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("region", { name: FAKE_ENTITY_NAME })).toBeVisible();
 });
