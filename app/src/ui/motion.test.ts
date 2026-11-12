@@ -121,15 +121,19 @@ describe("動態的刻度（#227，docs/design.md「刻度」）", () => {
 
   it("問答用到的 keyframes 都有定義", () => {
     const used = new Set([...cssText.matchAll(/animation:\s*(k[A-Z]\w*)/g)].map((m) => m[1]));
-    expect(used).toEqual(new Set(["kSend", "kRise", "kPopS", "kFade", "kSlideIn", "kSweep", "kGrow", "kUp", "kLift", "kUnder", "kFlyTo", "kBump"]));
+    expect(used).toEqual(new Set(["kSend", "kRise", "kPopS", "kFade", "kSlideIn", "kSweep", "kGrow", "kUp", "kLift", "kUnder", "kFlyTo", "kBump", "kExpand", "kCollapse", "kOutLeft"]));
     for (const name of used) expect(cssText).toContain(`@keyframes ${name} {`);
   });
 
-  // 結束狀態留在 keyframes 的 to 會蓋掉元素自己的樣式（#227：螢光在刷過後變透明）
+  // 結束狀態留在 keyframes 的 to 會蓋掉元素自己的樣式（#227：螢光在刷過後變透明）。
+  // 退場（待審的列收合、往左淡出，#243）的結束狀態就是要留著，直到列卸載
   it("fill-mode 是 both／forwards 的問答 keyframes 只寫 from，結束時回到元素自己的樣式", () => {
+    const exits = ["kCollapse", "kOutLeft"];
     const keyframes = (name: string) => cssText.match(new RegExp(`@keyframes ${name} \\{([\\s\\S]*?)\\n\\}`))?.[1] ?? "";
     const filled = (css: string) =>
-      [...css.matchAll(/animation:\s*(k[A-Z]\w*)[^;]*\b(both|forwards)\s*;/g)].map((m) => m[1]).filter((name) => /\bto\s*\{|100%\s*\{/.test(keyframes(name)));
+      [...css.matchAll(/animation:\s*(k[A-Z]\w*)[^;]*\b(both|forwards)\s*;/g)]
+        .map((m) => m[1])
+        .filter((name) => !exits.includes(name) && /\bto\s*\{|100%\s*\{/.test(keyframes(name)));
     // 檢查本身：以 both 結束在 to 的寫法會被抓到
     expect(filled(`${cssText}\n.x { animation: kSweep 1s both; }`)).toEqual(["kSweep"]);
     expect(filled(cssText)).toEqual([]);
