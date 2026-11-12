@@ -404,7 +404,8 @@ export function App() {
     if (source === null) return null;
     const turn = turns.find((t) => t.id === sourceTurn);
     const answer = turn?.answer?.kind === "answer" ? turn.answer : undefined;
-    const steps = answer === undefined ? null : sourceSteps(answer.numbering, source.highlight);
+    // 出處 N／M 只算回答引用到的段落（cited，#256 補充決定），不是送進 prompt 的全部段落（numbering）
+    const steps = answer === undefined ? null : sourceSteps(answer.cited, source.highlight);
     const target = turn?.mentions === undefined ? null : sourceGraphTarget(turn.mentions.entities, source.highlight, source.passages.map((p) => p.id));
     return (
       <SourceSheet

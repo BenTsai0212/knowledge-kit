@@ -1,5 +1,5 @@
 // 手機的原文面板（#256，docs/design.md「問答（手機）」）：「出處 N／M」與上一個、下一個出處，以及「在圖譜中查看」的目標實體。
-// 純函式；輸入是這一題回答的引用編號與送出當下身分的圖譜（RLS 已篩選），不另外判斷權限。
+// 純函式；輸入是這一題回答引用到的段落與送出當下身分的圖譜（RLS 已篩選），不另外判斷權限。
 import type { GraphEntity } from "../graph/read";
 
 export interface SourceSteps {
@@ -11,10 +11,10 @@ export interface SourceSteps {
   next: string | null;
 }
 
-// numbering：回答的引用編號對應的段落（[n] 是 numbering[n - 1]）；同一段被引用多次只算一次，依第一次出現的順序。
-// 段落不是這一題的出處時（例如從段落旁的標示打開的另一段）回 null，不顯示 N／M 與上下按鈕
-export function sourceSteps(numbering: readonly string[], passage: string): SourceSteps | null {
-  const passages = [...new Set(numbering)];
+// cited：回答引用到的段落（answer.cited，依第一次引用的順序），不是送進 prompt 的全部段落（numbering，#256 補充決定）；
+// 同一段出現多次只算一次。段落不是這一題引用到的時（例如從段落旁的標示打開的另一段）回 null，不顯示 N／M 與上下按鈕
+export function sourceSteps(cited: readonly string[], passage: string): SourceSteps | null {
+  const passages = [...new Set(cited)];
   const at = passages.indexOf(passage);
   if (at < 0) return null;
   return { index: at + 1, total: passages.length, prev: passages[at - 1] ?? null, next: passages[at + 1] ?? null };
