@@ -316,6 +316,17 @@ Rules:
 
 驗證：`online-demo.test.ts`（參數的各種值、各身分的頁籤、與線上 demo 的組合）；`e2e/presentation.spec.ts`（每個身分只有兩個頁籤、問答與圖譜可用）。
 
+#### 身分對照
+
+展示模式中同一題以每個身分各送出一次、並排成欄（#261，畫面見 [docs/design.md](design.md)「展示模式」）。目前已完成送出的邏輯與開關；畫面（頂端列的按鈕、`C`／`Esc`）在 #260 的頂端列合併後加入。
+
+- **與一般提問同一條路**（`qa/compare.ts` 的 `askEach()`）：每一欄呼叫 `ask()`，`identityId` 換成該欄的身分，依 `client/access.json` 的身分順序**一欄一欄**送出。檢索（`retrieve(identityId, …)`，由 RLS 決定）、組 prompt、`/api/ask` 都與一般提問相同，欄之間不共用檢索結果或回答。檢索的向量快取以段落 id 為鍵，不影響可見範圍（[docs/retrieval.md](retrieval.md)）。
+- **計次**：每一欄送出一次 `/api/ask`（本機拒答的欄不送出），計入每日提問次數。前端不知道剩餘次數（docs/design.md「錯誤與額度」原則 4）：這個分頁已收到 `daily_limit`／`global_daily_limit` 時，開啟對照只顯示說明、不送出（`canStartCompare()`）；中途收到時，已完成的欄保留，之後的欄是同一個額度錯誤、不再送出（#261 決定 2）。
+- **捨棄進行中的請求**：整組共用一張 `requests.ts` 的 ticket（一個 `AbortController`）。切換題目、關閉對照或切換語言時取消，之後的欄不再送出，`onText` 與結果都不採用。
+- **營運開關，預設關閉**：`VITE_DEMO_COMPARE` 只有 `1` 時開啟（build 時代入，讀取只在 `ui/online-demo.ts` 的 `demoCompare`）；線上 demo（`VITE_ONLINE_DEMO=1`）一律關閉。
+
+驗證：`qa/compare.test.ts`（順序與送出次數、每次只有該欄身分的段落、拒答、額度、中止）；越權測試 `app/tests/qa/compare-leakage.test.ts`（每一題 × 每種語言，每一欄送出的段落、文件標題與引用都在 `oracle.ts` 算出的該身分可見範圍內；忽略身分的資料層會被抓到）；`online-demo.test.ts`（開關）。
+
 ## 測試
 
 - 一律以假的傳輸層執行，CI 不呼叫真實 API：
