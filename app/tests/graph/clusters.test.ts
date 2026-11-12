@@ -8,6 +8,7 @@ import { openDatabase, type Database } from "../../src/db/database";
 import { datasetSample } from "../../src/evals/oracle";
 import { aggregateEdges, clusterGraph, filterGraph, type ClusterModel } from "../../src/graph/clusters";
 import { readGraph, type Graph } from "../../src/graph/read";
+import { viewOf } from "../../src/ui/graph-zoom";
 import { expectedVisible } from "../db/oracle";
 
 const { access, knowledgeModel } = clientConfig;
@@ -75,6 +76,19 @@ describe("分群與聚合線的權限", () => {
     for (const c of guest!.clustering.clusters.filter((c) => c.kind === "container")) {
       const m = manager!.clustering.clusters.find((x) => x.id === c.id);
       expect(m?.members.length ?? 0).toBeGreaterThanOrEqual(c.members.length);
+    }
+  });
+
+  it.each(CASES)("%s：畫在圖上的泡泡與線（全覽、各群組層）只含看得到的實體與關係", async (_name, id, model) => {
+    const visible = visibleOf(id);
+    const graph = await readGraph(db, id);
+    const clustering = clusterGraph(graph, model);
+    for (const open of [new Set<string>(), ...clustering.clusters.map((c) => new Set(c.members))]) {
+      const view = viewOf(graph, clustering, open);
+      for (const e of view.entities) expect(visible.entities.has(e)).toBe(true);
+      for (const r of view.edges.flatMap((x) => x.relations)) expect(visible.relations.has(r)).toBe(true);
+      const drawn = view.entities.length + view.bubbles.reduce((n, c) => n + clustering.clusters.find((x) => x.id === c)!.members.filter((m) => !open.has(m)).length, 0);
+      expect(drawn).toBe(visible.entities.size);
     }
   });
 

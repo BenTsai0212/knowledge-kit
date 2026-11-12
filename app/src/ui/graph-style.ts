@@ -7,6 +7,7 @@ import type { StylesheetJson } from "cytoscape";
 import type { EntityType } from "../client/types";
 import { iconDataUri } from "./entity-icons";
 import { heroShape, type HeroShape } from "./entry-hero";
+import { SECOND_OPACITY, SIDE_BUBBLE_OPACITY } from "./graph-zoom";
 
 // 節點名稱最寬 112px、最多兩行，超過以「…」截斷（#288，docs/design.md「英文版面」；截斷在 graph-labels.ts 的 clampLabel()）。
 // 截斷後的文字在 shortLabel，完整名稱在 label：選取與滑過時顯示完整名稱，實體面板與搜尋結果也是完整名稱
@@ -62,6 +63,51 @@ function typeRule(selector: string, color: string, icon: TypeStyle["icon"] | und
     selector,
     style: { ...NODE_SHAPES[heroShape(icon)], "background-color": fill, "background-image": iconDataUri(icon ?? "generic", v("--color-surface")) },
   };
+}
+
+// 泡泡的類型組成：三個小點（實體數多的類型在前），畫在泡泡下方
+export function compositionDots(colors: readonly string[]): string {
+  const dots = colors.map((c, i) => `<circle cx="${6 + i * 10}" cy="4" r="3" fill="${c}"/>`).join("");
+  return `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="28" height="8" viewBox="0 0 28 8">${dots}</svg>`)}`;
+}
+
+// 大量節點時的圖譜（#254）：泡泡是類型色 2px 邊框、類型色 12% 的淡底，中間是實體數與群組名稱（fonts.display），下方是類型組成的小點；
+// 第 2、3 層的其他群組縮成 60px、75% 不透明。聚合線標上「N 段」（fonts.mono、surface 底）。
+// 細節層：直接關係用 primary 加粗並標上關係名稱，二度關聯 45% 不透明、虛線
+function zoomRules(v: (name: string) => string, types: TypeStyle[], dark: boolean): StylesheetJson {
+  const tint = (color: string) => (dark ? mix(color, DARK_ENTITY_MIX, v("--color-text")) : color);
+  return [
+    {
+      selector: "node.bubble",
+      style: {
+        label: "data(label)",
+        shape: "ellipse",
+        "font-family": v("--font-display"),
+        "font-size": 13,
+        "text-valign": "center",
+        "text-margin-y": 0,
+        "text-max-width": "96px",
+        "text-background-opacity": 0,
+        "background-opacity": 0.12,
+        "background-image": "data(dots)",
+        "background-width": "28px",
+        "background-height": "8px",
+        "background-position-y": "88%",
+        "border-width": 2,
+        "border-color": tint(v("--color-graphFallback")),
+      },
+    },
+    ...types.map((t) => ({ selector: `node.bubble[type = "${t.id}"]`, style: { "background-color": tint(t.color), "border-color": tint(t.color) } })),
+    { selector: "node.side", style: { opacity: SIDE_BUBBLE_OPACITY, "font-size": 10 } },
+    {
+      selector: "edge.aggregate",
+      style: { label: "data(label)", "target-arrow-shape": "none", "font-size": 10, "font-family": v("--font-mono") },
+    },
+    { selector: "node.unlabelled", style: { label: "" } },
+    { selector: "edge.direct", style: { label: "data(label)", width: 4, "line-color": v("--color-primary"), "target-arrow-color": v("--color-primary") } },
+    { selector: ".second", style: { opacity: SECOND_OPACITY } },
+    { selector: "edge.second", style: { "line-style": "dashed" } },
+  ];
 }
 
 // transitionMs：節點與線在變灰／展開之間的 transition 時間（減少動態效果時為 0，見 motion.ts）；dark：目前是否為深色模式
@@ -123,6 +169,7 @@ export function graphStyle(read: ReadVariable, types: TypeStyle[], transitionMs 
     },
     // 關係名稱只在選取節點的相連關係顯示
     { selector: "edge.near", style: { label: "data(label)" } },
+    ...zoomRules(v, types, dark),
     // 變灰：不隱藏，保留整體輪廓，降到 45% 不透明（「只看它」之後 15%）。變灰的內容是背景，標籤對比刻意降低；
     // 滑過時恢復（最後的 hover），節點仍可點（#240 決定 3）
     { selector: ".dimmed", style: { opacity: DIMMED_OPACITY } },

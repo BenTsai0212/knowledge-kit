@@ -220,7 +220,7 @@ const uiStrings = {
   tabGraph: "required", legend: "required", graphEmpty: "required", graphEmptyReason: "required", switchIdentity: "required", selectEntity: "required",
   graphExpanded: "required", graphShowAll: "required", graphShowOnly: "required",
   graphSearch: "required", graphSearchNone: "required", graphTopConnected: "required", graphRelationCount: "required",
-  graphDocumentCount: "required", graphSourceCount: "required", graphAskAbout: "required", graphKeyboard: "required", askAboutEntity: "required",
+  graphDocumentCount: "required", graphSourceCount: "required", graphAskAbout: "required", graphKeyboard: "required", graphZoom: "required", askAboutEntity: "required",
   relatedEntities: "required", entitySources: "required",
   graphRetract: "required", graphRetractWillRemove: "required", graphRetractNoChange: "required", graphRetractConfirm: "required",
   graphRetractCancel: "required", tabTimeline: "required", pathTitle: "required",
@@ -371,6 +371,18 @@ export const i18nManifests: ManifestEntry[] = [
       listLabel: "required",
       listEmpty: "required",
     } satisfies KeyManifest<UiStrings["graphKeyboard"]>,
+  },
+  {
+    schema: "i18n.schema.json",
+    pointer: "/properties/graphZoom",
+    keys: {
+      breadcrumb: "required",
+      all: "required",
+      other: "required",
+      segments: "required",
+      moreMembers: "required",
+      minRelations: "required",
+    } satisfies KeyManifest<UiStrings["graphZoom"]>,
   },
   {
     schema: "i18n.schema.json",

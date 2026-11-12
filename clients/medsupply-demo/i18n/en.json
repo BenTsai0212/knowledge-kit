@@ -103,6 +103,14 @@
     "listLabel": "Graph as a list",
     "listEmpty": "No entities match the filters."
   },
+  "graphZoom": {
+    "breadcrumb": "Levels",
+    "all": "All",
+    "other": "Other",
+    "segments": "{count, plural, one {# link} other {# links}}",
+    "moreMembers": "+{count, plural, one {# member} other {# members}} · Expand",
+    "minRelations": "Only with relations ≥"
+  },
   "askAboutEntity": "What do we know about {name}?",
   "relatedEntities": "Related entities",
   "entitySources": "Appears in",

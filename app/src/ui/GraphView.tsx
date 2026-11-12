@@ -52,7 +52,7 @@ const NONE: ReadonlySet<string> = new Set();
 const { entityTypes, relationTypes } = clientConfig.knowledgeModel;
 
 // 以節點標籤的字型量寬度（canvas 的 measureText，與 cytoscape 畫標籤的方式相同）；取不到 canvas 時每個字以 1em 估計（寧可多截斷）
-function labelMeasure(): MeasureText {
+export function labelMeasure(): MeasureText {
   const font = getComputedStyle(document.documentElement).getPropertyValue("--font-body").trim() || "sans-serif";
   const context = document.createElement("canvas").getContext?.("2d") ?? null;
   if (context === null) return (text) => [...text].length * NODE_LABEL_FONT_SIZE;
@@ -93,7 +93,7 @@ function elements(graph: Graph, language: string, labelGraph: Graph): ElementDef
 }
 
 // 目前生效的 CSS 變數（淺色或深色）；減少動態效果時 transition 為 0；深色模式時實體色調亮
-function currentStyle(reduced: boolean) {
+export function currentStyle(reduced: boolean) {
   const style = getComputedStyle(document.documentElement);
   const dark = isDark(document.documentElement);
   return graphStyle((name) => style.getPropertyValue(name), entityTypes, motionDuration(reduced, EXPAND_MS), dark);
@@ -119,7 +119,7 @@ function markSelected(cy: Core, graph: Graph, selected: string | null) {
 }
 
 // 鍵盤的目前實體（實線圈）、游標（虛線圈），以及連到目前實體的線（加粗、標關係名稱）
-function markKeyboard(cy: Core, keyboard: KeyboardMarks | null) {
+export function markKeyboard(cy: Core, keyboard: KeyboardMarks | null) {
   cy.batch(() => {
     cy.elements().removeClass("kb-current kb-cursor kb-near");
     if (keyboard === null || keyboard.current === null) return;
@@ -131,7 +131,7 @@ function markKeyboard(cy: Core, keyboard: KeyboardMarks | null) {
 }
 
 // 鍵盤的游標（沒有游標時是目前的實體）移到畫面外時平移到中央（sweep，減少動態效果時直接到位）
-function reveal(cy: Core, keyboard: KeyboardMarks | null, reduced: boolean) {
+export function reveal(cy: Core, keyboard: KeyboardMarks | null, reduced: boolean) {
   const id = keyboard?.cursor ?? keyboard?.current ?? null;
   if (id === null) return;
   const node = cy.$id(id);
@@ -145,7 +145,7 @@ function reveal(cy: Core, keyboard: KeyboardMarks | null, reduced: boolean) {
 }
 
 // 縮放與全部顯示（鍵盤的 +／-／0）
-function zoomTo(cy: Core, level: number, reduced: boolean) {
+export function zoomTo(cy: Core, level: number, reduced: boolean) {
   const position = { x: cy.width() / 2, y: cy.height() / 2 };
   const zoom = Math.min(Math.max(level, cy.minZoom()), cy.maxZoom());
   const ms = motionDuration(reduced, MOTION.fast);
@@ -154,7 +154,7 @@ function zoomTo(cy: Core, level: number, reduced: boolean) {
   else cy.animate({ zoom: { level: zoom, renderedPosition: position } }, { duration: ms, easing: "ease-out" });
 }
 
-function fitAll(cy: Core, reduced: boolean) {
+export function fitAll(cy: Core, reduced: boolean) {
   const ms = motionDuration(reduced, PAN_MS);
   cy.stop(true, false);
   if (ms === 0) cy.fit(cy.elements(), 30);
@@ -219,7 +219,7 @@ function animateFocus(cy: Core, graph: Graph, previous: Expansion, next: Expansi
 // cytoscape 快取容器在畫面上的位置，只在視窗大小改變、捲動與容器本身的大小改變時重新計算；
 // 上方的內容出現或換行讓容器移動時，滑鼠座標會換算到錯的位置（#199）。
 // 容器或上一層的大小改變時，以及每次按下指標（在 cytoscape 處理之前）時，位置變了就 resize() 讓它重新計算
-function trackContainer(element: HTMLElement, cy: Core): () => void {
+export function trackContainer(element: HTMLElement, cy: Core): () => void {
   const rect = () => {
     const r = element.getBoundingClientRect();
     return `${r.left},${r.top},${r.width},${r.height}`;
