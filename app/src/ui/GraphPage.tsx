@@ -31,6 +31,8 @@ interface Props {
   initialSelected?: string | null;
   // 帳號登入時身分固定（#287）：空狀態不給「切換身分」
   canSwitchIdentity: boolean;
+  // 選取的實體（首頁的「最近看過」，#283）；只在圖譜讀到、目前身分看得到時通知
+  onViewed?(entityId: string): void;
 }
 
 const { entityTypes } = clientConfig.knowledgeModel;
@@ -41,7 +43,7 @@ const keepVisible = (graph: Graph) => (id: string | null) => (id !== null && gra
 // 圖譜頁：切換身分或語言時重新讀取；之後才回來的舊結果忽略；已展開的路徑截到第一個看不到的實體之前，路徑的兩端已看不到時清除。
 // 逐步展開（#199）：點節點從它展開，已展開的路徑累積；「回到全部」顯示全貌。
 // 中間是搜尋框、類型篩選（圖例）與圖，右側是實體面板（沒有選取時列出關聯最多的實體當起點）與多跳路徑
-export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, canReview, onRetracted, initialSelected = null, canSwitchIdentity }: Props) {
+export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, canReview, onRetracted, initialSelected = null, canSwitchIdentity, onViewed }: Props) {
   const s = strings(language);
   const [graph, setGraph] = useState<Graph | null>(null);
   const [expansion, setExpansionState] = useState<Expansion>(initialSelected === null ? ALL : only(initialSelected));
@@ -85,6 +87,11 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
       cancelled = true;
     };
   }, [db, identity, canReview, selected, graph]);
+  const visibleSelected = graph !== null && graph.entities.some((e) => e.id === selected) ? selected : null;
+  useEffect(() => {
+    if (visibleSelected !== null) onViewed?.(visibleSelected);
+    // onViewed 每次 render 都是新的函式；只在選取改變時通知
+  }, [visibleSelected]);
   // 多跳路徑的起點預設為目前選取的實體
   const from = ends.from ?? selected;
   // 路徑由目前的可見圖算出，切換身分後一律重新計算

@@ -508,6 +508,10 @@
     "askedTitle": "Your questions",
     "askedNote": "Only the question text is kept. “Ask again” answers with what you can see now.",
     "askAgain": "Ask again",
-    "askedEmpty": "No questions yet."
+    "askedEmpty": "No questions yet.",
+    "recentDocumentsTitle": "Recently added",
+    "recentDocumentsEmpty": "No documents you can see yet.",
+    "viewedTitle": "Recently viewed",
+    "viewedEmpty": "Entities you open in the graph or an answer appear here."
   }
 }

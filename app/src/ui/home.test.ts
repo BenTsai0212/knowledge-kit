@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AccessFile, ScenariosFile } from "../client/types";
 import type { ReviewDocument, ReviewStatus } from "../extraction/store";
-import { greetingPeriod, MAX_ASKED, rememberQuestion, roleScenarios, visibleScope, waitingSummary } from "./home";
+import { greetingPeriod, MAX_ASKED, MAX_VIEWED, rememberQuestion, rememberViewed, roleScenarios, visibleScope, waitingSummary } from "./home";
 import { pendingCount } from "./review-helpers";
 
 describe("greetingPeriod", () => {
@@ -106,5 +106,13 @@ describe("roleScenarios", () => {
     const scenarios = { scenarios: [{ id: "x", role: "guest" }, { id: "y", role: "staff" }, { id: "z", role: "staff" }] } as unknown as ScenariosFile;
     expect(roleScenarios(scenarios, "staff").map((x) => x.id)).toEqual(["y", "z"]);
     expect(roleScenarios(scenarios, "manager")).toEqual([]);
+  });
+});
+
+describe("rememberViewed", () => {
+  it("最新的在前、不重複，最多 MAX_VIEWED 個", () => {
+    expect(rememberViewed(["a", "b"], "b")).toEqual(["b", "a"]);
+    const many = Array.from({ length: MAX_VIEWED }, (_, i) => `e${i}`);
+    expect(rememberViewed(many, "new")).toEqual(["new", ...many.slice(0, MAX_VIEWED - 1)]);
   });
 });

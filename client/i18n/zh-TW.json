@@ -508,6 +508,10 @@
     "askedTitle": "問過的問題",
     "askedNote": "只保存問題文字；「再問一次」會用現在看得到的資料重新回答。",
     "askAgain": "再問一次",
-    "askedEmpty": "還沒有問過問題。"
+    "askedEmpty": "還沒有問過問題。",
+    "recentDocumentsTitle": "最近新增的文件",
+    "recentDocumentsEmpty": "還沒有看得到的文件。",
+    "viewedTitle": "最近看過",
+    "viewedEmpty": "在圖譜或回答中點過的實體會列在這裡。"
   }
 }

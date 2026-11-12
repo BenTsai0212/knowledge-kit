@@ -54,6 +54,12 @@ export function rememberQuestion(asked: readonly string[], question: string, max
   return [text, ...asked.filter((q) => q !== text)].slice(0, max);
 }
 
+// 「最近看過」最多保留的實體數
+export const MAX_VIEWED = 5;
+
+// 最近看過的實體：只存 id（名稱與能否看到在首頁以目前身分重新讀取），最新的在前，不重複
+export const rememberViewed = (viewed: readonly string[], id: string, max = MAX_VIEWED): string[] => [id, ...viewed.filter((x) => x !== id)].slice(0, max);
+
 // 首頁的常見問題：情境的角色是目前身分的那些情境
 export const roleScenarios = (scenarios: ScenariosFile, role: string) => scenarios.scenarios.filter((x) => x.role === role);
 

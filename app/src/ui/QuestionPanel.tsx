@@ -42,7 +42,21 @@ export function QuestionPanel({ language, disabled, text, onText, onAsk, limit, 
         </Notice>
       )}
       <div id={PRESETS_ID} className="presets" role="group" aria-label={role === undefined ? s.presetQuestions : s.home.commonQuestions}>
-        {scenarios.map((scenario) => (
+        {role !== undefined ? (
+          // 首頁：不顯示情境名稱與情境角色（docs/design.md「展示功能的位置」：改成「常見問題」，依身分顯示）
+          scenarios.length > 0 && (
+            <div className="scenario">
+              <span className="muted">{s.home.commonQuestions}</span>
+              {scenarios.flatMap((scenario) =>
+                scenario.questions.map((q) => (
+                  <button key={q.id} type="button" disabled={off} onClick={() => onAsk(q.text[language])}>
+                    {q.text[language]}
+                  </button>
+                )),
+              )}
+            </div>
+          )
+        ) : scenarios.map((scenario) => (
           <div key={scenario.id} className="scenario" role="group" aria-label={scenario.title[language]}>
             <span className="muted">
               {scenario.title[language]} · {s.scenarioRole}

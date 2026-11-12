@@ -36,7 +36,7 @@ import { RetrievalNotice } from "./ui/RetrievalNotice";
 import { reportOf } from "./ui/report-helpers";
 import { PREPARING, sameDisplay, type ProviderStatus } from "./ui/retrieval-notice";
 import { ReviewPage } from "./ui/ReviewPage";
-import { rememberQuestion, waitingSummary, type WaitingSummary } from "./ui/home";
+import { rememberQuestion, rememberViewed, waitingSummary, type WaitingSummary } from "./ui/home";
 import { HomePage } from "./ui/HomePage";
 import { createExtractionRunner } from "./ui/extraction-runner";
 import { defaultView, evalsMode, onlineDemo, presentationMode, visibleViews, type View } from "./ui/online-demo";
@@ -59,6 +59,8 @@ const activeProvider = () => (sharedProvider ??= createProvider(client.retrieval
 
 // 頁籤：導覽列與切換身分時的判斷用同一份結果（線上 demo、展示模式、評測台的網址參數都在載入時決定）
 const views = (canReview: boolean) => visibleViews(canReview, onlineDemo, presentationMode, evalsMode);
+// 沒有看過的實體時傳給首頁的空清單（固定同一個陣列，首頁不會因此重新讀取）
+const NONE: readonly string[] = [];
 
 
 export function App() {
@@ -77,6 +79,9 @@ export function App() {
   const [turns, setTurns] = useState<readonly Turn[]>([]);
   // 首頁的「問過的問題」（#283）：依身分分開，只存問題文字（不存回答）；切換身分或語言不清除，登出時清除
   const [asked, setAsked] = useState<Readonly<Record<string, readonly string[]>>>({});
+  // 首頁的「最近看過」（#283）：依身分分開，只存實體 id（圖譜選取的、問答右側面板打開的）；名稱與能否看到在首頁以目前身分讀取。登出時清除
+  const [viewed, setViewed] = useState<Readonly<Record<string, readonly string[]>>>({});
+  const onViewed = (id: string) => setViewed((all) => ({ ...all, [identity]: rememberViewed(all[identity] ?? [], id) }));
   const nextTurn = useRef(0);
   const [source, setSource] = useState<SourceDocument | null>(null);
   // 右側面板一次顯示原文或實體其中一個；實體面板只用該題送出當下的圖譜（#195）
@@ -319,6 +324,11 @@ export function App() {
     setEntity({ graph, id });
   }
 
+  // 問答右側面板打開的實體也算看過（只用該題送出當下、目前身分讀得到的圖譜）
+  useEffect(() => {
+    if (entity !== null) onViewed(entity.id);
+  }, [entity?.id]);
+
   return (
     <div className="app">
       <Sidebar
@@ -348,6 +358,7 @@ export function App() {
                 setSignIn(null);
                 setRejectedCode(null);
                 setAsked({});
+                setViewed({});
               }
         }
         views={views(canReview)}
@@ -383,6 +394,7 @@ export function App() {
               onRetracted={() => setReviewVersion((v) => v + 1)}
               initialSelected={graphFocus}
               canSwitchIdentity={canSwitchIdentity(signIn)}
+              onViewed={onViewed}
             />
           ) : view === "evals" ? (
             <EvalPage
@@ -480,6 +492,7 @@ export function App() {
         <main className="page">
           {offline && <Notice kind="warning" title={s.qaProblems.offline} />}
           <HomePage
+            db={db}
             language={language}
             identity={identity}
             waiting={canReview ? (pending?.identity === identity ? pending.summary : null) : undefined}
@@ -491,6 +504,9 @@ export function App() {
             // 提問與「再問一次」都切到問答頁，以現在的身分與看得到的資料回答
             onAsk={(question) => (setView("qa"), void onAsk(question))}
             onStartReview={() => setView("review")}
+            viewed={viewed[identity] ?? NONE}
+            onOpenDocument={(id) => (setFocusDocument(id), setView("timeline"))}
+            onOpenEntity={(id) => (setGraphFocus(id), setView("graph"))}
           />
         </main>
       ) : (

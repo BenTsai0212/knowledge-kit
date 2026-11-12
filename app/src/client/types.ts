@@ -708,5 +708,10 @@ export interface UiStrings {
     askedNote: string;
     askAgain: string;
     askedEmpty: string;
+    // 最近新增的文件、最近看過的實體
+    recentDocumentsTitle: string;
+    recentDocumentsEmpty: string;
+    viewedTitle: string;
+    viewedEmpty: string;
   };
 }
