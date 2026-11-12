@@ -34,8 +34,25 @@ async function uniqueNode(page: Page): Promise<{ id: string; name: string } | nu
   }, CANVAS);
 }
 
-// 在拖曳把手上拖曳（滑鼠的 pointer 事件）
+// 面板的進場動畫（kSheetUp）與高度的 transition 播完為止（把手位置不再變動）。
+// 動畫中讀把手位置，按下時面板已經移走，pointerdown 會落在內容上（#321 的修正要求）
+async function waitForSheetSettled(page: Page): Promise<void> {
+  const sheet = entitySheet(page);
+  await expect.poll(() => sheet.evaluate((el) => el.getAnimations().length)).toBe(0);
+  let last = Number.NaN;
+  await expect
+    .poll(async () => {
+      const top = (await sheet.boundingBox())!.y;
+      const stable = top === last;
+      last = top;
+      return stable;
+    })
+    .toBe(true);
+}
+
+// 在拖曳把手上拖曳（滑鼠的 pointer 事件）；先等面板停穩再讀把手位置
 async function dragHandle(page: Page, dy: number): Promise<void> {
+  await waitForSheetSettled(page);
   const handle = (await entitySheet(page).locator(".bottom-sheet__handle").boundingBox())!;
   const [x, y] = [handle.x + handle.width / 2, handle.y + handle.height / 2];
   await page.mouse.move(x, y);
@@ -110,6 +127,9 @@ test("搜尋 → 實體面板（56% 高、可拉到全高）→ 關閉後保留�
   await expect(sheet.getByRole("region", { name })).toBeVisible();
   await expect(sheet).toHaveAttribute("data-stop", "half");
   await expect.poll(async () => Math.round((await sheet.boundingBox())!.height)).toBe(Math.round(844 * 0.56));
+  // 進場動畫播完後，面板頂端停在 56% 的位置
+  await waitForSheetSettled(page);
+  near((await sheet.boundingBox())!.y, 844 - Math.round(844 * 0.56));
   expect(await noHorizontalScroll(page)).toBe(true);
 
   // 往上拉到全高，往下拉回 56%
