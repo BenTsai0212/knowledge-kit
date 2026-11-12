@@ -281,7 +281,7 @@ const uiStrings = {
   colon: "required", progress: "required",
   parenthetical: "required", refusal: "required", refusalNextTitle: "required", refusalNextRephrase: "required",
   refusalNextAskPerson: "required", refusalNextUpload: "required", refusalGotoUpload: "required", uncited: "required", incomplete: "required", answerRetry: "required",
-  errors: "required", unknownError: "required",
+  qaProblems: "required", errors: "required", unknownError: "required",
 } satisfies KeyManifest<UiStrings>;
 
 export const i18nManifests: ManifestEntry[] = [
@@ -293,6 +293,14 @@ export const i18nManifests: ManifestEntry[] = [
       unsupported: "required", too_large: "required", too_long: "required", empty: "required", no_text: "required",
       failed: "required", denied: "required", invalid: "required", no_input: "required",
     } satisfies KeyManifest<UiStrings["uploadErrors"]>,
+  },
+  {
+    schema: "i18n.schema.json",
+    pointer: "/properties/qaProblems",
+    keys: {
+      offline: "required", notSent: "required", shorten: "required", charCount: "required", limitBrowse: "required",
+      adminTitle: "required", adminDetails: "required", reload: "required",
+    } satisfies KeyManifest<UiStrings["qaProblems"]>,
   },
   {
     schema: "i18n.schema.json",

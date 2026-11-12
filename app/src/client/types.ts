@@ -651,6 +651,22 @@ export interface UiStrings {
   incomplete: string;
   // 回答中斷或失敗時，以同一個問題再問一次（#227）
   answerRetry: string;
+  // 問答的錯誤與額度（#280，docs/design.md「錯誤與額度」）
+  qaProblems: {
+    // 連不到伺服器時的頁面頂端提示（連線恢復後消失）
+    offline: string;
+    // prompt_too_long：這一題沒有送出，下一步是縮短問題
+    notSent: string;
+    shorten: string;
+    // 接近上限時的字數，參數 {count}、{max}
+    charCount: string;
+    // 今天用完了：只停用提問
+    limitBrowse: string;
+    // 需要管理者
+    adminTitle: string;
+    adminDetails: string;
+    reload: string;
+  };
   errors: Record<AskErrorType, string>;
   // 不認得的錯誤類型
   unknownError: string;

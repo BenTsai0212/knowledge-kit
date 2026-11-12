@@ -445,6 +445,16 @@
   "uncited": "出典の引用なし",
   "incomplete": "回答が途中で終わっています",
   "answerRetry": "もう一度質問する",
+  "qaProblems": {
+    "offline": "現在サーバーに接続できません。接続が回復すると、この表示は自動的に消えます。",
+    "notSent": "送信されていません",
+    "shorten": "質問を短くする",
+    "charCount": "{count}／{max}",
+    "limitBrowse": "グラフ、タイムライン、原文は引き続き閲覧できます。",
+    "adminTitle": "このデモは現在質問に回答できません",
+    "adminDetails": "管理者向けの詳細",
+    "reload": "ページを再読み込み"
+  },
   "errors": {
     "forbidden_origin": "このアドレスからは質問できません。",
     "invalid_access_code": "アクセスコードが正しくありません。もう一度入力してください。",

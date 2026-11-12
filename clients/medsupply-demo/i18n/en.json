@@ -445,6 +445,16 @@
   "uncited": "No sources cited",
   "incomplete": "Incomplete answer",
   "answerRetry": "Ask again",
+  "qaProblems": {
+    "offline": "Can't reach the server right now. This notice disappears once you're back online.",
+    "notSent": "Not sent",
+    "shorten": "Shorten question",
+    "charCount": "{count}/{max}",
+    "limitBrowse": "You can still browse the graph, timeline, and sources.",
+    "adminTitle": "This demo can't answer questions right now",
+    "adminDetails": "Details for the administrator",
+    "reload": "Reload page"
+  },
   "errors": {
     "forbidden_origin": "Questions can't be asked from this address.",
     "invalid_access_code": "The access code is incorrect. Please enter it again.",

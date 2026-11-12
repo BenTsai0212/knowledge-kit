@@ -9,15 +9,17 @@ interface Props {
   title: string;
   children?: ReactNode;
   action?: { label: string; onClick(): void; disabled?: boolean };
+  // 取代種類的預設圖示（例如額度用完的時鐘，#280）
+  icon?: string;
 }
 
 const ICONS: Record<NoticeKind, string> = { error: "!", warning: "⚠", info: "i" };
 
-export function Notice({ kind, title, children, action }: Props) {
+export function Notice({ kind, title, children, action, icon }: Props) {
   return (
     <div className={`notice notice-${kind}`} role={kind === "error" ? "alert" : "status"}>
       <span className="notice-icon" aria-hidden="true">
-        {ICONS[kind]}
+        {icon ?? ICONS[kind]}
       </span>
       <div className="notice-body">
         <strong>{title}</strong>
