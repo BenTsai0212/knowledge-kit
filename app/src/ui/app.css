@@ -1181,6 +1181,100 @@ main.qa > .source .source-text mark.entering {
   font-weight: 700;
 }
 
+/* 身分與語言面板（IdentitySheet.tsx）：高 66% */
+.bottom-sheet.identity-sheet {
+  height: 66dvh;
+}
+
+/* 身分的單選卡：名稱＋一句「看得到什麼」，整張卡可點，選中的卡用 primary 框 */
+.role-cards {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.role-cards legend {
+  margin-bottom: 0.5rem;
+  padding: 0;
+}
+
+.role-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-height: 44px;
+  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  cursor: pointer;
+}
+
+.role-card:has(input:checked) {
+  border-color: var(--color-primary);
+  background: var(--color-surfaceRaised);
+}
+
+.role-card:has(input:focus-visible) {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.role-card input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0.1rem 0 0;
+  accent-color: var(--color-primary);
+}
+
+.role-card__text {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.role-card__name {
+  font-weight: 700;
+}
+
+.role-card__scope {
+  color: var(--color-textMuted);
+  font-size: 0.875rem;
+}
+
+/* 語言的分段切換：與展示模式的分段切換同一種外觀 */
+.language-segmented {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.language-segmented__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-surfaceRaised);
+}
+
+.language-segmented__options button {
+  flex: 1 1 0;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--color-textMuted);
+}
+
+.language-segmented__options button[aria-pressed="true"] {
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
 /* 待審頁的第二層：底線式分頁（#243）。整列一條 border 底線，選中的分頁是 2px text 底線、粗體；數量直接接在名稱後。
    一律單行，窄螢幕超出時橫向捲動（不換行，底線不斷開）；分頁列往下 1px 疊在整列的底線上，捲動容器不裁掉選中的底線 */
 .review-toolbar {

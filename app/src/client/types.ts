@@ -201,6 +201,8 @@ export interface Project {
 export interface Role {
   id: Id;
   label: LocalizedText;
+  // 一句「看得到什麼」的說明（身分與語言面板）；只寫看得到的範圍，不寫看不到什麼（#247）
+  scope: LocalizedText;
   visibility: Id;
   projects: Id[];
   // 能否上傳文件；可上傳的等級與專案同樣限於看得到的範圍

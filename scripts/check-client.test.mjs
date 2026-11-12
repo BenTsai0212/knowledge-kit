@@ -360,6 +360,13 @@ describe("check-client", () => {
     expect(validateClient(files).map((e) => e.path)).toEqual(["/roles/0", "/roles/1/canUpload"]);
   });
 
+  it("角色的 scope（看得到什麼的說明）必填，是各語言的文字（#255）", () => {
+    const files = example();
+    delete files["access.json"].roles[0].scope;
+    files["access.json"].roles[1].scope = "公開文件";
+    expect(validateClient(files).map((e) => e.path)).toEqual(["/roles/0", "/roles/1/scope"]);
+  });
+
   it("情境的角色與問題 id 會被檢查", () => {
     const files = example();
     const scenario = files["scenarios.json"].scenarios[0];

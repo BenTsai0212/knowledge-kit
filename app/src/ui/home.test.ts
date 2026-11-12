@@ -123,8 +123,8 @@ const access = {
   ],
   projects: [{ id: "p1", label: {} }],
   roles: [
-    { id: "guest", label: {}, visibility: "public", projects: [], canUpload: false, canReview: false },
-    { id: "staff", label: {}, visibility: "internal", projects: ["p1"], canUpload: true, canReview: false },
+    { id: "guest", label: {}, scope: {}, visibility: "public", projects: [], canUpload: false, canReview: false },
+    { id: "staff", label: {}, scope: {}, visibility: "internal", projects: ["p1"], canUpload: true, canReview: false },
   ],
 } as unknown as AccessFile;
 

@@ -1,4 +1,5 @@
-// 身分、語言與更換邀請碼（帳號登入時是登出）：桌機左側導覽的頁首與手機的身分與語言面板共用（#255 從 Sidebar.tsx 移出）
+// 身分、語言與更換邀請碼（帳號登入時是登出）：左側導覽的頁首（#255 從 Sidebar.tsx 移出）。
+// 手機的身分與語言面板改用單選卡與分段切換（IdentitySheet.tsx，#255 PR 2）
 import { clientConfig } from "../client/load";
 import { fill, strings } from "../client/i18n";
 import type { IdentityControl } from "./sign-in";
@@ -11,12 +12,12 @@ interface Props {
   onIdentity(identity: string): void;
   onLanguage(language: string): void;
   onChangeAccessCode?(): void;
-  // 空狀態的「切換身分」把焦點移到有這個 id 的元件（#245）；手機上是頂端列的身分徽章，面板裡的選單不帶 id
+  // 空狀態的「切換身分」把焦點移到有這個 id 的元件（#245）；手機上是頂端列的身分徽章
   selectId?: string;
 }
 
-// 語言以該語言自己的名稱顯示（例如 zh-TW → 中文（台灣））
-const ownName = (code: string) => new Intl.DisplayNames([code], { type: "language" }).of(code) ?? code;
+// 語言以該語言自己的名稱顯示（例如 zh-TW → 中文（台灣））；手機的身分與語言面板共用
+export const ownName = (code: string) => new Intl.DisplayNames([code], { type: "language" }).of(code) ?? code;
 
 export function IdentityControls({ language, identity, identityControl, account, onIdentity, onLanguage, onChangeAccessCode, selectId }: Props) {
   const s = strings(language);
