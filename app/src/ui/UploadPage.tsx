@@ -54,6 +54,8 @@ interface Props {
   onRetryConflicts(documentId: string): void;
   // 到時間軸時帶上剛上傳的文件與它的語言，以便捲動到該文件
   onGoto(view: "qa" | "timeline", document?: { id: string; language: string }): void;
+  // 帳號登入時身分固定（#287）：空狀態不給「切換身分」
+  canSwitchIdentity: boolean;
 }
 
 const { access, client, knowledgeModel } = clientConfig;
@@ -72,7 +74,7 @@ type Confirm = {
   error?: UploadFailure;
 };
 
-export function UploadPage({ db, identity, language, onUploaded, extractions, onRetryExtraction, onRetryConflicts, onGoto }: Props) {
+export function UploadPage({ db, identity, language, onUploaded, extractions, onRetryExtraction, onRetryConflicts, onGoto, canSwitchIdentity }: Props) {
   const s = strings(language);
   // 萃取的狀態，以及（開啟比對時）比對的狀態
   const jobStatus = (job: Job) => (
@@ -142,7 +144,7 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
   }, [confirm]);
 
   if (!role?.canUpload)
-    return <EmptyState icon="upload" title={s.uploadNotAllowed} reason={s.uploadNotAllowedReason} actions={[{ label: s.switchIdentity, onClick: focusIdentity }]} />;
+    return <EmptyState icon="upload" title={s.uploadNotAllowed} reason={s.uploadNotAllowedReason} actions={canSwitchIdentity ? [{ label: s.switchIdentity, onClick: focusIdentity }] : []} />;
 
   const audience = audienceRoles(access, visibility, project === "" ? null : project)
     .map((r) => r.label[language])

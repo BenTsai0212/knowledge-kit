@@ -209,6 +209,8 @@ const uiStrings = {
   identity: "required", language: "required", accessCodeTitle: "required", accessCodeLabel: "required",
   accessCodeHint: "required", demoAccessCodeHint: "required", demoQaNotice: "required",
   demoUploadNotice: "required", accessCodeSubmit: "required", changeAccessCode: "required",
+  signInTitle: "required", signInAccount: "required", signInAccountOption: "required", signInPassword: "required", signInNoPassword: "required",
+  signInSubmit: "required", signInWithCode: "required", signInBack: "required", signOut: "required",
   presetQuestions: "required", scenarioRole: "required", questionLabel: "required",
   questionPlaceholder: "required", askButton: "required", answering: "required", emptyAnswer: "required", emptyAnswerReason: "required", emptyAnswerAction: "required",
   qaIndependent: "required", sessionQuestions: "required", answerMentions: "required", followUpTitle: "required",

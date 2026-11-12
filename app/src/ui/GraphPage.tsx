@@ -29,6 +29,8 @@ interface Props {
   onRetracted(): void;
   // 從問答頁的「在圖譜中查看」打開時，從該實體開始展開（#195、#199）；看不到時顯示全部
   initialSelected?: string | null;
+  // 帳號登入時身分固定（#287）：空狀態不給「切換身分」
+  canSwitchIdentity: boolean;
 }
 
 const { entityTypes } = clientConfig.knowledgeModel;
@@ -39,7 +41,7 @@ const keepVisible = (graph: Graph) => (id: string | null) => (id !== null && gra
 // 圖譜頁：切換身分或語言時重新讀取；之後才回來的舊結果忽略；已展開的路徑截到第一個看不到的實體之前，路徑的兩端已看不到時清除。
 // 逐步展開（#199）：點節點從它展開，已展開的路徑累積；「回到全部」顯示全貌。
 // 中間是搜尋框、類型篩選（圖例）與圖，右側是實體面板（沒有選取時列出關聯最多的實體當起點）與多跳路徑
-export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, canReview, onRetracted, initialSelected = null }: Props) {
+export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, canReview, onRetracted, initialSelected = null, canSwitchIdentity }: Props) {
   const s = strings(language);
   const [graph, setGraph] = useState<Graph | null>(null);
   const [expansion, setExpansionState] = useState<Expansion>(initialSelected === null ? ALL : only(initialSelected));
@@ -100,7 +102,7 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
   if (graph === null) return <p className="card muted">{s.loading}</p>;
   // 原因只說明目前身分的資料，不暗示有看不到的實體；切換身分旁不說明會多看到什麼（#245 決定）
   if (graph.entities.length === 0)
-    return <EmptyState icon="graph" title={s.graphEmpty} reason={s.graphEmptyReason} actions={[{ label: s.switchIdentity, onClick: focusIdentity }]} />;
+    return <EmptyState icon="graph" title={s.graphEmpty} reason={s.graphEmptyReason} actions={canSwitchIdentity ? [{ label: s.switchIdentity, onClick: focusIdentity }] : []} />;
 
   const onExpand = (id: string) => setExpansion((current) => expand(graph, current, id));
   // 與搜尋結果、節點標籤相同：同名的實體加上第一個相關實體的名稱（#198）

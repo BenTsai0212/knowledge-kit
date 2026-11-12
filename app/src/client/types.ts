@@ -323,6 +323,16 @@ export interface UiStrings {
   demoUploadNotice: string;
   accessCodeSubmit: string;
   changeAccessCode: string;
+  // 登入頁（#287）：帳號登入（展示）的標題、欄位與按鈕；帳號欄的選項是 {account}（展示帳號）與 {role}（角色名稱）；帳號登入後的「登出」
+  signInTitle: string;
+  signInAccount: string;
+  signInAccountOption: string;
+  signInPassword: string;
+  signInNoPassword: string;
+  signInSubmit: string;
+  signInWithCode: string;
+  signInBack: string;
+  signOut: string;
   presetQuestions: string;
   // 預設問題旁標示情境的角色；提問一律以目前選的身分（#26 決定 1）
   scenarioRole: string;

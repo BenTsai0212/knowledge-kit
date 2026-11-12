@@ -2,6 +2,7 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import { access, language, s, scenarios } from "./client";
 import { FAKE_ENTITY_NAME, routeFakeAsk } from "./fake-ask";
+import { demoAccount } from "../../app/src/ui/sign-in";
 
 export { language, s };
 
@@ -22,14 +23,26 @@ export async function blockModelDownload(page: Page): Promise<void> {
 // 開啟評測台的網址（#192，docs/evals.md「開啟評測台」）：沒有這個參數時，canReview 的身分也看不到評測台
 export const EVALS_PATH = "/?tools=evals";
 
-// 打開首頁（path 可帶網址參數，例如展示模式的 /?mode=presentation）、輸入邀請碼，等資料庫載入完成（預設問題的按鈕可以按）
+// 展示模式（?mode=presentation）的登入頁只有邀請碼（#287 決定 2）
+export const isPresentation = (path: string) => new URL(path, "http://localhost").searchParams.get("mode") === "presentation";
+
+// 打開首頁（path 可帶網址參數，例如展示模式的 /?mode=presentation）、以「使用邀請碼體驗」輸入邀請碼（可以切換身分，#287），
+// 等資料庫載入完成（預設問題的按鈕可以按）。帳號登入見 sign-in.spec.ts
 export async function openApp(page: Page, path = "/"): Promise<void> {
   await blockModelDownload(page);
   await routeFakeAsk(page);
   await page.goto(path);
+  if (!isPresentation(path)) await page.getByRole("button", { name: s.signInWithCode }).click();
   await page.getByLabel(s.accessCodeLabel).fill(ACCESS_CODE);
   await page.getByRole("button", { name: s.accessCodeSubmit }).click();
   await expect(page.getByRole("button", { name: presetQuestions[0].text, exact: true })).toBeEnabled();
+}
+
+// 帳號登入（#287）：登入頁的面板與帳號欄的選項（app/src/ui/sign-in.ts 的展示帳號＋角色名稱）
+export const signInPanel = (page: Page) => page.locator("section.sign-in");
+export function accountOption(id: RoleId): string {
+  const role = access.roles.find((r) => r.id === id)!;
+  return s.signInAccountOption.replace("{account}", demoAccount(id)).replace("{role}", role.label[language]);
 }
 
 // 以左側導覽的身分選單切換身分

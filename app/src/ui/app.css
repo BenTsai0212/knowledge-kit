@@ -127,6 +127,16 @@ h3 {
   max-width: 100%;
 }
 
+/* 帳號登入（#287）：身分是唯讀的文字，排法與身分選單相同 */
+.identity-account {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 /* 其他頁籤：內容佔中間與右側兩欄，頁面本身的版面不變 */
 .app > main {
   min-height: 0;
@@ -2664,10 +2674,29 @@ label.inline {
   border-left: 1px solid var(--color-border);
 }
 
+/* 登入面板（#287）：欄位一欄一列；停用的密碼欄看得出不能輸入，下方的「使用邀請碼體驗」是次要按鈕 */
+.sign-in label {
+  display: grid;
+}
+
+.sign-in input:disabled {
+  cursor: not-allowed;
+}
+
+.sign-in p {
+  margin: 0;
+}
+
+.entry__panel > button.secondary,
+.entry__panel > button.link {
+  justify-self: start;
+}
+
+/* 手機與平板（docs/design.md「手機」的「登入」）：主視覺縮成上方 330px，帳號、密碼、登入與模型下載進度在下方 */
 @media (max-width: 900px) {
   .app > main.entry {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 18rem auto;
+    grid-template-rows: 330px auto;
     overflow-y: auto;
   }
 
