@@ -200,6 +200,7 @@ npm run check:client
 | `aliasRules.normalizeWidth` | 是 | boolean | 比對前把全形英數與符號轉為半形 |
 | `aliasRules.ignoreWhitespace` | 是 | boolean | 比對時忽略空白 |
 | `mergeStrategy` | 否 | `review`／`auto`，預設 `review` | 名稱或別名相符時：`review` 放進待審，由人確認後合併；`auto` 直接合併成同一個實體 |
+| `container` | 否 | boolean，預設 `false` | 容器類型（例如部門、專案）：可見節點數超過門檻時，圖譜以這類實體分群，其他實體歸入直接相連的容器；沒有任何容器類型時改用社群偵測（[docs/graph.md](graph.md)「大量節點時的分群」，#254） |
 
 **為什麼預設 `review`**：名稱相符不代表是同一個實體。例如兩位同名的人員，自動合併會把他們合成同一個人，之後的關係、權限與引用都會跟著錯。只有名稱在客戶內部確定唯一的類型（例如部門），才改成 `auto`。
 

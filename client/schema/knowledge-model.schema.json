@@ -41,6 +41,11 @@
             "description": "同名或別名相符時：review 送審、auto 自動合併",
             "enum": ["review", "auto"],
             "default": "review"
+          },
+          "container": {
+            "description": "容器類型（例如部門、專案）：可見節點數超過門檻時，圖譜以這類實體分群，其他實體歸入直接相連的容器；沒有任何容器類型時改用社群偵測（docs/graph.md「大量節點時的分群」）",
+            "type": "boolean",
+            "default": false
           }
         }
       }
