@@ -99,6 +99,7 @@ describe("頁首的組合字標", () => {
       createElement(Sidebar, {
         language,
         identity: clientConfig.access.roles[0].id,
+        identityControl: "menu",
         onIdentity: () => {},
         onLanguage: () => {},
         views: ["qa"],

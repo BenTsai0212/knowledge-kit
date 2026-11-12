@@ -23,3 +23,12 @@ export function accountAccessCode(publicCode: string, typed: string): string | n
 
 // 登入頁有沒有帳號登入：展示模式（?mode=presentation）只顯示邀請碼，一定可以切換身分（#287 決定 2）
 export const offersAccountSignIn = (presentation: boolean) => !presentation;
+
+// 左側導覽的身分欄（#287 PR 1 審查）：還沒登入（登入頁）不顯示，避免先選了身分再以帳號登入時不知道算哪一個；
+// 以邀請碼體驗或展示模式進入後是選單；帳號登入時顯示帳號與角色、不能切換
+export type IdentityControl = "none" | "menu" | "account";
+
+export function identityControl(signIn: SignIn | null): IdentityControl {
+  if (signIn === null) return "none";
+  return signIn.kind === "account" ? "account" : "menu";
+}

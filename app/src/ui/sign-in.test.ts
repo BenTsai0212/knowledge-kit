@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { clientConfig } from "../client/load";
-import { accountAccessCode, canSwitchIdentity, demoAccount, needsAccessCode, offersAccountSignIn } from "./sign-in";
+import { accountAccessCode, canSwitchIdentity, demoAccount, identityControl, needsAccessCode, offersAccountSignIn } from "./sign-in";
 
 describe("demoAccount", () => {
   it("由角色 id 推算 <id>@example.test", () => {
@@ -41,5 +41,13 @@ describe("offersAccountSignIn", () => {
   it("展示模式只顯示邀請碼，一般模式才有帳號登入", () => {
     expect(offersAccountSignIn(true)).toBe(false);
     expect(offersAccountSignIn(false)).toBe(true);
+  });
+});
+
+describe("identityControl", () => {
+  it("登入頁不顯示身分欄；以邀請碼體驗進入後是選單；帳號登入時顯示帳號、不能切換", () => {
+    expect(identityControl(null)).toBe("none");
+    expect(identityControl({ kind: "code" })).toBe("menu");
+    expect(identityControl({ kind: "account", role: "staff" })).toBe("account");
   });
 });

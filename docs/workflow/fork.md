@@ -7,6 +7,7 @@
 - `AGENTS.md` 第 0 節：Repo（`owner/name`）、看板（GitHub Project 編號與網址）、決定者（停止回報與 `plan-first` 時 @ 的帳號）。
 - `LICENSE`：MIT 要求保留原著作權聲明；另加一行自己的著作權聲明，不刪除原本的。
 - `README.md`、`README.zh-TW.md`、`SECURITY.md`、`.github/ISSUE_TEMPLATE/access-code-request.md`：線上 demo 的網址、@ 的帳號與回報方式。
+- 登入頁的帳號登入只是展示（#287）：換成客戶的身分驗證，要改的地方見 `docs/client-config.md`「登入（展示）」。
 
 ## 新的組織
 

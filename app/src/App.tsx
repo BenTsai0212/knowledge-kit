@@ -44,7 +44,7 @@ import { strings } from "./client/i18n";
 import { TimelinePage } from "./ui/TimelinePage";
 import { UploadPage } from "./ui/UploadPage";
 import { Sidebar } from "./ui/Sidebar";
-import { canSwitchIdentity, demoAccount, type SignIn } from "./ui/sign-in";
+import { canSwitchIdentity, demoAccount, identityControl, type SignIn } from "./ui/sign-in";
 import { SignInPanel, type Rejected } from "./ui/SignInPanel";
 
 const { client, access } = clientConfig;
@@ -315,6 +315,7 @@ export function App() {
       <Sidebar
         language={language}
         identity={identity}
+        identityControl={identityControl(signIn)}
         account={signIn?.kind === "account" ? demoAccount(signIn.role) : undefined}
         onIdentity={(id) => {
           // 帳號登入時身分是登入的帳號，不能切換（#287）；介面上沒有選單，這裡再擋一次
