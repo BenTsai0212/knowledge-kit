@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { TimelineEntry } from "../graph/timeline";
 import css from "./app.css?raw";
-import { entityTypeShape, mentionedEntityIds, timelineEmptyKind, timelineSections } from "./timeline-view";
+import { dateParts, entityTypeShape, mentionedEntityIds, timelineEmptyKind, timelineSections } from "./timeline-view";
 
 const entry = (documentId: string, date: string | null, passages: string[][]): TimelineEntry => ({
   documentId,
@@ -50,6 +50,13 @@ describe("時間軸的區段與篩選", () => {
   });
 });
 
+describe("日期欄的年與月日（#282）", () => {
+  it("「YYYY-MM-DD」拆成年與月日，其他字串不拆", () => {
+    expect(dateParts("2026-03-01")).toEqual({ year: "2026", monthDay: "03-01" });
+    expect(dateParts("2026")).toEqual({ year: null, monthDay: "2026" });
+  });
+});
+
 describe("時間軸的樣式（docs/design.md）", () => {
   const rule = (selector: string) => css.match(new RegExp(`(?:^|\\n)${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\{([^}]*)\\}`))?.[1] ?? "";
 
@@ -63,5 +70,24 @@ describe("時間軸的樣式（docs/design.md）", () => {
     expect(date).toMatch(/font-family:\s*var\(--font-mono\)/);
     expect(date).toMatch(/color:\s*var\(--color-textMuted\)/);
     expect(date).toMatch(/text-align:\s*right/);
+  });
+
+  // 手機（#282，docs/design.md「時間軸、上傳、待審、評測台與更多（手機）」）
+  const phone = (selector: string) => rule(`.app--phone ${selector}`);
+
+  it("手機：日期欄 46px，年與月日分兩行", () => {
+    expect(phone(".timeline-entry")).toMatch(/grid-template-columns:\s*46px /);
+    expect(phone(".timeline-date__year")).toMatch(/display:\s*block/);
+    expect(phone(".timeline-date__sep")).toMatch(/display:\s*none/);
+  });
+
+  it("手機：篩選晶片一行、橫向滑動，晶片不換行、觸控目標至少 44px", () => {
+    const filter = phone(".timeline-filter");
+    expect(filter).toMatch(/flex-wrap:\s*nowrap/);
+    expect(filter).toMatch(/overflow-x:\s*auto/);
+    const chip = phone(".timeline-filter button.chip");
+    expect(chip).toMatch(/flex:\s*none/);
+    expect(chip).toMatch(/white-space:\s*nowrap/);
+    expect(chip).toMatch(/min-height:\s*44px/);
   });
 });

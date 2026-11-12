@@ -33,6 +33,13 @@ export function timelineSections(entries: readonly TimelineEntry[], filter: stri
   return sections;
 }
 
+// 日期拆成年與月日（#282）：手機的日期欄只有 46px，年與月日分兩行；桌機照樣接成「YYYY-MM-DD」。
+// 不是「YYYY-MM-DD」的字串不拆，整個放在 monthDay
+export function dateParts(date: string): { year: string | null; monthDay: string } {
+  const m = /^(\d{4})-(\d{2}-\d{2})$/.exec(date);
+  return m === null ? { year: null, monthDay: date } : { year: m[1], monthDay: m[2] };
+}
+
 // 空狀態（#245）：沒有文件（"none"）、依實體篩選後沒有符合的文件（"filtered"，下一步是回到全部），或有文件可顯示（null）
 export function timelineEmptyKind(sections: TimelineSections, filter: string | null): "none" | "filtered" | null {
   const rows = [...sections.dated, ...sections.undated];
