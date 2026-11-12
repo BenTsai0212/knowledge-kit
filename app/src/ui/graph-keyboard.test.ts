@@ -1,17 +1,23 @@
 import { describe, expect, it, vi } from "vitest";
+import { strings } from "../client/i18n";
+import { ALL } from "../graph/expansion";
 import type { Graph } from "../graph/read";
+import css from "./app.css?raw";
 import {
   ANNOUNCE_DEBOUNCE_MS,
   announceEnter,
   announceGo,
   announceMove,
   announceShown,
+  backStep,
   createAnnouncer,
   entryEntity,
   keyAction,
+  KEY_HELP,
   moveCursor,
   neighborsClockwise,
   relationSentences,
+  toggleOnly,
 } from "./graph-keyboard";
 
 const entity = (id: string, type: string, zh: string, en: string) => ({ id, type, name: zh, names: { "zh-TW": zh, en }, sources: [] });
@@ -166,5 +172,38 @@ describe("報讀的去抖（#289）", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("Backspace 與 Space（#289）", () => {
+  it("Backspace 回到展開路徑的上一段；只有一層時回到全部；已是全部時沒有上一個", () => {
+    expect(backStep(["p1", "t1"])).toEqual(["p1"]);
+    expect(backStep(["p1"])).toEqual(ALL);
+    expect(backStep(ALL)).toBeNull();
+  });
+
+  it("Space 只看目前的實體，再按一次回到原本的展開", () => {
+    const on = toggleOnly(full, { expansion: ["p1", "t1"], isolated: false, saved: null }, "t2");
+    expect(on).toEqual({ expansion: ["t2"], isolated: true, saved: ["p1", "t1"], on: true });
+    expect(toggleOnly(full, on, "t2")).toEqual({ expansion: ["p1", "t1"], isolated: false, saved: null, on: false });
+  });
+
+  it("只看的是別的實體時改成只看目前的實體；回到原本的展開時截掉看不到的部分", () => {
+    expect(toggleOnly(full, { expansion: ["t2"], isolated: true, saved: ALL }, "p1").expansion).toEqual(["p1"]);
+    expect(toggleOnly(limited, { expansion: ["t1"], isolated: true, saved: ["p1", "j1", "t1"] }, "t1").expansion).toEqual(["p1"]);
+  });
+});
+
+describe("按鍵表與提示列（#289）", () => {
+  it("列出規格的每一個按鍵，說明都在 i18n", () => {
+    const texts = strings("zh-TW").graphKeyboard;
+    expect(KEY_HELP.flatMap((h) => h.keys)).toEqual(["Tab", "←", "→", "Enter", "Backspace", "Space", "A", "/", "+", "-", "0", "Esc", "?"]);
+    for (const h of KEY_HELP) expect(texts[h.text]).toBeTruthy();
+  });
+
+  it("提示列只在外框有鍵盤焦點（:focus-visible）時出現", () => {
+    const cssText = css.replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(cssText).toMatch(/\.graph-keys\s*\{[^}]*display:\s*none/);
+    expect(cssText).toMatch(/\.graph-frame:focus-visible \+ \.graph-keys\s*\{[^}]*display:\s*flex/);
   });
 });

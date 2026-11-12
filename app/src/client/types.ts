@@ -393,6 +393,20 @@ export interface UiStrings {
     relation: string;
     relationJoin: string;
     sentenceJoin: string;
+    // Space（只看它／回到原本的展開）的報讀；按鍵表（?）與提示列的標題與各按鍵的說明（鍵帽在 ui/graph-keyboard.ts 的 KEY_HELP）
+    onlyOn: string;
+    onlyOff: string;
+    helpTitle: string;
+    helpTab: string;
+    helpMove: string;
+    helpGo: string;
+    helpBack: string;
+    helpOnly: string;
+    helpAsk: string;
+    helpSearch: string;
+    helpZoom: string;
+    helpReset: string;
+    helpKeys: string;
   };
   askAboutEntity: string;
   relatedEntities: string;

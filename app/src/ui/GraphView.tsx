@@ -8,7 +8,7 @@ import type { Graph } from "../graph/read";
 import { relationCounts } from "../graph/search";
 import { clampLabel, nodeLabels, type MeasureText } from "./graph-labels";
 import { edgeWidth, graphStyle, NODE_LABEL_FONT_SIZE, NODE_LABEL_MAX_LINES, NODE_LABEL_MAX_WIDTH, nodeSize } from "./graph-style";
-import { EXPAND_MS, motionDuration, PAN_MS, watchReducedMotion } from "./motion";
+import { EXPAND_MS, MOTION, motionDuration, PAN_MS, watchReducedMotion } from "./motion";
 import { isDark, watchColorScheme } from "./theme";
 
 interface Props {
@@ -42,6 +42,9 @@ export interface KeyboardMarks {
 export interface GraphViewApi {
   // 節點在版面上的位置（model 座標，不受平移與縮放影響）；圖還沒畫好時是空的
   positions(): Map<string, { x: number; y: number }>;
+  // 以畫面中心縮放（+／-）與全部顯示（0）；減少動態效果時直接到位
+  zoomBy(factor: number): void;
+  fit(): void;
 }
 
 const NONE: ReadonlySet<string> = new Set();
@@ -125,6 +128,37 @@ function markKeyboard(cy: Core, keyboard: KeyboardMarks | null) {
     current.connectedEdges().addClass("kb-near");
     if (keyboard.cursor !== null) cy.$id(keyboard.cursor).addClass("kb-cursor");
   });
+}
+
+// 鍵盤的游標（沒有游標時是目前的實體）移到畫面外時平移到中央（sweep，減少動態效果時直接到位）
+function reveal(cy: Core, keyboard: KeyboardMarks | null, reduced: boolean) {
+  const id = keyboard?.cursor ?? keyboard?.current ?? null;
+  if (id === null) return;
+  const node = cy.$id(id);
+  if (node.empty()) return;
+  const [box, extent] = [node.boundingBox(), cy.extent()];
+  if (box.x1 >= extent.x1 && box.x2 <= extent.x2 && box.y1 >= extent.y1 && box.y2 <= extent.y2) return;
+  const ms = motionDuration(reduced, PAN_MS);
+  cy.stop(true, false);
+  if (ms === 0) cy.center(node);
+  else cy.animate({ center: { eles: node } }, { duration: ms, easing: "ease-in-out" });
+}
+
+// 縮放與全部顯示（鍵盤的 +／-／0）
+function zoomTo(cy: Core, level: number, reduced: boolean) {
+  const position = { x: cy.width() / 2, y: cy.height() / 2 };
+  const zoom = Math.min(Math.max(level, cy.minZoom()), cy.maxZoom());
+  const ms = motionDuration(reduced, MOTION.fast);
+  cy.stop(true, false);
+  if (ms === 0) cy.zoom({ level: zoom, renderedPosition: position });
+  else cy.animate({ zoom: { level: zoom, renderedPosition: position } }, { duration: ms, easing: "ease-out" });
+}
+
+function fitAll(cy: Core, reduced: boolean) {
+  const ms = motionDuration(reduced, PAN_MS);
+  cy.stop(true, false);
+  if (ms === 0) cy.fit(cy.elements(), 30);
+  else cy.animate({ fit: { eles: cy.elements(), padding: 30 } }, { duration: ms, easing: "ease-in-out" });
 }
 
 // 聚焦集合以外變灰（找到多跳路徑時改為路徑以外變灰）；全部時都不變灰。類型篩選掉的實體與它們的線也變灰。
@@ -281,12 +315,22 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
   }, [expansion, path, excluded, isolated]);
 
   useEffect(() => {
-    if (cy.current !== null) markKeyboard(cy.current, keyboard);
+    if (cy.current === null) return;
+    markKeyboard(cy.current, keyboard);
+    reveal(cy.current, keyboard, reduced.current);
   }, [keyboard?.current, keyboard?.cursor, keyboard === null]);
 
   useEffect(() => {
     if (api === undefined) return;
-    api.current = { positions: () => new Map((cy.current?.nodes() ?? []).map((n) => [n.id(), { ...n.position() }])) };
+    api.current = {
+      positions: () => new Map((cy.current?.nodes() ?? []).map((n) => [n.id(), { ...n.position() }])),
+      zoomBy: (factor) => {
+        if (cy.current !== null) zoomTo(cy.current, cy.current.zoom() * factor, reduced.current);
+      },
+      fit: () => {
+        if (cy.current !== null) fitAll(cy.current, reduced.current);
+      },
+    };
     return () => {
       api.current = null;
     };

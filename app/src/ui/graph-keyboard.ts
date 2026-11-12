@@ -2,6 +2,7 @@
 // 只在 readGraph() 回傳的可見圖上計算（#247）：順序、數量、相關實體與報讀的句子都只涉及目前身分看得到的實體與關係，
 // 句子不提及看不到的部分。節點的位置由 GraphView 從 cytoscape 讀出後傳入。
 import { fill, strings } from "../client/i18n";
+import { ALL, keepVisible as keepVisiblePath, only, type Expansion } from "../graph/expansion";
 import type { Graph, GraphEntity, GraphRelation } from "../graph/read";
 import { relationCounts, topConnected } from "../graph/search";
 import { entityOptionLabel, entityTypeLabel, relationTypeLabel } from "./graph-labels";
@@ -140,6 +141,44 @@ export const announceGo = (graph: Graph, id: string, language: string) => fill(s
 // 篩選後與回到全部：顯示 {entities} 個實體。
 export const announceShown = (graph: Graph, excluded: ReadonlySet<string>, language: string) =>
   fill(strings(language).graphKeyboard.shown, { entities: visibleCounts(graph, excluded).entities }, language);
+
+// Backspace：回到展開路徑的上一段，與麵包屑一致（#289 決定 3）；只有一層時回到全部（等同麵包屑的「回到全部」）。
+// 已是全部時回 null（報讀「已經是第一個實體」）
+export function backStep(expansion: Expansion): Expansion | null {
+  return expansion.length === 0 ? null : expansion.slice(0, -1);
+}
+
+export interface OnlyState {
+  expansion: Expansion;
+  isolated: boolean;
+  // 按 Space 之前的展開，再按一次時回到這裡
+  saved: Expansion | null;
+}
+
+// Space：目前的實體已是「只看它」時回到原本的展開（截掉看不到的部分），否則只看它（#240 的 isolated）
+export function toggleOnly(graph: Graph, state: OnlyState, at: string): OnlyState & { on: boolean } {
+  const showingOnly = state.isolated && state.expansion.length === 1 && state.expansion[0] === at;
+  if (showingOnly) return { expansion: keepVisiblePath(graph, state.saved ?? ALL), isolated: false, saved: null, on: false };
+  return { expansion: only(at), isolated: true, saved: state.expansion, on: true };
+}
+
+// 按鍵表（?）與提示列：鍵帽是鍵盤上印的符號與鍵名，不隨語言改變；說明在 client/i18n/ 的 graphKeyboard
+export type HelpText = "helpTab" | "helpMove" | "helpGo" | "helpBack" | "helpOnly" | "helpAsk" | "helpSearch" | "helpZoom" | "helpReset" | "helpKeys";
+export const KEY_HELP: readonly { keys: readonly string[]; text: HelpText; hint?: true }[] = [
+  { keys: ["Tab"], text: "helpTab" },
+  { keys: ["←", "→"], text: "helpMove", hint: true },
+  { keys: ["Enter"], text: "helpGo", hint: true },
+  { keys: ["Backspace"], text: "helpBack", hint: true },
+  { keys: ["Space"], text: "helpOnly" },
+  { keys: ["A"], text: "helpAsk" },
+  { keys: ["/"], text: "helpSearch", hint: true },
+  { keys: ["+", "-", "0"], text: "helpZoom" },
+  { keys: ["Esc"], text: "helpReset", hint: true },
+  { keys: ["?"], text: "helpKeys", hint: true },
+];
+
+// 縮放：一次放大或縮小的倍率
+export const ZOOM_STEP = 1.25;
 
 export interface Timers {
   setTimeout(callback: () => void, ms: number): unknown;

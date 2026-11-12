@@ -12,8 +12,24 @@ import { EntityIcon } from "./EntityIcon";
 import { EntityPanel } from "./EntityPanel";
 import { EntitySearch } from "./EntitySearch";
 import { entityOptionLabel } from "./graph-labels";
-import { announceEnter, announceGo, announceMove, announceShown, createAnnouncer, entryEntity, keyAction, moveCursor, neighborsClockwise } from "./graph-keyboard";
+import { closeDialog } from "./dialog-motion";
+import {
+  announceEnter,
+  announceGo,
+  announceMove,
+  announceShown,
+  backStep,
+  createAnnouncer,
+  entryEntity,
+  keyAction,
+  KEY_HELP,
+  moveCursor,
+  neighborsClockwise,
+  toggleOnly,
+  ZOOM_STEP,
+} from "./graph-keyboard";
 import { GraphView, type GraphViewApi } from "./GraphView";
+import { prefersReducedMotion } from "./motion";
 import { PathPanel } from "./PathPanel";
 import { createRequestGate } from "./requests";
 import { fill, strings } from "../client/i18n";
@@ -83,6 +99,19 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
     return announcer.cancel;
   }, [announcer]);
   const view = useRef<GraphViewApi | null>(null);
+  const frame = useRef<HTMLDivElement>(null);
+  const help = useRef<HTMLDialogElement>(null);
+  const search = useRef<HTMLDivElement>(null);
+  // Space 之前的展開（再按一次 Space 時回到這裡）
+  const beforeOnly = useRef<Expansion | null>(null);
+  // 用 / 跳到搜尋框時，選了結果後焦點回到外框（#289）；在 render 之後才移動焦點，讓進入時讀到新的選取
+  const searchFromFrame = useRef(false);
+  const [refocus, setRefocus] = useState(0);
+  // 關閉按鍵表（?）後回到外框：保留目前的實體與游標，不重新報讀進入
+  const resume = useRef(false);
+  useEffect(() => {
+    if (refocus > 0) frame.current?.focus();
+  }, [refocus]);
 
   useEffect(() => {
     const ticket = reads.current.begin();
@@ -172,13 +201,28 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
   };
   const onFrameFocus = (e: ReactFocusEvent<HTMLDivElement>) => {
     // 只處理鍵盤進入外框；用滑鼠點畫布時不畫圈、不報讀，之後按鍵時才進入
-    if (e.target === e.currentTarget && e.currentTarget.matches(":focus-visible")) enter();
+    if (e.target !== e.currentTarget) return;
+    if (resume.current) {
+      resume.current = false;
+      setFocused(true);
+    } else if (e.currentTarget.matches(":focus-visible")) enter();
   };
   const onFrameKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
     if (e.target !== e.currentTarget) return;
     const action = keyAction(e);
-    if (action === null || !["prev", "next", "go", "back", "reset"].includes(action)) return;
+    if (action === null) return;
     e.preventDefault();
+    if (action === "zoomIn" || action === "zoomOut") return view.current?.zoomBy(action === "zoomIn" ? ZOOM_STEP : 1 / ZOOM_STEP);
+    if (action === "fit") return view.current?.fit();
+    if (action === "help") {
+      // 關閉時瀏覽器把焦點還給外框（之後 onClose 再確保一次）：先記下，回來時不重新進入
+      resume.current = true;
+      return help.current?.showModal();
+    }
+    if (action === "search") {
+      searchFromFrame.current = true;
+      return search.current?.querySelector("input")?.focus();
+    }
     const at = focused && current !== null ? current : enter();
     if (at === null) return;
     if (action === "prev" || action === "next") {
@@ -195,12 +239,27 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
       setCursor(null);
       announcer.say(announceGo(graph, target, language));
     } else if (action === "back") {
-      // 上一個實體＝展開路徑的上一段，與麵包屑一致（#289 決定 3）
-      if (expansion.length < 2) return announcer.say(k.atStart);
-      const previous = expansion[expansion.length - 2];
-      setExpansion(expansion.slice(0, -1));
-      setKeyboardCurrent(previous);
-      announcer.say(announceGo(graph, previous, language));
+      // 上一個實體＝展開路徑的上一段，與麵包屑一致（#289 決定 3）；只有一層時回到全部，目前的實體保留在鍵盤的「目前」
+      const previous = backStep(expansion);
+      if (previous === null) return announcer.say(k.atStart);
+      setExpansion(previous);
+      setCursor(null);
+      const target = previous.at(-1);
+      if (target === undefined) {
+        setKeyboardCurrent(at);
+        announcer.say(announceShown(graph, excluded, language));
+      } else {
+        setKeyboardCurrent(target);
+        announcer.say(announceGo(graph, target, language));
+      }
+    } else if (action === "only") {
+      const next = toggleOnly(graph, { expansion, isolated, saved: beforeOnly.current }, at);
+      beforeOnly.current = next.saved;
+      setExpansion(next.expansion, next.isolated);
+      setKeyboardCurrent(at);
+      announcer.say(fill(next.on ? k.onlyOn : k.onlyOff, { name: nameOf(at) }));
+    } else if (action === "ask") {
+      onAskAbout(fill(s.askAboutEntity, { name: nameOf(at) }));
     } else if (expansion.length > 0) {
       // Esc：回到全部，目前的實體保留在鍵盤的「目前」
       setKeyboardCurrent(at);
@@ -213,7 +272,25 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
     <div className="graph-page">
       <section className="card graph-main">
         <div className="graph-tools">
-          <EntitySearch graph={graph} language={language} label={s.graphSearch} types={filter} onPick={(id) => setExpansion(only(id))} />
+          <div
+            ref={search}
+            className="graph-search"
+            onBlur={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget)) searchFromFrame.current = false;
+            }}
+          >
+            <EntitySearch
+              graph={graph}
+              language={language}
+              label={s.graphSearch}
+              types={filter}
+              onPick={(id) => {
+                setExpansion(only(id));
+                if (searchFromFrame.current) setRefocus((n) => n + 1);
+                searchFromFrame.current = false;
+              }}
+            />
+          </div>
           {/* 圖例兼類型篩選：沒勾的類型變灰，並排除在搜尋與起點清單外 */}
           <ul className="legend" aria-label={s.legend}>
             {entityTypes.map((t) => (
@@ -268,6 +345,7 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
             if (e.target === e.currentTarget) setFocused(false);
           }}
           onKeyDown={onFrameKeyDown}
+          ref={frame}
         >
           <GraphView
             graph={graph}
@@ -282,9 +360,47 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
             api={view}
           />
         </div>
+        {/* 按鍵提示列：只在外框有鍵盤焦點（:focus-visible）時出現（app.css）；報讀器從按鍵表（?）讀，這裡不重複 */}
+        <ul className="graph-keys" aria-hidden="true">
+          {KEY_HELP.filter((h) => h.hint).map((h) => (
+            <li key={h.text}>
+              {h.keys.map((key) => (
+                <kbd key={key}>{key}</kbd>
+              ))}{" "}
+              {k[h.text]}
+            </li>
+          ))}
+        </ul>
         <p className="visually-hidden" aria-live="polite" data-testid="graph-announcer">
           {announcement}
         </p>
+        {/* 按鍵表（?）：沿用置中的對話框；Esc 或「關閉」播放退場後關閉，焦點回到外框 */}
+        <dialog
+          ref={help}
+          className="dialog graph-help"
+          aria-labelledby="graph-help-title"
+          onCancel={(e) => (e.preventDefault(), closeDialog(e.currentTarget, prefersReducedMotion()))}
+          onClose={() => frame.current?.focus()}
+        >
+          <h2 id="graph-help-title">{k.helpTitle}</h2>
+          <dl>
+            {KEY_HELP.map((h) => (
+              <div key={h.text}>
+                <dt>
+                  {h.keys.map((key) => (
+                    <kbd key={key}>{key}</kbd>
+                  ))}
+                </dt>
+                <dd>{k[h.text]}</dd>
+              </div>
+            ))}
+          </dl>
+          <div className="dialog-actions">
+            <button type="button" onClick={() => help.current !== null && closeDialog(help.current, prefersReducedMotion())}>
+              {s.dialogClose}
+            </button>
+          </div>
+        </dialog>
       </section>
       <div className="graph-side">
         {selected === null ? (
