@@ -6,7 +6,7 @@ import design from "../../../docs/design.md?raw";
 import checkClient from "../../../scripts/check-client.mjs?raw";
 import css from "./app.css?raw";
 import { graphStyle } from "./graph-style";
-import { DARK_SCHEME, themeStyleSheet, themeVariables, watchColorScheme } from "./theme";
+import { DARK_SCHEME, DARK_SELECTOR, followColorScheme, isDark, SCHEME_ATTRIBUTE, themeStyleSheet, themeVariables, watchColorScheme } from "./theme";
 
 const cssText = css.replace(/\/\*[\s\S]*?\*\//g, "");
 
@@ -119,8 +119,8 @@ describe("設計系統 v1", () => {
     expect(Object.fromEntries(declarations(`${block};`))).toMatchObject({ "background-color": "var(--color-markReading)", color: "var(--color-readingText)" });
   });
 
-  // 深色模式的 app.css 規則（@media (prefers-color-scheme: dark) { … } 的內容）
-  const darkStart = cssText.indexOf(`@media ${DARK_SCHEME} {`);
+  // 深色模式的 app.css 規則（引用標號所在的第一個 :root[data-scheme="dark"] { … } 的內容）
+  const darkStart = cssText.indexOf(`${DARK_SELECTOR} {`);
   const darkCss = (() => {
     let depth = 0;
     for (let i = cssText.indexOf("{", darkStart); i < cssText.length; i++) {
@@ -129,7 +129,7 @@ describe("設計系統 v1", () => {
     }
     return "";
   })();
-  const lightCss = darkStart < 0 ? cssText : cssText.replace(`@media ${DARK_SCHEME} {${darkCss}}`, "");
+  const lightCss = darkStart < 0 ? cssText : cssText.replace(`${DARK_SELECTOR} {${darkCss}}`, "");
   const rule = (text: string, selector: string) => {
     const block = text.match(new RegExp(`(?:^|[\\n}])\\s*${selector.replace(/[.[\]"=:()+]/g, "\\$&")}\\s*\\{([^}]*)\\}`))?.[1];
     expect(block, selector).toBeDefined();
@@ -234,34 +234,74 @@ describe("設計系統 v1", () => {
 
 describe("深色模式", () => {
   const sheet = themeStyleSheet(clientConfig.theme);
-  const [light, dark] = sheet.split(`@media ${DARK_SCHEME}`);
+  const [light, dark] = sheet.split(DARK_SELECTOR);
 
-  it("淺色放在 :root，深色放在 prefers-color-scheme: dark 內，每個顏色都有", () => {
-    expect(light).toContain("color-scheme: light dark;");
+  it("淺色放在 :root，深色放在 :root[data-scheme=\"dark\"] 內，每個顏色都有", () => {
+    expect(light).toContain("color-scheme: light;");
     for (const [name, value] of Object.entries(themeVariables(clientConfig.theme))) expect(light).toContain(`${name}: ${value};`);
-    expect(dark).toBeDefined();
+    expect(dark).toContain("color-scheme: dark;");
     for (const [name, value] of Object.entries(clientConfig.theme.darkColors)) expect(dark).toContain(`--color-${name}: ${value};`);
     // 深色只換顏色，圓角與字型沿用
     expect(dark).not.toMatch(/--(?:radius|font)-/);
   });
 
-  it("系統切換淺色／深色時通知，取消後不再通知", () => {
+  it("app.css 的深色規則都在 DARK_SELECTOR 內，不直接用 media query（切換時才能交叉淡換，#246）", () => {
+    expect(cssText).not.toContain("prefers-color-scheme");
+    expect(cssText.split(`${DARK_SELECTOR} {`).length - 1).toBe(3);
+  });
+
+  it("依系統設定標記 root；系統切換時把重新標記交給 change（交叉淡換），取消後不再通知", () => {
     const listeners = new Set<() => void>();
     const queries: string[] = [];
+    const media = { matches: false };
     const fake = (query: string) => {
       queries.push(query);
       return {
+        get matches() {
+          return media.matches;
+        },
         addEventListener: (_type: string, fn: () => void) => listeners.add(fn),
         removeEventListener: (_type: string, fn: () => void) => listeners.delete(fn),
       } as unknown as MediaQueryList;
     };
-    let calls = 0;
-    const stop = watchColorScheme(fake, () => calls++);
+    const attributes = new Map<string, string>();
+    const root = { setAttribute: (name: string, value: string) => attributes.set(name, value), getAttribute: (name: string) => attributes.get(name) ?? null };
+    const changes: (() => void)[] = [];
+    const stop = followColorScheme(fake, root, (apply) => changes.push(apply));
     expect(queries).toEqual([DARK_SCHEME]);
+    expect(attributes.get(SCHEME_ATTRIBUTE)).toBe("light");
+    media.matches = true;
     for (const fn of listeners) fn();
-    expect(calls).toBe(1);
+    // change 拿到套用的函式，套用之前不改標記
+    expect(isDark(root)).toBe(false);
+    changes[0]();
+    expect(isDark(root)).toBe(true);
     stop();
     expect(listeners.size).toBe(0);
+  });
+
+  it("標記改變後通知（圖譜重新套用配色），取消後停止", () => {
+    const observed: unknown[] = [];
+    let notify = () => {};
+    let disconnected = false;
+    class FakeObserver {
+      constructor(callback: () => void) {
+        notify = callback;
+      }
+      observe(_target: unknown, options: unknown) {
+        observed.push(options);
+      }
+      disconnect() {
+        disconnected = true;
+      }
+    }
+    let calls = 0;
+    const stop = watchColorScheme({} as Node, () => calls++, FakeObserver as unknown as typeof MutationObserver);
+    expect(observed).toEqual([{ attributes: true, attributeFilter: [SCHEME_ATTRIBUTE] }]);
+    notify();
+    expect(calls).toBe(1);
+    stop();
+    expect(disconnected).toBe(true);
   });
 
   it("圖譜的配色只讀 theme.json 提供的變數，切換時讀到的值跟著改變", () => {

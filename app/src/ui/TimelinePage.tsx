@@ -7,6 +7,8 @@ import { entityOptionLabel } from "./graph-labels";
 import { PassageMarks } from "./PassageMarks";
 import { createRequestGate } from "./requests";
 import { EmptyState } from "./EmptyState";
+import { goneDelay, withGone } from "./gone-motion";
+import { prefersReducedMotion, staggerIndex } from "./motion";
 import { entityTypeShape, timelineEmptyKind, timelineSections, type TimelineRow } from "./timeline-view";
 import { strings } from "../client/i18n";
 import { clientConfig } from "../client/load";
@@ -43,7 +45,10 @@ function TypeMark({ type }: { type: string }) {
 // 時間軸頁（#241，docs/design.md）：三欄格線（日期、時間軸線與圓點、文件卡片），依日期由新到舊列出介面語言的文件，
 // 沒有日期的文件在最下方的「未註明日期」區。依實體篩選時不符合的文件變淡、不移除，位置不跳動。
 // 只列出目前身分看得到的文件（RLS），不顯示看不到的文件的數量或任何痕跡。
-// 切換身分或語言時重新讀取，舊結果忽略；篩選的實體已看不到時清除
+// 切換身分或語言時重新讀取，舊結果忽略；篩選的實體已看不到時清除。
+// 只切換身分時，讀完前保留舊清單，新身分看不到的文件模糊淡出並收合，其餘補位（gone-motion.ts，#246）
+const documentKey = (entry: TimelineEntry) => entry.documentId;
+
 export function TimelinePage({ db, identity, language, uploaded, focus, onFocused, onOpenSource }: Props) {
   const s = strings(language);
   const [graph, setGraph] = useState<Graph | null>(null);
@@ -52,10 +57,15 @@ export function TimelinePage({ db, identity, language, uploaded, focus, onFocuse
   const reads = useRef(createRequestGate());
   const list = useRef<HTMLDivElement>(null);
   const [flash, setFlash] = useState<string | null>(null);
+  // 畫面上的清單是哪個身分、語言讀的；切換身分時的上一份清單與消失播完的時間
+  const shown = useRef<{ identity: string; language: string; entries: TimelineEntry[] } | null>(null);
+  const [gone, setGone] = useState<{ previous: TimelineEntry[]; ms: number } | null>(null);
 
   useEffect(() => {
     const ticket = reads.current.begin();
-    setEntries(null);
+    const previous = shown.current?.language === language ? shown.current : null;
+    // 切換語言時清單整個換掉（交叉淡換）；只切換身分時保留舊清單
+    if (previous === null) setEntries(null);
     void (async () => {
       // 篩選晶片用的實體也依目前身分讀取；篩選的實體看不到時改為不篩選
       const g = await readGraph(db, identity);
@@ -64,10 +74,21 @@ export function TimelinePage({ db, identity, language, uploaded, focus, onFocuse
       if (!ticket.isCurrent()) return;
       setGraph(g);
       setEntityId((current) => (current !== null && g.entities.some((e) => e.id === current) ? current : null));
+      const removed = previous === null || previous.identity === identity ? 0 : withGone(previous.entries, timeline, documentKey).filter((r) => r.gone !== null).length;
+      const ms = goneDelay(prefersReducedMotion(), removed);
+      setGone(ms > 0 && previous !== null ? { previous: previous.entries, ms } : null);
+      shown.current = { identity, language, entries: timeline };
       setEntries(timeline);
     })();
     return () => reads.current.cancel();
   }, [db, identity, language]);
+
+  // 消失的文件播完後移除
+  useEffect(() => {
+    if (gone === null) return;
+    const timer = setTimeout(() => setGone(null), gone.ms);
+    return () => clearTimeout(timer);
+  }, [gone]);
 
   // onFocused 每次 render 都是新的函式，以 ref 取得最新的，不放進 effect 的相依
   const focused = useRef(onFocused);
@@ -101,13 +122,22 @@ export function TimelinePage({ db, identity, language, uploaded, focus, onFocuse
       .sort((a, b) => a.label.localeCompare(b.label, language)) ?? [];
   const languageNames = new Intl.DisplayNames([language], { type: "language" });
 
+  // 消失中的文件：依序的順序（documentId → 第幾個）
+  const rows = entries === null ? null : gone === null ? entries.map((item) => ({ item, gone: null })) : withGone(gone.previous, entries, documentKey);
+  const goneOrder = new Map(rows?.flatMap((r) => (r.gone === null ? [] : [[r.item.documentId, r.gone] as const])) ?? []);
+
   const renderRow = ({ entry, matches, entityIds }: TimelineRow) => {
     const mentioned = entityIds.filter((id) => byId.has(id));
+    const order = goneOrder.get(entry.documentId);
     return (
       <li
         key={entry.documentId}
         data-document-id={entry.documentId}
-        className={`timeline-entry${matches ? "" : " dimmed"}${entry.documentId === flash ? " flash" : ""}`}
+        className={`timeline-entry${matches ? "" : " dimmed"}${entry.documentId === flash ? " flash" : ""}${order === undefined ? "" : " is-gone"}`}
+        // 消失中的文件不能操作，也不讓輔助科技讀到
+        inert={order !== undefined}
+        aria-hidden={order === undefined ? undefined : true}
+        style={order === undefined ? undefined : ({ "--i": staggerIndex(order) } as CSSProperties)}
         // 淡出動畫結束時取消標示，程式與 CSS 的時間不會不一致
         onAnimationEnd={(e) => e.animationName.startsWith("timeline-flash") && setFlash(null)}
       >
@@ -151,7 +181,7 @@ export function TimelinePage({ db, identity, language, uploaded, focus, onFocuse
     );
   };
 
-  const sections = entries === null ? null : timelineSections(entries, entityId);
+  const sections = rows === null ? null : timelineSections(rows.map((r) => r.item), entityId);
   const empty = sections === null ? null : timelineEmptyKind(sections, entityId);
 
   return (

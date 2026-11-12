@@ -199,7 +199,9 @@ Light 與 Dark 共用同一套時間與曲線。
 - 對話框：置中的 `.dialog`（評測台的確認視窗）以 `kScale` 進場、遮罩 `kFade`；關閉（含 Esc）由 `ui/dialog-motion.ts` 的 `closeDialog()` 先播放反向的退場（fast）再關閉，減少動態效果時直接關閉。上傳的確認區仍是從底部升起的面板（#242 決定 1），只有遮罩淡入。
 - 邀請碼錯誤：輸入框保留被拒的碼、`aria-invalid` 時邊線是 `danger`，說明以 `kDrop` 在輸入框下方展開。
 - 改用關鍵字檢索的提示：以 `kExpand` 從頂端推開下方的內容。
-- 結構與減少動態效果的檢查：`ui/global-motion.test.ts`、`ui/dialog-motion.test.ts`，E2E 是 `e2e/motion.spec.ts`。切換身分、語言與主題在後續的 PR。
+- 切換身分：時間軸中新身分看不到的文件留在原位，以 `kGone` 模糊淡出並收合（第 2 個起依序延後 40ms），其餘補位；不放上鎖框、不留佔位或數量。只有切換前已在畫面上的文件會播放，播完就移除（`ui/gone-motion.ts`）。問答的對話與右側面板照舊在切換時清空，圖譜由 cytoscape 重建。
+- 切換語言、Light／Dark：以 View Transitions 原地交叉淡換整個畫面（`ui/cross-fade.ts`），舊畫面 `kFadeOut`（fast）、新畫面 `kFade`（base，延後 60ms）；不支援的瀏覽器直接切換。Light／Dark 仍跟隨系統設定，但由 JS 在 `<html>` 標上 `data-scheme`（`ui/theme.ts` 的 `followColorScheme()`），系統切換時才拍得到舊畫面。
+- 結構與減少動態效果的檢查：`ui/global-motion.test.ts`、`ui/dialog-motion.test.ts`、`ui/gone-motion.test.ts`、`ui/cross-fade.test.ts`，E2E 是 `e2e/motion.spec.ts`。減少動態效果時不做轉場、消失的文件直接移除。
 
 ### 入口頁主視覺
 

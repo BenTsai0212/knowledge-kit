@@ -39,6 +39,9 @@
 .a-load{transform-origin:left center;animation:kGrow 2400ms linear backwards}
 .a-timer{transform-origin:left center;animation:kTimer 5000ms linear forwards}
 .a-node{transform-box:fill-box;transform-origin:center;animation:kNode 1600ms cubic-bezier(.2,0,0,1) infinite}
+/* 切換身分：看不到的內容模糊淡出並收合高度，其餘補位（畫布版本 1794412955-7348，2026-11-11 擷取，#246 決定補充 2） */
+@keyframes kGone{0%{opacity:1;filter:none;height:40px}55%{opacity:0;filter:blur(4px);height:40px}100%{opacity:0;filter:blur(4px);height:0;margin-top:-6px}}
+.a-gone{overflow:hidden;animation:kGone 420ms cubic-bezier(.4,0,1,1) forwards}
 
 /* 動態 · 審核與說法不同 */
 @keyframes kExpand{from{grid-template-rows:0fr;opacity:0}}

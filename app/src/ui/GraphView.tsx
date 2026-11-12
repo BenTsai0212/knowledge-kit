@@ -9,7 +9,7 @@ import { relationCounts } from "../graph/search";
 import { nodeLabels } from "./graph-labels";
 import { edgeWidth, graphStyle, nodeSize } from "./graph-style";
 import { EXPAND_MS, motionDuration, PAN_MS, watchReducedMotion } from "./motion";
-import { DARK_SCHEME, watchColorScheme } from "./theme";
+import { isDark, watchColorScheme } from "./theme";
 
 interface Props {
   graph: Graph;
@@ -66,7 +66,7 @@ function elements(graph: Graph, language: string, labelGraph: Graph): ElementDef
 // 目前生效的 CSS 變數（淺色或深色）；減少動態效果時 transition 為 0；深色模式時實體色調亮
 function currentStyle(reduced: boolean) {
   const style = getComputedStyle(document.documentElement);
-  const dark = window.matchMedia(DARK_SCHEME).matches;
+  const dark = isDark(document.documentElement);
   return graphStyle((name) => style.getPropertyValue(name), entityTypes, motionDuration(reduced, EXPAND_MS), dark);
 }
 
@@ -212,7 +212,7 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
     // selected、expansion 的變化在下面的 effect 處理，不重建圖
   }, [graph, language, labelGraph]);
 
-  // 系統切換淺色／深色或減少動態效果時，重新讀出並套用到 cytoscape
+  // 淺色／深色的標記改變（系統切換後的交叉淡換，#246）或減少動態效果時，重新讀出並套用到 cytoscape
   useEffect(() => {
     const restyle = () => cy.current?.style(currentStyle(reduced.current));
     const stopMotion = watchReducedMotion(
@@ -222,7 +222,7 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
         restyle();
       },
     );
-    const stopScheme = watchColorScheme((query) => window.matchMedia(query), restyle);
+    const stopScheme = watchColorScheme(document.documentElement, restyle);
     return () => (stopMotion(), stopScheme());
   }, []);
 

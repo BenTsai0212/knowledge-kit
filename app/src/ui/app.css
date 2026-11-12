@@ -562,7 +562,8 @@ button.citation[aria-pressed="true"] {
   box-shadow: none;
 }
 
-@media (prefers-color-scheme: dark) {
+/* 深色的規則寫在 :root[data-scheme="dark"] 內（theme.ts 的 DARK_SELECTOR，依系統設定由 JS 標記，切換時交叉淡換，#246） */
+:root[data-scheme="dark"] {
   button.citation {
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-mark) 40%, var(--color-markSoft));
   }
@@ -1153,7 +1154,7 @@ main.qa > .source .source-text mark.entering {
   border-radius: 0.05rem;
 }
 
-@media (prefers-color-scheme: dark) {
+:root[data-scheme="dark"] {
   .entity-badge .type-dot {
     background: color-mix(in srgb, var(--type-color) 75%, var(--color-text));
   }
@@ -1364,6 +1365,47 @@ details.path summary {
 
 .timeline-entry.dimmed .timeline-dot {
   background: var(--color-graphFallback);
+}
+
+/* 切換身分（#246 決定補充 2）：新身分看不到的文件模糊淡出並收合（kGone，expand＋fast、退場曲線），其餘補位；不留佔位。
+   列是單一列的 grid，收合時內容以 min-height: 0 裁切（motion-reference.md「例外」）；第 2 個起依序延後 40ms（--i 是 staggerIndex） */
+.timeline-entry.is-gone {
+  overflow: hidden;
+  grid-template-rows: 1fr;
+  animation: kGone calc(var(--motion-expand) + var(--motion-fast)) var(--ease-exit) calc(var(--i, 0) * var(--motion-stagger-sentence) / 2) forwards;
+}
+
+.timeline-entry.is-gone > * {
+  min-height: 0;
+}
+
+@keyframes kGone {
+  0% {
+    opacity: 1;
+    filter: none;
+    grid-template-rows: 1fr;
+  }
+
+  55% {
+    opacity: 0;
+    filter: blur(4px);
+    grid-template-rows: 1fr;
+  }
+
+  100% {
+    opacity: 0;
+    filter: blur(4px);
+    grid-template-rows: 0fr;
+  }
+}
+
+/* 切換語言、Light／Dark（#246）：原地交叉淡換，舊畫面 kFadeOut（fast）、新畫面 kFade（base，延後 60ms），不滑動、不做圓形擴散（cross-fade.ts） */
+::view-transition-old(root) {
+  animation: kFadeOut var(--motion-fast) var(--ease-exit) forwards;
+}
+
+::view-transition-new(root) {
+  animation: kFade var(--motion-base) var(--ease-enter) var(--motion-stagger-list) backwards;
 }
 
 .timeline-meta,
@@ -2718,7 +2760,7 @@ label.inline {
 }
 
 /* 實體類型色在 Dark 調亮（design.md 的 OKLCH 公式以 srgb 混入 text 近似） */
-@media (prefers-color-scheme: dark) {
+:root[data-scheme="dark"] {
   .hero__shape {
     fill: color-mix(in srgb, var(--type-color) 75%, var(--color-text));
   }

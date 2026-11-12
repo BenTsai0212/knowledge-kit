@@ -58,7 +58,7 @@ describe("動態參考檔（#249）", () => {
   });
 
   it("參考檔讀得到全部的 keyframes（不是被 Vitest 換成空字串）", () => {
-    expect(referenceKeyframes.size).toBe(33);
+    expect(referenceKeyframes.size).toBe(34);
     for (const name of ["kSend", "kRise", "kPopS", "kOrbit", "kGlow", "kBump"]) expect(referenceKeyframes.has(name)).toBe(true);
   });
 
