@@ -3073,8 +3073,10 @@ label.inline {
 }
 
 /* 首頁（#283，docs/design.md「日常工具」的「首頁」）：問候與可見範圍、提問框與常見問題、主管的「等你處理」、問過的問題 */
+/* 欄寬是 minmax(0, 1fr)：不截斷的長標題（最近新增的文件、問過的問題）不會把欄撐寬，各卡片不超出畫面（#288） */
 .home {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   max-width: 56rem;
 }

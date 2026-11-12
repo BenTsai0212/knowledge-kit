@@ -98,6 +98,12 @@ describe("窄螢幕的按鈕", () => {
   });
 });
 
+describe("首頁", () => {
+  it("欄寬是 minmax(0, 1fr)：截斷的長標題不會把卡片撐出畫面", () => {
+    expect(rules().find((r) => r.selector === ".home" && r.media === null)?.decls["grid-template-columns"]).toBe("minmax(0, 1fr)");
+  });
+});
+
 describe("排版規則", () => {
   // 按鈕、分段（分頁）、晶片的選擇器
   const control = /button|chip|\[role="tab"\]|review-tabs/;
