@@ -189,13 +189,15 @@ test("清單模式：切換、篩選共用、關係句的連結跳到該項、�
   await expect(list).toBeVisible();
   await expect(frame(page)).toHaveCount(0);
 
-  // 類型篩選共用：取消勾選第一種類型時，該類型的群組（h3）不見
-  const firstType = page.locator(".graph-page .legend label").first();
-  const typeLabel = (await firstType.innerText()).trim();
-  await expect(list.getByRole("heading", { level: 3, name: typeLabel })).toBeVisible();
-  await firstType.click();
-  await expect(list.getByRole("heading", { level: 3, name: typeLabel })).toHaveCount(0);
-  await firstType.click();
+  // 類型篩選共用：取消勾選全部類型時清單沒有實體，勾回來後恢復（群組是 #254 的分群，見 graph-scale.spec.ts）
+  const items = list.locator(":scope > section > ul > li");
+  const listed = await items.count();
+  expect(listed).toBeGreaterThan(0);
+  const typeBoxes = page.locator(".graph-page .legend input[type=checkbox]");
+  for (const box of await typeBoxes.all()) await box.uncheck();
+  await expect(page.locator(".graph-list")).toHaveText(k.listEmpty);
+  for (const box of await typeBoxes.all()) await box.check();
+  await expect(items).toHaveCount(listed);
 
   // 關係句中的實體名稱是連結：跳到清單中的那一項（焦點移到它的名稱按鈕）
   const link = list.locator(".graph-list-relations a").first();

@@ -3,6 +3,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import type { DatasetDocument, EntitiesFile, RelationsFile } from "../../app/src/dataset/types";
 import { datasetSample, expectedVisible } from "../../app/src/evals/oracle";
+import type { Graph } from "../../app/src/graph/read";
 import type { RoleId } from "./app";
 import { access, clientDir, readClientJson } from "./client";
 
@@ -13,11 +14,12 @@ const documents = readdirSync(DOCUMENTS_DIR)
   .filter((f) => f.endsWith(".json"))
   .map((f) => JSON.parse(readFileSync(`${DOCUMENTS_DIR}/${f}`, "utf8")) as DatasetDocument);
 const entities = readClientJson<EntitiesFile>("data/entities.json").entities;
+const relationsFile = readClientJson<RelationsFile>("data/relations.json");
 const sample = datasetSample({
   root: "data/",
   documents: Object.fromEntries(documents.map((d) => [d.id, d])),
   entities: { entities },
-  relations: readClientJson<RelationsFile>("data/relations.json"),
+  relations: relationsFile,
 });
 
 const normalize = (text: string) => text.replace(/\s+/g, " ").trim();
@@ -100,4 +102,15 @@ export function sameNameEntities(role: RoleId, language: string): { name: string
 export function seesAllOf(viewer: RoleId, role: RoleId): boolean {
   const shown = visible(viewer);
   return [...visible(role)].every((id) => shown.has(id));
+}
+
+// 該身分看得到的圖（與 readGraph() 回傳的形狀相同，出處省略）：大量節點時的門檻與清單的分群（#254）用它算期望值
+export function visibleGraph(role: RoleId): Graph {
+  const v = expectedVisible(access, sample, role);
+  const seen = new Set(v.entities);
+  const shown = new Set(v.relations);
+  return {
+    entities: entities.filter((e) => seen.has(e.id)).map((e) => ({ id: e.id, type: e.type, name: e.name, names: e.names, sources: [] })),
+    relations: relationsFile.relations.filter((r) => shown.has(r.id)).map((r) => ({ id: r.id, type: r.type, from: r.from, to: r.to, sources: [] })),
+  };
 }
