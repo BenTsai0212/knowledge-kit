@@ -7,6 +7,8 @@ import type { ReviewDocument, ReviewEntity, ReviewRelation } from "../extraction
 import {
   batchPlan,
   canBatch,
+  choiceCard,
+  choiceShown,
   docCollapsible,
   entityApproval,
   entityMark,
@@ -16,6 +18,8 @@ import {
   initialChoice,
   inputSize,
   isSuggested,
+  mergeCandidates,
+  missingNameLanguages,
   namesComplete,
   namesInvalid,
   nextTab,
@@ -434,5 +438,42 @@ describe("toastText", () => {
 
   it("名稱中的替換字元與標記原樣保留", () => {
     expect(toastText(approved, ["$& <b>甲</b> $1"])).toBe("已核准：$& <b>甲</b> $1");
+  });
+});
+
+describe("合併選擇的單選卡（#243）", () => {
+  const choose: MergeSuggestion = { mode: "choose", candidates: ["a", "b"] };
+  const suggested: MergeSuggestion = { mode: "choose", candidates: ["a"] };
+  const auto: MergeSuggestion = { mode: "auto", target: "a" };
+
+  it("候選：auto 是合併對象，choose 是全部候選，建立新實體沒有候選", () => {
+    expect(mergeCandidates(choose)).toEqual(["a", "b"]);
+    expect(mergeCandidates(auto)).toEqual(["a"]);
+    expect(mergeCandidates({ mode: "new" })).toEqual([]);
+  });
+
+  it("需要逐筆決定的一直展開；系統建議與自動合併按下「變更合併對象」才展開；建立新實體不展開", () => {
+    expect(choiceShown(choose, false)).toBe(true);
+    expect(choiceShown(suggested, false)).toBe(false);
+    expect(choiceShown(suggested, true)).toBe(true);
+    expect(choiceShown(auto, false)).toBe(false);
+    expect(choiceShown(auto, true)).toBe(true);
+    expect(choiceShown({ mode: "new" }, true)).toBe(false);
+  });
+
+  it("選中的卡：合併、建立新實體，還沒選擇時沒有", () => {
+    expect(choiceCard({ mergeInto: "a" })).toBe("merge");
+    expect(choiceCard({ mergeInto: null })).toBe("new");
+    expect(choiceCard({ mergeInto: undefined })).toBeNull();
+    expect(choiceCard(initialChoice(choose))).toBeNull();
+    expect(choiceCard(initialChoice(suggested))).toBe("merge");
+  });
+});
+
+describe("missingNameLanguages（#243）", () => {
+  it("列出去掉空白後沒有值的語言，依語言的順序", () => {
+    expect(missingNameLanguages({ "zh-TW": "王小明", en: "" }, ["zh-TW", "en"])).toEqual(["en"]);
+    expect(missingNameLanguages({ en: " " }, ["zh-TW", "en"])).toEqual(["zh-TW", "en"]);
+    expect(missingNameLanguages({ "zh-TW": "王小明", en: "Wang" }, ["zh-TW", "en"])).toEqual([]);
   });
 });

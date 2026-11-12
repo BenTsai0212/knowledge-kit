@@ -832,7 +832,8 @@ main.qa > .source .source-text mark.entering {
   }
 }
 
-/* 待審頁的第二層：底線式分頁（#243）。整列一條 border 底線，選中的分頁是 2px text 底線、粗體；數量直接接在名稱後 */
+/* 待審頁的第二層：底線式分頁（#243）。整列一條 border 底線，選中的分頁是 2px text 底線、粗體；數量直接接在名稱後。
+   一律單行，窄螢幕超出時橫向捲動（不換行，底線不斷開）；分頁列往下 1px 疊在整列的底線上，捲動容器不裁掉選中的底線 */
 .review-toolbar {
   display: flex;
   align-items: flex-end;
@@ -843,8 +844,17 @@ main.qa > .source .source-text mark.entering {
 
 .review-tabs {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  flex: 0 1 auto;
+  min-width: 0;
   gap: 1.25rem;
+  margin-bottom: -1px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.review-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .review-tabs [role="tab"] {
@@ -852,7 +862,8 @@ main.qa > .source .source-text mark.entering {
   border: none;
   border-bottom: 2px solid transparent;
   border-radius: 0;
-  margin-bottom: -1px;
+  flex: none;
+  white-space: nowrap;
   padding: 0.5rem 0 0.4rem;
   color: var(--color-textMuted);
   font-weight: 400;
@@ -1832,6 +1843,56 @@ label.inline {
   margin-top: 0.75rem;
 }
 
+/* 名稱缺少語言的實體（#243）：整列 warning 細框（不做大面積底色），缺的欄位標示必填 */
+.review-entity.is-warning {
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius-small);
+  padding: 0.35rem 0.5rem;
+}
+
+.review-required {
+  margin: 0 0.25rem;
+  color: var(--color-warning);
+  font-size: 0.8rem;
+}
+
+/* 合併選擇（#243）：列內展開兩張單選卡（合併到既有實體、建立新實體），選中用 primary 框線 */
+.review-choice {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.5rem;
+  margin: 0.5rem 0 0;
+}
+
+.review-choice__card {
+  display: grid;
+  align-content: start;
+  gap: 0.35rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  padding: 0.5rem 0.75rem;
+}
+
+.review-choice__card.is-selected {
+  border-color: var(--color-primary);
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+
+.review-choice__title {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.review-choice__option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
 .review-prepared > summary {
   cursor: pointer;
 }
@@ -1948,6 +2009,23 @@ label.inline {
 .conflict-side h4,
 .conflict-side p {
   margin: 0 0 0.35rem;
+}
+
+.conflict-side h4 {
+  color: var(--color-conflict);
+  font-size: 0.8rem;
+}
+
+/* 出處：說法下方，文件標題、等級、日期與「打開原文」 */
+.conflict-source {
+  font-size: 0.875rem;
+}
+
+/* 三個決定按鈕：在兩種說法的下方 */
+.conflict-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 @media (max-width: 640px) {

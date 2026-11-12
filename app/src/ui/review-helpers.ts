@@ -277,6 +277,20 @@ export function entityMark(suggestion: MergeSuggestion): "new" | "auto" | "sugge
   return isSuggested(suggestion) ? "suggested" : null;
 }
 
+// 合併選擇的候選（#243）：auto 的合併對象、choose 的候選；建立新實體的沒有候選（不顯示單選卡）
+export const mergeCandidates = (suggestion: MergeSuggestion): readonly string[] =>
+  suggestion.mode === "choose" ? suggestion.candidates : suggestion.mode === "auto" ? [suggestion.target] : [];
+
+// 合併選擇的單選卡是否展開（#243）：需要逐筆決定的實體一直展開；系統建議與自動合併在按下「變更合併對象」後展開
+export const choiceShown = (suggestion: MergeSuggestion, opened: boolean) => mergeCandidates(suggestion).length > 0 && (!canBatch(suggestion) || opened);
+
+// 單選卡選中的是哪一張（#243）：合併到既有實體、建立新實體；還沒選擇時為 null
+export const choiceCard = (choice: EntityChoice): "merge" | "new" | null =>
+  choice.mergeInto === undefined ? null : choice.mergeInto === null ? "new" : "merge";
+
+// 名稱缺少的語言（#243）：去掉前後空白後沒有值的語言，依 languages 的順序。只用於建立新實體（合併時名稱不使用）
+export const missingNameLanguages = (names: LocalizedText, languages: readonly string[]) => languages.filter((l) => (names[l] ?? "").trim() === "");
+
 // 文件卡片可以收合（#243）：沒有需要你確認的組、也沒有待處理的說法不同
 export const docCollapsible = (toConfirm: number, pendingConflicts: number) => toConfirm === 0 && pendingConflicts === 0;
 
