@@ -193,6 +193,14 @@ Light 與 Dark 共用同一套時間與曲線。
 | 全域 | toast | 上升 12px，底部細線倒數，滑鼠移上暫停 | base |
 | 全域 | 對話框 | 遮罩淡入；本體 98%→100%，延後 60ms | base |
 
+「全域」與「進入」列的實作（#246）：
+
+- toast：視窗底部置中，`kToast` 進場；底部細線 `kTimer` 依 `TOAST_MS`（10 秒）倒數，暫停與重新計時跟著 `ui/toast-timer.ts`（[docs/extraction.md](extraction.md)「畫面」）。
+- 對話框：置中的 `.dialog`（評測台的確認視窗）以 `kScale` 進場、遮罩 `kFade`；關閉（含 Esc）由 `ui/dialog-motion.ts` 的 `closeDialog()` 先播放反向的退場（fast）再關閉，減少動態效果時直接關閉。上傳的確認區仍是從底部升起的面板（#242 決定 1），只有遮罩淡入。
+- 邀請碼錯誤：輸入框保留被拒的碼、`aria-invalid` 時邊線是 `danger`，說明以 `kDrop` 在輸入框下方展開。
+- 改用關鍵字檢索的提示：以 `kExpand` 從頂端推開下方的內容。
+- 結構與減少動態效果的檢查：`ui/global-motion.test.ts`、`ui/dialog-motion.test.ts`，E2E 是 `e2e/motion.spec.ts`。切換身分、語言與主題在後續的 PR。
+
 ### 入口頁主視覺
 
 入口頁左側是沒有文字的知識圖譜動態，右側是邀請碼面板。

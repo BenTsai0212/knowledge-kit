@@ -3,6 +3,8 @@
 // cytoscape 的動畫由 JS 執行，以 watchReducedMotion() 判斷。
 
 export const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
+// 目前是否減少動態效果（讀一次，不監聽變化）；沒有 matchMedia 的環境當作否
+export const prefersReducedMotion = (): boolean => globalThis.matchMedia?.(REDUCED_MOTION).matches ?? false;
 
 // 新展開的節點放大浮現、由灰轉成類型色；新的線由起點畫向終點（圖譜，#199）
 export const EXPAND_MS = 300;

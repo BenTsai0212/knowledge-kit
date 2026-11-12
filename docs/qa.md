@@ -170,7 +170,7 @@ Rules:
 | 類型 | 來源 | 繁中訊息（多個類型同列時為摘要） |
 | --- | --- | --- |
 | `forbidden_origin` | Worker | 這個網址無法使用問答功能。 |
-| `invalid_access_code` | Worker | 邀請碼不正確，請重新輸入。（畫面清除 `sessionStorage` 中的碼並回到輸入畫面，#26 決定 3） |
+| `invalid_access_code` | Worker | 邀請碼不正確，請重新輸入。（畫面清除 `sessionStorage` 中的碼並回到輸入畫面，#26 決定 3；輸入框保留被拒的碼，#246） |
 | `daily_limit` | Worker | 今天的提問次數已用完，請明天再試。 |
 | `global_daily_limit` | Worker | 今天的線上試用額度已用完（所有使用者共用），請明天（台灣時間早上 8 點後）再試，或在本機執行。 |
 | `invalid_request`、`method_not_allowed` | Worker | 送出的內容（方式）有誤，請重新整理頁面後再試。 |
@@ -194,7 +194,7 @@ Rules:
 | 元件 | 內容 |
 | --- | --- |
 | `App.tsx` | 狀態：資料庫、邀請碼、身分、語言、這次的問答（依序累積）、右側面板（原文或實體，一次一個）、輸入框的文字 |
-| `ui/AccessCodeForm.tsx` | 輸入邀請碼（`type="password"`）；碼被拒時顯示原因 |
+| `ui/AccessCodeForm.tsx` | 輸入邀請碼（`type="password"`）；碼被拒時保留輸入、邊線換成 `danger`，原因在輸入框下方展開（#246） |
 | `ui/Sidebar.tsx` | 左側導覽：公司名稱、「虛構資料」標示、身分切換（`access.json` 的角色，標示「展示用權限」）、語言切換、更換邀請碼、頁籤；問答頁另列「這次的問題」，點了捲到該題 |
 | `ui/Conversation.tsx` | 中間的對話：每一題一個 `AnswerView`，依序往下累積；新的一題出現時捲到該題 |
 | `ui/QuestionPanel.tsx` | 固定在下方的輸入區：一行可橫向捲動的預設問題（依情境分組、標示情境的角色）、自由提問（500 字元上限）、「每一題都是獨立回答」的說明 |
@@ -213,7 +213,7 @@ Rules:
     - 靜態檔：JS 約 0.9 MB（gzip 約 230 KB）、`pglite.wasm` 約 10 MB（gzip 約 3.5 MB）、`pglite.data` 約 6.3 MB（gzip 約 2.1 MB）。
     - 下載後到可以提問：約 0.4 秒（wasm 已在快取）；第一次約 1.1 秒加上下載時間（#26 計畫時的量測）。
   - `vite.config.ts` 設 `optimizeDeps.exclude: ["@electric-sql/pglite"]`：開發伺服器預先打包會改變 PGlite 載入 wasm 與資料檔的路徑。
-- **邀請碼**：存在 React state 與 `sessionStorage`（`ui/access-code.ts`），關閉分頁就清除；不放會保留到下次開啟的瀏覽器儲存（`access-code.test.ts` 掃描 `app/src/`），也不放網址（只放在 `X-Access-Code` header）。收到 `invalid_access_code` 時清除並回到輸入畫面。
+- **邀請碼**：存在 React state 與 `sessionStorage`（`ui/access-code.ts`），關閉分頁就清除；不放會保留到下次開啟的瀏覽器儲存（`access-code.test.ts` 掃描 `app/src/`），也不放網址（只放在 `X-Access-Code` header）。收到 `invalid_access_code` 時清除並回到輸入畫面；被拒的碼只留在 React state 中、填回輸入框（#246）。
 - **提問**：預設問題與自由提問都以**送出當下**選的身分與語言提問（#26 決定 1、2）；預設問題旁標示的情境角色只是說明。
 - **每一題獨立回答**（#195）：問答依序往下累積，但每題只送出該題的文字，不帶上一題的問題與回答（`app/src/qa/` 的流程不變）；輸入框下方標明這一點。回答串流中停用送出與預設問題，不以新提問中斷前一題（#195 決定 3）。
 - **動態**（#227，刻度與對照表見 [docs/design.md](design.md)「動態」）：時間與曲線是 `ui/motion.ts` 產生的 CSS 變數（`--motion-*`、`--ease-*`，`main.tsx` 放進 `<style>`），`prefers-reduced-motion: reduce` 時時間都是 0ms，直接到位。
@@ -262,7 +262,7 @@ Rules:
 
 開關開啟時：
 
-- **邀請碼表單**預先填入公開試用碼，並說明所有訪客共用每日次數；訪客只要按送出。碼被拒（`invalid_access_code`，例如公開碼已更換）後回到表單時不再填入。給潛在客戶與夥伴的邀請碼（`invited` 組）照常手動輸入。
+- **邀請碼表單**預先填入公開試用碼，並說明所有訪客共用每日次數；訪客只要按送出。碼被拒（`invalid_access_code`，例如公開碼已更換）後回到表單時，輸入框保留被拒的碼並在下方說明原因，訪客改成新碼再送出（#246）。給潛在客戶與夥伴的邀請碼（`invited` 組）照常手動輸入。
 - **隱藏評測台頁籤**：一次會呼叫大量問答（#100 決定 4）；網址帶 `?tools=evals` 也不顯示。問答、圖譜、時間軸、上傳與待審照常開放；上傳後的萃取與比對同樣受每個碼的 `DAILY_LIMIT` 與全站的 `GLOBAL_DAILY_LIMIT` 限制（[worker/README.md](../worker/README.md)）。
 - **提醒**：問答頁顯示 `demoQaNotice`（問題會傳給模型供應商）；上傳頁以 `demoUploadNotice`（內容會傳給模型供應商、文件只存在瀏覽器）取代 `uploadEphemeral`。「虛構資料」「展示用權限」的標示與一般 build 相同。
 - 開關屬於部署設定，不放進 `client/`：客戶的 fork 不繼承 demo 的限制。

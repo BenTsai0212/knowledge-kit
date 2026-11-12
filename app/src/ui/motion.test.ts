@@ -107,8 +107,8 @@ describe("動態的刻度（#227，docs/design.md「刻度」）", () => {
   });
 
   it("問答的動畫只用刻度的變數，不寫死時間與曲線", () => {
-    // 時間軸的標示（#42）與 toast 不在本次範圍，另以自己的 reduced-motion 規則處理
-    const legacy = ["timeline-flash", "timeline-flash-static", "toast-in"];
+    // 時間軸的標示（#42）不在本次範圍，另以自己的 reduced-motion 規則處理
+    const legacy = ["timeline-flash", "timeline-flash-static"];
     const animations = [...cssText.matchAll(/(?:^|[;{\s])(animation(?:-delay)?|transition(?:-duration|-timing-function)?)\s*:\s*([^;{}]+);/g)]
       .map((m) => [m[1], m[2].trim()] as const)
       .filter(([, value]) => value !== "none" && !legacy.some((name) => value.startsWith(name)));
@@ -121,14 +121,14 @@ describe("動態的刻度（#227，docs/design.md「刻度」）", () => {
 
   it("問答用到的 keyframes 都有定義", () => {
     const used = new Set([...cssText.matchAll(/animation:\s*(k[A-Z]\w*)/g)].map((m) => m[1]));
-    expect(used).toEqual(new Set(["kSend", "kRise", "kPopS", "kFade", "kSlideIn", "kSweep", "kGrow", "kUp", "kLift", "kUnder", "kFlyTo", "kBump", "kExpand", "kCollapse", "kOutLeft", "kOut", "kDim"]));
+    expect(used).toEqual(new Set(["kSend", "kRise", "kPopS", "kFade", "kSlideIn", "kSweep", "kGrow", "kUp", "kLift", "kUnder", "kFlyTo", "kBump", "kExpand", "kCollapse", "kOutLeft", "kOut", "kDim", "kToast", "kTimer", "kScale", "kFadeOut", "kDrop"]));
     for (const name of used) expect(cssText).toContain(`@keyframes ${name} {`);
   });
 
   // 結束狀態留在 keyframes 的 to 會蓋掉元素自己的樣式（#227：螢光在刷過後變透明）。
-  // 退場（待審的列收合、往左淡出、往右離開、取代時舊說法變淡，#243）的結束狀態就是要留著，直到列卸載
+  // 退場（待審的列收合、往左淡出、往右離開、取代時舊說法變淡，#243；對話框遮罩的淡出、toast 倒數線走完，#246）的結束狀態就是要留著，直到元素卸載
   it("fill-mode 是 both／forwards 的問答 keyframes 只寫 from，結束時回到元素自己的樣式", () => {
-    const exits = ["kCollapse", "kOutLeft", "kOut", "kDim"];
+    const exits = ["kCollapse", "kOutLeft", "kOut", "kDim", "kFadeOut", "kTimer"];
     const keyframes = (name: string) => cssText.match(new RegExp(`@keyframes ${name} \\{([\\s\\S]*?)\\n\\}`))?.[1] ?? "";
     const filled = (css: string) =>
       [...css.matchAll(/animation:\s*(k[A-Z]\w*)[^;]*\b(both|forwards)\s*;/g)]

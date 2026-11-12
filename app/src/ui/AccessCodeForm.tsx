@@ -1,19 +1,20 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { errorMessage, strings } from "../client/i18n";
 import { onlineDemo } from "./online-demo";
 
 interface Props {
   language: string;
-  // 上一個碼被拒（invalid_access_code）時顯示原因
-  rejected: boolean;
+  // 上一個碼被拒（invalid_access_code）時是被拒的碼：顯示原因，輸入框保留這個碼（#246）；沒有被拒時為 null
+  rejected: string | null;
   onSubmit(code: string): void;
 }
 
 export function AccessCodeForm({ language, rejected, onSubmit }: Props) {
   const s = strings(language);
-  // 線上 demo 預先填入公開試用碼，訪客只要按送出（#100 決定 2）；碼被拒時不再填入，讓訪客輸入其他碼
-  const prefilled = rejected ? "" : onlineDemo.publicAccessCode;
-  const [code, setCode] = useState(prefilled);
+  const errorId = useId();
+  // 線上 demo 預先填入公開試用碼，訪客只要按送出（#100 決定 2）；碼被拒時保留已輸入的內容，不清空（#246）
+  const [code, setCode] = useState(rejected ?? onlineDemo.publicAccessCode);
+  const invalid = rejected !== null;
   return (
     <form
       className="card access-code"
@@ -23,12 +24,26 @@ export function AccessCodeForm({ language, rejected, onSubmit }: Props) {
       }}
     >
       <h2>{s.accessCodeTitle}</h2>
-      {rejected && <p className="error">{errorMessage(language, "invalid_access_code")}</p>}
       <label>
         {s.accessCodeLabel}
-        <input type="password" autoComplete="off" value={code} onChange={(e) => setCode(e.target.value)} />
+        <input
+          type="password"
+          autoComplete="off"
+          value={code}
+          aria-invalid={invalid || undefined}
+          aria-describedby={invalid ? errorId : undefined}
+          onChange={(e) => setCode(e.target.value)}
+        />
       </label>
-      {prefilled !== "" && <p className="muted">{s.demoAccessCodeHint}</p>}
+      {/* 錯誤：輸入框邊線換成 danger、說明往下展開（kDrop）；不搖晃、不閃紅（docs/design.md「全互動對照表」的「進入」） */}
+      {invalid && (
+        <div className="access-code__error">
+          <p id={errorId} className="error">
+            {errorMessage(language, "invalid_access_code")}
+          </p>
+        </div>
+      )}
+      {!invalid && onlineDemo.publicAccessCode !== "" && <p className="muted">{s.demoAccessCodeHint}</p>}
       <p className="muted">{s.accessCodeHint}</p>
       <button type="submit" disabled={code.trim() === ""}>
         {s.accessCodeSubmit}

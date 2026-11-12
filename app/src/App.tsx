@@ -58,7 +58,8 @@ export function App() {
   const [language, setLanguage] = useState(client.defaultLanguage);
   const [identity, setIdentity] = useState(access.roles[0].id);
   const [accessCode, setAccessCode] = useState(loadAccessCode);
-  const [codeRejected, setCodeRejected] = useState(false);
+  // 被拒的邀請碼：入口頁保留在輸入框並顯示原因（#246）；沒有被拒時為 null
+  const [rejectedCode, setRejectedCode] = useState<string | null>(null);
   const [db, setDb] = useState<Database | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   // 這次的問答，依序往下累積；每題獨立回答，不帶上一題（#195）
@@ -169,11 +170,11 @@ export function App() {
     setGraphFocus(null);
   }
 
-  // 邀請碼被拒：清除，回到輸入畫面（#26 決定 3）
+  // 邀請碼被拒：清除，回到輸入畫面（#26 決定 3）；輸入框保留被拒的碼（#246）
   function rejectAccessCode() {
     clearAccessCode();
     setAccessCode(null);
-    setCodeRejected(true);
+    setRejectedCode(accessCode ?? "");
   }
 
   async function onAsk(question: string) {
@@ -283,7 +284,7 @@ export function App() {
                 discard();
                 clearAccessCode();
                 setAccessCode(null);
-                setCodeRejected(false);
+                setRejectedCode(null);
               }
         }
         views={views(canReview)}
@@ -401,11 +402,11 @@ export function App() {
           <div className="entry__panel">
             <AccessCodeForm
               language={language}
-              rejected={codeRejected}
+              rejected={rejectedCode}
               onSubmit={(code) => {
                 saveAccessCode(code);
                 setAccessCode(code);
-                setCodeRejected(false);
+                setRejectedCode(null);
               }}
             />
             <RetrievalNotice language={language} preparesModel={preparesModel(client.retrieval)} status={providerStatus} />

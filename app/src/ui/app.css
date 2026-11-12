@@ -308,6 +308,30 @@ main {
   max-width: 420px;
 }
 
+/* 邀請碼錯誤（#246）：邊線換成 danger、說明往下展開（kDrop，base，延後 80ms）；保留輸入，不搖晃 */
+.access-code input[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+.access-code__error {
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: kDrop var(--motion-base) var(--ease-enter) var(--motion-stagger-sentence) backwards;
+}
+
+.access-code__error > * {
+  overflow: hidden;
+  min-height: 0;
+  margin: 0;
+}
+
+@keyframes kDrop {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+
 .muted {
   color: var(--color-textMuted);
 }
@@ -971,6 +995,18 @@ main.qa > .source .source-text mark.entering {
   accent-color: var(--notice-color);
 }
 
+/* 改用關鍵字檢索的提示（#246）：從對話頂端往下推開內容（kExpand，expand），常駐 */
+.retrieval-fallback {
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: kExpand var(--motion-expand) var(--ease-enter) backwards;
+}
+
+.retrieval-fallback > .notice {
+  overflow: hidden;
+  min-height: 0;
+}
+
 .dialog-header {
   display: flex;
   justify-content: space-between;
@@ -1560,8 +1596,46 @@ details.path summary {
   animation: kUp var(--motion-base) var(--ease-enter) backwards;
 }
 
-.upload-dialog::backdrop {
+/* 遮罩淡入（kFade，base；全互動對照表「全域 · 對話框」，#246） */
+.upload-dialog::backdrop,
+.dialog::backdrop {
   background: var(--color-overlay);
+  animation: kFade var(--motion-base) var(--ease-enter) backwards;
+}
+
+/* 置中的對話框（#246）：本體 98%→100%＋淡入、延後 60ms（kScale）；關閉時反向（fast，dialog-motion.ts 的 is-closing） */
+.dialog {
+  width: min(480px, calc(100vw - 2rem));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-surface);
+  color: var(--color-text);
+  padding: 1rem;
+}
+
+.dialog[open] {
+  animation: kScale var(--motion-base) var(--ease-enter) var(--motion-stagger-list) backwards;
+}
+
+.dialog.is-closing {
+  animation: kScale var(--motion-fast) var(--ease-exit) reverse forwards;
+}
+
+.dialog.is-closing::backdrop {
+  animation: kFadeOut var(--motion-fast) var(--ease-exit) forwards;
+}
+
+@keyframes kScale {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+@keyframes kFadeOut {
+  to {
+    opacity: 0;
+  }
 }
 
 .upload-dialog dl {
@@ -2217,17 +2291,20 @@ label.inline {
   font-weight: 400;
 }
 
-/* 核准或退回後的短提示：浮動在視窗上方置中，不隨頁面捲動（#48 審查第 2 次）。區域一直存在（live region） */
+/* 核准或退回後的短提示：浮動在視窗底部置中、不隨頁面捲動（#246 決定補充 3，比照畫板）。區域一直存在（live region） */
 .toast-region {
   position: fixed;
-  top: 1rem;
+  bottom: 1.5rem;
   left: 50%;
   transform: translateX(-50%);
   z-index: 20;
   max-width: calc(100% - 2rem);
 }
 
+/* 每次出現（key 遞增而重新掛載）都上升 12px＋淡入（kToast，base） */
 .toast {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -2236,24 +2313,38 @@ label.inline {
   border-radius: var(--radius-medium);
   box-shadow: 0 4px 16px color-mix(in srgb, var(--color-overlay) 38%, transparent);
   padding: 0.5rem 0.5rem 0.5rem 1rem;
-  animation: toast-in 0.3s ease-out;
+  animation: kToast var(--motion-base) var(--ease-enter) backwards;
 }
 
-/* 每次出現（key 遞增而重新掛載）都從上方滑入並淡入 */
-@keyframes toast-in {
+@keyframes kToast {
   from {
     opacity: 0;
-    transform: translateY(-0.75rem);
-  }
-  to {
-    opacity: 1;
-    transform: none;
+    transform: translateY(12px);
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .toast {
-    animation: none;
+/* 底部細線以 linear 倒數剩餘時間（kTimer）；滑鼠移上或焦點在提示內時暫停（toast-timer.ts） */
+.toast__timer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--color-primary);
+  transform-origin: left center;
+  animation: kTimer var(--toast-duration) var(--ease-linear) forwards;
+}
+
+.toast__timer.is-paused {
+  animation-play-state: paused;
+}
+
+@keyframes kTimer {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
   }
 }
 

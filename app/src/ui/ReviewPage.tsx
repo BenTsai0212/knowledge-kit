@@ -50,7 +50,7 @@ import {
 } from "./review-helpers";
 import { fill, strings } from "../client/i18n";
 import { createToastTimer, type ToastTimer } from "./toast-timer";
-import { REDUCED_MOTION, staggerIndex } from "./motion";
+import { motionDuration, prefersReducedMotion, staggerIndex } from "./motion";
 import { conflictSettleDelay, exitOrder, exitThenWrite, resultDelay, rowClass, rowExitDelay, withExit, type RowExit } from "./review-motion";
 import { entityTypeShape } from "./timeline-view";
 
@@ -73,7 +73,6 @@ interface Props {
 // 撤銷的對象：決定 id 與這次寫入的項目 id（撤銷後這些列在原位重新展開，#243）
 type UndoTarget = { docId: string; decisions: string[]; items: string[] };
 
-const prefersReducedMotion = () => window.matchMedia?.(REDUCED_MOTION).matches ?? false;
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 // 短提示自動消失的時間；滑鼠停在提示上或焦點在提示內時暫停（toast-timer.ts，#48 審查）
@@ -123,6 +122,8 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   const [toast, setToast] = useState<{ id: number; text: string; graph: boolean; undo?: UndoTarget; result?: number } | null>(null);
   const toastId = useRef(0);
   const toastTimer = useRef<ToastTimer | null>(null);
+  // 底部的倒數線（kTimer，#246）：round 換 key 從頭播放（新的提示、撤銷後換文字、暫停後重新計時），running 為 false 時暫停
+  const [toastRun, setToastRun] = useState({ round: 0, running: true });
   // 連點時 state 還沒更新，以 ref 確保同時只有一個核准或退回在進行（比照 #42）
   const working = useRef(false);
   // 列的動態（#243，review-motion.ts）：離開中的列（核准收合、退回往左淡出）留到新的資料讀回來；
@@ -150,7 +151,12 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
 
   useEffect(() => {
     if (toast === null) return;
-    const timer = createToastTimer(TOAST_MS, () => setToast(null));
+    setToastRun((r) => ({ round: r.round + 1, running: true }));
+    const timer = createToastTimer(
+      TOAST_MS,
+      () => setToast(null),
+      (running) => setToastRun((r) => ({ round: running ? r.round + 1 : r.round, running })),
+    );
     toastTimer.current = timer;
     return () => {
       timer.cancel();
@@ -581,7 +587,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
           ↻
         </button>
       </div>
-      {/* 短提示：浮動在視窗上方置中；live region 一直存在，內容出現時螢幕閱讀器才讀得到 */}
+      {/* 短提示：浮動在視窗底部置中（#246）；live region 一直存在，內容出現時螢幕閱讀器才讀得到 */}
       <div className="toast-region" role="status">
         {toast !== null && (
           <div
@@ -614,6 +620,13 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
             <button type="button" className="icon-button" aria-label={s.dialogClose} title={s.dialogClose} onClick={() => setToast(null)}>
               ✕
             </button>
+            {/* 剩餘時間：長度跟著 TOAST_MS，減少動態效果時直接到位 */}
+            <span
+              key={toastRun.round}
+              className={toastRun.running ? "toast__timer" : "toast__timer is-paused"}
+              aria-hidden="true"
+              style={{ "--toast-duration": `${motionDuration(prefersReducedMotion(), TOAST_MS)}ms` } as CSSProperties}
+            />
           </div>
         )}
       </div>

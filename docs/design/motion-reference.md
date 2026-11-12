@@ -15,6 +15,8 @@
 | 300ms | expand | `--motion-expand` |
 | 400ms | sweep | `--motion-sweep` |
 | 520ms | settle | `--motion-settle` |
+| 延遲 60ms／80ms | stagger | `--motion-stagger-list`／`--motion-stagger-sentence`（對話框本體的 60ms、邀請碼錯誤說明的 80ms，#246） |
+| `.a-timer` 的 5000ms | progress | toast 的倒數線跟著 `TOAST_MS`（10 秒，`ReviewPage.tsx`），經 `motionDuration()` 以 `--toast-duration` 帶入（#246 決定補充 3） |
 
 曲線同樣用 `--ease-*`：`cubic-bezier(.2,0,0,1)` 是進場、`cubic-bezier(.4,0,1,1)` 是退場、`cubic-bezier(.3,1.5,.5,1)` 是 settle、`linear` 是 `--ease-linear`（progress，#244）。入口頁主視覺等持續循環的裝飾動畫不套用刻度（`docs/design.md`「入口頁主視覺」）。
 
