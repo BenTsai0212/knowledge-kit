@@ -4,6 +4,7 @@ import type { Transaction } from "@electric-sql/pglite";
 import type { LanguageCode, LocalizedText } from "../client/types";
 import type { Database } from "../db/database";
 import type { SourcePassage } from "../graph/read";
+import { appearanceKey, byAppearance, type FirstSource } from "./review-order";
 
 export interface PendingInput {
   entities: { id: string; type: string; names: LocalizedText; sources: string[] }[];
@@ -132,7 +133,7 @@ export async function writePending(db: Database, identityId: string | null, docu
 }
 
 const SOURCES = (table: string, column: string) => `
-  SELECT s.${column} AS owner_id, p.id, p.document_id, d.title AS document_title, p.language, p.content
+  SELECT s.${column} AS owner_id, p.id, p.document_id, d.title AS document_title, p.language, p.content, p.ordinal
     FROM kk.${table} s JOIN kk.passages p ON p.id = s.passage_id JOIN kk.documents d ON d.id = p.document_id
    ORDER BY s.${column}, p.ordinal`;
 
@@ -143,6 +144,14 @@ interface SourceRow {
   document_title: string;
   language: string;
   content: string;
+  ordinal: number;
+}
+
+// 每個項目的第一個出處段落（SOURCES 依段落順序排列，第一列就是最早的一段）
+function firstSources(rows: SourceRow[]): Map<string, FirstSource> {
+  const out = new Map<string, FirstSource>();
+  for (const r of rows) if (!out.has(r.owner_id)) out.set(r.owner_id, { ordinal: r.ordinal, content: r.content });
+  return out;
 }
 
 function group(rows: SourceRow[]): Map<string, SourcePassage[]> {
@@ -200,8 +209,10 @@ export function readReview(db: Database, identityId: string | null): Promise<Rev
           ORDER BY p.document_id, p.id`,
       )
     ).rows;
-    const entitySources = group((await tx.query<SourceRow>(SOURCES("pending_entity_sources", "pending_entity_id"))).rows);
-    const relationSources = group((await tx.query<SourceRow>(SOURCES("pending_relation_sources", "pending_relation_id"))).rows);
+    const entityRows = (await tx.query<SourceRow>(SOURCES("pending_entity_sources", "pending_entity_id"))).rows;
+    const relationRows = (await tx.query<SourceRow>(SOURCES("pending_relation_sources", "pending_relation_id"))).rows;
+    const entitySources = group(entityRows);
+    const relationSources = group(relationRows);
 
     const documents = new Map<string, ReviewDocument>();
     for (const e of entities) {
@@ -240,6 +251,14 @@ export function readReview(db: Database, identityId: string | null): Promise<Rev
         decisionId: r.decision_id,
         rejectedWithEntity: status === "rejected" && endpoints.some((e) => e.status === "rejected"),
       });
+    }
+    // 依項目在文件中出現的順序排列（review-order.ts）：撤銷、重新讀取或重新萃取後順序不變（#243 PR 3 審查）
+    const entityFirst = firstSources(entityRows);
+    const relationFirst = firstSources(relationRows);
+    const namesOf = (doc: ReviewDocument, id: string) => Object.values(doc.entities.find((e) => e.id === id)?.names ?? {});
+    for (const doc of documents.values()) {
+      doc.entities = byAppearance(doc.entities, (e) => appearanceKey(entityFirst.get(e.id), [Object.values(e.names)]));
+      doc.relations = byAppearance(doc.relations, (r) => appearanceKey(relationFirst.get(r.id), [namesOf(doc, r.from), namesOf(doc, r.to)]));
     }
     return [...documents.values()];
   });

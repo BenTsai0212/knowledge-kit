@@ -1977,6 +1977,25 @@ label.inline {
   }
 }
 
+/* 核准全部（#243 PR 4）：各列依序往右離開（.a-out：kOut、base；--o 是第幾個出發，間隔 stagger-list），
+   「系統已準備」收合時那一行一起離開；結果在短提示中彈出（.a-pop：kPopS、settle，延遲是 review-motion.ts 的 resultDelay） */
+.review-item.is-away,
+.review-prepared > summary.is-away {
+  animation: kOut var(--motion-base) var(--ease-exit) calc(var(--o, 0) * var(--motion-stagger-list)) forwards;
+}
+
+.review-result {
+  display: inline-block;
+  animation: kPopS var(--motion-settle) var(--ease-spring) var(--result-delay) backwards;
+}
+
+@keyframes kOut {
+  to {
+    opacity: 0;
+    transform: translateX(56px);
+  }
+}
+
 .review-prepared > summary {
   cursor: pointer;
 }
@@ -2110,6 +2129,69 @@ label.inline {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+/* 說法不同的決定（#243 PR 4，motion-reference.css「動態 · 審核與說法不同」），播完才寫入：
+   並存：兩卡之間（並排與上下排列都在中央的空隙）畫出等號（.a-grow：kGrow、sweep，第 2 條晚 stagger-sentence），
+   兩邊依序標上關聯（kRise，expand 起、間隔 stagger-list）。
+   取代：舊說法變淡（.a-dim：kDim、base，sweep 的一半起），刪除線由左畫到右（.a-grow） */
+.conflict-pair[data-settle] {
+  position: relative;
+}
+
+.conflict-equals {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  gap: 3px;
+  width: 0.75rem;
+  transform: translate(-50%, -50%);
+}
+
+.conflict-equals > span {
+  height: 2px;
+  background: var(--color-primary);
+  transform-origin: left center;
+  animation: kGrow var(--motion-sweep) var(--ease-enter) backwards;
+}
+
+.conflict-equals > span:last-child {
+  animation-delay: var(--motion-stagger-sentence);
+}
+
+.conflict-linked {
+  position: relative;
+  display: inline-block;
+  margin-left: 0.5rem;
+  color: var(--color-primary);
+  animation: kRise var(--motion-base) var(--ease-enter) calc(var(--motion-expand) + var(--i, 0) * var(--motion-stagger-list)) backwards;
+}
+
+.conflict-side.is-superseded {
+  animation: kDim var(--motion-base) var(--ease-exit) calc(var(--motion-sweep) / 2) forwards;
+}
+
+.conflict-side.is-superseded .conflict-content {
+  position: relative;
+}
+
+.conflict-strike {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-conflict);
+  transform-origin: left center;
+  pointer-events: none;
+  animation: kGrow var(--motion-sweep) var(--ease-enter) backwards;
+}
+
+@keyframes kDim {
+  to {
+    opacity: 0.55;
+  }
 }
 
 @media (max-width: 640px) {

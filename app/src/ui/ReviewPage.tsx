@@ -6,6 +6,8 @@
 // 展開各語言的名稱欄位；說法不同兩種說法並排、下方三個決定按鈕。窄螢幕的分頁單行、橫向捲動。
 // 列的動態（#243 PR 3，review-motion.ts）：逐列升起；合併選擇列內展開並畫出連線；核准一筆時列收合、退回往左淡出，
 // 動畫播完才寫入；撤銷時列在原位重新展開、短提示原地換掉文字。
+// #243 PR 4：核准全部時各列依序往右離開、結果在短提示中彈出；說法不同「並存」兩卡之間畫出等號、兩邊標上關聯，
+// 「取代」舊說法變淡、刪除線由左畫到右，同樣播完才寫入。
 // 每筆一行，按「編輯名稱」才可以修改；出處點開才顯示，預設 2 行、標出實體名稱；核准或退回後顯示短提示（#48），附「撤銷」（ADR 0007 決定 4）。
 // 每份文件另有「說法不同」區塊（#51）：新舊段落並列、三選一處理；已處理的在「已處理的說法不同」分頁。
 // 「回報」分頁是問答的回答錯誤回報（ADR 0007 決定 7，ReportList.tsx）。
@@ -49,7 +51,7 @@ import {
 import { fill, strings } from "../client/i18n";
 import { createToastTimer, type ToastTimer } from "./toast-timer";
 import { REDUCED_MOTION, staggerIndex } from "./motion";
-import { exitThenWrite, rowClass, rowExitDelay, withExit, type RowExit } from "./review-motion";
+import { conflictSettleDelay, exitOrder, exitThenWrite, resultDelay, rowClass, rowExitDelay, withExit, type RowExit } from "./review-motion";
 import { entityTypeShape } from "./timeline-view";
 
 interface Props {
@@ -117,7 +119,8 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   // graph：附「到圖譜查看」（只有核准；退回的項目不會出現在圖譜）。undo：這次寫入的決定，附「撤銷」（ADR 0007 決定 4）。
   // id 每次遞增，當作 key：文字與上一次相同時也重新掛載，重新播放進場動畫（#48 審查第 2 次）
   // 撤銷時文字原地換掉、id 不變，不重新掛載（#243）
-  const [toast, setToast] = useState<{ id: number; text: string; graph: boolean; undo?: UndoTarget } | null>(null);
+  // result：核准全部的結果，文字彈出（kPopS），值是延遲的毫秒數（review-motion.ts 的 resultDelay，#243 PR 4）
+  const [toast, setToast] = useState<{ id: number; text: string; graph: boolean; undo?: UndoTarget; result?: number } | null>(null);
   const toastId = useRef(0);
   const toastTimer = useRef<ToastTimer | null>(null);
   // 連點時 state 還沒更新，以 ref 確保同時只有一個核准或退回在進行（比照 #42）
@@ -126,6 +129,8 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   // 撤銷後回到待審的列重新展開。restored 不清空：換 class 會讓列重播逐列升起，列離開時自然卸載
   const [leaving, setLeaving] = useState<ReadonlyMap<string, RowExit>>(new Map());
   const [restored, setRestored] = useState<ReadonlySet<string>>(new Set());
+  // 說法不同正在播放的決定（並存、取代，#243 PR 4）：播完才寫入，新的資料讀回來時清空
+  const [settling, setSettling] = useState<ReadonlyMap<string, ConflictDecision>>(new Map());
   const reads = useRef(createRequestGate());
   const [version, setVersion] = useState(0);
 
@@ -135,6 +140,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
       if (!ticket.isCurrent()) return;
       setDocs(reviewDocuments(d, c));
       setLeaving(new Map());
+      setSettling(new Map());
       setConflicts(c);
       setGraph(g);
       setReports(r);
@@ -189,36 +195,60 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
 
   // done：成功後的短提示；undoable 時 action 回傳的決定 id 交給「撤銷」。
   // motion（#243）：exit 是要退場的列與方式（先播完再寫入，失敗時列回到原狀），items 是這次寫入的項目（撤銷時重新展開），
-  // restore 是撤銷後回到待審的列；inPlace 時短提示原地換掉文字、不重新掛載
+  // restore 是撤銷後回到待審的列；inPlace 時短提示原地換掉文字、不重新掛載。
+  // conflict 是說法不同的決定（播完才寫入）；result 時短提示的文字是核准全部的結果，彈出（#243 PR 4）
   async function run(
     docId: string,
     action: () => Promise<string[] | void>,
     done: { text: string; graph: boolean; undoable?: boolean },
     skipped = 0,
-    motion: { exit?: { ids: string[]; kind: RowExit }; items?: string[]; restore?: string[]; inPlace?: boolean } = {},
+    motion: {
+      exit?: { ids: string[]; kind: RowExit };
+      conflict?: { id: string; decision: ConflictDecision };
+      result?: boolean;
+      items?: string[];
+      restore?: string[];
+      inPlace?: boolean;
+    } = {},
   ) {
     if (working.current) return;
     working.current = true;
     setBusy(true);
     setNotice(skipped > 0 ? { docId, skipped } : null);
     if (!motion.inPlace) setToast(null);
-    const exit = motion.exit;
+    const { exit, conflict } = motion;
+    const reduced = prefersReducedMotion();
+    const delay =
+      exit !== undefined ? rowExitDelay(reduced, exit.kind, exit.ids.length) : conflict !== undefined ? conflictSettleDelay(reduced, conflict.decision) : 0;
+    // 說法不同的動畫：標上（decision）或還原（null）
+    const settle = (decision: ConflictDecision | null) => {
+      if (conflict === undefined) return;
+      setSettling((cur) => {
+        const next = new Map(cur);
+        if (decision === null) next.delete(conflict.id);
+        else next.set(conflict.id, decision);
+        return next;
+      });
+    };
     try {
       const decisions = await exitThenWrite({
-        delay: exit === undefined ? 0 : rowExitDelay(prefersReducedMotion(), exit.kind),
+        delay,
         wait,
         mark: () => {
           if (exit !== undefined) setLeaving((cur) => withExit(cur, exit.ids, exit.kind));
+          if (conflict !== undefined && delay > 0) settle(conflict.decision);
         },
         restore: () => {
           if (exit !== undefined) setLeaving((cur) => withExit(cur, exit.ids, null));
+          settle(null);
         },
         write: action,
       });
       const undo = done.undoable && Array.isArray(decisions) && decisions.length > 0 ? { docId, decisions, items: motion.items ?? [] } : undefined;
       const back = motion.restore;
       if (back !== undefined) setRestored((cur) => new Set([...cur, ...back]));
-      setToast((cur) => ({ text: done.text, graph: done.graph, undo, id: motion.inPlace && cur !== null ? cur.id : ++toastId.current }));
+      const result = motion.result ? resultDelay(reduced, delay) : undefined;
+      setToast((cur) => ({ text: done.text, graph: done.graph, undo, result, id: motion.inPlace && cur !== null ? cur.id : ++toastId.current }));
     } catch (e) {
       setNotice({ docId, skipped, error: e instanceof ReviewError ? s.reviewErrors[e.reason] : s.unknownError });
     } finally {
@@ -228,12 +258,13 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
     }
   }
   // skippedCount：批次核准時因名稱不完整而略過的筆數（逐筆核准時為 0，清除先前的提示）
-  // exitIds：核准時收合的列（一組或一筆，#243）；「核准這份文件的全部」不在這裡收合
+  // exitIds：核准時收合的列（一組或一筆，#243）；all：「核准這份文件的全部」，各列依序往右離開、結果彈出（#243 PR 4）
   const approveItems = (
     docId: string,
     items: { entities: EntityApproval[]; relations: string[]; existingRelations?: string[] },
     skippedCount = 0,
     exitIds: string[] = [],
+    all = false,
   ) =>
     run(
       docId,
@@ -248,12 +279,22 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
       },
       skippedCount,
       {
-        exit: exitIds.length > 0 ? { ids: exitIds, kind: "collapse" } : undefined,
+        exit: exitIds.length > 0 ? { ids: exitIds, kind: all ? "away" : "collapse" } : undefined,
+        result: all,
         items: [...items.entities.map((e) => e.id), ...items.relations, ...(items.existingRelations ?? [])],
       },
     );
   const approveBatch = (docId: string, plan: ReturnType<typeof batchPlan>, exitIds: string[] = []) =>
     void approveItems(docId, { entities: plan.entities, relations: plan.relations, existingRelations: plan.existingRelations }, plan.skipped, exitIds);
+  // 核准這份文件的全部：計畫中的每一列依文件中的順序往右離開
+  const approveAll = (docId: string, plan: ReturnType<typeof batchPlan>) =>
+    void approveItems(
+      docId,
+      { entities: plan.entities, relations: plan.relations, existingRelations: plan.existingRelations },
+      plan.skipped,
+      [...plan.entities.map((e) => e.id), ...plan.relations, ...plan.existingRelations],
+      true,
+    );
   // 退回：列往左淡出（#243）
   const rejectItems = (docId: string, items: { entities: string[]; relations: string[] }) => {
     const ids = [...items.entities, ...items.relations];
@@ -272,10 +313,10 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   // 撤銷：撤回剛寫入的每一筆決定（退回時含一併退回的關係），項目回到待審、列在原位重新展開；短提示原地換掉文字（#243）
   const undo = (target: UndoTarget) =>
     void run(target.docId, () => retract(db, identity, target.decisions), { text: s.reviewToastUndone, graph: false }, 0, { restore: target.items, inPlace: true });
-  // 列（li）的 class 與依序出現的格數（#243）：逐列升起，第 7 列起不再延遲
+  // 列（li）的 class 與依序出現的格數（#243）：逐列升起，第 7 列起不再延遲；--o 是往右離開的第幾個（#243 PR 4）
   const itemProps = (id: string, index: number) => ({
     className: rowClass(id, leaving, restored),
-    style: { "--i": staggerIndex(index) } as CSSProperties,
+    style: { "--i": staggerIndex(index), ...(leaving.get(id) === "away" && { "--o": exitOrder(leaving, id) }) } as CSSProperties,
   });
 
   const nameOf = (doc: ReviewDocument, id: string) => {
@@ -325,17 +366,31 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   const itemStatus = tab === "pending" ? "pending" : tab === "rejected" ? "rejected" : null;
   // 回報分頁沒有文件：itemStatus 是 null，conflictsOf() 也是空的
   const visibleDocs = docs.filter((d) => [...d.entities, ...d.relations].some((x) => x.status === itemStatus) || conflictsOf(d.id).length > 0);
+  // 並存與取代先播完動畫才寫入（#243 PR 4）
   const decide = (docId: string, conflictId: string, decision: ConflictDecision) =>
-    void run(docId, () => decideConflict(db, identity, conflictId, decision), {
-      text: toastText({ one: s.conflictToast, many: s.conflictToast }, [s.conflictDecisions[decision]]),
-      graph: false,
-    });
-  // 新舊說法的一側：說法（文件的語言），下方是出處（文件標題、等級與專案的標籤、日期）與「打開原文」
-  const conflictSide = (label: string, p: ConflictPassage) => (
-    <div className="conflict-side">
-      <h4>{label}</h4>
+    void run(
+      docId,
+      () => decideConflict(db, identity, conflictId, decision),
+      { text: toastText({ one: s.conflictToast, many: s.conflictToast }, [s.conflictDecisions[decision]]), graph: false },
+      0,
+      { conflict: { id: conflictId, decision } },
+    );
+  // 新舊說法的一側：說法（文件的語言），下方是出處（文件標題、等級與專案的標籤、日期）與「打開原文」。
+  // linked：並存時標上的關聯（第幾側、另一側的說法），文字與時間軸的段落標示相同、依序升起；
+  // superseded：取代時舊說法變淡、刪除線由左畫到右（#243 PR 4）
+  const conflictSide = (label: string, p: ConflictPassage, opts: { linked?: { index: number; other: ConflictPassage }; superseded?: boolean } = {}) => (
+    <div className={opts.superseded ? "conflict-side is-superseded" : "conflict-side"}>
+      <h4>
+        {label}
+        {opts.linked !== undefined && (
+          <span className="conflict-linked" style={{ "--i": opts.linked.index } as CSSProperties}>
+            {fill(s.conflictMarks.conflict, { title: opts.linked.other.documentTitle }, language)}
+          </span>
+        )}
+      </h4>
       <p className="conflict-content" lang={p.language}>
         {p.content}
+        {opts.superseded && <span className="conflict-strike" aria-hidden="true" />}
       </p>
       <p className="conflict-source">
         <span lang={p.language}>{p.documentTitle}</span> <AccessBadges visibility={p.visibility} project={p.project} language={language} />{" "}
@@ -539,7 +594,13 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
               if (!ev.currentTarget.contains(ev.relatedTarget)) toastTimer.current?.release("focus");
             }}
           >
-            <span>{toast.text}</span>
+            {toast.result === undefined ? (
+              <span>{toast.text}</span>
+            ) : (
+              <span className="review-result" style={{ "--result-delay": `${toast.result}ms` } as CSSProperties}>
+                {toast.text}
+              </span>
+            )}
             {toast.undo !== undefined && (
               <button type="button" className="link" disabled={busy} onClick={() => undo(toast.undo!)}>
                 {s.reviewUndo}
@@ -648,7 +709,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                         ) : (
                           <span className="muted">{s.reviewProgressDone}</span>
                         )}
-                        <button type="button" disabled={busy} onClick={() => approveBatch(doc.id, batchPlan(doc, suggestions, allChoices, client.languages, graph))}>
+                        <button type="button" disabled={busy} onClick={() => approveAll(doc.id, batchPlan(doc, suggestions, allChoices, client.languages, graph))}>
                           {busy ? s.reviewWorking : s.reviewApproveDocument}
                         </button>
                       </>
@@ -709,7 +770,14 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                         實體可以逐筆核准（batchPlan 只含這一筆） */}
                     {preparedCount > 0 && (
                       <details className="review-prepared">
-                        <summary>
+                        {/* 收合時看不到列：全部往右離開時，這一行一起離開（#243 PR 4） */}
+                        <summary
+                          className={
+                            [...g.prepared.entities.map((e) => e.id), ...g.prepared.relations.map((x) => x.relation.id)].every((id) => leaving.get(id) === "away")
+                              ? "is-away"
+                              : undefined
+                          }
+                        >
                           {fill(s.reviewPrepared, { count: preparedCount }, language)}
                           {preparedMerges && <span className="muted"> {s.reviewPreparedMergeHint}</span>}
                         </summary>
@@ -770,9 +838,19 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                           {c.summary}
                         </p>
                         {c.decision !== null && <span className="badge">{s.conflictDecisions[c.decision]}</span>}
-                        <div className="conflict-pair">
-                          {conflictSide(s.conflictNew, c.newPassage)}
-                          {conflictSide(s.conflictOld, c.oldPassage)}
+                        {/* 並存：兩卡之間畫出等號、兩邊標上關聯；取代：舊說法變淡、劃掉（#243 PR 4） */}
+                        <div className="conflict-pair" data-settle={settling.get(c.id)}>
+                          {conflictSide(s.conflictNew, c.newPassage, { linked: settling.get(c.id) === "coexist" ? { index: 0, other: c.oldPassage } : undefined })}
+                          {settling.get(c.id) === "coexist" && (
+                            <span className="conflict-equals" aria-hidden="true">
+                              <span />
+                              <span />
+                            </span>
+                          )}
+                          {conflictSide(s.conflictOld, c.oldPassage, {
+                            linked: settling.get(c.id) === "coexist" ? { index: 1, other: c.newPassage } : undefined,
+                            superseded: settling.get(c.id) === "supersede",
+                          })}
                         </div>
                         {c.decision === null && (
                           <div className="conflict-actions">
