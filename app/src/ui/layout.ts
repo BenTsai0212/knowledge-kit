@@ -36,6 +36,16 @@ export const usesSegmented = (views: readonly View[]): boolean => views.length <
 export const SHEET_DRAG_CLOSE_PX = 96;
 export const sheetDragCloses = (dy: number, sheetHeight: number): boolean => dy > 0 && dy >= Math.min(SHEET_DRAG_CLOSE_PX, sheetHeight / 4);
 
+// 可展開的底部面板（#257 的實體面板）：停在 56% 高（half），往上拉到全高（full）。放開時依拖曳的距離決定停在哪一段，
+// 門檻與 sheetDragCloses() 相同：half 往上拉過門檻到 full、往下拉過門檻關閉；full 往下拉過門檻回到 half；沒過門檻時彈回原段
+export type SheetStop = "half" | "full";
+export const SHEET_HALF = 0.56;
+
+export function sheetSnap(at: SheetStop, dy: number, sheetHeight: number): SheetStop | "close" {
+  if (at === "half") return sheetDragCloses(-dy, sheetHeight) ? "full" : sheetDragCloses(dy, sheetHeight) ? "close" : "half";
+  return sheetDragCloses(dy, sheetHeight) ? "half" : "full";
+}
+
 // 分頁列的圖示（24×24 的線條，沿用空狀態的圖示）；首頁與「更多」另外畫
 export const NAV_ICONS: Record<View | "more", string> = {
   // 首頁：房子

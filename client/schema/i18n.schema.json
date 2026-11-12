@@ -14,7 +14,7 @@
     "accessCodeLabel", "accessCodeHint", "demoAccessCodeHint", "demoQaNotice", "demoUploadNotice", "accessCodeSubmit", "changeAccessCode", "signInTitle", "signInAccount", "signInAccountOption", "signInPassword", "signInNoPassword", "signInSubmit", "signInWithCode", "signInBack", "signOut", "identityBadge", "identityAndLanguage", "navMore", "presetQuestions", "scenarioRole",
     "questionLabel", "questionPlaceholder", "askButton", "answering", "emptyAnswer", "emptyAnswerReason", "emptyAnswerAction", "qaIndependent", "sessionQuestions", "answerMentions", "followUpTitle", "followUpOutgoing", "followUpIncoming", "viewInGraph", "openSource", "sourceTitle",
     "closeSource", "views", "tabQa", "tabHome", "tabGraph", "legend", "graphEmpty", "graphEmptyReason", "switchIdentity", "selectEntity", "graphExpanded", "graphShowAll", "graphShowOnly",
-    "graphSearch", "graphSearchNone", "graphTopConnected", "graphRelationCount", "graphDocumentCount", "graphSourceCount", "graphAskAbout", "graphKeyboard", "graphZoom", "askAboutEntity", "relatedEntities",
+    "graphSearch", "graphSearchNone", "graphTopConnected", "graphRelationCount", "graphDocumentCount", "graphSourceCount", "graphAskAbout", "graphFilters", "graphKeyboard", "graphZoom", "askAboutEntity", "relatedEntities",
     "entitySources", "graphRetract", "graphRetractWillRemove", "graphRetractNoChange", "graphRetractConfirm", "graphRetractCancel", "tabTimeline", "pathTitle", "pathFrom", "pathTo", "pathChoose", "pathNotFound", "pathNotFoundReason", "pathChangeEnd",
     "timelineFilter", "timelineAll", "timelineEmpty", "timelineEmptyReason", "timelineFilterEmptyReason", "timelineShowAll", "undated", "tabUpload", "uploadNotAllowed", "uploadNotAllowedReason", "uploadEphemeral",
     "uploadFile", "fileChoose", "fileNone", "uploadPaste", "uploadPastePlaceholder", "uploadDocTitle", "uploadLanguage", "uploadVisibility",
@@ -135,6 +135,7 @@
     "graphDocumentCount": { "$ref": "#/definitions/Text" },
     "graphSourceCount": { "$ref": "#/definitions/Text" },
     "graphAskAbout": { "$ref": "#/definitions/Text" },
+    "graphFilters": { "$ref": "#/definitions/Text" },
     "graphKeyboard": {
       "description": "圖譜的鍵盤操作與報讀（#289，docs/design.md「圖譜的鍵盤操作與螢幕報讀器」）：enter 的 {entities}、{relations} 是看得到的實體與關係數；current、go 的 {name}、{type}、{count}；move 的 {index}、{total}、{name}、{relations}；relation 的 {from}、{relation}、{to}；onlyOn、onlyOff 的 {name}；help* 是按鍵表與提示列的說明；mode* 是「圖譜｜清單」切換，list* 是清單模式",
       "type": "object",

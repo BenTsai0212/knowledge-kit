@@ -7,6 +7,7 @@ import { shortestPath } from "../graph/path";
 import { clusterGraph, filterGraph, scaleMode } from "../graph/clusters";
 import { readGraph, type Graph } from "../graph/read";
 import { topConnected } from "../graph/search";
+import { BottomSheet } from "./BottomSheet";
 import { focusIdentity } from "./empty-state";
 import { EmptyState } from "./EmptyState";
 import { EntityIcon } from "./EntityIcon";
@@ -34,6 +35,7 @@ import {
 import { GraphView, type GraphViewApi } from "./GraphView";
 import { breadcrumb, detailOf, zoomLevel } from "./graph-zoom";
 import { GraphZoomView } from "./GraphZoomView";
+import { useLayout } from "./layout";
 import { prefersReducedMotion } from "./motion";
 import { PathPanel } from "./PathPanel";
 import { createRequestGate } from "./requests";
@@ -62,21 +64,6 @@ const { entityTypes } = clientConfig.knowledgeModel;
 // 新的圖譜中已看不到的實體一律清除
 const keepVisible = (graph: Graph) => (id: string | null) => (id !== null && graph.entities.some((e) => e.id === id) ? id : null);
 
-// 手機（≤ 600px）用較低的門檻（docs/design.md「大量節點時的圖譜」）
-const MOBILE = "(max-width: 600px)";
-
-function useMobile(): boolean {
-  const [mobile, setMobile] = useState(() => globalThis.matchMedia?.(MOBILE).matches ?? false);
-  useEffect(() => {
-    const query = globalThis.matchMedia?.(MOBILE);
-    if (query === undefined) return;
-    const update = () => setMobile(query.matches);
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
-  }, []);
-  return mobile;
-}
-
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 // 在「回到全部」的狀態按 Esc 離開圖譜（#289 決定 4）：焦點移到外框後的下一個可聚焦元素，等同 Tab
@@ -89,7 +76,10 @@ function focusAfter(element: HTMLElement) {
 
 // 圖譜頁：切換身分或語言時重新讀取；之後才回來的舊結果忽略；已展開的路徑截到第一個看不到的實體之前，路徑的兩端已看不到時清除。
 // 逐步展開（#199）：點節點從它展開，已展開的路徑累積；「回到全部」顯示全貌。
-// 中間是搜尋框、類型篩選（圖例）與圖，右側是實體面板（沒有選取時列出關聯最多的實體當起點）與多跳路徑
+// 中間是搜尋框、類型篩選（圖例）與圖，右側是實體面板（沒有選取時列出關聯最多的實體當起點）與多跳路徑。
+// 手機（#257，docs/design.md「圖譜（手機）」）：圖譜佔滿頂端列與分頁列之間，上方是搜尋、「篩選與找路徑」與「圖譜｜清單」；
+// 類型篩選、「只顯示關聯 ≥ N」、多跳路徑與關聯最多的實體收進「篩選與找路徑」底部面板；點節點、搜尋或在清單選取時打開實體面板
+// （可展開的底部面板，停在 56% 高）。關閉實體面板只收起面板，選取與展開路徑不變（#257 決定 1）
 export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, canReview, onRetracted, initialSelected = null, canSwitchIdentity, onViewed }: Props) {
   const s = strings(language);
   const [graph, setGraph] = useState<Graph | null>(null);
@@ -107,7 +97,10 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
   const [minRelations, setMinRelations] = useState(0);
   const [cluster, setCluster] = useState<string | null>(null);
   const [showMembers, setShowMembers] = useState(false);
-  const mobile = useMobile();
+  // 手機（≤ 600px）：版面改變，門檻也用手機欄（docs/design.md「大量節點時的圖譜」）
+  const phone = useLayout() === "phone";
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [entityOpen, setEntityOpen] = useState(false);
   const reads = useRef(createRequestGate());
   // 撤回後重新讀取圖譜
   const [version, setVersion] = useState(0);
@@ -195,8 +188,8 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
     return new Set((graph?.entities ?? []).map((e) => e.id).filter((id) => !kept.has(id)));
   }, [graph, filtered]);
   const clustering = useMemo(
-    () => (filtered === null || scaleMode(filtered.entities.length, mobile) === "all" ? null : clusterGraph(filtered, clientConfig.knowledgeModel)),
-    [filtered, mobile],
+    () => (filtered === null || scaleMode(filtered.entities.length, phone) === "all" ? null : clusterGraph(filtered, clientConfig.knowledgeModel)),
+    [filtered, phone],
   );
   // 清單的群組（#254 決定 5）：門檻以上沿用全覽的分群，門檻以下也用同一種分群（篩選後的圖），不再依實體類型
   const groups = useMemo(() => {
@@ -227,6 +220,9 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
     return <EmptyState icon="graph" title={s.graphEmpty} reason={s.graphEmptyReason} actions={canSwitchIdentity ? [{ label: s.switchIdentity, onClick: focusIdentity }] : []} />;
 
   const onExpand = (id: string) => setExpansion((current) => expand(graph, current, id));
+  // 點節點、在清單選取：手機另外打開實體面板（再點同一個節點時重新打開）
+  const showEntity = () => phone && setEntityOpen(true);
+  const onPick = (id: string) => (onExpand(id), showEntity());
   // 與搜尋結果、節點標籤相同：同名的實體加上第一個相關實體的名稱（#198）
   const nameOf = (id: string) => {
     const entity = graph.entities.find((e) => e.id === id);
@@ -299,6 +295,7 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
       // 前往游標所在的實體（沒有游標時是目前的實體）：等同點節點，實體面板同步，焦點留在外框
       const target = cursor ?? at;
       onExpand(target);
+      showEntity();
       setKeyboardCurrent(target);
       setCursor(null);
       announcer.say(announceGo(graph, target, language));
@@ -332,8 +329,87 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
     } else focusAfter(e.currentTarget);
   };
 
+  // 圖例兼類型篩選與「只顯示關聯 ≥ N」：桌機在工具列，手機在「篩選與找路徑」面板
+  const filters = (
+    <>
+      {/* 圖例兼類型篩選：沒勾的類型變灰，並排除在搜尋與起點清單外 */}
+      <ul className="legend" aria-label={s.legend}>
+        {entityTypes.map((t) => (
+          <li key={t.id}>
+            <label>
+              <input type="checkbox" checked={types.has(t.id)} onChange={() => toggleType(t.id)} />
+              <EntityIcon icon={t.icon} color={t.color} />
+              {t.label[language]}
+            </label>
+          </li>
+        ))}
+      </ul>
+      <label className="graph-min">
+        {z.minRelations}
+        <input type="number" min={0} value={minRelations} onChange={(e) => setMinRelations(Math.max(0, Math.floor(Number(e.target.value) || 0)))} />
+      </label>
+    </>
+  );
+  // 沒有選取時的起點：關聯最多的實體（手機在「篩選與找路徑」面板最下方，選了之後換成實體面板，#257 決定 2）
+  const start = (
+    <section className="card graph-start" aria-label={s.graphTopConnected}>
+      <p className="muted">{s.selectEntity}</p>
+      <h2>{s.graphTopConnected}</h2>
+      <ol>
+        {top.map(({ entity, count }) => {
+          const type = entityTypes.find((t) => t.id === entity.type);
+          return (
+            <li key={entity.id}>
+              <button type="button" className="link" onClick={() => (setExpansion(only(entity.id)), setFiltersOpen(false), showEntity())}>
+                {type !== undefined && <EntityIcon icon={type.icon} color={type.color} />}
+                {entityOptionLabel(graph, entity, language)}
+              </button>{" "}
+              <span className="muted">{fill(s.graphRelationCount, { count })}</span>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+  const entityPanel = selected !== null && (
+    <EntityPanel
+      // 換選取的實體時清除撤回的確認
+      key={selected}
+      graph={graph}
+      entityId={selected}
+      language={language}
+      onSelect={onExpand}
+      onShowOnly={(id) => setExpansion(only(id), true)}
+      onAskAbout={(id) => onAskAbout(fill(s.askAboutEntity, { name: nameOf(id) }))}
+      onOpenSource={onOpenSource}
+      retractions={canReview && retractions?.entityId === selected ? retractions.list : []}
+      onRetract={async (r) => {
+        try {
+          await retract(db, identity, r.decisionIds);
+        } catch (e) {
+          return e instanceof ReviewError ? s.reviewErrors[e.reason] : s.unknownError;
+        }
+        setVersion((v) => v + 1);
+        onRetracted();
+        return null;
+      }}
+    />
+  );
+  const pathPanel = (
+    <PathPanel
+      graph={graph}
+      language={language}
+      from={from}
+      to={ends.to}
+      path={path}
+      // 起點沒改時保留「預設為選取的實體」，之後選取別的實體時起點跟著改
+      onChange={(nextFrom, to) => setEnds({ from: nextFrom === from ? ends.from : nextFrom, to })}
+      onOpenSource={onOpenSource}
+    />
+  );
+
   return (
-    <div className="graph-page">
+    <div className={phone ? "graph-page graph-page--phone" : "graph-page"}>
       <section className="card graph-main">
         <div className="graph-tools">
           <div
@@ -350,27 +426,19 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
               types={filter}
               onPick={(id) => {
                 setExpansion(only(id));
+                showEntity();
                 if (searchFromFrame.current) setRefocus((n) => n + 1);
                 searchFromFrame.current = false;
               }}
             />
           </div>
-          {/* 圖例兼類型篩選：沒勾的類型變灰，並排除在搜尋與起點清單外 */}
-          <ul className="legend" aria-label={s.legend}>
-            {entityTypes.map((t) => (
-              <li key={t.id}>
-                <label>
-                  <input type="checkbox" checked={types.has(t.id)} onChange={() => toggleType(t.id)} />
-                  <EntityIcon icon={t.icon} color={t.color} />
-                  {t.label[language]}
-                </label>
-              </li>
-            ))}
-          </ul>
-          <label className="graph-min">
-            {z.minRelations}
-            <input type="number" min={0} value={minRelations} onChange={(e) => setMinRelations(Math.max(0, Math.floor(Number(e.target.value) || 0)))} />
-          </label>
+          {phone ? (
+            <button type="button" className="secondary graph-filters-button" onClick={() => setFiltersOpen(true)}>
+              {s.graphFilters}
+            </button>
+          ) : (
+            filters
+          )}
           <div className="graph-mode" role="group" aria-label={k.modeLabel}>
             {(["graph", "list"] as const).map((m) => (
               <button key={m} type="button" className="chip" aria-pressed={mode === m} onClick={() => setMode(m)}>
@@ -432,7 +500,7 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
           )}
         </div>
         {mode === "list" ? (
-          <GraphList groups={groups} language={language} current={current} onSelect={onExpand} />
+          <GraphList groups={groups} language={language} current={current} onSelect={onPick} />
         ) : (
           <>
             {/* 外框（#289）：在 Tab 順序中只佔一個位置，方向鍵交給圖譜；畫布本身對報讀器隱藏，每一步寫進報讀區 */}
@@ -460,7 +528,7 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
                   language={language}
                   clusterName={clusterName}
                   segments={(count) => fill(z.segments, { count }, language)}
-                  onSelect={onExpand}
+                  onSelect={onPick}
                   onOpenCluster={openCluster}
                   keyboard={focused ? { current, cursor } : null}
                   api={view}
@@ -474,7 +542,7 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
                   expansion={expansion}
                   excluded={excluded}
                   isolated={isolated}
-                  onSelect={onExpand}
+                  onSelect={onPick}
                   keyboard={focused ? { current, cursor } : null}
                   api={view}
                 />
@@ -525,61 +593,31 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
           {announcement}
         </p>
       </section>
-      <div className="graph-side">
-        {selected === null ? (
-          <section className="card graph-start" aria-label={s.graphTopConnected}>
-            <p className="muted">{s.selectEntity}</p>
-            <h2>{s.graphTopConnected}</h2>
-            <ol>
-              {top.map(({ entity, count }) => {
-                const type = entityTypes.find((t) => t.id === entity.type);
-                return (
-                  <li key={entity.id}>
-                    <button type="button" className="link" onClick={() => setExpansion(only(entity.id))}>
-                      {type !== undefined && <EntityIcon icon={type.icon} color={type.color} />}
-                      {entityOptionLabel(graph, entity, language)}
-                    </button>{" "}
-                    <span className="muted">{fill(s.graphRelationCount, { count })}</span>
-                  </li>
-                );
-              })}
-            </ol>
-          </section>
-        ) : (
-          <EntityPanel
-            // 換選取的實體時清除撤回的確認
-            key={selected}
-            graph={graph}
-            entityId={selected}
+      {phone ? (
+        <>
+          <BottomSheet open={filtersOpen} onClose={() => setFiltersOpen(false)} title={s.graphFilters} language={language} className="graph-filters">
+            {filters}
+            {pathPanel}
+            {selected === null && start}
+          </BottomSheet>
+          {/* 實體面板：標題（實體名稱）只給報讀器，畫面上由面板內的類型徽章與名稱開頭 */}
+          <BottomSheet
+            open={entityOpen && selected !== null}
+            onClose={() => setEntityOpen(false)}
+            title={selected === null ? "" : nameOf(selected)}
             language={language}
-            onSelect={onExpand}
-            onShowOnly={(id) => setExpansion(only(id), true)}
-            onAskAbout={(id) => onAskAbout(fill(s.askAboutEntity, { name: nameOf(id) }))}
-            onOpenSource={onOpenSource}
-            retractions={canReview && retractions?.entityId === selected ? retractions.list : []}
-            onRetract={async (r) => {
-              try {
-                await retract(db, identity, r.decisionIds);
-              } catch (e) {
-                return e instanceof ReviewError ? s.reviewErrors[e.reason] : s.unknownError;
-              }
-              setVersion((v) => v + 1);
-              onRetracted();
-              return null;
-            }}
-          />
-        )}
-        <PathPanel
-          graph={graph}
-          language={language}
-          from={from}
-          to={ends.to}
-          path={path}
-          // 起點沒改時保留「預設為選取的實體」，之後選取別的實體時起點跟著改
-          onChange={(nextFrom, to) => setEnds({ from: nextFrom === from ? ends.from : nextFrom, to })}
-          onOpenSource={onOpenSource}
-        />
-      </div>
+            className="entity-sheet"
+            expandable
+          >
+            {entityPanel}
+          </BottomSheet>
+        </>
+      ) : (
+        <div className="graph-side">
+          {selected === null ? start : entityPanel}
+          {pathPanel}
+        </div>
+      )}
     </div>
   );
 }

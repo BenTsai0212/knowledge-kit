@@ -74,6 +74,7 @@
   "graphDocumentCount": "文件 {count}",
   "graphSourceCount": "出處 {count}",
   "graphAskAbout": "在問答中問",
+  "graphFilters": "篩選與找路徑",
   "graphKeyboard": {
     "roleDescription": "知識圖譜",
     "label": "方向鍵沿著關係移動，Enter 前往",

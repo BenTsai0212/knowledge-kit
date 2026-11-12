@@ -74,6 +74,7 @@
   "graphDocumentCount": "文書 {count} 件",
   "graphSourceCount": "出典 {count} 件",
   "graphAskAbout": "質問する",
+  "graphFilters": "絞り込みと経路",
   "graphKeyboard": {
     "roleDescription": "ナレッジグラフ",
     "label": "矢印キーで関係をたどり、Enter で移動",
