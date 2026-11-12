@@ -29,8 +29,10 @@ export function canWrite(access: AccessFile, identityId: string | null, level: s
 }
 
 // docs/data-model.md「待審與核准」的獨立實作（#44）。待審項目只存在於上傳的文件中。
-// decisions 依寫入順序列出；撤回（ADR 0007）以決定的 id 列在 retractions（含連帶撤回）
+// decisions 依寫入順序列出；撤回（ADR 0007）以決定的 id 列在 retractions（含連帶撤回）。
+// uploads 是上傳的文件 → 上傳者（ADR 0009：上傳者讀得到自己上傳的文件的待審項目與決定）
 export interface ReviewSample {
+  uploads: Record<string, string>;
   pendingEntities: { id: string; doc: string; type: string; sources: string[] }[];
   pendingRelations: { id: string; doc: string; from: string; to: string; sources: string[] }[];
   decisions: { item: string; decision: "approve" | "reject"; mergeInto?: string }[];
@@ -55,25 +57,37 @@ function activeDecisions(review: ReviewSample): Map<string, Decision> {
   return new Map(decisionsWithId(review).filter((d) => !retracted.has(d.id)).map((d) => [d.item, d]));
 }
 
-// 每張待審資料表看得到的列：有 canReview，且文件看得到（決定：項目看得到）。
+// 每張待審資料表看得到的列，是下列兩者的聯集：
+// - 核准者：有 canReview，且文件看得到（決定：項目看得到）
+// - 上傳者（ADR 0009）：文件是自己上傳的，且文件看得到（決定：另外要求合併對象是自己目前看得到的實體）
 // 撤回紀錄：項目所屬的文件看得到即可，不要求 canReview（ADR 0007 決定 6）
 export function expectedReviewVisible(access: AccessFile, data: Sample, review: ReviewSample, identityId: string | null): Visible {
   const role = access.roles.find((r) => r.id === identityId);
   const visibleDocs = new Set(expectedVisible(access, data, identityId).documents);
-  const docs = new Set(role?.canReview ? visibleDocs : []);
+  const reviewed = new Set(role?.canReview ? visibleDocs : []);
+  const own = new Set([...visibleDocs].filter((d) => identityId !== null && review.uploads[d] === identityId));
+  const docs = new Set([...reviewed, ...own]);
   const entities = review.pendingEntities.filter((e) => docs.has(e.doc));
   const relations = review.pendingRelations.filter((r) => docs.has(r.doc));
-  const items = new Set([...entities, ...relations].map((x) => x.id));
   const docOf = new Map([...review.pendingEntities, ...review.pendingRelations].map((x) => [x.id, x.doc]));
+  const visibleEntities = new Set(expectedVisible(access, approvedSample(data, review), identityId).entities);
   const decisions = decisionsWithId(review);
+  const decisionVisible = (d: Decision) =>
+    reviewed.has(docOf.get(d.item)!) || (own.has(docOf.get(d.item)!) && (d.mergeInto === undefined || visibleEntities.has(d.mergeInto)));
   return {
     pending_entities: entities.map((e) => e.id),
     pending_entity_sources: entities.flatMap((e) => e.sources.map((s) => `${e.id}|${s}`)),
     pending_relations: relations.map((r) => r.id),
     pending_relation_sources: relations.flatMap((r) => r.sources.map((s) => `${r.id}|${s}`)),
-    review_decisions: decisions.filter((d) => items.has(d.item)).map((d) => d.id),
+    review_decisions: decisions.filter(decisionVisible).map((d) => d.id),
     review_retractions: decisions.filter((d) => review.retractions.includes(d.id) && visibleDocs.has(docOf.get(d.item)!)).map((d) => d.id),
   };
+}
+
+// 核准者看得到的待審項目與決定（能做的決定、能撤回的範圍）：有 canReview 才有
+function reviewerVisible(access: AccessFile, data: Sample, review: ReviewSample, identityId: string | null): Visible | null {
+  const role = access.roles.find((r) => r.id === identityId);
+  return role?.canReview ? expectedReviewVisible(access, data, review, identityId) : null;
 }
 
 export const REVIEW_KEY_SQL: Record<string, string> = {
@@ -111,9 +125,8 @@ export function approvedSample(data: Sample, review: ReviewSample): Sample {
 
 // 能否撤回：有 canReview、決定看得到（項目所屬的文件看得到），且還沒有撤回。參考情境與資料集的內容沒有決定，所以撤回不了
 export function canRetract(access: AccessFile, data: Sample, review: ReviewSample, identityId: string | null, decisionId: string): boolean {
-  return (
-    expectedReviewVisible(access, data, review, identityId).review_decisions.includes(decisionId) && !review.retractions.includes(decisionId)
-  );
+  const visible = reviewerVisible(access, data, review, identityId);
+  return visible !== null && visible.review_decisions.includes(decisionId) && !review.retractions.includes(decisionId);
 }
 
 // 能否寫入決定：有 canReview、項目看得到、沒有有效的決定；合併對象是該角色看得到的實體；核准關係時兩端都已核准
@@ -125,8 +138,8 @@ export function canDecide(
   item: string,
   decision: { decision: "approve" | "reject"; mergeInto?: string },
 ): boolean {
-  const visible = expectedReviewVisible(access, data, review, identityId);
-  if (![...visible.pending_entities, ...visible.pending_relations].includes(item)) return false;
+  const visible = reviewerVisible(access, data, review, identityId);
+  if (visible === null || ![...visible.pending_entities, ...visible.pending_relations].includes(item)) return false;
   if (decision.mergeInto !== undefined && !expectedVisible(access, approvedSample(data, review), identityId).entities.includes(decision.mergeInto)) return false;
   if (activeDecisions(review).has(item)) return false;
   const relation = review.pendingRelations.find((r) => r.id === item);

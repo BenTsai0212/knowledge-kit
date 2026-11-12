@@ -154,7 +154,7 @@ policy 中的子查詢同樣受 RLS 限制，所以「段落看得到」已包�
 | `relation_sources` | 新增 `INSERT` | 段落是一筆核准的待審關係的出處（兩端由 0003 的複合外鍵保證與關係一致） | 不變 |
 
 - **待審資料的可見範圍以文件判斷**：同一份上傳文件的段落權限都相同（0005），所以「看得到文件」就等於「看得到出處」。這樣 policy 不必互相參照。
-- **上傳者看不到待審資料**：寫入只檢查文件是不是自己上傳的；「出處與兩端屬於同一份文件」由複合外鍵保證（外鍵檢查不受 RLS 影響）。上傳者沒有 `can_review` 時，寫入後讀不到任何待審資料（所以寫入不使用 `RETURNING`）。
+- **寫入只檢查文件是不是自己上傳的**：「出處與兩端屬於同一份文件」由複合外鍵保證（外鍵檢查不受 RLS 影響）。寫入不使用 `RETURNING`。上傳者讀得到的範圍見下方「上傳者讀得到自己上傳的文件」。
 - **退回**：`review_decisions` 的 CHECK 規定退回不帶 `names` 與 `merge_into`；合併不帶 `names`（既有實體的名稱不變）。
 - **待審 id 的格式**（migration 0007）：待審實體以 `pe-` 開頭、待審關係以 `pr-` 開頭（CHECK）。`review_decisions.item_id` 由兩者共用，限制格式後兩者不會撞名，也不會與既有實體的 id 混淆。違反時 `store.ts` 回傳 `denied`，不顯示資料庫的訊息。
 - **`kk.is_approved()`**：`review_decisions` 的 INSERT policy 要檢查「關係的兩端都已核准」，但 policy 直接查詢自己的資料表會被 PostgreSQL 視為無限遞迴，所以寫成 PL/pgSQL 函式（不會被內聯進 policy，執行時套用 `review_decisions` 的 SELECT policy）。函式都以呼叫者權限執行，不使用 `SECURITY DEFINER`。
@@ -162,6 +162,23 @@ policy 中的子查詢同樣受 RLS 限制，所以「段落看得到」已包�
 - **合併後可見範圍變大**（#44 決定）：把待審實體合併到既有實體時，新文件的段落成為該實體的出處。依「實體只要有一個看得到的出處就看得到」，看得到新文件的人也看得到該實體，包含只在其他文件出現過的其他語言名稱。待審區的合併選單會提示這一點。
 - **圖譜已有的關係**（#189 決定 1）：核准的待審關係與核准者看得到的既有關係完全相同（類型、合併後的兩端）時，`store.ts` 只寫 `review_decisions`，不寫入 `relations` 與 `relation_sources`，避免重複的關係；RLS 不變（見 [docs/extraction.md](extraction.md)「合併」）。`oracle.ts` 的 `approvedSample()` 不模擬這一點，`review.test.ts` 的範例資料不使用與既有關係相同的待審關係。
 - `oracle.ts` 的 `expectedReviewVisible()`、`canDecide()`、`approvedSample()` 是上述規則的獨立實作；`app/tests/extraction/review.test.ts` 以兩種設定（參考情境，以及一般員工也能審核）比對，並測試偽造的決定與正式資料寫入。
+
+### 上傳者讀得到自己上傳的文件
+
+「我的上傳」與首頁的「有更新」（#284）要讓上傳的人看到審核進度與結果（ADR 0009，migration 0011）。0011 只**新增** permissive 的 SELECT policy `own_upload`，與 0006 的 `review` policy 以 OR 合併；0006 的 policy 與所有寫入的 policy 都不變。讀取集中在 `store.ts` 的 `readMyUploads()`。
+
+| 資料表 | 新增的讀取（`USING`，與既有條件 OR） |
+| --- | --- |
+| `pending_entities`、`pending_relations` 與兩張出處表 | `document_id` 的文件是自己上傳的（`documents.uploaded_by = kk.current_identity_id()`），且看得到 |
+| `review_decisions` | 項目屬於自己上傳、看得到的文件，且 `merge_into` 為 NULL 或是自己看得到的實體 |
+
+- **「自己」目前是同一角色**（#284 決定 1）：`identities` 一個角色一個身分，所以「自己上傳的」是同一角色（例如所有一般員工）上傳的。改成個人帳號時自然成立。
+- **文件仍要看得到**：子查詢讀 `kk.documents` 時套用 `documents` 的 `can_see`，文件看不到時（例如之後可見範圍被調低）讀不到。資料集的文件 `uploaded_by` 為 NULL，沒有身分時 `current_identity_id()` 為 NULL，兩者都不成立。
+- **合併對象要看得到**（#284 決定 2）：實體 id 是有意義的代稱（例如 `person-wang-xiaoming`）。合併後再撤回時，舊決定的 `merge_into` 可能指向上傳者已看不到的實體，所以那筆決定上傳者讀不到。有效的合併核准會讓新文件的段落成為實體的出處，正常情況下合併對象一定看得到。
+- **`kk.entity_visible()`**：`entities`、`entity_sources` 的 INSERT policy 查 `review_decisions`，`review_decisions` 的 policy 若直接查 `entities`，PostgreSQL 展開 policy 時視為無限遞迴（已以測試確認）。所以寫成 PL/pgSQL 函式（同 `kk.is_approved()`），以呼叫者權限執行。
+- **只開放讀取**：決定、撤回與正式資料的寫入仍要求 `can_review`；上傳者讀得到之後仍不能核准、退回或撤回。`can_review` 的身分看得到的範圍不變（`own_upload` 是既有範圍的子集）。
+- **呼叫端**：`readReview()` 與 `readRetractions()` 對沒有 `can_review` 的上傳者也會讀到自己文件的資料；`App.tsx`、`ReviewPage.tsx`、`GraphPage.tsx` 只在 `canReview` 時呼叫，畫面行為不變。
+- `oracle.ts` 的 `ReviewSample.uploads` 與 `expectedReviewVisible()`（核准者 ∪ 上傳者）是上述規則的獨立實作；`canDecide()`、`canRetract()` 仍只看核准者的範圍。`review.test.ts` 以 oracle 比對決定前後、撤回後每個身分讀到的五張表，並測試文件看不到時、合併對象看不到時讀不到，以及上傳者仍不能核准、退回、撤回。
 
 ### 撤回
 
