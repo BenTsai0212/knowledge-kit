@@ -157,6 +157,8 @@ export interface EntityTypeFile {
   icon?: EntityIconName;
   aliasRules: AliasRules;
   mergeStrategy?: MergeStrategy;
+  // 容器類型（例如部門、專案）：大量節點時的圖譜以這類實體分群（#254）；省略時不是容器
+  container?: boolean;
 }
 
 export interface RelationType {

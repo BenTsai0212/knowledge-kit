@@ -140,6 +140,7 @@ export const manifests: ManifestEntry[] = [
       icon: "optional",
       aliasRules: "required",
       mergeStrategy: "optional",
+      container: "optional",
     } satisfies KeyManifest<EntityTypeFile>,
   },
   {

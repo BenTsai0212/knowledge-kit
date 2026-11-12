@@ -14,6 +14,7 @@
       "color": "#2E7D5B",
       "icon": "team",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
+      "container": true,
       "mergeStrategy": "auto"
     },
     {
@@ -38,6 +39,7 @@
       "color": "#B26A00",
       "icon": "folder",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": false },
+      "container": true,
       "mergeStrategy": "review"
     },
     {
