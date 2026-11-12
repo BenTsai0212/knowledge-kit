@@ -3,8 +3,9 @@
 // 寫入後，確認區的原文預覽依萃取的真實進度畫出找到的字詞（類型色底線），說法不同的段落標 conflictSoft（#242 PR 2）。
 // 萃取完成、已送審時，一顆標記從面板飛向導覽的「待審」（#242 PR 3）。
 // 可選的等級與專案只列出目前身分看得到的；實際能否寫入由 RLS 決定。上傳內容一律以文字節點顯示。
+// 分成「新增文件」與「我的上傳」（#284）：送出後顯示四步進度；退回的文件可「重新上傳修正版」，帶入原本的設定後回到新增文件。
 // 切換身分或語言時由 App 以 key 重建本元件，清除表單、預覽與結果。
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { clientConfig } from "../client/load";
 import type { Database } from "../db/database";
 import { chunk } from "../upload/chunk";
@@ -18,10 +19,13 @@ import { EMPTY_ICONS, focusIdentity } from "./empty-state";
 import { EmptyState } from "./EmptyState";
 import { ExtractionStatus } from "./ExtractionStatus";
 import { FilePicker } from "./FilePicker";
+import { countsFromBatches, type Reupload } from "./my-uploads";
+import { MyUploads, ReviewProgress } from "./MyUploads";
 import { Notice } from "./Notice";
 import { onlineDemo } from "./online-demo";
 import { REDUCED_MOTION, staggerIndex } from "./motion";
 import { createRequestGate } from "./requests";
+import { nextTab } from "./review-helpers";
 import { fill, strings } from "../client/i18n";
 import type { UploadFailure } from "../client/types";
 import { tabSelector } from "./Sidebar";
@@ -66,6 +70,10 @@ const PREVIEW_COUNT = 3;
 // 已送審的標記的直徑（px），與 app.css 的 .upload-fly 相同
 const FLY_SIZE = 12;
 
+// 上傳頁的兩段（#284）：新增文件、我的上傳
+const SECTIONS = ["new", "mine"] as const;
+type Section = (typeof SECTIONS)[number];
+
 // 預覽成功後在彈出視窗中確認；寫入中不能關閉，同一份預覽只能寫入一次
 type Confirm = {
   passages: string[];
@@ -105,6 +113,10 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   // 拖著檔案進入拖放區（#242）：框線變實線、底色變淺、圖示上浮
   const [dragOver, setDragOver] = useState(false);
+  const [section, setSection] = useState<Section>("new");
+  // 重新上傳修正版時帶入的原本設定（#284）；再上傳一份時移除提示
+  const [reupload, setReupload] = useState<Reupload | null>(null);
+  const ids = useId();
   const parses = useRef(createRequestGate());
   // 連點時 state 還沒更新，以 ref 確保同一份預覽只寫入一次
   const writeStarted = useRef(false);
@@ -176,7 +188,33 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
     setVisibility(defaultVisibility(access, identity));
     setProject("");
     setDate(todayIso());
+    setReupload(null);
   }
+
+  // 重新上傳修正版：帶入標題、語言、可見等級與專案（目前身分不能選的不帶入），清掉已選的檔案與貼上的文字，回到新增文件
+  function startReupload(r: Reupload) {
+    clearFile();
+    setPasted("");
+    setTitle(r.title);
+    if (client.languages.includes(r.language)) setDocLanguage(r.language);
+    if (levels.some((l) => l.id === r.visibility)) setVisibility(r.visibility);
+    setProject(r.project !== null && projects.some((p) => p.id === r.project) ? r.project : "");
+    setDate(todayIso());
+    setReupload(r);
+    setSection("new");
+  }
+
+  const sectionKey = (ev: KeyboardEvent<HTMLDivElement>) => {
+    const next = nextTab(SECTIONS, section, ev.key);
+    if (next === null) return;
+    ev.preventDefault();
+    setSection(next);
+    document.getElementById(`${ids}-tab-${next}`)?.focus();
+  };
+  const sectionLabels: Record<Section, string> = { new: s.myUploads.tabNew, mine: s.myUploads.tabMine };
+  // 我的上傳：本工作階段還在萃取的文件；萃取有進展時重新讀取
+  const extractingIds = new Set(extractions.filter((x) => countsFromBatches(x.state.batches, x.running).extracting).map((x) => x.state.documentId));
+  const refreshKey = extractions.map((x) => `${x.state.documentId}:${x.running}:${x.state.batches.map((b) => b.status).join(",")}`).join("|");
 
   async function preview() {
     const ticket = parses.current.begin();
@@ -275,8 +313,13 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
       );
     });
 
-  return (
-    <section className="card upload">
+  const newPanel = (
+    <div role="tabpanel" id={`${ids}-panel`} aria-labelledby={`${ids}-tab-new`} className="upload">
+      {reupload !== null && (
+        <Notice kind="info" title={s.myUploads.reupload}>
+          {s.myUploads.reuploadNotice}
+        </Notice>
+      )}
       <UploadSteps steps={steps} language={language} />
       {/* 線上 demo：另外說明上傳內容會傳給模型供應商（#100 決定 4） */}
       <p className="badge warning">{onlineDemo.enabled ? s.demoUploadNotice : s.uploadEphemeral}</p>
@@ -396,6 +439,45 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
           ))}
         </section>
       )}
+    </div>
+  );
+
+  return (
+    <section className="card upload">
+      <div className="review-tabs upload-sections" role="tablist" aria-label={s.myUploads.sections} onKeyDown={sectionKey}>
+        {SECTIONS.map((x) => (
+          <button
+            key={x}
+            type="button"
+            role="tab"
+            id={`${ids}-tab-${x}`}
+            aria-selected={section === x}
+            aria-controls={`${ids}-panel`}
+            tabIndex={section === x ? 0 : -1}
+            onClick={() => setSection(x)}
+          >
+            {sectionLabels[x]}
+          </button>
+        ))}
+      </div>
+      {section === "new" ? (
+        newPanel
+      ) : (
+        <div role="tabpanel" id={`${ids}-panel`} aria-labelledby={`${ids}-tab-mine`}>
+          <MyUploads
+            db={db}
+            identity={identity}
+            language={language}
+            extracting={extractingIds}
+            refreshKey={refreshKey}
+            jobStatus={(id) => {
+              const job = extractions.find((x) => x.state.documentId === id);
+              return job === undefined ? null : jobStatus(job);
+            }}
+            onReupload={startReupload}
+          />
+        </div>
+      )}
 
       <dialog
         ref={dialog}
@@ -467,6 +549,8 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
                   {s.colon}
                   {confirm.result.passageIds.length}
                 </p>
+                {/* 送出後的四步進度（#284）：主管核准後才會出現在問答與圖譜 */}
+                {writtenJob && <ReviewProgress counts={countsFromBatches(writtenJob.state.batches, writtenJob.running)} language={language} />}
                 {writtenJob && jobStatus(writtenJob)}
                 <div className="dialog-actions">
                   <button type="button" onClick={() => onGoto("qa")}>

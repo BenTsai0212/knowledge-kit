@@ -513,5 +513,28 @@
     "recentDocumentsEmpty": "No documents you can see yet.",
     "viewedTitle": "Recently viewed",
     "viewedEmpty": "Entities you open in the graph or an answer appear here."
+  },
+  "myUploads": {
+    "tabNew": "Add a document",
+    "tabMine": "My uploads",
+    "sections": "Upload sections",
+    "empty": "You haven’t uploaded any documents yet.",
+    "statusUploaded": "Uploaded",
+    "statusInReview": "In review",
+    "statusApproved": "Approved",
+    "statusPartlyRejected": "Partly rejected",
+    "statusRejected": "Rejected",
+    "stepsLabel": "Review progress",
+    "stepUploaded": "Uploaded",
+    "stepExtracted": "Extracted",
+    "stepReview": "Waiting for a reviewer",
+    "stepPublished": "In Q&A and the graph",
+    "approvalNote": "Content appears in Q&A and the graph after a reviewer approves it.",
+    "itemCounts": "{entities, plural, one {# entity} other {# entities}} · {relations, plural, one {# relation} other {# relations}}",
+    "entities": "Entities",
+    "relations": "Relations",
+    "noItems": "No entities or relations were extracted from this document.",
+    "reupload": "Upload a corrected version",
+    "reuploadNotice": "The original title, language, visibility level and project are filled in. Choose the corrected file and submit it; it becomes a new document and goes through review again."
   }
 }

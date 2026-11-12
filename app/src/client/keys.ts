@@ -284,7 +284,7 @@ const uiStrings = {
   parenthetical: "required", refusal: "required", refusalNextTitle: "required", refusalNextRephrase: "required",
   refusalNextAskPerson: "required", refusalNextUpload: "required", refusalNextGraph: "required",
   refusalNextOwner: "required", refusalNextRephraseWith: "required", refusalNextRephraseName: "required", refusalGotoUpload: "required", uncited: "required", incomplete: "required", answerRetry: "required",
-  qaProblems: "required", errors: "required", unknownError: "required", home: "required",
+  qaProblems: "required", errors: "required", unknownError: "required", home: "required", myUploads: "required",
 } satisfies KeyManifest<UiStrings>;
 
 export const i18nManifests: ManifestEntry[] = [
@@ -314,6 +314,33 @@ export const i18nManifests: ManifestEntry[] = [
       viewedTitle: "required",
       viewedEmpty: "required",
     } satisfies KeyManifest<UiStrings["home"]>,
+  },
+  {
+    schema: "i18n.schema.json",
+    pointer: "/properties/myUploads",
+    keys: {
+      tabNew: "required",
+      tabMine: "required",
+      sections: "required",
+      empty: "required",
+      statusUploaded: "required",
+      statusInReview: "required",
+      statusApproved: "required",
+      statusPartlyRejected: "required",
+      statusRejected: "required",
+      stepsLabel: "required",
+      stepUploaded: "required",
+      stepExtracted: "required",
+      stepReview: "required",
+      stepPublished: "required",
+      approvalNote: "required",
+      itemCounts: "required",
+      entities: "required",
+      relations: "required",
+      noItems: "required",
+      reupload: "required",
+      reuploadNotice: "required",
+    } satisfies KeyManifest<UiStrings["myUploads"]>,
   },
   {
     schema: "i18n.schema.json",

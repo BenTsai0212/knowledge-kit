@@ -513,5 +513,28 @@
     "recentDocumentsEmpty": "閲覧できる文書はまだありません。",
     "viewedTitle": "最近見たもの",
     "viewedEmpty": "グラフや回答で開いたエンティティがここに表示されます。"
+  },
+  "myUploads": {
+    "tabNew": "文書を追加",
+    "tabMine": "自分のアップロード",
+    "sections": "アップロードの区分",
+    "empty": "まだ文書をアップロードしていません。",
+    "statusUploaded": "アップロード済み",
+    "statusInReview": "レビュー中",
+    "statusApproved": "承認済み",
+    "statusPartlyRejected": "一部却下",
+    "statusRejected": "却下",
+    "stepsLabel": "レビューの進捗",
+    "stepUploaded": "アップロード済み",
+    "stepExtracted": "抽出完了",
+    "stepReview": "レビュー待ち",
+    "stepPublished": "質問応答と関係図に反映",
+    "approvalNote": "レビュー担当者が承認すると、内容が質問応答と関係図に表示されます。",
+    "itemCounts": "エンティティ {entities} 件 · 関係 {relations} 件",
+    "entities": "エンティティ",
+    "relations": "関係",
+    "noItems": "この文書からはエンティティも関係も抽出されませんでした。",
+    "reupload": "修正版をアップロード",
+    "reuploadNotice": "元のタイトル、言語、公開範囲、プロジェクトを入力しました。修正したファイルを選んで送信すると、新しい文書として再度レビューされます。"
   }
 }
