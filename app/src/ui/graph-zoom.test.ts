@@ -5,7 +5,7 @@ import type { Graph } from "../graph/read";
 import { clientConfig } from "../client/load";
 import { strings } from "../client/i18n";
 import { graphStyle } from "./graph-style";
-import { breadcrumb, bubbleId, CALM_LIMIT, detailOf, openEntities, ringPositions, SECOND_OPACITY, SIDE_BUBBLE, SIDE_BUBBLE_OPACITY, viewOf, zoomLevel } from "./graph-zoom";
+import { breadcrumb, bubbleId, CALM_LIMIT, detailOf, openEntities, ringPositions, SECOND_OPACITY, SIDE_BUBBLE, SIDE_BUBBLE_OPACITY, MAX_VIEW_ZOOM, VIEW_PADDING, viewOf, viewportFor, zoomLevel } from "./graph-zoom";
 import graphPage from "./GraphPage.tsx?raw";
 import zoomView from "./GraphZoomView.tsx?raw";
 
@@ -104,6 +104,35 @@ describe("畫在圖上的元素", () => {
     expect(ring).toHaveLength(4);
     for (const p of ring) expect(Math.hypot(p.x, p.y)).toBeCloseTo(100 + SIDE_BUBBLE);
     expect(ring[0]!.y).toBeCloseTo(-(100 + SIDE_BUBBLE));
+  });
+});
+
+describe("換層級時的視角", () => {
+  const canvas = { width: 800, height: 600 };
+  const rendered = (v: { zoom: number; pan: { x: number; y: number } }, x: number, y: number) => ({ x: x * v.zoom + v.pan.x, y: y * v.zoom + v.pan.y });
+
+  it("外框整個放進畫布並置中，四邊至少留白 VIEW_PADDING", () => {
+    const box = { x1: -500, y1: 100, x2: 1500, y2: 400 };
+    const v = viewportFor(box, canvas);
+    const [a, b] = [rendered(v, box.x1, box.y1), rendered(v, box.x2, box.y2)];
+    expect(a.x).toBeGreaterThanOrEqual(VIEW_PADDING - 1e-9);
+    expect(a.y).toBeGreaterThanOrEqual(VIEW_PADDING - 1e-9);
+    expect(b.x).toBeLessThanOrEqual(canvas.width - VIEW_PADDING + 1e-9);
+    expect(b.y).toBeLessThanOrEqual(canvas.height - VIEW_PADDING + 1e-9);
+    expect(rendered(v, 500, 250)).toEqual({ x: 400, y: 300 });
+  });
+
+  it("外框很小（只有一個節點、或節點還疊在同一點）時縮放不超過上限", () => {
+    expect(viewportFor({ x1: 10, y1: 10, x2: 10, y2: 10 }, canvas).zoom).toBe(MAX_VIEW_ZOOM);
+    expect(viewportFor({ x1: 0, y1: 0, x2: 60, y2: 60 }, canvas).zoom).toBe(MAX_VIEW_ZOOM);
+    expect(MAX_VIEW_ZOOM).toBeLessThanOrEqual(2);
+  });
+
+  it("元件以最終位置與全部元素（含外圍的群組泡泡）計算目標視角，不以 fit 對還在泡泡位置的節點", () => {
+    const show = zoomView.slice(zoomView.indexOf("const show ="), zoomView.indexOf("const shown ="));
+    expect(show.indexOf("viewportFor(instance.elements().boundingBox()")).toBeGreaterThan(-1);
+    expect(show.indexOf("viewportFor(")).toBeLessThan(show.indexOf("n.position(origin)"));
+    expect(show).not.toContain("fit");
   });
 });
 

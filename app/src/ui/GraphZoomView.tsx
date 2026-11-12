@@ -8,7 +8,7 @@ import type { Graph } from "../graph/read";
 import { relationCounts } from "../graph/search";
 import { clampLabel, nodeLabels } from "./graph-labels";
 import { compositionDots, edgeWidth, NODE_LABEL_MAX_LINES, NODE_LABEL_MAX_WIDTH, nodeSize } from "./graph-style";
-import { bubbleId, CALM_LIMIT, detailOf, openEntities, ringPositions, SIDE_BUBBLE, viewOf, type ZoomLevel } from "./graph-zoom";
+import { arrange, bubbleId, CALM_LIMIT, detailOf, openEntities, SIDE_BUBBLE, viewOf, viewportFor, type ZoomLevel } from "./graph-zoom";
 import { currentStyle, fitAll, labelMeasure, markKeyboard, reveal, trackContainer, zoomTo, type GraphViewApi, type KeyboardMarks } from "./GraphView";
 import { EXPAND_MS, motionDuration, PAN_MS, watchReducedMotion } from "./motion";
 import { watchColorScheme } from "./theme";
@@ -98,30 +98,6 @@ function elements(p: Props): ElementDefinition[] {
   ];
 }
 
-// 排版：全覽排泡泡；群組與細節層排實體（以展開的泡泡在全覽中的位置為中心），其他群組停在外圍
-function layout(cy: Core, p: Props, origin: { x: number; y: number }): Positions {
-  const entities = cy.nodes(".entity");
-  const moving = p.level === "overview" ? cy.nodes() : entities;
-  const step = (2 * Math.PI) / Math.max(moving.length, 1);
-  moving.forEach((n, i) => {
-    n.position({ x: 300 * Math.cos(i * step), y: 300 * Math.sin(i * step) });
-  });
-  moving.union(moving.edgesWith(moving)).layout({ name: "cose", randomize: false, animate: false }).run();
-  if (p.level !== "overview") {
-    const box = entities.boundingBox();
-    const [dx, dy] = [origin.x - (box.x1 + box.x2) / 2, origin.y - (box.y1 + box.y2) / 2];
-    entities.forEach((n) => {
-      n.position({ x: n.position("x") + dx, y: n.position("y") + dy });
-    });
-    const side = cy.nodes(".bubble");
-    const ring = ringPositions(entities.boundingBox(), side.length);
-    side.forEach((n, i) => {
-      n.position(ring[i]!);
-    });
-  }
-  return new Map(cy.nodes().map((n) => [n.id(), { ...n.position() }]));
-}
-
 const layoutKey = (p: Props) => (p.level === "overview" ? "overview" : p.level === "cluster" ? `cluster:${p.cluster}` : `detail:${p.selected}:${p.showMembers}`);
 
 export function GraphZoomView(props: Props) {
@@ -145,19 +121,19 @@ export function GraphZoomView(props: Props) {
     instance.add(elements(p));
     const saved = cache.current.get(key);
     if (saved !== undefined) instance.nodes().forEach((n) => void n.position(saved.get(n.id()) ?? n.position()));
-    else cache.current.set(key, layout(instance, p, origin));
+    else cache.current.set(key, arrange(instance, p.level, origin));
+    // 目標視角以最終位置計算（含外圍的群組泡泡與標籤），再把節點移回泡泡的位置播放 expand
+    const target = viewportFor(instance.elements().boundingBox(), { width: instance.width(), height: instance.height() });
     const still = reduced.current || calm;
-    const entities = instance.nodes(".entity");
     if (!still && previous === "overview" && p.level !== "overview")
-      entities.forEach((n) => {
+      instance.nodes(".entity").forEach((n) => {
         const to = { ...n.position() };
         n.position(origin);
         n.animate({ position: to }, { duration: EXPAND_MS, easing: "ease-out" });
       });
-    const eles = p.level === "overview" ? instance.elements() : entities.length > 0 ? entities : instance.elements();
     const ms = motionDuration(reduced.current, PAN_MS);
-    if (ms === 0 || previous === null) instance.fit(eles, 40);
-    else instance.animate({ fit: { eles, padding: 40 } }, { duration: ms, easing: "ease-in-out" });
+    if (ms === 0 || previous === null) instance.viewport(target);
+    else instance.animate(target, { duration: ms, easing: "ease-in-out" });
   };
   const shown = useRef<ZoomLevel | null>(null);
 

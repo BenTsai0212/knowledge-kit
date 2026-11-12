@@ -1,5 +1,6 @@
 // 大量節點時的三層語意縮放（#254，docs/design.md「大量節點時的圖譜」）：層級、細節層的範圍與畫在圖上的元素。
 // 只用篩選後的可見圖與它的分群（clusters.ts）計算，泡泡的實體數與聚合線的段數只涉及目前身分看得到的內容（#247）。
+import type { Core } from "cytoscape";
 import { type Cluster, type Clustering } from "../graph/clusters";
 import type { Graph } from "../graph/read";
 
@@ -115,6 +116,51 @@ export function ringPositions(box: { x1: number; y1: number; x2: number; y2: num
     const angle = -Math.PI / 2 + (2 * Math.PI * i) / count;
     return { x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) };
   });
+}
+
+type Point = { x: number; y: number };
+
+// 排版：全覽排泡泡；群組與細節層排實體（以展開的泡泡在全覽中的位置為中心），其他群組停在外圍。回傳各節點的最終位置
+export function arrange(cy: Core, level: ZoomLevel, origin: Point): Map<string, Point> {
+  const entities = cy.nodes(".entity");
+  const moving = level === "overview" ? cy.nodes() : entities;
+  const step = (2 * Math.PI) / Math.max(moving.length, 1);
+  moving.forEach((n, i) => {
+    n.position({ x: 300 * Math.cos(i * step), y: 300 * Math.sin(i * step) });
+  });
+  moving.union(moving.edgesWith(moving)).layout({ name: "cose", randomize: false, animate: false }).run();
+  if (level !== "overview") {
+    const box = entities.boundingBox();
+    const [dx, dy] = [origin.x - (box.x1 + box.x2) / 2, origin.y - (box.y1 + box.y2) / 2];
+    entities.forEach((n) => {
+      n.position({ x: n.position("x") + dx, y: n.position("y") + dy });
+    });
+    const side = cy.nodes(".bubble");
+    const ring = ringPositions(entities.boundingBox(), side.length);
+    side.forEach((n, i) => {
+      n.position(ring[i]!);
+    });
+  }
+  return new Map(cy.nodes().map((n) => [n.id(), { ...n.position() }]));
+}
+
+// 換層級時的視角：畫布邊緣留白（rendered px）與縮放上限（小群組也不放大到節點超出畫布，#316 審查）
+export const VIEW_PADDING = 40;
+export const MAX_VIEW_ZOOM = 1.5;
+
+// 目標視角：把 box（節點在最終位置的外框，含外圍的群組泡泡與標籤）整個放進畫布並置中，縮放不超過 maxZoom。
+// 先算出目標再播放 expand（節點從泡泡的位置移到最終位置）與 sweep，不在節點還疊在同一點時 fit
+export function viewportFor(
+  box: { x1: number; y1: number; x2: number; y2: number },
+  canvas: { width: number; height: number },
+  padding = VIEW_PADDING,
+  maxZoom = MAX_VIEW_ZOOM,
+): { zoom: number; pan: Point } {
+  const [w, h] = [Math.max(box.x2 - box.x1, 1), Math.max(box.y2 - box.y1, 1)];
+  const [aw, ah] = [Math.max(canvas.width - 2 * padding, 1), Math.max(canvas.height - 2 * padding, 1)];
+  const zoom = Math.min(maxZoom, aw / w, ah / h);
+  const [cx, cy] = [(box.x1 + box.x2) / 2, (box.y1 + box.y2) / 2];
+  return { zoom, pan: { x: canvas.width / 2 - zoom * cx, y: canvas.height / 2 - zoom * cy } };
 }
 
 // 麵包屑「全部 › 群組 › 實體」：依層級列出要顯示的段

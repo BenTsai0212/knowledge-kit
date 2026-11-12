@@ -82,6 +82,7 @@ const graph = await readGraph(db, "staff");
 - **麵包屑**「全部 › 群組 › 實體」取代門檻以下的「已展開」列；進入細節層時記住所屬群組，返回（麵包屑、`Esc`、`Backspace`）回到該群組。篩選或切換身分後已不存在的群組與實體回到全覽。
 - **權限**：泡泡的實體數、聚合線與畫在圖上的元素只來自可見圖（`app/tests/graph/clusters.test.ts` 對每個身分檢查全覽與各群組層的 `viewOf()`）。
 - **動態**：從全覽進入群組或細節時，群內節點從泡泡的位置展開（expand），畫面平移到展開的範圍（sweep）；其他切換只平移。減少動態效果時直接切換。
+- **視角**：排版（`arrange()`）後先以節點的最終位置、含外圍的群組泡泡與標籤的外框算出目標視角（`viewportFor()`：四邊留白 `VIEW_PADDING` 40px、縮放上限 `MAX_VIEW_ZOOM` 1.5，小群組也不會放大到節點超出畫布），再把節點移回泡泡的位置，同時播放 expand 與 sweep。`app/tests/graph/zoom-viewport.test.ts` 以大型資料實際排版（headless cytoscape），檢查全覽、群組層與細節層換到目標視角後所有節點都在畫布內。「＋N 位成員 · 展開」是畫布外的按鈕，不受視角影響。
 - **效能**：排版結果依層級（全覽、各群組、各細節）快取，篩選或切換身分時重建。可見節點超過 `CALM_LIMIT`（150）時關閉展開的動態與 transition，拖曳、縮放時不畫標籤（cytoscape 的 `hideLabelsOnViewport`、`textureOnViewport`）。超過 300 個節點時的延遲載入與子群另開 Issue。
 
 ## 多跳路徑：`shortestPath()`
