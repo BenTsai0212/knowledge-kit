@@ -96,7 +96,12 @@
     "helpSearch": "搜尋名稱",
     "helpZoom": "放大、縮小、全部顯示",
     "helpReset": "回到全部",
-    "helpKeys": "按鍵表"
+    "helpKeys": "按鍵表",
+    "modeLabel": "檢視方式",
+    "modeGraph": "圖譜",
+    "modeList": "清單",
+    "listLabel": "圖譜的清單",
+    "listEmpty": "沒有符合篩選的實體。"
   },
   "askAboutEntity": "{name}的相關資訊有哪些？",
   "relatedEntities": "相關實體",

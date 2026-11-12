@@ -364,6 +364,11 @@ export const i18nManifests: ManifestEntry[] = [
       helpZoom: "required",
       helpReset: "required",
       helpKeys: "required",
+      modeLabel: "required",
+      modeGraph: "required",
+      modeList: "required",
+      listLabel: "required",
+      listEmpty: "required",
     } satisfies KeyManifest<UiStrings["graphKeyboard"]>,
   },
   {

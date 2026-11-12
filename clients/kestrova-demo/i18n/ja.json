@@ -96,7 +96,12 @@
     "helpSearch": "名前を検索",
     "helpZoom": "拡大・縮小・全体表示",
     "helpReset": "全体に戻る",
-    "helpKeys": "キー一覧"
+    "helpKeys": "キー一覧",
+    "modeLabel": "表示方法",
+    "modeGraph": "グラフ",
+    "modeList": "リスト",
+    "listLabel": "グラフのリスト",
+    "listEmpty": "条件に合うエンティティはありません。"
   },
   "askAboutEntity": "{name}について分かっていることを教えてください。",
   "relatedEntities": "関連するエンティティ",

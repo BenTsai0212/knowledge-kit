@@ -81,8 +81,14 @@ export function moveCursor(total: number, index: number | null, step: 1 | -1): n
   return (index + step + total) % total;
 }
 
+// 關係句的片段：主詞與受詞帶實體 id（清單模式把它們做成連結），其他是文字
+export interface SentencePart {
+  text: string;
+  entityId?: string;
+}
+
 // 關係說成「主詞 關係 受詞」的完整句子；同一個方向的多種關係合併在同一句（例如「A 隸屬、負責 B」）
-export function relationSentences(graph: Graph, relations: GraphRelation[], language: string): string[] {
+export function relationSentenceParts(graph: Graph, relations: GraphRelation[], language: string): SentencePart[][] {
   const s = strings(language).graphKeyboard;
   const name = (id: string) => {
     const entity = graph.entities.find((e) => e.id === id);
@@ -90,14 +96,23 @@ export function relationSentences(graph: Graph, relations: GraphRelation[], lang
   };
   const byDirection = new Map<string, GraphRelation[]>();
   for (const r of relations) byDirection.set(`${r.from}\n${r.to}`, [...(byDirection.get(`${r.from}\n${r.to}`) ?? []), r]);
-  return [...byDirection.values()].map((rs) =>
-    fill(s.relation, {
-      from: name(rs[0].from),
-      relation: [...new Set(rs.map((r) => relationTypeLabel(r.type, language)))].join(s.relationJoin),
-      to: name(rs[0].to),
-    }),
-  );
+  return [...byDirection.values()].map((rs) => {
+    const relation = [...new Set(rs.map((r) => relationTypeLabel(r.type, language)))].join(s.relationJoin);
+    const part = (token: string): SentencePart =>
+      token === "{from}"
+        ? { text: name(rs[0].from), entityId: rs[0].from }
+        : token === "{to}"
+          ? { text: name(rs[0].to), entityId: rs[0].to }
+          : { text: token === "{relation}" ? relation : token };
+    return s.relation
+      .split(/(\{from\}|\{relation\}|\{to\})/)
+      .filter((token) => token !== "")
+      .map(part);
+  });
 }
+
+export const relationSentences = (graph: Graph, relations: GraphRelation[], language: string): string[] =>
+  relationSentenceParts(graph, relations, language).map((parts) => parts.map((p) => p.text).join(""));
 
 // 看得到、沒有篩選掉的實體與關係數（關係的兩端都沒篩選掉才算）
 function visibleCounts(graph: Graph, excluded: ReadonlySet<string>) {
