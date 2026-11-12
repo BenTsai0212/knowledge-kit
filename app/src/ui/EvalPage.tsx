@@ -179,7 +179,7 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
     if (run === null) return;
     const current = await report(run);
     const set = Math.min(reportSet, current.sets.length - 1);
-    const html = reportHtml(qualityReport({ questions, access, data: dataset, thresholds, current, set, previous }), access, language);
+    const html = reportHtml(qualityReport({ questions, access, data: dataset, thresholds, current, set, previous }), access, language, client.displayName[language]);
     save(new Blob([html], { type: "text/html" }), `quality-report-${stamp(run)}.html`);
   }
 

@@ -3,10 +3,11 @@
 import { describe, expect, it } from "vitest";
 import { strings } from "../client/i18n";
 import { clientConfig } from "../client/load";
+import type { LanguageCode } from "../client/types";
 import { dataset } from "../dataset/load";
 import { evalQuestions } from "./load";
 import { qualityReport, restrictedRoles, type ReportSource } from "./report";
-import { escapeHtml, reportHtml } from "./report-html";
+import { cssString, escapeHtml, reportHtml } from "./report-html";
 import type { QuestionResult } from "./run";
 import { summarize, type QuestionScore } from "./score";
 import type { EvalQuestion } from "./types";
@@ -49,8 +50,9 @@ function source(results: QuestionResult[], patch: Partial<ReportSource> = {}): R
   };
 }
 
-const html = (current: ReportSource, previous: ReportSource | null = null) =>
-  reportHtml(qualityReport({ questions, access, data: dataset, thresholds, current, set: 0, previous }), access, language);
+const CLIENT = client.displayName[language];
+const html = (current: ReportSource, previous: ReportSource | null = null, lang: LanguageCode = language) =>
+  reportHtml(qualityReport({ questions, access, data: dataset, thresholds, current, set: 0, previous }), access, lang, client.displayName[lang] ?? CLIENT);
 const allPass = () => questions.map((q) => resultFor(q));
 const allFail = () => questions.map((q) => resultFor(q, true));
 
@@ -144,5 +146,111 @@ describe("reportHtml：機密（#210 決定 3 與補充）", () => {
     const numbers = [...page.matchAll(/<tr><td>(\d+)<\/td>/g)].map((m) => Number(m[1]));
     const expected = questions.flatMap((q, i) => (restricted.has(q.role) ? [] : [i + 1]));
     expect(numbers).toEqual(expected);
+  });
+});
+
+// 版面（#281，docs/design.md「品質報告的列印版面」）；列印成 PDF 的實際版面由人工確認（中文與英文各一次）
+describe("reportHtml：列印版面", () => {
+  const styleOf = (page: string) => page.slice(page.indexOf("<style>"), page.indexOf("</style>"));
+  const firstOf = (page: string) => page.slice(page.indexOf('<section class="first">'), page.indexOf('<section class="appendix">'));
+  const appendixOf = (page: string) => page.slice(page.indexOf('<section class="appendix">'));
+  const count = (text: string, part: string) => text.split(part).length - 1;
+  const s = strings(language);
+
+  it("A4 直式；頁尾是「客戶 · 品質報告 第 N／M 頁」（頁碼用 CSS 計數器）", () => {
+    for (const lang of client.languages) {
+      const style = styleOf(html(source(allPass()), null, lang));
+      expect(style).toContain("size: A4 portrait;");
+      const footer = /@bottom-center \{ content: ([^;]+);/.exec(style)?.[1] ?? "";
+      expect(footer).toContain("counter(page)");
+      expect(footer).toContain("counter(pages)");
+      expect(footer).not.toMatch(/\{pages?\}|\{client\}/);
+      expect(footer).toContain(cssString(client.displayName[lang] ?? CLIENT).slice(1, -1));
+    }
+  });
+
+  it("不寫死顏色：沒有色碼、rgb()、hsl() 與顏色名稱；字型是系統字型", () => {
+    const style = styleOf(html(source(allFail()), source(allPass())));
+    expect(style).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(|(?<![\w-])(black|white|gr[ae]y|red|green|blue|orange|yellow)(?![\w-])/i);
+    expect(style).toContain("currentColor");
+    expect(style).toContain("font-family: system-ui");
+    expect(style).not.toContain("@font-face");
+  });
+
+  it("第一頁：頁首（產品名、客戶、評測日期、題庫版本）、結論標題、四項指標、各身分、不代表什麼；附錄從新的一頁開始", () => {
+    const page = html(source(allPass()));
+    const first = firstOf(page);
+    const masthead = first.slice(first.indexOf('<header class="masthead">'), first.indexOf("</header>"));
+    for (const x of [s.productName, CLIENT, "2026-11-10", "0123456789ab"]) expect(masthead).toContain(escapeHtml(x));
+    expect(first.indexOf("</header>")).toBeLessThan(first.indexOf("<h1>"));
+    expect(count(first, '<div class="bar"')).toBe(4);
+    expect(first.match(/<span class="limit" style="left: [\d.]+%"><\/span>/g)).toHaveLength(4);
+    expect(first).toContain(escapeHtml(t.thresholdLegend));
+    expect(first).toContain(escapeHtml(t.leakExplain));
+    expect(first).toContain(escapeHtml(t.limitsTitle));
+    // 附錄的內容不在第一頁
+    expect(first).not.toContain(escapeHtml(t.matrixTitle));
+    expect(page).toContain(".appendix { break-before: page; }");
+  });
+
+  it("條狀圖的長度是結果、虛線在門檻的位置", () => {
+    const page = html(source(allPass()));
+    const citation = page.slice(page.indexOf(`<th scope="row">${escapeHtml(s.evalMetrics.citation)}</th>`));
+    const limit = Math.round(thresholds.citation * 1000) / 10;
+    expect(citation.slice(0, citation.indexOf("</tr>"))).toContain(`<span class="fill" style="width: 100%"></span><span class="limit" style="left: ${limit}%"></span>`);
+  });
+
+  it("通過與否用 ✓／✕ 與文字：全部達到時每列「✓ 達到」，沒有加粗門檻線的列", () => {
+    const first = firstOf(html(source(allPass())));
+    expect(count(first, escapeHtml(`${t.passMark} ${t.metLabel}`))).toBe(4);
+    expect(first).not.toContain('class="unmet"');
+    expect(first).not.toContain(escapeHtml(`${t.failMark} ${t.unmetLabel}`));
+  });
+
+  it("未達時只加粗門檻線（.unmet）、該列標「✕ 未達」；第二次的結果與「✓ 兩次」", () => {
+    const page = html(source(allFail()), source(allPass()));
+    const failing = firstOf(page);
+    const unmetRows = count(failing, '<tr class="unmet">');
+    expect(unmetRows).toBeGreaterThan(0);
+    expect(count(failing, escapeHtml(`${t.failMark} ${t.unmetLabel}`))).toBe(unmetRows);
+    expect(styleOf(page)).toContain(".unmet .bar .limit { border-left-width: 3px; }");
+
+    const both = firstOf(html(source(allPass()), source(allPass())));
+    expect(both).toContain(escapeHtml(t.second));
+    expect(count(both, escapeHtml(`${t.passMark} ${t.bothLabel}`))).toBe(4);
+  });
+
+  it("各身分以 ✓／✕ 標出滲漏；附錄以 ✕ 標出有未通過的格", () => {
+    const pass = html(source(allPass()));
+    expect(firstOf(pass)).toContain(`<li>${escapeHtml(t.passMark)} `);
+    expect(appendixOf(pass)).not.toContain(escapeHtml(t.failMark));
+    const fail = html(source(allFail()));
+    expect(firstOf(fail)).toContain(`<li>${escapeHtml(t.failMark)} `);
+    expect(appendixOf(fail)).toContain(`<td>${escapeHtml(t.failMark)} `);
+  });
+
+  it("可填寫的欄位：螢幕上是虛線框，列印時變成底線；上方的說明條列印時隱藏", () => {
+    const page = html(source(allFail()));
+    expect(page).toContain(`<div class="field" contenteditable="true" role="textbox" aria-label="${escapeHtml(t.reason)}"></div>`);
+    expect(page).toContain(`aria-label="${escapeHtml(t.action)}"`);
+    const style = styleOf(page);
+    expect(style).toMatch(/\n\.field \{[^}]*border: 1px dashed;/);
+    const print = style.slice(style.indexOf("@media print"));
+    expect(print).toContain(".field { border: 0; border-bottom: 1px solid; }");
+    expect(print).toContain(".note { display: none; }");
+  });
+
+  it("英文介面：指標表固定欄寬（名稱允許換行），內容同樣完整", () => {
+    const en = strings("en");
+    const page = html(source(allFail()), source(allPass()), "en");
+    expect(page).toContain('<html lang="en">');
+    expect(page).toContain('<table class="metrics"><colgroup><col class="name">');
+    expect(styleOf(page)).toContain(".metrics { table-layout: fixed; }");
+    for (const key of ["citation", "answer", "leakage", "refusal"] as const) expect(page).toContain(escapeHtml(en.evalMetrics[key]));
+    expect(page).toContain(escapeHtml(en.evalReport.evaluatedOn));
+  });
+
+  it("cssString 跳脫引號、反斜線、角括號與換行", () => {
+    expect(cssString('a"b\\c</style>\n')).toBe('"a\\22 b\\5c c\\3c /style\\3e \\a "');
   });
 });
