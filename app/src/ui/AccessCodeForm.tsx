@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useState, type Ref } from "react";
 import { errorMessage, strings } from "../client/i18n";
 import { onlineDemo } from "./online-demo";
 
@@ -7,9 +7,11 @@ interface Props {
   // 上一個碼被拒（invalid_access_code）時是被拒的碼：顯示原因，輸入框保留這個碼（#246）；沒有被拒時為 null
   rejected: string | null;
   onSubmit(code: string): void;
+  // 登入面板從帳號登入切換過來時，焦點移到標題（#334）
+  titleRef?: Ref<HTMLHeadingElement>;
 }
 
-export function AccessCodeForm({ language, rejected, onSubmit }: Props) {
+export function AccessCodeForm({ language, rejected, onSubmit, titleRef }: Props) {
   const s = strings(language);
   const errorId = useId();
   // 線上 demo 預先填入公開試用碼，訪客只要按送出（#100 決定 2）；碼被拒時保留已輸入的內容，不清空（#246）
@@ -23,11 +25,17 @@ export function AccessCodeForm({ language, rejected, onSubmit }: Props) {
         if (code.trim() !== "") onSubmit(code.trim());
       }}
     >
-      <h2>{s.accessCodeTitle}</h2>
+      <p className="entry-eyebrow" aria-hidden="true">
+        {s.accessCodeEyebrow}
+      </p>
+      <h2 ref={titleRef} tabIndex={-1}>
+        {s.accessCodeTitle}
+      </h2>
       <label>
         {s.accessCodeLabel}
         <input
           type="password"
+          className="entry-code"
           autoComplete="off"
           value={code}
           aria-invalid={invalid || undefined}
@@ -45,7 +53,7 @@ export function AccessCodeForm({ language, rejected, onSubmit }: Props) {
       )}
       {!invalid && onlineDemo.publicAccessCode !== "" && <p className="muted">{s.demoAccessCodeHint}</p>}
       <p className="muted">{s.accessCodeHint}</p>
-      <button type="submit" disabled={code.trim() === ""}>
+      <button type="submit" className="entry-primary" disabled={code.trim() === ""}>
         {s.accessCodeSubmit}
       </button>
     </form>

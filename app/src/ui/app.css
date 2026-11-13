@@ -3796,9 +3796,10 @@ label.inline {
   }
 }
 
-/* 入口頁（#228）：左側主視覺、右側邀請碼面板；窄螢幕時主視覺在上、面板在下 */
+/* 入口頁（#228）：左側主視覺、右側登入面板；窄螢幕時主視覺在上、面板在下。
+   桌機（#334，畫板 K-Login）：主視覺佔滿左側，登入面板是右側寬 380～520px 的一欄（surface 底、左邊 1px border），內容垂直置中 */
 .app > main.entry {
-  grid-template-columns: minmax(0, 1fr) minmax(20rem, 28rem);
+  grid-template-columns: minmax(0, 1fr) clamp(380px, 26vw, 520px);
   grid-template-rows: minmax(0, 1fr);
   gap: 0;
   padding: 0;
@@ -3815,7 +3816,77 @@ label.inline {
   border-left: 1px solid var(--color-border);
 }
 
-/* 登入面板（#287）：欄位一欄一列；停用的密碼欄看得出不能輸入，下方的「使用邀請碼體驗」是次要按鈕 */
+/* 桌機登入前（#334）：沒有左側導覽，上方是頂端列（EntryBar.tsx），下方是入口頁 */
+.app.app--entry {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.entry-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px clamp(16px, 3vw, 40px);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.entry-bar__brand {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.entry-bar__wordmark {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.entry-bar__sep {
+  color: var(--color-textMuted);
+}
+
+.entry-bar__client {
+  font-size: 14px;
+  color: var(--color-textMuted);
+}
+
+/* 「虛構資料」「展示用權限」：虛線的 mono 小標籤 */
+.entry-bar__tag {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px dashed var(--color-textMuted);
+  border-radius: var(--radius-small);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.entry-bar__language {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--color-textMuted);
+}
+
+.entry-bar__language select {
+  height: 40px;
+  padding: 0 10px;
+  font-size: 14px;
+}
+
+/* 登入面板（#287）：欄位一欄一列；停用的密碼欄是虛線框，看得出不能輸入 */
 .sign-in label {
   display: grid;
 }
@@ -3828,9 +3899,171 @@ label.inline {
   margin: 0;
 }
 
-.entry__panel > button.secondary,
-.entry__panel > button.link {
+.sign-in__password {
+  border-style: dashed;
+  background-color: transparent;
+}
+
+.entry__panel button.link {
   justify-self: start;
+}
+
+/* 標題上方的 mono 小字（#334）：「SIGN IN」「ACCESS」 */
+.entry-eyebrow {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--color-primary);
+}
+
+/* 帳號的單選卡（#334）：mono 的展示帳號＋角色名稱，整張卡可點，選中的卡用 primary 1.5px 框 */
+.account-cards {
+  display: grid;
+  gap: 6px;
+}
+
+.account-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.account-card:has(input:checked) {
+  border: 1.5px solid var(--color-primary);
+  padding: 0 13.5px;
+}
+
+.account-card:has(input:focus-visible) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.account-card input {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--color-primary);
+}
+
+.account-card__text {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.account-card__account {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.account-card__role {
+  font-size: 12px;
+  color: var(--color-textMuted);
+}
+
+/* 「登入」與「使用邀請碼體驗」之間的「或」：兩側是細線 */
+.sign-in__or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--color-textMuted);
+}
+
+.sign-in__or::before,
+.sign-in__or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+/* 桌機的登入面板（#334）：面板本身就是欄，表單不再是浮動的卡片；標題 28px、輸入框與「登入」52px、「使用邀請碼體驗」48px，都是滿寬 */
+@media (min-width: 1025px) {
+  .entry__panel {
+    gap: 16px;
+    padding: 40px clamp(16px, 3vw, 48px);
+    background: var(--color-surface);
+  }
+
+  .entry__panel .access-code {
+    gap: 12px;
+    max-width: none;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+  }
+
+  .entry__panel h2 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  .entry__panel .access-code label {
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .entry__panel .access-code p {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .entry__panel .entry-eyebrow {
+    font-size: 11px;
+  }
+
+  .sign-in__label {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .sign-in__password {
+    height: 48px;
+    padding: 0 14px;
+  }
+
+  .entry-code {
+    height: 52px;
+    padding: 0 14px;
+    font-family: var(--font-mono);
+    font-size: 17px;
+    letter-spacing: 0.04em;
+  }
+
+  .entry-primary {
+    height: 52px;
+    font-weight: 700;
+  }
+
+  .sign-in__alt {
+    height: 48px;
+    border-color: var(--color-border);
+    background: transparent;
+    color: var(--color-text);
+    font-weight: 600;
+  }
+
+  .sign-in__back {
+    min-height: 44px;
+    padding: 0 4px;
+    font-weight: 600;
+    text-decoration: none;
+  }
 }
 
 /* 手機與平板（≤ 1024px，layout.ts 的 TABLET_MAX；docs/design.md「入口（手機）」、平板的登入頁沿用手機版）：

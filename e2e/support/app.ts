@@ -41,6 +41,8 @@ export async function openApp(page: Page, path = "/"): Promise<void> {
 
 // 帳號登入（#287）：登入頁的面板與帳號欄的選項（app/src/ui/sign-in.ts 的展示帳號＋角色名稱）
 export const signInPanel = (page: Page) => page.locator("section.sign-in");
+// 帳號的單選卡（#334）：以展示帳號找（卡片的名稱是帳號＋角色名稱）
+export const chooseAccount = (panel: Locator, id: RoleId) => panel.getByRole("radio", { name: demoAccount(id) }).check();
 export function accountOption(id: RoleId): string {
   const role = access.roles.find((r) => r.id === id)!;
   return s.signInAccountOption.replace("{account}", demoAccount(id)).replace("{role}", role.label[language]);

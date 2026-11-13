@@ -6,6 +6,7 @@ import { expect, test, type Page } from "@playwright/test";
 import {
   ACCESS_CODE,
   accountOption,
+  chooseAccount,
   blockModelDownload,
   EVALS_PATH,
   identityBadge,
@@ -167,7 +168,7 @@ test("帳號登入時：面板只顯示帳號與角色、不能切換身分，�
   await routeFakeAsk(page);
   await page.goto("/");
   const panel = signInPanel(page);
-  await panel.getByLabel(s.signInAccount).selectOption({ label: accountOption(role.id) });
+  await chooseAccount(panel, role.id);
   await panel.getByLabel(s.accessCodeLabel).fill(ACCESS_CODE);
   await panel.getByRole("button", { name: s.signInSubmit, exact: true }).click();
   await identityBadge(page).click();

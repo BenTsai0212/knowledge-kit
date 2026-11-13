@@ -89,6 +89,7 @@
 - `EntityPanel.tsx`：圖譜頁的右側面板
 - `EntitySearch.tsx`：以名稱搜尋實體
 - `entry-hero.ts`：入口頁主視覺版面的純函式
+- `EntryBar.tsx`：桌機登入頁的頂端列（登入前沒有左側導覽，#334）
 - `EntryHero.tsx`：入口頁的主視覺（見 `docs/design.md`「入口頁主視覺」）
 - `eval-helpers.ts`：評測台的純函式
 - `EvalPage.tsx`：評測台

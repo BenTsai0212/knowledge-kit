@@ -26,6 +26,7 @@ import { openRetriever } from "./retrieval/retrieve";
 import { readSource, type SourceDocument } from "./sources/source";
 import { clearAccessCode, loadAccessCode, saveAccessCode } from "./ui/access-code";
 import { crossFade } from "./ui/cross-fade";
+import { EntryBar } from "./ui/EntryBar";
 import { EntryHero } from "./ui/EntryHero";
 import { EvalPage } from "./ui/EvalPage";
 import { GraphPage } from "./ui/GraphPage";
@@ -459,6 +460,9 @@ export function App() {
   // 平板（#255）：原文與實體從右側滑出覆蓋，不常駐右欄。展示模式沿用 1920×1080 的規格縮放（docs/design.md「平板」），不改用滑出面板
   const tablet = layout === "tablet" && !presentationBar;
   const overlay = phone || tablet;
+  // 桌機登入前（#334，畫板 K-Login）：沒有左側導覽，頂端列＋登入頁；沒有導覽可以切到其他頁，所以不論目前的頁籤都顯示登入頁。
+  // 平板與手機的登入頁照舊（#327）
+  const desktopEntry = layout === "desktop" && accessCode === null;
   // 身分對照只在展示模式的頂端列、開關開啟時（線上 demo 一律關閉，online-demo.ts 的 demoCompare）
   const compareEnabled = presentationBar && demoCompare;
   const compareDisabled = retriever === null || answering;
@@ -536,9 +540,10 @@ export function App() {
       </BottomSheet>
     );
   return (
-    <div className={phone ? "app app--phone" : tablet ? "app app--tablet" : "app"}>
+    <div className={phone ? "app app--phone" : tablet ? "app app--tablet" : desktopEntry ? "app app--entry" : "app"}>
       {/* 只渲染一種導覽結構：展示模式登入後是頂端列，沒有「更換邀請碼」與「這次的問題」（docs/design.md「隱藏與保留」）；
-          其他情況手機是頂端列＋底部分頁列、平板是左側的圖示導覽列、桌機是左側導覽（#255）。展示模式的登入頁照常用 Nav */}
+          其他情況手機是頂端列＋底部分頁列、平板是左側的圖示導覽列、桌機是左側導覽（#255），桌機登入前是登入頁的頂端列（#334）。
+          展示模式在手機與平板的登入頁照常用 Nav */}
       {presentationBar ? (
         <PresentationBar
           language={language}
@@ -551,6 +556,8 @@ export function App() {
           bump={identityBump}
           compare={compareEnabled ? { open: compare !== null, disabled: compare === null && compareDisabled, onToggle: toggleCompare } : undefined}
         />
+      ) : desktopEntry ? (
+        <EntryBar language={language} onLanguage={(code) => crossFade(() => flushSync(() => changeLanguage(code)))} />
       ) : (
         <Nav
           language={language}
@@ -592,7 +599,7 @@ export function App() {
         <main className="page">
           <p className="card error">{s.loadFailed}</p>
         </main>
-      ) : view !== "qa" && view !== "home" && (view !== "evals" || accessCode !== null) ? (
+      ) : !desktopEntry && view !== "qa" && view !== "home" && (view !== "evals" || accessCode !== null) ? (
         <main className="page">
           {db === null ? (
             <p className="card muted">{s.loading}</p>
@@ -689,7 +696,7 @@ export function App() {
           {!overlay && sidePanel()}
         </main>
       ) : accessCode === null ? (
-        // 登入頁（#228、#287）：左側主視覺、右側登入面板與語意模型的下載進度；窄螢幕時主視覺在上
+        // 登入頁（#228、#287、#334）：左側主視覺、右側登入面板與語意模型的下載進度；窄螢幕時主視覺在上
         <main className="entry">
           <EntryHero />
           <div className="entry__panel">
