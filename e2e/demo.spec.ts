@@ -38,6 +38,17 @@ test("公開試用碼已預先填入，按送出就能提問；問答頁提醒�
   await expect(page.locator("section.answer")).toContainText(FAKE_ANSWER_LEAD);
 });
 
+// 身分對照（#261）：demo job 也以 VITE_DEMO_COMPARE=1 build，線上 demo 仍一律關閉（online-demo.ts 的 readDemoCompare()）
+test("展示模式：沒有身分對照的按鈕，C 也不打開（VITE_DEMO_COMPARE=1 也一樣）", async ({ page }) => {
+  await page.goto("/?mode=presentation");
+  await page.getByRole("button", { name: s.accessCodeSubmit }).click();
+  const banner = page.getByRole("banner");
+  await expect(banner.getByRole("radiogroup", { name: s.identity })).toBeVisible();
+  await expect(banner.getByRole("button", { name: s.presentation.compare })).toHaveCount(0);
+  await page.locator("body").press("c");
+  await expect(page.getByRole("region", { name: s.presentation.compare })).toHaveCount(0);
+});
+
 test("評測台隱藏，待審保留", async ({ page }) => {
   test.skip(reviewer === undefined, NO_REVIEWER);
   await start(page);

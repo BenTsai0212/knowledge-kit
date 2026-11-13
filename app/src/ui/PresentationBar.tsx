@@ -1,7 +1,7 @@
 // 展示模式的頂端列（#260 PR 2，docs/design.md「展示模式」的「版面」）：取代左側導覽。
 // 產品 icon、客戶名稱，下方一行「虛構資料 · 展示用權限」；「問答｜圖譜」分段切換（只有兩個頁籤時改用頂端的分段切換）；
 // 右側是身分分段切換（每個身分前標快捷鍵數字；按鍵本身屬於主持人快捷鍵的 Issue）與語言。
-// 「身分對照」按鈕由 #261 加在身分分段切換的右側（#260 決定 2：本 PR 不放佔位按鈕）。
+// 「身分對照」按鈕在身分分段切換的右側（#261）：只有開關 VITE_DEMO_COMPARE 開啟時傳入 compare；按下切換開關（aria-pressed），快捷鍵是 C。
 import { clientConfig } from "../client/load";
 import { strings } from "../client/i18n";
 import { IDENTITY_SELECT_ID } from "./empty-state";
@@ -19,6 +19,8 @@ interface Props {
   onView(view: View): void;
   // 劇本切換身分時：該身分的徽章以 settle 跳一下（count 換 key 重播動畫）；null 時不跳
   bump: IdentityBump | null;
+  // 身分對照（#261）；開關關閉時沒有，不顯示按鈕
+  compare?: { open: boolean; disabled: boolean; onToggle(): void };
 }
 
 export interface IdentityBump {
@@ -28,7 +30,7 @@ export interface IdentityBump {
 
 const ownName = (code: string) => new Intl.DisplayNames([code], { type: "language" }).of(code) ?? code;
 
-export function PresentationBar({ language, identity, onIdentity, onLanguage, views, view, onView, bump }: Props) {
+export function PresentationBar({ language, identity, onIdentity, onLanguage, views, view, onView, bump, compare }: Props) {
   const s = strings(language);
   const tabLabels: Partial<Record<View, string>> = { qa: s.tabQa, graph: s.tabGraph };
   return (
@@ -77,6 +79,12 @@ export function PresentationBar({ language, identity, onIdentity, onLanguage, vi
           );
         })}
       </div>
+      {compare !== undefined && (
+        <button type="button" className="secondary presentation-bar__compare" aria-pressed={compare.open} disabled={compare.disabled} onClick={compare.onToggle}>
+          <kbd aria-hidden="true">C</kbd>
+          {s.presentation.compare}
+        </button>
+      )}
       <label className="presentation-bar__language">
         {s.language}
         <select value={language} onChange={(e) => onLanguage(e.target.value)}>

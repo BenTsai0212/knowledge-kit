@@ -154,7 +154,8 @@ repo 預計公開，CI 紀錄也會公開，所以兩者的輸出都**不包含�
 | `graph-search.spec.ts` | 圖譜的找起點與右側面板（#199）：沒有選取時右側列出「關聯最多」；以搜尋框選一個實體開始展開，在面板的關係清單點相連的實體展開第二層，「回到全部」後沒有變灰；一般身分搜尋不到只有能審查的身分看得到的實體，切回能審查的身分後搜得到；「在問答中問」切到問答頁、問句填進輸入框且沒有送出；實體面板有類型徽章，「在問答中問」是主要按鈕、「只看它」是次要按鈕，原文片段的底色是 `reading`，片段中出現的實體名稱以 `<mark>` 標出（#240）；類型篩選取消勾選後該類型變灰、搜尋不到；多跳路徑的起點預設為選取的實體、終點以搜尋選擇；手機寬度可以搜尋與展開、沒有橫向捲動。不點畫布 |
 | `home.spec.ts` | 首頁（#283）：登入後先到首頁，問候是三種之一且不含身分名稱，常見問題只列目前身分的情境；從首頁提問切到問答頁，問過的問題列在首頁，「再問一次」成為新的一題；「等你處理」只給能審核的身分；「有更新」（#284）：能上傳、不能審核的身分上傳後是審核中，「查看進度」到我的上傳並選取該份，能審核的身分核准後是已核准，「在圖譜中查看」打開核准的實體。回報已處理的「看處理結果」見 `reports.spec.ts`。其他測試的 `openApp()` 登入後切到問答頁 |
 | `presentation.spec.ts` | 客戶展示模式（#129，`/?mode=presentation`）：每個身分都只有問答與圖譜兩個頁籤（同時帶 `?tools=evals` 也一樣）；問答附出處並打開原文、圖譜畫出畫布 |
-| `demo.spec.ts` | 線上 demo 的設定（#100，只在 `VITE_ONLINE_DEMO=1` 的 build 執行，見下方「線上 demo」）：公開試用碼預先填入並以它提問、問答與上傳頁的提醒、評測台隱藏（帶 `?tools=evals` 也一樣）而待審保留、上傳後萃取的實體出現在待審 |
+| `compare.spec.ts` | 展示模式的身分對照（#261，需要 `VITE_DEMO_COMPARE=1` 的 build，見下方「本機執行」）：頂端列的按鈕開關對照，沒有題目時是說明；對照打開時點劇本中只有一個身分看得到答案段落的題目（以 `oracle.ts` 算出；沒有時略過），每個身分一欄、依 `access.json` 的順序，只有目前身分的欄是 `is-current`；假的 `/api/ask` 只在送出的段落含答案段落時回答（比對答案段落中第一段其他段落都不含的 20 字，不用開頭：開頭可能與看得到的段落相同；另有不需要瀏覽器與開關的測試確認比對文字只出現在一個答案段落），所以看得到的身分的欄有引用，其他欄是一般的拒答與「可以試試」，每一欄都不出現該身分看不到的段落；`C` 打開與關閉、`Esc` 關閉，焦點在輸入框時 `C` 是文字；減少動態效果時欄的動畫時間是 0 |
+| `demo.spec.ts` | 線上 demo 的設定（#100，只在 `VITE_ONLINE_DEMO=1` 的 build 執行，見下方「線上 demo」）：公開試用碼預先填入並以它提問、問答與上傳頁的提醒、評測台隱藏（帶 `?tools=evals` 也一樣）而待審保留、上傳後萃取的實體出現在待審；以 `VITE_DEMO_COMPARE=1` build 時，展示模式也沒有身分對照（#261） |
 
 - **看不到的段落**以 `app/src/evals/oracle.ts` 的 `expectedVisible()` 從選定客戶的 `data/` 算出（`e2e/support/dataset.ts`），不以畫面或資料庫的結果為準；畫面文字以每段開頭 20 個字元比對（空白先合併）。切換前先確認畫面上確實有看不到的段落，比對本身才有效。
 - **串流中的回答**：`route.fulfill` 一次送出整個 body，做不出串流到一半的狀態，所以 `holdAskStream()` 在頁面內替換 `fetch`，由測試以 `pushAskStream()` 逐段送出。
@@ -166,22 +167,22 @@ repo 預計公開，CI 紀錄也會公開，所以兩者的輸出都**不包含�
 
 ```bash
 npx playwright install chromium
-npm run build
-npm run test:e2e
+VITE_DEMO_COMPARE=1 npm run build
+VITE_DEMO_COMPARE=1 npm run test:e2e
 ```
 
-已有在 port 4173 執行中的預覽頁時直接使用（CI 中一律自己啟動）。修改 `app/` 或 `client/` 後要重新 `npm run build`。對客戶執行時，build 與測試都加上同一個 `KK_CLIENT=<名稱>`（由人執行）。
+`VITE_DEMO_COMPARE=1` 開啟展示模式的身分對照（#261，營運開關，預設關閉）：`compare.spec.ts` 的畫面測試只在 build 與測試都帶這個變數時執行，沒有時略過（參考情境不得略過，整次執行算失敗）。已有在 port 4173 執行中的預覽頁時直接使用（CI 中一律自己啟動）。修改 `app/` 或 `client/` 後要重新 `npm run build`。對客戶執行時，build 與測試都加上同一個 `KK_CLIENT=<名稱>`（由人執行）。
 
 ### 線上 demo
 
 `playwright.config.ts` 依 `VITE_ONLINE_DEMO` 決定範圍：`1` 時只執行 `demo.spec.ts`，其他情況不執行它（一般 build 沒有 demo 的畫面，demo build 沒有評測台）。build 與測試要用同一組環境變數，`VITE_PUBLIC_ACCESS_CODE` 用任意虛構字串（沒有設定時 `demo.spec.ts` 直接失敗）：
 
 ```bash
-VITE_ONLINE_DEMO=1 VITE_PUBLIC_ACCESS_CODE=e2e-public-code npm run build
-VITE_ONLINE_DEMO=1 VITE_PUBLIC_ACCESS_CODE=e2e-public-code npm run test:e2e
+VITE_ONLINE_DEMO=1 VITE_PUBLIC_ACCESS_CODE=e2e-public-code VITE_DEMO_COMPARE=1 npm run build
+VITE_ONLINE_DEMO=1 VITE_PUBLIC_ACCESS_CODE=e2e-public-code VITE_DEMO_COMPARE=1 npm run test:e2e
 ```
 
-測試後要跑一般的 e2e 時，先不帶這兩個變數重新 `npm run build`。只用參考情境 `client/`（線上 demo 不放客戶）。
+測試後要跑一般的 e2e 時，先不帶 `VITE_ONLINE_DEMO` 與 `VITE_PUBLIC_ACCESS_CODE` 重新 `npm run build`。只用參考情境 `client/`（線上 demo 不放客戶）。
 
 ### CI
 
@@ -190,7 +191,7 @@ VITE_ONLINE_DEMO=1 VITE_PUBLIC_ACCESS_CODE=e2e-public-code npm run test:e2e
 - `concurrency`：同一個 PR 推新的 commit 時取消舊的執行；push 到 `main` 與手動執行每次各自一個群組（`run_id`），不會被取消。
 - 觸發是 `pull_request`（不是 `pull_request_target`），fork 來的 PR 也只以唯讀的 token 執行，拿不到 secret；workflow 本來就不用 secret，所以 fork 的 PR 也能照常執行。
 
-- `list` job 列出參考情境（`""`）與 `clients/` 底下的客戶（`scripts/check-clients.mjs` 的 `listClients()`），`playwright` job 以 matrix 對每一個各執行一格（`KK_CLIENT` 設為該名稱，build 後執行測試；`fail-fast: false`）。
+- `list` job 列出參考情境（`""`）與 `clients/` 底下的客戶（`scripts/check-clients.mjs` 的 `listClients()`），`playwright` job 以 matrix 對每一個各執行一格（`KK_CLIENT` 設為該名稱，build 後執行測試；`fail-fast: false`）。`playwright` 與 `demo` 兩個 job 都設 `VITE_DEMO_COMPARE=1`（#261）：一般 build 執行 `compare.spec.ts`，線上 demo 的 build 確認身分對照仍然關閉。
 - `demo` job 以線上 demo 的設定（`VITE_ONLINE_DEMO=1`、虛構的 `VITE_PUBLIC_ACCESS_CODE`）build 參考情境，執行 `demo.spec.ts`；失敗時的 artifact 是 `playwright-online-demo`，成功時是 `playwright-report-online-demo`。
 - 權限只有 `contents: read`，不使用任何 secret。
 - PR 上失敗時：程式造成的失敗由決策中心貼修正要求；GitHub 端異常造成的失敗由決策中心重跑（[decision-center.md](workflow/decision-center.md) 第 4 節）。main 上失敗時由決策中心另開修正 Issue（workflow 不會自動開 Issue）。

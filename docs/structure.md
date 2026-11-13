@@ -105,6 +105,8 @@
 - `GraphZoomView.tsx`：大量節點時的三層語意縮放（見 `docs/graph.md`「三層語意縮放（畫面）」）；`cover` prop
 - `home.ts`：首頁的純函式
 - `HomePage.tsx`：首頁（登入後的預設頁）
+- `identity-compare.ts`：身分對照的純函式：欄的順序與目前身分、目前的題目、一欄一欄送出、`C`／`Esc`
+- `IdentityCompare.tsx`：展示模式的身分對照，每個身分一欄，沿用 `AnswerView`（純函式在 `identity-compare.ts`），見 `docs/qa.md`「身分對照」
 - `IdentityControls.tsx`：左側導覽的身分、語言與更換邀請碼（手機改用 `IdentitySheet.tsx`）
 - `IdentitySheet.tsx`：手機的身分與語言面板的內容（身分單選卡附 `roles[].scope`、語言分段切換、更換邀請碼；帳號登入時只顯示帳號與角色）
 - `layout.ts`：斷點（`layoutFor()`、`useLayout()`）、手機分頁的分配（`phoneTabs()`）、底部面板的拖曳門檻與 `sheetSnap()`、底部面板以上的可見部分 `visibleArea()`（純函式，測試在 `layout.test.ts`）
@@ -117,7 +119,7 @@
 - `online-demo.ts`：唯一讀取處：線上 demo 的 `VITE_ONLINE_DEMO`、`VITE_PUBLIC_ACCESS_CODE`（預設關閉；開啟時隱藏評測台），展示模式 `?mode=presentation`（只顯示問答與圖譜），評測台的 `?tools=evals`，身分對照的 `VITE_DEMO_COMPARE`（預設關閉、線上 demo 一律關閉）；見 `docs/qa.md`「線上 demo」「展示模式」「身分對照」、`docs/evals.md`「開啟評測台」
 - `PassageMarks.tsx`：時間軸與原文面板的標示
 - `PathPanel.tsx`：圖譜頁的路徑面板
-- `PresentationBar.tsx`：展示模式登入後的頂端列（不論寬度都取代 `Sidebar`／`MobileNav`），見 `docs/qa.md`「展示模式」
+- `PresentationBar.tsx`：展示模式登入後的頂端列（不論寬度都取代 `Sidebar`／`MobileNav`）；`VITE_DEMO_COMPARE` 開啟時有「身分對照」按鈕，見 `docs/qa.md`「展示模式」「身分對照」
 - `ProductIcon.tsx`：頁首的產品 icon（favicon 在 `app/public/favicon.svg`，見 `docs/design.md`「產品 icon（K 晶格）」）
 - `qa-errors.ts`：問答錯誤的五類（見 `docs/qa.md`「錯誤」）
 - `refusal-next-steps.ts`：拒答下方的下一步（見 `docs/qa.md`「拒答」）
@@ -254,6 +256,7 @@ Cloudflare Worker（TypeScript）：`GET /api/health`、`POST /api/ask`；其他
 Playwright 的端對端測試（`*.spec.ts`）；設定在根目錄的 `playwright.config.ts`，說明見 `docs/testing.md`。
 
 - `access.spec.ts`：越權
+- `compare.spec.ts`：展示模式的身分對照，只在 `VITE_DEMO_COMPARE=1` 的 build 執行畫面的測試（比對文字只出現在一個答案段落的檢查不需要開關）
 - `demo.spec.ts`：線上 demo 的設定，只在 `VITE_ONLINE_DEMO=1` 的 build 執行
 - `entry-touch.spec.ts`：入口（手機與平板）與觸控目標（#255 PR 4）
 - `fixtures/`：上傳用的虛構檔案
@@ -272,7 +275,7 @@ Playwright 的端對端測試（`*.spec.ts`）；設定在根目錄的 `playwrig
 - `smoke.spec.ts`：冒煙
 - `support/app.ts`：共用操作（介面文字從選定客戶的 `i18n/` 讀取）
 - `support/client.ts`：讀取 `KK_CLIENT` 選定客戶的 JSON 並推算測試用的身分（不寫死角色、等級、專案）
-- `support/dataset.ts`：以 `app/src/evals/oracle.ts` 算出各身分看不到的段落
+- `support/dataset.ts`：以 `app/src/evals/oracle.ts` 算出各身分看不到的段落；身分對照用的「只有一個身分看得到的題目」與只出現在答案段落的比對文字（`onlyOneSees()`）
 - `support/fake-ask.ts`：假的 `/api/ask`（含串流到一半的假回應）
 - `support/skip-reporter.ts`：列出略過的測試與原因（參考情境有略過時失敗）
 

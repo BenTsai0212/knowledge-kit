@@ -61,6 +61,8 @@ interface Props {
   onViewInGraph(entityId: string): void;
   // 手機原文面板的「回報有錯」（#256）：每按一次加一，打開這一題的回報表單並捲到該題；0 是沒有要求
   reportRequest?: number;
+  // 標題：預設是問題；身分對照的欄是該欄的身分（#261，問題在各欄上方只顯示一次）
+  heading?: string;
 }
 
 const { entityTypes } = clientConfig.knowledgeModel;
@@ -68,7 +70,7 @@ const { entityTypes } = clientConfig.knowledgeModel;
 // 回答完成後已播過動態的題目：切換頁籤回來重新掛載時不再播放（#227）
 const settled = new Set<string>();
 
-export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport, readReport, onRetry, retryDisabled, onShorten, onDraft, onViewInGraph, reportRequest = 0 }: Props) {
+export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport, readReport, onRetry, retryDisabled, onShorten, onDraft, onViewInGraph, reportRequest = 0, heading }: Props) {
   const s = strings(language);
   const { answer } = state;
   const stepText: Record<RefusalStep, string> = {
@@ -155,7 +157,7 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
 
   return (
     <section id={id} ref={ref} className={classes} style={{ "--done": doneStep } as CSSProperties} aria-live="polite">
-      <h2>{state.question}</h2>
+      <h2>{heading ?? state.question}</h2>
       {/* 串流中與完成後是同一個元素：已經升起的句子不重播 */}
       {sentences !== null && (
         <p className="answer-text">

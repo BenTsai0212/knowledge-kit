@@ -805,6 +805,12 @@ export interface UiStrings {
     scriptProgress: string;
     scriptTotal: string;
     scriptAsked: string;
+    // 身分對照（#261）：頂端列的按鈕、還沒有題目、已用完提問次數、還沒送出的欄、目前身分的欄
+    compare: string;
+    compareEmpty: string;
+    compareLimited: string;
+    compareWaiting: string;
+    compareCurrent: string;
   };
   myUploads: {
     tabNew: string;

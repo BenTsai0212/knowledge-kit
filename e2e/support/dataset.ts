@@ -114,3 +114,32 @@ export function visibleGraph(role: RoleId): Graph {
     relations: relationsFile.relations.filter((r) => shown.has(r.id)).map((r) => ({ id: r.id, type: r.type, from: r.from, to: r.to, sources: [] })),
   };
 }
+
+// 正規化後的文字含 text 的段落 id（比對字串只出現在一個段落的檢查用）
+export const passagesContaining = (text: string): string[] => passages.filter((p) => p.text.includes(text)).map((p) => p.id);
+
+// 段落中第一段長度 PREFIX_LENGTH、其他段落都不含的文字（從開頭往後找）；沒有時是 null。
+// 只用開頭比對時，開頭相同的其他段落（例如公開的產品總覽）也會被當成這一段（#261 修正要求）
+function uniqueMarker(passage: { id: string; text: string }): string | null {
+  const others = passages.filter((p) => p.id !== passage.id);
+  for (let at = 0; at + PREFIX_LENGTH <= passage.text.length; at++) {
+    const marker = passage.text.slice(at, at + PREFIX_LENGTH);
+    if (!others.some((p) => p.text.includes(marker))) return marker;
+  }
+  return null;
+}
+
+// 身分對照（#261）：介面語言的段落中，只有一個身分看得到的那些段落比對用的文字（只出現在該段落），以及看得到它們的身分。
+// 沒有任何段落是介面語言、不只一個身分看得到、或有段落找不到只出現在該段落的文字時是 null
+export function onlyOneSees(passageIds: readonly string[], language: string): { role: RoleId; markers: string[] } | null {
+  const inLanguage = documents.filter((d) => d.language === language).flatMap((d) => d.passages.map((p) => p.id));
+  const ids = passageIds.filter((id) => inLanguage.includes(id));
+  const seers = access.roles.filter((r) => ids.some((id) => visible(r.id).has(id)));
+  if (ids.length === 0 || seers.length !== 1) return null;
+  const markers = passages.filter((p) => ids.includes(p.id)).map(uniqueMarker);
+  if (markers.some((m) => m === null)) return null;
+  return { role: seers[0].id, markers: markers as string[] };
+}
+
+// 正規化空白後的文字（與畫面、送出的 body 比對用）
+export const normalizeText = normalize;

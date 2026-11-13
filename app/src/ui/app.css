@@ -4519,6 +4519,74 @@ label.inline {
   font-weight: 700;
 }
 
+/* 身分對照（#261，docs/design.md「展示模式」的「身分對照」）：頂端列的按鈕（打開時 primary 框線與淡底），
+   問答頁的中間換成每個身分一欄（身分順序），目前身分的欄用 primary 框線。各欄逐欄升起（kRise，間隔 stagger-sentence 80ms，
+   --column 是 staggerIndex）；減少動態效果時時間都是 0ms，直接到位 */
+.presentation-bar__compare {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.presentation-bar__compare[aria-pressed="true"] {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+}
+
+:root[data-mode="presentation"] .presentation-bar__compare kbd {
+  min-width: 1.5em;
+  padding: 0 0.3rem;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-small);
+  font-family: var(--font-mono);
+  font-size: var(--present-label);
+  text-align: center;
+}
+
+.compare {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+}
+
+:root[data-mode="presentation"] .compare__question {
+  margin: 0;
+  font-size: var(--present-question);
+  font-weight: var(--present-question-weight);
+}
+
+.compare__columns {
+  display: grid;
+  grid-template-columns: repeat(var(--columns, 1), minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.compare__column {
+  position: relative;
+  top: 0;
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  animation: kRise var(--motion-base) var(--ease-enter) calc(var(--column, 0) * var(--motion-stagger-sentence)) both;
+}
+
+.compare__column.is-current {
+  border-color: var(--color-primary);
+}
+
+.compare__current {
+  justify-self: start;
+  margin: 0;
+}
+
+.compare__column > .answer {
+  margin: 0;
+}
+
 /* 手機寬度（≤ 600px，layout.ts 的 PHONE_MAX）：展示模式登入後仍是同一個頂端列（不換成手機的導覽，畫面上只有一個「問答｜圖譜」切換）。
    頂端列的每一項各佔一行、分段切換佔滿寬度、身分可換行；劇本改成在對話上方堆疊，整頁沒有橫向捲動 */
 @media (max-width: 600px) {
@@ -4554,6 +4622,15 @@ label.inline {
   :root[data-mode="presentation"] main.qa,
   :root[data-mode="presentation"] main.qa.with-panel,
   :root[data-mode="presentation"] main.qa.with-panel:has(> .source) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .presentation-bar__compare {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+
+  .compare__columns {
     grid-template-columns: minmax(0, 1fr);
   }
 
