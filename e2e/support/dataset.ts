@@ -114,3 +114,17 @@ export function visibleGraph(role: RoleId): Graph {
     relations: relationsFile.relations.filter((r) => shown.has(r.id)).map((r) => ({ id: r.id, type: r.type, from: r.from, to: r.to, sources: [] })),
   };
 }
+
+// 身分對照（#261）：介面語言的段落中，只有一個身分看得到的那些段落比對用的開頭，以及看得到它們的身分。
+// 沒有任何段落是介面語言、或不只一個身分看得到時是 null
+export function onlyOneSees(passageIds: readonly string[], language: string): { role: RoleId; prefixes: string[] } | null {
+  const inLanguage = documents.filter((d) => d.language === language).flatMap((d) => d.passages.map((p) => p.id));
+  const ids = passageIds.filter((id) => inLanguage.includes(id));
+  const seers = access.roles.filter((r) => ids.some((id) => visible(r.id).has(id)));
+  if (ids.length === 0 || seers.length !== 1) return null;
+  const prefixes = passages.filter((p) => ids.includes(p.id)).map((p) => p.text.slice(0, PREFIX_LENGTH));
+  return { role: seers[0].id, prefixes };
+}
+
+// 正規化空白後的文字（與畫面、送出的 body 比對用）
+export const normalizeText = normalize;

@@ -4,6 +4,7 @@
 // 問答頁是左導覽、中間對話、右側面板（原文或回答提到的實體）的三欄（#195，docs/qa.md「畫面」）。
 // 手機（≤ 600px）的原文與實體面板是底部面板（#256）。
 // 展示模式（#260）：左導覽換成頂端列（PresentationBar），問答頁的左欄是劇本（ScriptPanel）。
+// 身分對照（#261，開關 VITE_DEMO_COMPARE）：問答頁的中間換成每個身分一欄（IdentityCompare），送出在 qa/compare.ts 的 askEach()。
 import { useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { clientConfig } from "./client/load";
@@ -16,7 +17,8 @@ import type { EvalRun } from "./evals/run";
 import { planExtraction, runExtraction, type ExtractionState } from "./extraction/run";
 import { readReview } from "./extraction/store";
 import { readGraph, type Graph } from "./graph/read";
-import { ask } from "./qa/answer";
+import { ask, type Answer } from "./qa/answer";
+import { askEach, canStartCompare } from "./qa/compare";
 import { apiTransport } from "./qa/api";
 import { readMyReport, readReports, writeReport } from "./reports/store";
 import { createProvider, preparesModel, PROVIDERS, type ActiveProvider, type ProgressListener } from "./retrieval/providers";
@@ -41,7 +43,7 @@ import { ReviewPage } from "./ui/ReviewPage";
 import { rememberQuestion, rememberViewed, waitingSummary, type WaitingSummary } from "./ui/home";
 import { HomePage } from "./ui/HomePage";
 import { createExtractionRunner } from "./ui/extraction-runner";
-import { defaultView, evalsMode, onlineDemo, presentationMode, visibleViews, type View } from "./ui/online-demo";
+import { defaultView, demoCompare, evalsMode, onlineDemo, presentationMode, visibleViews, type View } from "./ui/online-demo";
 import { createRequestGate } from "./ui/requests";
 import { SourcePanel } from "./ui/SourcePanel";
 import { SourceSheet } from "./ui/SourceSheet";
@@ -59,6 +61,9 @@ import { NavRail } from "./ui/NavRail";
 import { useLayout } from "./ui/layout";
 import { PresentationBar, type IdentityBump } from "./ui/PresentationBar";
 import { ScriptPanel } from "./ui/ScriptPanel";
+import { IdentityCompare, type CompareRun } from "./ui/IdentityCompare";
+import { compareColumns, compareKey, compareQuestion } from "./ui/identity-compare";
+import type { AnswerState } from "./ui/AnswerView";
 import { switchesIdentity, type ScriptItem } from "./ui/script";
 import { canSwitchIdentity, demoAccount, identityControl, type SignIn } from "./ui/sign-in";
 import { SignInPanel, type Rejected } from "./ui/SignInPanel";
@@ -117,6 +122,10 @@ export function App() {
   const [scriptCurrent, setScriptCurrent] = useState<string | null>(null);
   // （count 換 key 重播動畫；以頂端列手動切換身分時清除，不跳）
   const [identityBump, setIdentityBump] = useState<IdentityBump | null>(null);
+  // 身分對照（#261）：打開時是目前這一次對照，關閉時是 null；只在記憶體。一組請求共用 compares 的 ticket（切換題目、關閉、切換語言時取消）
+  const [compare, setCompare] = useState<CompareRun | null>(null);
+  const compares = useRef(createRequestGate());
+  const nextCompare = useRef(0);
   // 本次工作階段上傳的文件（時間軸加上「上傳」標籤），以及從上傳頁跳到時間軸時要捲動到的文件（#42）
   const [uploaded, setUploaded] = useState<ReadonlySet<string>>(new Set());
   const [focusDocument, setFocusDocument] = useState<string | null>(null);
@@ -236,6 +245,7 @@ export function App() {
   // 切換語言：目前身分的對話是以原本的語言回答的，一併清掉（其他身分的留著）
   function changeLanguage(code: string) {
     discard();
+    closeCompare();
     setTurnsOf(identity, () => NO_TURNS);
     setLanguage(code);
   }
@@ -243,6 +253,7 @@ export function App() {
   // 邀請碼被拒：清除，回到輸入畫面（#26 決定 3）；輸入框保留被拒的碼（#246）。所有身分的對話一併清掉（#303）
   function rejectAccessCode() {
     questions.current.cancel();
+    closeCompare();
     setConversations({});
     clearAccessCode();
     setAccessCode(null);
@@ -280,7 +291,53 @@ export function App() {
       setIdentityBump((last) => ({ role: item.role, count: (last?.count ?? 0) + 1 }));
     }
     setScriptCurrent(item.key);
-    void onAsk(item.text[language], item.role);
+    // 身分對照打開時：這一題換成對照的題目（取消進行中的對照），不加進對話
+    if (compare !== null) void runCompare(item.text[language]);
+    else void onAsk(item.text[language], item.role);
+  }
+
+  // 回答提到的實體與拒答的「可以試試」（#285）：以送出的身分讀圖譜（RLS 篩選）；讀取失敗時不列實體，拒答只給通用建議
+  async function readMentions(result: Answer, owner: string): Promise<AnswerState["mentions"]> {
+    const category = result.kind === "error" ? errorCategory(result.error) : null;
+    const refused = result.kind === "refusal" || (result.kind === "error" && category === "modelRefusal");
+    const wantsGraph = (result.kind === "answer" && !result.uncited) || refused;
+    const graph = wantsGraph && db !== null ? await readGraph(db, owner).catch(() => null) : null;
+    return graph === null ? undefined : { graph, entities: mentionedEntities(graph, result) };
+  }
+
+  const closeCompare = () => (compares.current.cancel(), setCompare(null));
+
+  // 身分對照（#261）：以每個身分各呼叫一次 ask()（askEach()，依身分順序一欄一欄送出），與一般提問同一條路、欄之間不共用結果。
+  // 這個分頁已用完提問次數時只顯示說明、不送出（canStartCompare()）；還沒有題目時等劇本或輸入區送出
+  async function runCompare(question: string | null) {
+    if (retriever === null || accessCode === null) return;
+    const ticket = compares.current.begin();
+    const run = nextCompare.current++;
+    const limited = !canStartCompare(limit);
+    setCompare({ run, question, limited, answers: {}, finished: 0 });
+    if (question === null || limited) return;
+    const change = (next: (c: CompareRun) => CompareRun) => setCompare((c) => (c === null || c.run !== run ? c : next(c)));
+    const setColumn = (index: number, state: AnswerState) => change((c) => ({ ...c, answers: { ...c.answers, [index]: state } }));
+    const roles = access.roles.map((r) => r.id);
+    const ctx = { retriever, transport: apiTransport({ accessCode }), model: client.model, displayName: client.displayName };
+    await askEach(
+      ctx,
+      roles,
+      { text: question, language },
+      {
+        onText: (index, streaming) => ticket.isCurrent() && setColumn(index, { question, streaming }),
+        onAnswer: (index, result) => {
+          if (!ticket.isCurrent()) return;
+          if (result.kind === "error" && result.error === "invalid_access_code") return void rejectAccessCode();
+          if (turnError(result) === "network") setOffline(true);
+          // 今天用完了：輸入框上方的說明與一般提問相同；這一欄與之後的欄顯示額度訊息（askEach() 不再送出）
+          if (result.kind === "error" && errorCategory(result.error) === "dailyLimit") setLimit(result.error);
+          change((c) => ({ ...c, finished: index + 1 }));
+          void readMentions(result, roles[index]).then((mentions) => ticket.isCurrent() && setColumn(index, { question, streaming: "", answer: result, mentions }));
+        },
+      },
+      ticket.signal,
+    );
   }
 
   // owner：送出的身分。劇本先切換身分時，這次 render 的 identity 還是切換前的，所以由呼叫端傳入
@@ -316,13 +373,9 @@ export function App() {
       return;
     }
     if (result.kind !== "error") setAdminError(null);
-    // 回答提到的實體與拒答的「可以試試」（#285）：以送出當下的身分讀圖譜（RLS 篩選），讀完才結束這一題，期間仍停用送出；
-    // 讀取失敗時不列實體，拒答只給通用建議
-    const refused = result.kind === "refusal" || (result.kind === "error" && category === "modelRefusal");
-    const wantsGraph = (result.kind === "answer" && !result.uncited) || refused;
-    const graph = wantsGraph && db !== null ? await readGraph(db, owner).catch(() => null) : null;
+    // 以送出當下的身分讀圖譜，讀完才結束這一題，期間仍停用送出
+    const mentions = await readMentions(result, owner);
     if (!ticket.isCurrent()) return;
-    const mentions = graph === null ? undefined : { graph, entities: mentionedEntities(graph, result) };
     update({ id, question, streaming: "", answer: result, mentions });
   }
 
@@ -374,10 +427,11 @@ export function App() {
     if (final?.error === "invalid_access_code") rejectAccessCode();
   }
 
-  async function onOpenSource(passageId: string, turnId: string | null = null) {
+  // owner：以哪個身分讀原文（身分對照的欄是該欄的身分）
+  async function onOpenSource(passageId: string, turnId: string | null = null, owner = identity) {
     if (db === null) return;
     const ticket = sources.current.begin();
-    const document = await readSource(db, identity, passageId);
+    const document = await readSource(db, owner, passageId);
     if (ticket.isCurrent()) (setEntity(null), setSource(document), setSourceTurn(document === null ? null : turnId));
   }
 
@@ -405,6 +459,29 @@ export function App() {
   // 平板（#255）：原文與實體從右側滑出覆蓋，不常駐右欄。展示模式沿用 1920×1080 的規格縮放（docs/design.md「平板」），不改用滑出面板
   const tablet = layout === "tablet" && !presentationBar;
   const overlay = phone || tablet;
+  // 身分對照只在展示模式的頂端列、開關開啟時（線上 demo 一律關閉，online-demo.ts 的 demoCompare）
+  const compareEnabled = presentationBar && demoCompare;
+  const compareDisabled = retriever === null || answering;
+  const toggleCompare = () => (compare !== null ? closeCompare() : compareDisabled ? undefined : void runCompare(compareQuestion(turns)));
+  // 主持人快捷鍵 C／Esc（docs/design.md「主持人快捷鍵」）：只在問答頁、焦點不在文字輸入時；Esc 在原文或實體面板打開時交給面板
+  const compareKeys = useRef<(e: KeyboardEvent) => void>(() => {});
+  compareKeys.current = (e) => {
+    if (!compareEnabled || view !== "qa") return;
+    const action = compareKey({ key: e.key, ctrlKey: e.ctrlKey, metaKey: e.metaKey, altKey: e.altKey, target: e.target instanceof Element ? (e.target as HTMLInputElement) : null }, compare !== null);
+    if (action === null || (action === "close" && (source !== null || entity !== null))) return;
+    e.preventDefault();
+    if (action === "toggle") toggleCompare();
+    else closeCompare();
+  };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => compareKeys.current(e);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+  const canUploadAs = (role: string) => {
+    const r = access.roles.find((x) => x.id === role);
+    return (r?.canUpload ?? false) && views(r?.canReview ?? false).includes("upload");
+  };
 
   // 原文與實體面板的容器依版面決定，集中在這裡（#256 決定 4）：手機是底部面板，平板是右側的滑出面板（#255），桌機是 main 中的右欄
   const side = tablet ? "right" : "bottom";
@@ -472,6 +549,7 @@ export function App() {
           view={view}
           onView={(next) => (setGraphFocus(null), setView(next))}
           bump={identityBump}
+          compare={compareEnabled ? { open: compare !== null, disabled: compare === null && compareDisabled, onToggle: toggleCompare } : undefined}
         />
       ) : (
         <Nav
@@ -666,42 +744,69 @@ export function App() {
             {adminError !== null && <AdminNotice language={language} {...adminError} />}
             {/* 手機的「這次的問題」在問答頁頂部（#256 決定 1）；展示模式不顯示（#260） */}
             {phone && !presentationMode && <SessionQuestions language={language} questions={turns} onQuestion={scrollToTurn} />}
-            <Conversation
-              language={language}
-              turns={turns}
-              canUpload={canUpload}
-              onOpenSource={onOpenSource}
-              openPassage={source?.highlight ?? null}
-              onGotoUpload={() => setView("upload")}
-              onOpenEntity={onOpenEntity}
-              openEntity={entity}
-              // 展示模式不顯示「回報有錯」（#260，docs/design.md「隱藏與保留」）
-              onReport={presentationMode ? undefined : async (turn, category, note) => {
-                const report = reportOf(turn, category, note);
-                // 能回報的題目一定有資料庫與回報內容（AnswerView 只在 canReport() 時顯示）；否則當作失敗
-                if (db === null || report === null) throw new Error("not reportable");
-                const reportId = await writeReport(db, identity, report);
-                // 回答下方改顯示這則回報的結果（#286）
-                setTurnsOf(identity, (all) => all.map((t) => (t.id === turn.id ? { ...t, reportId } : t)));
-                // 回報的人自己能審核時，待審頁籤的筆數加一
-                setReviewVersion((v) => v + 1);
-              }}
-              readReport={(reportId) => (db === null ? Promise.resolve(null) : readMyReport(db, identity, reportId))}
-              onAsk={onAsk}
-              askDisabled={retriever === null || answering || limit !== null}
-              onViewInGraph={(id) => (setGraphFocus(id), setView("graph"))}
-              reportRequest={reportRequest}
-              onDraft={(question) => {
-                setDraft(question);
-                document.getElementById(QUESTION_INPUT_ID)?.focus();
-              }}
-            />
+            {compareEnabled && compare !== null ? (
+              <IdentityCompare
+                language={language}
+                columns={compareColumns(access, identity, language)}
+                compare={compare}
+                canUpload={canUploadAs}
+                onOpenSource={(role, passageId) => void onOpenSource(passageId, null, role)}
+                openPassage={source?.highlight ?? null}
+                onGotoUpload={() => setView("upload")}
+                onOpenEntity={onOpenEntity}
+                openEntity={entity}
+                onRetry={() => void runCompare(compare.question)}
+                retryDisabled={compare.finished < access.roles.length}
+                onDraft={(question) => {
+                  setDraft(question);
+                  document.getElementById(QUESTION_INPUT_ID)?.focus();
+                }}
+                // 在圖譜看它：以該欄的身分看圖譜（切換到該身分）
+                onViewInGraph={(role, id) => {
+                  if (role !== identity) changeIdentity(role);
+                  setGraphFocus(id);
+                  setView("graph");
+                }}
+              />
+            ) : (
+              <Conversation
+                language={language}
+                turns={turns}
+                canUpload={canUpload}
+                onOpenSource={onOpenSource}
+                openPassage={source?.highlight ?? null}
+                onGotoUpload={() => setView("upload")}
+                onOpenEntity={onOpenEntity}
+                openEntity={entity}
+                // 展示模式不顯示「回報有錯」（#260，docs/design.md「隱藏與保留」）
+                onReport={presentationMode ? undefined : async (turn, category, note) => {
+                  const report = reportOf(turn, category, note);
+                  // 能回報的題目一定有資料庫與回報內容（AnswerView 只在 canReport() 時顯示）；否則當作失敗
+                  if (db === null || report === null) throw new Error("not reportable");
+                  const reportId = await writeReport(db, identity, report);
+                  // 回答下方改顯示這則回報的結果（#286）
+                  setTurnsOf(identity, (all) => all.map((t) => (t.id === turn.id ? { ...t, reportId } : t)));
+                  // 回報的人自己能審核時，待審頁籤的筆數加一
+                  setReviewVersion((v) => v + 1);
+                }}
+                readReport={(reportId) => (db === null ? Promise.resolve(null) : readMyReport(db, identity, reportId))}
+                onAsk={onAsk}
+                askDisabled={retriever === null || answering || limit !== null}
+                onViewInGraph={(id) => (setGraphFocus(id), setView("graph"))}
+                reportRequest={reportRequest}
+                onDraft={(question) => {
+                  setDraft(question);
+                  document.getElementById(QUESTION_INPUT_ID)?.focus();
+                }}
+              />
+            )}
             <QuestionPanel
               language={language}
               disabled={retriever === null || answering}
               text={draft}
               onText={setDraft}
-              onAsk={(question) => void onAsk(question)}
+              // 身分對照打開時，輸入區送出的問題換成對照的題目
+              onAsk={(question) => void (compare !== null ? runCompare(question) : onAsk(question))}
               limit={limit}
               presets={!presentationMode}
             />

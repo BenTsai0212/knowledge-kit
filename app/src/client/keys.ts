@@ -393,6 +393,11 @@ export const i18nManifests: ManifestEntry[] = [
       scriptProgress: "required",
       scriptTotal: "required",
       scriptAsked: "required",
+      compare: "required",
+      compareEmpty: "required",
+      compareLimited: "required",
+      compareWaiting: "required",
+      compareCurrent: "required",
     } satisfies KeyManifest<UiStrings["presentation"]>,
   },
   {
