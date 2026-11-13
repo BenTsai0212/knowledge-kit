@@ -39,6 +39,15 @@ export function expand(graph: Graph, expansion: Expansion, entityId: string): Ex
   return focus?.entities.has(entityId) ? [...expansion, entityId] : only(entityId);
 }
 
+// 剛展開（#336，畫板 Graph）：從路徑往下展開一層（next 是 previous 再接一個實體）時，這一層才進入聚焦集合的實體。
+// 其他變化（只看它、回到全部、點回路徑上的一段、切換身分）沒有剛展開的實體
+export function freshEntities(graph: Graph, previous: Expansion, next: Expansion): ReadonlySet<string> {
+  const appended = previous.length > 0 && next.length === previous.length + 1 && previous.every((id, i) => next[i] === id);
+  if (!appended) return new Set();
+  const before = focusOf(graph, previous)?.entities ?? new Set<string>();
+  return new Set([...(focusOf(graph, next)?.entities ?? [])].filter((id) => !before.has(id)));
+}
+
 // 切換身分後：路徑截到第一個看不到的實體之前（後面的展開是從它出發的，不再成立）
 export function keepVisible(graph: Graph, expansion: Expansion): Expansion {
   const ids = new Set(graph.entities.map((e) => e.id));

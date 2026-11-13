@@ -22,6 +22,9 @@ interface Props {
   retractions: DocumentRetraction[];
   // 撤回此文件對這個實體的核准（含連帶的關係）；失敗時回傳錯誤訊息
   onRetract(retraction: DocumentRetraction): Promise<string | null>;
+  // 桌機（#336，畫板 Graph）：右側整高欄。相關實體是 52px 的列（類型的形狀＋名稱＋右側關係名稱），
+  // 出現的文件是 surfaceRaised 卡片（文件名＋摘錄，實體名稱用 mark）；手機、平板與展示模式不傳
+  wide?: boolean;
 }
 
 // 圖譜頁右側的實體面板（#199，設計系統 v1 #240）：類型徽章（類型色淡底＋形狀）、名稱、關聯／文件／出處數；
@@ -29,7 +32,9 @@ interface Props {
 // 出現的文件：每份文件一張 reading 紙面，列出提到它的原文片段並以 <mark> 標出名稱（點標題打開原文）。全部只用可見圖。
 // 經審核進來的文件可以「撤回此文件對它的核准」：先列出撤回後會從圖譜消失的實體與關係，確認後才撤回（ADR 0007）。
 // 名稱與搜尋結果相同，同名的實體加上第一個相關實體的名稱（#198）
-export function EntityPanel({ graph, entityId, language, onSelect, onShowOnly, onAskAbout, onOpenSource, retractions, onRetract }: Props) {
+const typeColor = (type: string) => clientConfig.knowledgeModel.entityTypes.find((t) => t.id === type)?.color ?? "var(--color-graphFallback)";
+
+export function EntityPanel({ graph, entityId, language, onSelect, onShowOnly, onAskAbout, onOpenSource, retractions, onRetract, wide = false }: Props) {
   const s = strings(language);
   // 正在確認撤回的文件、撤回中、錯誤訊息
   const [confirming, setConfirming] = useState<string | null>(null);
@@ -38,7 +43,6 @@ export function EntityPanel({ graph, entityId, language, onSelect, onShowOnly, o
   const entity = graph.entities.find((e) => e.id === entityId);
   if (entity === undefined) return null;
   const name = entityOptionLabel(graph, entity, language);
-  const type = clientConfig.knowledgeModel.entityTypes.find((t) => t.id === entity.type);
   const relations = new Map(graph.relations.map((r) => [r.id, r]));
   // 出處依文件分組，點標題打開第一段；出處優先顯示介面語言（#36）
   const documents = entityDocuments(entity, language);
@@ -87,8 +91,8 @@ export function EntityPanel({ graph, entityId, language, onSelect, onShowOnly, o
   };
 
   return (
-    <section className="card entity" aria-label={name}>
-      <span className={`entity-badge shape-${entityTypeShape(entity.type)}`} style={{ "--type-color": type?.color ?? "var(--color-graphFallback)" } as CSSProperties}>
+    <section className={wide ? "entity entity--wide" : "card entity"} aria-label={name}>
+      <span className={`entity-badge shape-${entityTypeShape(entity.type)}`} style={{ "--type-color": typeColor(entity.type) } as CSSProperties}>
         <span className="type-dot" aria-hidden="true" />
         {entityTypeLabel(entity.type, language)}
       </span>
@@ -109,19 +113,38 @@ export function EntityPanel({ graph, entityId, language, onSelect, onShowOnly, o
         </button>
       </div>
       <h3>{s.relatedEntities}</h3>
-      <ul>
-        {relatedEntities(graph, entityId, language).map((r) => (
-          <li key={r.relationId}>
-            {r.outgoing ? `${r.label} → ` : `← ${r.label} `}
-            <button type="button" className="link" onClick={() => onSelect(r.entity.id)}>
-              {entityOptionLabel(graph, r.entity, language)}
-            </button>{" "}
-            <span className="muted">{fill(s.graphSourceCount, { count: relations.get(r.relationId)?.sources.length ?? 0 })}</span>
-          </li>
-        ))}
-      </ul>
+      {wide ? (
+        // 整列可點（按鈕的 ::after 蓋住整列），按鈕的名稱只有實體名稱；關係名稱在右側，方向以箭頭表示
+        <ul className="entity-rows">
+          {relatedEntities(graph, entityId, language).map((r) => (
+            <li key={r.relationId} className="entity-row">
+              <span
+                className={`type-dot shape-${entityTypeShape(r.entity.type)}`}
+                aria-hidden="true"
+                style={{ "--type-color": typeColor(r.entity.type) } as CSSProperties}
+              />
+              <button type="button" className="link" onClick={() => onSelect(r.entity.id)}>
+                {entityOptionLabel(graph, r.entity, language)}
+              </button>
+              <span className="entity-row__relation muted">{r.outgoing ? `${r.label} →` : `← ${r.label}`}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <ul>
+          {relatedEntities(graph, entityId, language).map((r) => (
+            <li key={r.relationId}>
+              {r.outgoing ? `${r.label} → ` : `← ${r.label} `}
+              <button type="button" className="link" onClick={() => onSelect(r.entity.id)}>
+                {entityOptionLabel(graph, r.entity, language)}
+              </button>{" "}
+              <span className="muted">{fill(s.graphSourceCount, { count: relations.get(r.relationId)?.sources.length ?? 0 })}</span>
+            </li>
+          ))}
+        </ul>
+      )}
       <h3>{s.entitySources}</h3>
-      <ul className="entity-documents">
+      <ul className={wide ? "entity-documents entity-documents--cards" : "entity-documents"}>
         {documents.map((d) => (
           <li key={d.documentId} className="entity-document">
             <button type="button" className="link" onClick={() => onOpenSource(d.passages[0].id)}>

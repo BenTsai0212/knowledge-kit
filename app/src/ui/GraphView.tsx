@@ -2,7 +2,7 @@
 import type { BoundingBox12, CollectionReturnValue, Core, EdgeSingular, ElementDefinition, NodeCollection } from "cytoscape";
 import { useEffect, useRef, type RefObject } from "react";
 import { clientConfig } from "../client/load";
-import { ALL, focusOf, nearRelations, selectedOf, type Expansion } from "../graph/expansion";
+import { ALL, focusOf, freshEntities, nearRelations, selectedOf, type Expansion } from "../graph/expansion";
 import type { PathStep } from "../graph/path";
 import type { Graph } from "../graph/read";
 import { relationCounts } from "../graph/search";
@@ -13,6 +13,7 @@ import { panToCenter } from "./graph-zoom";
 import { EXPAND_MS, MOTION, motionDuration, PAN_MS, watchReducedMotion } from "./motion";
 import { presentationArrangement, type Box, type EdgeShape, type NodeShape, type Point } from "./presentation-camera";
 import { isDark, watchColorScheme } from "./theme";
+import { strings } from "../client/i18n";
 
 interface Props {
   graph: Graph;
@@ -69,6 +70,7 @@ export function labelMeasure(): MeasureText {
 // 標籤與搜尋結果相同，同名的實體加上第一個相關實體的名稱（nodeLabels()）；節點大小依看得到的關聯數，線粗依看得到的出處數
 function elements(graph: Graph, language: string, labelGraph: Graph): ElementDefinition[] {
   const labels = nodeLabels(graph, language, labelGraph);
+  const fresh = strings(language).graphJustExpanded;
   const measure = labelMeasure();
   const relationLabel = new Map(relationTypes.map((t) => [t.id, t.label[language]]));
   const degree = relationCounts(graph);
@@ -78,9 +80,10 @@ function elements(graph: Graph, language: string, labelGraph: Graph): ElementDef
     ...graph.entities.map((e, i) => {
       const size = nodeSize(degree.get(e.id) ?? 0);
       const label = labels.get(e.id) ?? "";
+      const shortLabel = clampLabel(label, measure, NODE_LABEL_MAX_WIDTH, NODE_LABEL_MAX_LINES);
       return {
-        // label 是完整名稱（選取、滑過時顯示）；shortLabel 是畫在圖上的截斷名稱（#288）
-        data: { id: e.id, type: e.type, label, shortLabel: clampLabel(label, measure, NODE_LABEL_MAX_WIDTH, NODE_LABEL_MAX_LINES), size },
+        // label 是完整名稱（選取、滑過時顯示）；shortLabel 是畫在圖上的截斷名稱（#288）；freshLabel 是剛展開時下方加上「剛展開」（#336）
+        data: { id: e.id, type: e.type, label, shortLabel, freshLabel: `${shortLabel}\n${fresh}`, size },
         position: { x: 300 * Math.cos(i * step), y: 300 * Math.sin(i * step) },
       };
     }),
@@ -267,6 +270,15 @@ function markFocus(cy: Core, graph: Graph, expansion: Expansion, path: PathStep[
   });
 }
 
+// 剛展開（#336）：往下展開一層時，這一層才出現的節點標上 fresh（graph-style.ts 在名稱下方標「剛展開」）；展示模式不標
+function markFresh(cy: Core, graph: Graph, previous: Expansion, next: Expansion) {
+  const fresh = presenting() ? new Set<string>() : freshEntities(graph, previous, next);
+  cy.batch(() => {
+    cy.nodes().removeClass("fresh");
+    cy.nodes().filter((n) => fresh.has(n.id())).addClass("fresh");
+  });
+}
+
 // 新的線由關係的起點畫向終點：虛線的線段與間隔都比線長，把間隔的位移從線段長度動到 0，畫完後換回實線
 function drawEdge(edge: EdgeSingular, ms: number) {
   const [a, b] = [edge.source().position(), edge.target().position()];
@@ -429,6 +441,7 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
       }
       return;
     }
+    markFresh(cy.current, graph, applied.current, next);
     animateFocus(cy.current, graph, applied.current, next, reduced.current, cover);
     applied.current = next;
   }, [expansion, path, excluded, isolated, cover]);

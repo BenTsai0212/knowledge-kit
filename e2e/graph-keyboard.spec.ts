@@ -120,10 +120,10 @@ test("以鍵盤從進入圖譜走到另一個實體，報讀區說出每一步�
   await expect(frame(page)).toBeFocused();
   await expect.poll(async () => (await selectedNodes(page, CANVAS)).length).toBe(1);
 
-  // Tab：離開圖譜到實體面板
+  // Tab：離開圖譜到實體面板（桌機是右側的實體欄，#336）
   await page.keyboard.press("Tab");
   await expect(frame(page)).not.toBeFocused();
-  await expect(page.locator(".graph-side :focus")).toHaveCount(1);
+  await expect(page.locator(".graph-entity-column :focus")).toHaveCount(1);
   await expect(page.locator(".graph-keys")).toBeHidden();
 });
 
@@ -212,8 +212,9 @@ test("清單模式：切換、篩選共用、關係句的連結跳到該項、�
   await expect(page.getByRole("region", { name, exact: true })).toBeVisible();
   await expect(item).toHaveAttribute("aria-current", "true");
 
-  // 切回圖譜：選取的實體保留
-  await modes.getByRole("button", { name: k.modeGraph }).click();
+  // 切回圖譜：選取的實體保留（桌機的「清單模式」是一個切換按鈕，#336）
+  await modes.getByRole("button", { name: k.modeList }).click();
+  await expect(modes.getByRole("button", { name: k.modeList })).toHaveAttribute("aria-pressed", "false");
   await expect(frame(page)).toBeVisible();
   await expect.poll(() => selectedNodes(page, CANVAS)).toEqual([anchor.slice("graph-list-".length)]);
 

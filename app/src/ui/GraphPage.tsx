@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FocusEvent as ReactFocusEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type FocusEvent as ReactFocusEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { clientConfig } from "../client/load";
 import type { Database } from "../db/database";
 import { readRetractions, retract, ReviewError, type DocumentRetraction } from "../extraction/store";
@@ -37,8 +37,10 @@ import { breadcrumb, detailOf, zoomLevel } from "./graph-zoom";
 import { GraphZoomView } from "./GraphZoomView";
 import { SHEET_HALF, useLayout } from "./layout";
 import { prefersReducedMotion } from "./motion";
+import { presentationMode } from "./online-demo";
 import { PathPanel } from "./PathPanel";
 import { createRequestGate } from "./requests";
+import { entityTypeShape } from "./timeline-view";
 import { fill, strings } from "../client/i18n";
 
 interface Props {
@@ -80,6 +82,7 @@ function focusAfter(element: HTMLElement) {
 // 手機（#257，docs/design.md「圖譜（手機）」）：圖譜佔滿頂端列與分頁列之間，上方是搜尋、「篩選與找路徑」與「圖譜｜清單」；
 // 類型篩選、「只顯示關聯 ≥ N」、多跳路徑與關聯最多的實體收進「篩選與找路徑」底部面板；點節點、搜尋或在清單選取時打開實體面板
 // （可展開的底部面板，停在 56% 高）。關閉實體面板只收起面板，選取與展開路徑不變（#257 決定 1）
+// 桌機（#336，docs/graph.md「桌機」）：頁首一列、畫布上方的工具列、填滿高度的畫布與貼齊右緣的實體欄；沒有選取時不列「關聯最多」
 export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, canReview, onRetracted, initialSelected = null, canSwitchIdentity, onViewed }: Props) {
   const s = strings(language);
   const [graph, setGraph] = useState<Graph | null>(null);
@@ -102,6 +105,12 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
   const phone = layout === "phone";
   // 平板（#255）：實體面板是右側的滑出面板（寬 400px），開始的說明與多跳路徑在圖的下方（單欄）
   const tablet = layout === "tablet";
+  // 桌機（#336，畫板 Graph、G-Scale）：頁首一列（標題、搜尋、找路徑），畫布上方的工具列，畫布填滿剩下的高度，
+  // 實體面板是貼齊右緣的整高欄（沒有選取時畫布佔滿寬度）。展示模式維持原本的版面
+  const desktop = layout === "desktop" && !presentationMode;
+  const [pathOpen, setPathOpen] = useState(false);
+  const pathId = useId();
+  const pathButton = useRef<HTMLButtonElement>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [entityOpen, setEntityOpen] = useState(false);
   const reads = useRef(createRequestGate());
@@ -334,7 +343,10 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
     } else focusAfter(e.currentTarget);
   };
 
-  // 圖例兼類型篩選與「只顯示關聯 ≥ N」：桌機在工具列，手機在「篩選與找路徑」面板
+  // 圖例兼類型篩選與「只顯示關聯 ≥ N」：平板與展示模式在工具列，手機在「篩選與找路徑」面板
+  const minInput = (
+    <input type="number" min={0} value={minRelations} onChange={(e) => setMinRelations(Math.max(0, Math.floor(Number(e.target.value) || 0)))} />
+  );
   const filters = (
     <>
       {/* 圖例兼類型篩選：沒勾的類型變灰，並排除在搜尋與起點清單外 */}
@@ -351,9 +363,34 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
       </ul>
       <label className="graph-min">
         {z.minRelations}
-        <input type="number" min={0} value={minRelations} onChange={(e) => setMinRelations(Math.max(0, Math.floor(Number(e.target.value) || 0)))} />
+        {minInput}
       </label>
     </>
+  );
+  // 桌機的篩選（#336，畫板 G-Scale）：類型圖例膠囊（核取方塊畫成類型的形狀，沒勾時是空心）、「只顯示關聯 ≥ N」、「清單模式」
+  const shapeStyle = (color: string) => ({ "--type-color": color }) as CSSProperties;
+  const chips = (
+    <div className="graph-chips">
+      <ul className="legend legend--chips" aria-label={s.legend}>
+        {entityTypes.map((t) => (
+          <li key={t.id}>
+            <label className="graph-chip">
+              <input type="checkbox" className={`type-check shape-${entityTypeShape(t.id)}`} style={shapeStyle(t.color)} checked={types.has(t.id)} onChange={() => toggleType(t.id)} />
+              {t.label[language]}
+            </label>
+          </li>
+        ))}
+      </ul>
+      <label className="graph-min graph-chip">
+        {z.minRelations}
+        {minInput}
+      </label>
+      <div className="graph-mode" role="group" aria-label={k.modeLabel}>
+        <button type="button" className="chip graph-chip" aria-pressed={mode === "list"} onClick={() => setMode(mode === "list" ? "graph" : "list")}>
+          {s.graphListMode}
+        </button>
+      </div>
+    </div>
   );
   // 沒有選取時的起點：關聯最多的實體（手機在「篩選與找路徑」面板最下方，選了之後換成實體面板，#257 決定 2）
   const start = (
@@ -388,6 +425,7 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
       onAskAbout={(id) => onAskAbout(fill(s.askAboutEntity, { name: nameOf(id) }))}
       onOpenSource={onOpenSource}
       retractions={canReview && retractions?.entityId === selected ? retractions.list : []}
+      wide={desktop}
       onRetract={async (r) => {
         try {
           await retract(db, identity, r.decisionIds);
@@ -402,6 +440,7 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
   );
   const pathPanel = (
     <PathPanel
+      panel={desktop ? { id: pathId } : undefined}
       graph={graph}
       language={language}
       from={from}
@@ -413,30 +452,262 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
     />
   );
 
+  const searchBox = (
+    <div
+      ref={search}
+      className="graph-search"
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) searchFromFrame.current = false;
+      }}
+    >
+      <EntitySearch
+        graph={graph}
+        language={language}
+        label={s.graphSearch}
+        types={filter}
+        field={desktop}
+        onPick={(id) => {
+          setExpansion(only(id));
+          showEntity();
+          if (searchFromFrame.current) setRefocus((n) => n + 1);
+          searchFromFrame.current = false;
+        }}
+      />
+    </div>
+  );
+  // 已展開的路徑與大量節點時的麵包屑（桌機在畫布上方工具列的左邊）。這一列沒有展開時也保留高度：出現或消失時畫布不移動
+  const trail = (
+    <div className="graph-trail">
+      {zoom !== null && (
+        <nav aria-label={z.breadcrumb} className="graph-crumbs">
+          <ol>
+            {breadcrumb(zoom.level, zoom.cluster, selected).map((c, i, all) => (
+              <li key={c.kind}>
+                <button
+                  type="button"
+                  className="link"
+                  aria-current={i === all.length - 1 ? "step" : undefined}
+                  onClick={() => (c.kind === "entity" ? undefined : openCluster(c.id))}
+                >
+                  {c.kind === "all" ? z.all : c.kind === "cluster" ? clusterName(c.id!) : nameOf(c.id!)}
+                </button>
+              </li>
+            ))}
+          </ol>
+          {collapsed > 0 && !showMembers && (
+            <button type="button" className="chip" onClick={() => setShowMembers(true)}>
+              {fill(z.moreMembers, { count: collapsed }, language)}
+            </button>
+          )}
+        </nav>
+      )}
+      {zoom === null && expansion.length > 0 && (
+        <nav aria-label={s.graphExpanded}>
+          <span className="muted">
+            {s.graphExpanded}
+            {s.colon}
+          </span>
+          <ol>
+            {expansion.map((id, i) => (
+              <li key={id}>
+                {/* 點其中一段：回到該層 */}
+                <button
+                  type="button"
+                  className="link"
+                  aria-current={i === expansion.length - 1 ? "step" : undefined}
+                  onClick={() => setExpansion(expansion.slice(0, i + 1))}
+                >
+                  {nameOf(id)}
+                </button>
+              </li>
+            ))}
+          </ol>
+          <button type="button" className={desktop ? "chip graph-chip" : undefined} onClick={() => setExpansion(ALL)}>
+            {s.graphShowAll}
+          </button>
+        </nav>
+      )}
+    </div>
+  );
+  // 外框（#289）：在 Tab 順序中只佔一個位置，方向鍵交給圖譜；畫布本身對報讀器隱藏，每一步寫進報讀區
+  const frameElement = (
+    <div
+      className="graph-frame"
+      tabIndex={0}
+      role="application"
+      aria-roledescription={k.roleDescription}
+      aria-label={k.label}
+      onFocus={onFrameFocus}
+      onBlur={(e) => {
+        if (e.target === e.currentTarget) setFocused(false);
+      }}
+      onKeyDown={onFrameKeyDown}
+      ref={frame}
+    >
+      {zoom !== null && clustering !== null && filtered !== null ? (
+        <GraphZoomView
+          graph={filtered}
+          clustering={clustering}
+          level={zoom.level}
+          cluster={zoom.cluster}
+          selected={zoom.level === "detail" ? selected : null}
+          showMembers={showMembers}
+          language={language}
+          clusterName={clusterName}
+          segments={(count) => fill(z.segments, { count }, language)}
+          onSelect={onPick}
+          onOpenCluster={openCluster}
+          keyboard={focused ? { current, cursor } : null}
+          api={view}
+          cover={sheetCover}
+        />
+      ) : (
+        <GraphView
+          graph={graph}
+          language={language}
+          selected={selected}
+          path={path}
+          expansion={expansion}
+          excluded={excluded}
+          isolated={isolated}
+          onSelect={onPick}
+          keyboard={focused ? { current, cursor } : null}
+          api={view}
+          cover={sheetCover}
+        />
+      )}
+    </div>
+  );
+  const keysAndHelp = (
+    <>
+      {/* 按鍵提示列：只在外框有鍵盤焦點（:focus-visible）時出現（app.css）；報讀器從按鍵表（?）讀，這裡不重複 */}
+      <ul className="graph-keys" aria-hidden="true">
+        {KEY_HELP.filter((h) => h.hint).map((h) => (
+          <li key={h.text}>
+            {h.keys.map((key) => (
+              <kbd key={key}>{key}</kbd>
+            ))}{" "}
+            {k[h.text]}
+          </li>
+        ))}
+      </ul>
+      {/* 按鍵表（?）：沿用置中的對話框；Esc 或「關閉」播放退場後關閉，焦點回到外框 */}
+      <dialog
+        ref={help}
+        className="dialog graph-help"
+        aria-labelledby="graph-help-title"
+        onCancel={(e) => (e.preventDefault(), closeDialog(e.currentTarget, prefersReducedMotion()))}
+        onClose={() => frame.current?.focus()}
+      >
+        <h2 id="graph-help-title">{k.helpTitle}</h2>
+        <dl>
+          {KEY_HELP.map((h) => (
+            <div key={h.text}>
+              <dt>
+                {h.keys.map((key) => (
+                  <kbd key={key}>{key}</kbd>
+                ))}
+              </dt>
+              <dd>{k[h.text]}</dd>
+            </div>
+          ))}
+        </dl>
+        <div className="dialog-actions">
+          <button type="button" onClick={() => help.current !== null && closeDialog(help.current, prefersReducedMotion())}>
+            {s.dialogClose}
+          </button>
+        </div>
+      </dialog>
+    </>
+  );
+  const list = <GraphList groups={groups} language={language} current={current} onSelect={onPick} />;
+  // 報讀區：兩種檢視共用（類型篩選改變時報讀顯示的實體數）
+  const announcerElement = (
+    <p className="visually-hidden" aria-live="polite" data-testid="graph-announcer">
+      {announcement}
+    </p>
+  );
+
+  if (desktop) {
+    const closePath = () => (setPathOpen(false), pathButton.current?.focus());
+    return (
+      <div className="graph-page graph-page--desktop">
+        <section className="graph-main" aria-labelledby="graph-title">
+          <div className="graph-head">
+            {/* 左側欄的客戶名稱是 h1（#330），一頁只放一個 h1 */}
+            <h2 id="graph-title">{s.tabGraph}</h2>
+            {searchBox}
+            <button
+              ref={pathButton}
+              type="button"
+              className="secondary graph-path-button"
+              aria-expanded={pathOpen}
+              aria-controls={pathId}
+              onClick={() => setPathOpen((open) => !open)}
+            >
+              {s.graphFindPath}
+            </button>
+            {/* 找路徑的面板（原本的可收合區塊）：浮在畫布右上，Esc 或再按一次「找路徑」關閉 */}
+            {pathOpen && (
+              <div
+                className="graph-path-popover"
+                onKeyDown={(e) => {
+                  if (e.key === "Escape" && !e.defaultPrevented) closePath();
+                }}
+              >
+                {pathPanel}
+              </div>
+            )}
+          </div>
+          <div className="graph-toolbar">
+            {trail}
+            {chips}
+          </div>
+          {mode === "list" ? (
+            list
+          ) : (
+            <>
+              <div className="graph-stage">
+                {/* 縮放按鈕排在外框之前：Tab 離開外框時直接到實體面板（#289 的 Tab 順序不變） */}
+                <div className="graph-zoom-buttons">
+                  <button type="button" aria-label={s.graphZoomIn} onClick={() => view.current?.zoomBy(ZOOM_STEP)}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                  </button>
+                  <button type="button" aria-label={s.graphZoomOut} onClick={() => view.current?.zoomBy(1 / ZOOM_STEP)}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                      <path d="M5 12h14" />
+                    </svg>
+                  </button>
+                </div>
+                {frameElement}
+                {/* 畫布左下的圖例：工具列的類型膠囊已給報讀器，這裡只給看的人 */}
+                <ul className="graph-legend" aria-hidden="true">
+                  {entityTypes.map((t) => (
+                    <li key={t.id}>
+                      <span className={`type-dot shape-${entityTypeShape(t.id)}`} style={shapeStyle(t.color)} />
+                      {t.label[language]}
+                    </li>
+                  ))}
+                  <li className="muted">{s.graphLegendNote}</li>
+                </ul>
+              </div>
+              {keysAndHelp}
+            </>
+          )}
+          {announcerElement}
+        </section>
+        {selected !== null && <div className="graph-entity-column">{entityPanel}</div>}
+      </div>
+    );
+  }
+
   return (
     <div className={phone ? "graph-page graph-page--phone" : tablet ? "graph-page graph-page--tablet" : "graph-page"}>
       <section className="card graph-main">
         <div className="graph-tools">
-          <div
-            ref={search}
-            className="graph-search"
-            onBlur={(e) => {
-              if (!e.currentTarget.contains(e.relatedTarget)) searchFromFrame.current = false;
-            }}
-          >
-            <EntitySearch
-              graph={graph}
-              language={language}
-              label={s.graphSearch}
-              types={filter}
-              onPick={(id) => {
-                setExpansion(only(id));
-                showEntity();
-                if (searchFromFrame.current) setRefocus((n) => n + 1);
-                searchFromFrame.current = false;
-              }}
-            />
-          </div>
+          {searchBox}
           {phone ? (
             <button type="button" className="secondary graph-filters-button" onClick={() => setFiltersOpen(true)}>
               {s.graphFilters}
@@ -452,153 +723,16 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
             ))}
           </div>
         </div>
-        {/* 這一列沒有展開時也保留高度：出現或消失時畫布不移動 */}
-        <div className="graph-trail">
-          {zoom !== null && (
-            <nav aria-label={z.breadcrumb} className="graph-crumbs">
-              <ol>
-                {breadcrumb(zoom.level, zoom.cluster, selected).map((c, i, all) => (
-                  <li key={c.kind}>
-                    <button
-                      type="button"
-                      className="link"
-                      aria-current={i === all.length - 1 ? "step" : undefined}
-                      onClick={() => (c.kind === "entity" ? undefined : openCluster(c.id))}
-                    >
-                      {c.kind === "all" ? z.all : c.kind === "cluster" ? clusterName(c.id!) : nameOf(c.id!)}
-                    </button>
-                  </li>
-                ))}
-              </ol>
-              {collapsed > 0 && !showMembers && (
-                <button type="button" className="chip" onClick={() => setShowMembers(true)}>
-                  {fill(z.moreMembers, { count: collapsed }, language)}
-                </button>
-              )}
-            </nav>
-          )}
-          {zoom === null && expansion.length > 0 && (
-            <nav aria-label={s.graphExpanded}>
-              <span className="muted">
-                {s.graphExpanded}
-                {s.colon}
-              </span>
-              <ol>
-                {expansion.map((id, i) => (
-                  <li key={id}>
-                    {/* 點其中一段：回到該層 */}
-                    <button
-                      type="button"
-                      className="link"
-                      aria-current={i === expansion.length - 1 ? "step" : undefined}
-                      onClick={() => setExpansion(expansion.slice(0, i + 1))}
-                    >
-                      {nameOf(id)}
-                    </button>
-                  </li>
-                ))}
-              </ol>
-              <button type="button" onClick={() => setExpansion(ALL)}>
-                {s.graphShowAll}
-              </button>
-            </nav>
-          )}
-        </div>
+        {trail}
         {mode === "list" ? (
-          <GraphList groups={groups} language={language} current={current} onSelect={onPick} />
+          list
         ) : (
           <>
-            {/* 外框（#289）：在 Tab 順序中只佔一個位置，方向鍵交給圖譜；畫布本身對報讀器隱藏，每一步寫進報讀區 */}
-            <div
-              className="graph-frame"
-              tabIndex={0}
-              role="application"
-              aria-roledescription={k.roleDescription}
-              aria-label={k.label}
-              onFocus={onFrameFocus}
-              onBlur={(e) => {
-                if (e.target === e.currentTarget) setFocused(false);
-              }}
-              onKeyDown={onFrameKeyDown}
-              ref={frame}
-            >
-              {zoom !== null && clustering !== null && filtered !== null ? (
-                <GraphZoomView
-                  graph={filtered}
-                  clustering={clustering}
-                  level={zoom.level}
-                  cluster={zoom.cluster}
-                  selected={zoom.level === "detail" ? selected : null}
-                  showMembers={showMembers}
-                  language={language}
-                  clusterName={clusterName}
-                  segments={(count) => fill(z.segments, { count }, language)}
-                  onSelect={onPick}
-                  onOpenCluster={openCluster}
-                  keyboard={focused ? { current, cursor } : null}
-                  api={view}
-                  cover={sheetCover}
-                />
-              ) : (
-                <GraphView
-                  graph={graph}
-                  language={language}
-                  selected={selected}
-                  path={path}
-                  expansion={expansion}
-                  excluded={excluded}
-                  isolated={isolated}
-                  onSelect={onPick}
-                  keyboard={focused ? { current, cursor } : null}
-                  api={view}
-                  cover={sheetCover}
-                />
-              )}
-            </div>
-            {/* 按鍵提示列：只在外框有鍵盤焦點（:focus-visible）時出現（app.css）；報讀器從按鍵表（?）讀，這裡不重複 */}
-            <ul className="graph-keys" aria-hidden="true">
-              {KEY_HELP.filter((h) => h.hint).map((h) => (
-                <li key={h.text}>
-                  {h.keys.map((key) => (
-                    <kbd key={key}>{key}</kbd>
-                  ))}{" "}
-                  {k[h.text]}
-                </li>
-              ))}
-            </ul>
-            {/* 按鍵表（?）：沿用置中的對話框；Esc 或「關閉」播放退場後關閉，焦點回到外框 */}
-            <dialog
-              ref={help}
-              className="dialog graph-help"
-              aria-labelledby="graph-help-title"
-              onCancel={(e) => (e.preventDefault(), closeDialog(e.currentTarget, prefersReducedMotion()))}
-              onClose={() => frame.current?.focus()}
-            >
-              <h2 id="graph-help-title">{k.helpTitle}</h2>
-              <dl>
-                {KEY_HELP.map((h) => (
-                  <div key={h.text}>
-                    <dt>
-                      {h.keys.map((key) => (
-                        <kbd key={key}>{key}</kbd>
-                      ))}
-                    </dt>
-                    <dd>{k[h.text]}</dd>
-                  </div>
-                ))}
-              </dl>
-              <div className="dialog-actions">
-                <button type="button" onClick={() => help.current !== null && closeDialog(help.current, prefersReducedMotion())}>
-                  {s.dialogClose}
-                </button>
-              </div>
-            </dialog>
+            {frameElement}
+            {keysAndHelp}
           </>
         )}
-        {/* 報讀區：兩種檢視共用（類型篩選改變時報讀顯示的實體數） */}
-        <p className="visually-hidden" aria-live="polite" data-testid="graph-announcer">
-          {announcement}
-        </p>
+        {announcerElement}
       </section>
       {phone ? (
         <>

@@ -72,8 +72,8 @@ test("搜尋 → 展開兩層 → 回到全部", async ({ page }) => {
   const found = pair(data);
   test.skip(found === null, "圖中沒有名稱不重複、而且有名稱不重複的鄰居的節點");
   const { a, b } = found!;
-  // 沒有選取：右側列出關聯最多的實體
-  await expect(page.getByRole("region", { name: s.graphTopConnected }).getByRole("listitem").first()).toBeVisible();
+  // 沒有選取：桌機沒有實體欄，畫布佔滿寬度（#336；關聯最多的實體在手機、平板與展示模式，見各自的測試）
+  await expect(page.locator(".graph-entity-column")).toHaveCount(0);
 
   // 搜尋 a：從它開始展開
   await searchAndPick(page, data.labels[a]);
@@ -92,7 +92,7 @@ test("搜尋 → 展開兩層 → 回到全部", async ({ page }) => {
   await trail(page).getByRole("button", { name: s.graphShowAll }).click();
   await expect(trail(page)).toHaveCount(0);
   await expect.poll(async () => (await graphData(page))!.dimmed).toEqual([]);
-  await expect(page.getByRole("region", { name: s.graphTopConnected })).toBeVisible();
+  await expect(page.locator(".graph-entity-column")).toHaveCount(0);
 });
 
 test("依身分不同：一般身分搜尋不到看不到的實體，能審查的身分搜尋得到", async ({ page }) => {
@@ -134,9 +134,9 @@ test("在問答中問：切到問答頁，問句填進輸入框，不送出", as
   await expect(page.locator("section.answer")).toHaveCount(0);
 });
 
-// 設計系統 v1（#240）：類型徽章、「在問答中問」是主要按鈕（「只看它」是次要按鈕）、
-// 出現的文件的原文片段在 reading 紙面上，片段中出現的實體名稱以 <mark> 標出
-test("實體面板：類型徽章、主要與次要按鈕、原文片段在紙面上並標出名稱", async ({ page }) => {
+// 設計系統 v1（#240）：類型徽章、「在問答中問」是主要按鈕（「只看它」是次要按鈕）、片段中出現的實體名稱以 <mark> 標出。
+// 桌機（#336，畫板 Graph）的出現的文件是 surfaceRaised 卡片（手機、平板與展示模式仍是 reading 紙面）
+test("實體面板：類型徽章、主要與次要按鈕、文件是卡片並標出名稱", async ({ page }) => {
   const data = await openGraph(page, nonReviewer?.id ?? reviewer?.id);
   const found = pair(data);
   test.skip(found === null, "圖中沒有名稱不重複的節點");
@@ -148,9 +148,9 @@ test("實體面板：類型徽章、主要與次要按鈕、原文片段在紙�
   await expect(panel.getByRole("button", { name: s.graphShowOnly })).toHaveClass(/secondary/);
   const excerpts = panel.locator(".entity-excerpt");
   await expect(excerpts.first()).toBeVisible();
-  const paper = await excerpts.first().evaluate((el) => {
+  const paper = await panel.locator(".entity-document").first().evaluate((el) => {
     const probe = document.createElement("div");
-    probe.style.background = "var(--color-reading)";
+    probe.style.background = "var(--color-surfaceRaised)";
     document.body.append(probe);
     const expected = getComputedStyle(probe).backgroundColor;
     probe.remove();
@@ -251,10 +251,13 @@ test("多跳路徑：起點預設為選取的實體，終點以搜尋選擇，�
   test.skip(found === null, "圖中沒有名稱不重複、而且有名稱不重複的鄰居的節點");
   const { a, b } = found!;
   await searchAndPick(page, data.labels[a]);
-  await page.locator("details.path summary").click();
+  // 桌機：頁首的「找路徑」打開面板（#336）
+  const open = page.getByRole("button", { name: s.graphFindPath, exact: true });
+  await open.click();
+  await expect(open).toHaveAttribute("aria-expanded", "true");
   await expect(search(page, s.pathFrom)).toHaveValue(data.labels[a]);
   await searchAndPick(page, data.labels[b], s.pathTo);
-  const steps = page.locator("details.path > ol > li > strong");
+  const steps = page.locator(".path--panel > ol > li > strong");
   await expect(steps).toHaveText([data.labels[a], data.labels[b]]);
 });
 

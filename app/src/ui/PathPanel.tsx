@@ -15,10 +15,12 @@ interface Props {
   path: PathStep[] | null;
   onChange(from: string | null, to: string | null): void;
   onOpenSource(passageId: string): void;
+  // 桌機（#336）：由頁首的「找路徑」按鈕打開的面板（有標題，不再是可收合區塊）；id 給按鈕的 aria-controls
+  panel?: { id: string };
 }
 
 // 多跳路徑（#199：右側面板下方的可收合區塊，兩端用與搜尋框相同的元件）：逐步列出路徑上的關係與出處；找不到時顯示固定文字，不透露原因
-export function PathPanel({ graph, language, from, to, path, onChange, onOpenSource }: Props) {
+export function PathPanel({ graph, language, from, to, path, onChange, onOpenSource, panel }: Props) {
   const s = strings(language);
   const ends = useRef<HTMLDivElement>(null);
   const byId = new Map(graph.entities.map((e) => [e.id, e]));
@@ -27,9 +29,8 @@ export function PathPanel({ graph, language, from, to, path, onChange, onOpenSou
     <EntitySearch graph={graph} language={language} label={label} value={value} onPick={onSelect} onClear={() => onSelect(null)} />
   );
 
-  return (
-    <details className="card path">
-      <summary>{s.pathTitle}</summary>
+  const content = (
+    <>
       <div ref={ends} className="path-select">
         {end(from, (id) => onChange(id, to), s.pathFrom)}
         {end(to, (id) => onChange(from, id), s.pathTo)}
@@ -84,6 +85,17 @@ export function PathPanel({ graph, language, from, to, path, onChange, onOpenSou
           })}
         </ol>
       )}
+    </>
+  );
+  return panel === undefined ? (
+    <details className="card path">
+      <summary>{s.pathTitle}</summary>
+      {content}
     </details>
+  ) : (
+    <section id={panel.id} className="card path path--panel" aria-labelledby={`${panel.id}-title`}>
+      <h2 id={`${panel.id}-title`}>{s.pathTitle}</h2>
+      {content}
+    </section>
   );
 }

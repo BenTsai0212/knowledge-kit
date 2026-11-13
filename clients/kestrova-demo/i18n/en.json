@@ -89,6 +89,12 @@
   "graphSourceCount": "Sources: {count}",
   "graphAskAbout": "Ask about it",
   "graphFilters": "Filters & paths",
+  "graphFindPath": "Find path",
+  "graphZoomIn": "Zoom in",
+  "graphZoomOut": "Zoom out",
+  "graphLegendNote": "Shape + color, not color alone",
+  "graphJustExpanded": "Just expanded",
+  "graphListMode": "List mode",
   "graphKeyboard": {
     "roleDescription": "knowledge graph",
     "label": "Arrow keys move along relations, Enter goes there",
