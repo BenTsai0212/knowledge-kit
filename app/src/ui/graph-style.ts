@@ -2,6 +2,7 @@
 // 設計系統 v1（#240，docs/design.md「實體顏色」）：節點是「形狀＋填色」，形狀與入口頁主視覺相同（entry-hero.ts 的 heroShape()），
 // 填色是實體類型色（Dark 調亮），圖示是 surface 色；找不到類型時用 graphFallback、圓形與通用圖示。節點大小＝關聯數，線粗＝出處數。
 // 逐步展開與找路徑時，聚焦集合以外的節點與線降低不透明度（dimmed，不隱藏）；關係名稱只在選取節點的相連關係（near）顯示。
+// 展示模式（#260）以 app.css 的 --present-* 放大標籤、選取實體以外的節點降到 28%（presentationRules()）。
 // 圖只有目前身分看得到的實體與關係，這裡不畫任何「有內容被隱藏」的痕跡。
 import type { StylesheetJson } from "cytoscape";
 import type { EntityType } from "../client/types";
@@ -28,6 +29,10 @@ export const DIMMED_OPACITY = 0.45;
 export const ISOLATED_OPACITY = 0.15;
 // 鍵盤的目前實體與游標的圈（#289）
 export const KEYBOARD_RING = 3;
+// 展示模式（#260）：選取實體以外的節點（others）降到 28% 不透明
+export const PRESENT_OTHERS_OPACITY = 0.28;
+// 展示模式選取的關係的線粗
+export const PRESENT_NEAR_WIDTH = 5;
 
 // 關聯數 0 → 32px，每多一個關聯加 4px，最多 64px
 export function nodeSize(degree: number): number {
@@ -110,6 +115,56 @@ function zoomRules(v: (name: string) => string, types: TypeStyle[], dark: boolea
   ];
 }
 
+// 展示模式的字級（docs/design.md「展示模式」的「字級與主題」）：從 app.css 的 --present-* 讀出，一般模式時讀不到（空字串）
+export interface PresentSizes {
+  // 節點標籤（18px）與選取的實體（26px）
+  label: number;
+  selected: number;
+  // 關係名稱、聚合線與側邊泡泡等小字（「虛構資料」標示的 16px，展示模式不用更小的字）
+  small: number;
+}
+
+export function presentSizes(v: (name: string) => string): PresentSizes | null {
+  const [label, selected, small] = ["--present-graph-label", "--present-graph-selected", "--present-label"].map((name) => parseFloat(v(name)));
+  return [label, selected, small].every((n) => Number.isFinite(n) && n > 0) ? { label, selected, small } : null;
+}
+
+// 展示模式的標籤是畫面上的大小（#260 PR 3 審查）：cytoscape 的字級是 model 單位、隨 zoom 放大，
+// 所以字級、截斷寬度、與節點的距離、襯底與外框都除以目前的 zoom；GraphView 的 keepLabelSize() 在縮放時重新計算
+type Zoomed<T> = (ele: { cy(): { zoom(): number } }) => T;
+export const onScreen =
+  (px: number): Zoomed<number> =>
+  (ele) =>
+    px / ele.cy().zoom();
+// 只接受長度字串的屬性（text-max-width、text-background-padding）
+const onScreenPx =
+  (px: number): Zoomed<string> =>
+  (ele) =>
+    `${px / ele.cy().zoom()}px`;
+
+// 展示模式（#260）：節點標籤與選取的實體放大，截斷的寬度依字級等比例放大（graph-labels.ts 以 12px、112px 截斷，比例不變）；
+// 選取實體以外的節點（others）28% 不透明，滑過時恢復；選取的關係用 primary 加粗並標上關係名稱
+function presentationRules(v: (name: string) => string, size: PresentSizes): StylesheetJson {
+  const width = (fontSize: number, base: number) => onScreenPx((base * fontSize) / NODE_LABEL_FONT_SIZE);
+  const primary = { "line-color": v("--color-primary"), "target-arrow-color": v("--color-primary") };
+  const padding = { "text-background-padding": onScreenPx(2) };
+  return [
+    {
+      selector: "node",
+      style: { "font-size": onScreen(size.label), "text-max-width": width(size.label, NODE_LABEL_MAX_WIDTH), "text-margin-y": onScreen(6), ...padding, "text-outline-width": onScreen(2) },
+    },
+    { selector: "node.bubble", style: { "font-size": onScreen(size.label), "text-max-width": width(size.label, 96), "text-margin-y": 0 } },
+    { selector: "node.side", style: { "font-size": onScreen(size.small) } },
+    // 關係名稱與一般模式相同：只有 surface 襯底、沒有外框（一般模式的 edge 沒有設 text-outline-color，
+    // 給了外框寬度就會畫成 cytoscape 預設的黑色粗框，#260 PR 3 第 2 次審查）
+    { selector: "edge", style: { "font-size": onScreen(size.small), ...padding } },
+    { selector: "node.selected", style: { "font-size": onScreen(size.selected), "text-max-width": width(size.selected, NODE_LABEL_MAX_WIDTH) } },
+    { selector: "node.others", style: { opacity: PRESENT_OTHERS_OPACITY } },
+    { selector: "node.others.hover", style: { opacity: 1 } },
+    { selector: "edge.near", style: { label: "data(label)", width: PRESENT_NEAR_WIDTH, ...primary } },
+  ];
+}
+
 // transitionMs：節點與線在變灰／展開之間的 transition 時間（減少動態效果時為 0，見 motion.ts）；dark：目前是否為深色模式
 export function graphStyle(read: ReadVariable, types: TypeStyle[], transitionMs = 0, dark = false): StylesheetJson {
   const v = (name: string) => read(name).trim();
@@ -124,6 +179,7 @@ export function graphStyle(read: ReadVariable, types: TypeStyle[], transitionMs 
     "text-background-shape": "roundrectangle" as const,
   };
   const edgeColor = mix(v("--color-border"), EDGE_MIX, v("--color-text"));
+  const present = presentSizes(v);
   return [
     {
       selector: "node",
@@ -173,6 +229,8 @@ export function graphStyle(read: ReadVariable, types: TypeStyle[], transitionMs 
     // 變灰：不隱藏，保留整體輪廓，降到 45% 不透明（「只看它」之後 15%）。變灰的內容是背景，標籤對比刻意降低；
     // 滑過時恢復（最後的 hover），節點仍可點（#240 決定 3）
     { selector: ".dimmed", style: { opacity: DIMMED_OPACITY } },
+    // 展示模式：放在變灰之後（28% 比 45% 更淡），「只看它」的 15% 與滑過、鍵盤的恢復之前
+    ...(present === null ? [] : presentationRules(v, present)),
     { selector: ".dimmed.isolated", style: { opacity: ISOLATED_OPACITY } },
     // 選取：外面一圈 background 間隙＋2px text 外環
     {

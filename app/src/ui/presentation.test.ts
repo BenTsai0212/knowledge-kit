@@ -21,7 +21,7 @@ const declaration = (selector: string, property: string) => {
 };
 
 describe("字級表（docs/design.md「字級與主題」）", () => {
-  // 圖譜節點標籤畫在 cytoscape 上，由 graph-style.ts 處理（#260 PR 3）
+  // 圖譜節點標籤畫在 cytoscape 上，由 graph-style.ts 讀 --present-graph-* 處理（graph-style.test.ts）
   const table: [string, string, string, string][] = [
     ["內文、清單", "body", "font-size", "20px"],
     ["問題泡泡", ".answer > h2", "font-size", "36px"],
@@ -33,6 +33,8 @@ describe("字級表（docs/design.md「字級與主題」）", () => {
     ["頁籤、身分、按鈕（高）", ":is(button:not(.link, .citation), select, .primary-tabs button)", "min-height", "56px"],
     ["「虛構資料」「展示用權限」", ":is(.badge, .access-badge)", "font-size", "16px"],
     ["原文面板的寬", "main.qa > .source", "width", "min(620px, 100vw)"],
+    ["圖譜的實體卡片：名稱", "section.entity > h2", "font-size", "44px"],
+    ["圖譜的實體卡片：按鈕（高）", ".entity-actions button", "min-height", "64px"],
   ];
 
   it.each(table)("%s：展示模式時以 --present-* 變數設定", (_name, selector, property, expected) => {

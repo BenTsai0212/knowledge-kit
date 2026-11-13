@@ -313,7 +313,8 @@ describe("深色模式", () => {
       }, clientConfig.knowledgeModel.entityTypes);
     const [lightStyle, darkStyle] = [style({}), style({ ...clientConfig.theme.darkColors })];
     const defined = new Set(Object.keys(themeVariables(clientConfig.theme)));
-    expect([...read].filter((name) => !defined.has(name))).toEqual([]);
+    // 展示模式的字級（--present-*）由 app.css 定義，不是配色（graph-style.test.ts 檢查）
+    expect([...read].filter((name) => !defined.has(name) && !name.startsWith("--present-"))).toEqual([]);
     const nodeColor = (s: ReturnType<typeof graphStyle>) => JSON.stringify(s).match(/"color":"([^"]+)"/)?.[1];
     expect(nodeColor(lightStyle)).toBe(clientConfig.theme.colors.text);
     expect(nodeColor(darkStyle)).toBe(clientConfig.theme.darkColors.text);

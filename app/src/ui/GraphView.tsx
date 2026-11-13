@@ -1,5 +1,5 @@
 // 以 cytoscape 畫出圖譜。cytoscape 以動態 import 載入：只用問答的人不必下載（build 時分成獨立的 chunk）。
-import type { CollectionReturnValue, Core, EdgeSingular, ElementDefinition } from "cytoscape";
+import type { BoundingBox12, CollectionReturnValue, Core, EdgeSingular, ElementDefinition, NodeCollection } from "cytoscape";
 import { useEffect, useRef, type RefObject } from "react";
 import { clientConfig } from "../client/load";
 import { ALL, focusOf, nearRelations, selectedOf, type Expansion } from "../graph/expansion";
@@ -7,10 +7,11 @@ import type { PathStep } from "../graph/path";
 import type { Graph } from "../graph/read";
 import { relationCounts } from "../graph/search";
 import { clampLabel, nodeLabels, type MeasureText } from "./graph-labels";
-import { edgeWidth, graphStyle, NODE_LABEL_FONT_SIZE, NODE_LABEL_MAX_LINES, NODE_LABEL_MAX_WIDTH, nodeSize } from "./graph-style";
+import { edgeWidth, graphStyle, NODE_LABEL_FONT_SIZE, NODE_LABEL_MAX_LINES, NODE_LABEL_MAX_WIDTH, nodeSize, presentSizes } from "./graph-style";
 import { visibleArea } from "./layout";
 import { panToCenter } from "./graph-zoom";
 import { EXPAND_MS, MOTION, motionDuration, PAN_MS, watchReducedMotion } from "./motion";
+import { presentationArrangement, type Box, type EdgeShape, type NodeShape, type Point } from "./presentation-camera";
 import { isDark, watchColorScheme } from "./theme";
 
 interface Props {
@@ -103,6 +104,74 @@ export function currentStyle(reduced: boolean) {
   return graphStyle((name) => style.getPropertyValue(name), entityTypes, motionDuration(reduced, EXPAND_MS), dark);
 }
 
+// 展示模式（app.css 的 --present-* 讀得到時，與 graphStyle() 的 presentationRules() 同一個判斷）
+export function presenting(): boolean {
+  const style = getComputedStyle(document.documentElement);
+  return presentSizes((name) => style.getPropertyValue(name)) !== null;
+}
+
+// 展示模式的標籤是畫面上的大小（graph-style.ts 的 onScreen()）：縮放時重新計算樣式，字級跟著 zoom 換算
+export function keepLabelSize(cy: Core): void {
+  if (!presenting()) return;
+  cy.on("zoom", () => cy.style().update());
+  cy.style().update();
+}
+
+// 展示模式的視角（presentation-camera.ts）：從 cytoscape 量出聚焦集合的節點與標上名稱的關係。
+// 標籤在畫面上的大小不隨 zoom 改變，所以以目前的 zoom 換算成相對於錨點（節點本體的下緣中央、關係的中點）的畫面位移；
+// 節點的位置用原本的位置（homes：排成橢圓前的位置）
+function shapes(cy: Core, nodes: NodeCollection, home: ReadonlyMap<string, Point>): [NodeShape[], EdgeShape[]] {
+  const zoom = cy.zoom();
+  const relative = (box: BoundingBox12, at: Point, z = 1): Box => ({ x1: (box.x1 - at.x) * z, y1: (box.y1 - at.y) * z, x2: (box.x2 - at.x) * z, y2: (box.y2 - at.y) * z });
+  const ids = new Set(nodes.map((n) => n.id()));
+  const nodeShapes = nodes.map((n) => {
+    const [now, body] = [n.position(), n.boundingBox({ includeLabels: false })];
+    const label = relative(n.boundingBox({ includeNodes: false, includeLabels: true }), { x: now.x, y: body.y2 }, zoom);
+    return { id: n.id(), position: home.get(n.id()) ?? { ...now }, body: relative(body, now), label };
+  });
+  const edgeShapes: EdgeShape[] = [];
+  cy.edges(".near")
+    .filter((e) => ids.has(e.data("source")) && ids.has(e.data("target")))
+    .forEach((e) => {
+      const label = e.boundingBox({ includeNodes: false, includeEdges: false, includeLabels: true });
+      if (!Number.isFinite(label.w) || label.w <= 0) return;
+      const [a, b] = [e.source().position(), e.target().position()];
+      edgeShapes.push({ source: e.data("source"), target: e.data("target"), label: relative(label, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, zoom) });
+    });
+  return [nodeShapes, edgeShapes];
+}
+
+// 排成橢圓的節點原本的位置（換焦點或回到全部時移回去）
+const homes = new WeakMap<Core, Map<string, Point>>();
+
+// 移動節點（減少動態效果時直接到位）；targets 以外、之前排成橢圓的節點移回原位
+function moveNodes(cy: Core, targets: ReadonlyMap<string, Point>, ms: number) {
+  const home = homes.get(cy) ?? new Map<string, Point>();
+  homes.set(cy, home);
+  const destinations = new Map<string, Point>();
+  for (const [id, at] of home) if (!targets.has(id)) (destinations.set(id, at), home.delete(id));
+  for (const [id, at] of targets) {
+    if (!home.has(id)) home.set(id, { ...cy.$id(id).position() });
+    destinations.set(id, at);
+  }
+  for (const [id, at] of destinations) {
+    const node = cy.$id(id);
+    node.stop(true, false);
+    if (ms === 0) node.position(at);
+    else node.animate({ position: at }, { duration: ms, easing: "ease-in-out" });
+  }
+}
+
+// 把聚焦集合放進畫面、彼此不重疊（必要時把相連的實體排到選取實體周圍）
+function presentFocus(cy: Core, nodes: NodeCollection, selected: string | null, ms: number) {
+  const [nodeShapes, edgeShapes] = shapes(cy, nodes, homes.get(cy) ?? new Map());
+  const { camera, moved } = presentationArrangement(nodeShapes, edgeShapes, selected, { width: cy.width(), height: cy.height() });
+  cy.stop(true, false);
+  moveNodes(cy, moved, ms);
+  if (ms === 0) cy.viewport(camera);
+  else cy.animate(camera, { duration: ms, easing: "ease-in-out" });
+}
+
 function markPath(cy: Core, path: PathStep[] | null) {
   cy.elements().removeClass("path");
   for (const step of path ?? []) {
@@ -111,12 +180,14 @@ function markPath(cy: Core, path: PathStep[] | null) {
   }
 }
 
-// 選取的節點，以及它的相連關係（顯示關係名稱）
-function markSelected(cy: Core, graph: Graph, selected: string | null) {
+// 選取的節點，以及它的相連關係（顯示關係名稱）。others 是選取實體以外的節點（圖譜頁有選取時）：
+// 只有展示模式的樣式會用到（28% 不透明，graph-style.ts 的 presentationRules()），一般模式沒有對應的樣式
+function markSelected(cy: Core, graph: Graph, selected: string | null, others = true) {
   const near = nearRelations(graph, selected);
   cy.batch(() => {
-    cy.nodes().removeClass("selected");
+    cy.nodes().removeClass("selected others");
     if (selected !== null) cy.$id(selected).addClass("selected");
+    if (selected !== null && others) cy.nodes().filter((n) => n.id() !== selected).addClass("others");
     cy.edges().removeClass("near");
     cy.edges().filter((e) => near.has(e.data("relation"))).addClass("near");
   });
@@ -212,6 +283,7 @@ const FOCUS_PADDING = 40;
 
 // 展開後的動態：新的線描出來；畫面平滑移動，讓選取的節點靠近中央（聚焦集合放不進畫面時改為聚焦集合整個放進畫面）；回到全部時顯示全貌。
 // 手機的實體面板開著時（cover > 0），只平移：選取的節點放在面板以上的中央，縮放不變；聚焦集合超出可見部分時由使用者自己拖曳或縮放（#257）
+// 展示模式改由 presentFocus() 決定 zoom 與位置：聚焦集合與標籤整個放進畫面、標籤不重疊
 function animateFocus(cy: Core, graph: Graph, previous: Expansion, next: Expansion, reduced: boolean, cover: number) {
   const [expandMs, panMs] = [motionDuration(reduced, EXPAND_MS), motionDuration(reduced, PAN_MS)];
   cy.stop(true, false);
@@ -221,6 +293,8 @@ function animateFocus(cy: Core, graph: Graph, previous: Expansion, next: Expansi
 
   const focus = focusOf(graph, next);
   if (focus === null) {
+    // 展示模式：排成橢圓的節點移回原位
+    if (presenting()) moveNodes(cy, new Map(), panMs);
     fit(cy.elements(), 30);
     return;
   }
@@ -233,6 +307,10 @@ function animateFocus(cy: Core, graph: Graph, previous: Expansion, next: Expansi
   }
   const selected = cy.$id(selectedOf(next) ?? "");
   const eles = cy.nodes().filter((n) => focus.entities.has(n.id()));
+  if (presenting()) {
+    presentFocus(cy, eles, selectedOf(next), panMs);
+    return;
+  }
   const [box, extent] = [eles.boundingBox(), cy.extent()];
   if (cover > 0 && selected.nonempty()) centerIn(cy, selected, areaOf(cy, cover), panMs);
   else if (box.w <= extent.w && box.h <= extent.h) center(selected);
@@ -284,7 +362,8 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
       const instance = cytoscape({
         container: container.current,
         elements: elements(graph, language, labelGraph),
-        layout: { name: "cose", randomize: false, animate: false },
+        // 展示模式的標籤較大：排版時把標籤算進節點的大小，節點之間留出標籤的空間
+        layout: { name: "cose", randomize: false, animate: false, nodeDimensionsIncludeLabels: presenting() },
         style: currentStyle(reduced.current),
       });
       // 點空白處不清除選取（避免誤觸），圖譜頁以「回到全部」清除
@@ -295,11 +374,16 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
       cy.current = instance;
       untrack = trackContainer(container.current, instance);
       // 版面只在讀入圖時排一次；展開、變灰、回到全部都只改 class，節點位置不動
-      markSelected(instance, graph, selected);
+      markSelected(instance, graph, selected, !compact);
       markFocus(instance, graph, expansion ?? ALL, path, excluded, isolated);
       applied.current = expansion ?? ALL;
       markPath(instance, path);
       markKeyboard(instance, keyboard);
+      keepLabelSize(instance);
+      // 展示模式：一開始就有聚焦集合時（例如從問答跳到圖譜）直接放到位
+      const focus = focusOf(graph, expansion ?? ALL);
+      if (presenting() && focus !== null && path === null && !compact)
+        presentFocus(instance, instance.nodes().filter((n) => focus.entities.has(n.id())), selectedOf(expansion ?? ALL), 0);
     });
     return () => {
       cancelled = true;
@@ -325,7 +409,8 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
   }, []);
 
   useEffect(() => {
-    if (cy.current !== null) markSelected(cy.current, graph, selected);
+    // 鄰近圖（compact）的中心不算選取，其他節點不變淡
+    if (cy.current !== null) markSelected(cy.current, graph, selected, !compact);
   }, [selected]);
 
   // 展開狀態改變時才播放動態；路徑與類型篩選只改變灰與標示

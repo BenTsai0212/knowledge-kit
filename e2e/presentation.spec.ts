@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { identitySegments, language, openApp, openTab, presetQuestions, s, sourcePanel, switchIdentity } from "./support/app";
 import { access, client, scenarios } from "./support/client";
 import { FAKE_ANSWER_LEAD } from "./support/fake-ask";
+import { waitForGraphIdle } from "./support/graph";
 
 test.beforeEach(async ({ page }) => {
   await openApp(page, "/?mode=presentation");
@@ -154,6 +155,82 @@ test("劇本：依情境分組；點另一個身分情境的題目時先切到�
   // 切回原本的身分：✓ 仍在（依各身分的對話判斷，#303）
   await switchIdentity(page, current);
   await expect(button).toContainText("✓");
+});
+
+// 圖譜（#260 PR 3，docs/design.md「展示模式」的「圖譜」）：節點標籤 18px、選取 26px，其他節點 28%，選取的關係加粗並標名稱；實體卡片放大
+test("圖譜：標籤放大、選取實體以外的節點 28%、實體卡片放大", async ({ page }) => {
+  await openTab(page, s.tabGraph);
+  const canvas = ".graph-page .graph-canvas";
+  await waitForGraphIdle(page, canvas);
+  const start = page.getByRole("region", { name: s.graphTopConnected });
+  await start.getByRole("listitem").first().getByRole("button").click();
+
+  // cytoscape 的樣式（transition 結束後）。字級是 model 單位，畫面上的大小 = 字級 × zoom：
+  // 選取的節點 26px、其他節點 18px 且 28% 不透明、選取的關係標上名稱
+  const styles = () =>
+    page.evaluate((selector) => {
+      type Element = { id(): string; hasClass(c: string): boolean; style(p: string): string };
+      type Cy = { zoom(): number; nodes(): Element[] & { filter(f: (n: Element) => boolean): Element[] }; edges(): { filter(f: (e: Element) => boolean): Element[] } };
+      const cy = document.querySelector<HTMLElement & { _cyreg?: { cy?: Cy } }>(selector)?._cyreg?.cy;
+      if (cy === undefined) return null;
+      const rendered = (n: Element) => Math.round(parseFloat(n.style("font-size")) * cy.zoom());
+      const selected = cy.nodes().filter((n) => n.hasClass("selected"));
+      const others = cy.nodes().filter((n) => !n.hasClass("selected") && !n.hasClass("hover"));
+      const near = cy.edges().filter((e) => e.hasClass("near"));
+      return {
+        selected: selected.map((n) => [rendered(n), n.style("opacity")]),
+        others: [...new Set(others.map((n) => `${rendered(n)} ${n.style("opacity")}`))],
+        nearLabelled: near.length > 0 && near.every((e) => e.style("label") !== ""),
+        // 關係名稱與一般模式相同（#260 PR 3 第 2 次審查）：與節點標籤相同的 surface 襯底；外框在畫面上 ≤ 3px，
+        // 有外框時是背景色（與節點標籤的外框相同），不是 cytoscape 預設的黑色
+        nearLabelPlain: near.every((e) => {
+          const node = selected[0];
+          const outline = parseFloat(e.style("text-outline-width")) * cy.zoom();
+          return (
+            node !== undefined &&
+            e.style("text-background-color") === node.style("text-background-color") &&
+            e.style("text-background-opacity") === "1" &&
+            outline <= 3 &&
+            (outline === 0 || e.style("text-outline-color") === node.style("text-outline-color"))
+          );
+        }),
+      };
+    }, canvas);
+  await expect.poll(styles).toEqual({ selected: [[26, "1"]], others: ["18 0.28"], nearLabelled: true, nearLabelPlain: true });
+
+  // 畫面上（#260 PR 3 審查）：聚焦集合（選取的實體與相連的實體）的節點連同標籤彼此不重疊、都在畫布內，
+  // 選取節點的標籤在畫面上約 26px（不因畫面放大而變得更大）
+  await waitForGraphIdle(page, canvas);
+  const layout = await page.evaluate((selector) => {
+    type Box = { x1: number; y1: number; x2: number; y2: number };
+    type Node = { id(): string; hasClass(c: string): boolean; style(p: string): string; renderedBoundingBox(o: { includeLabels: boolean }): Box };
+    type Cy = { zoom(): number; width(): number; height(): number; nodes(): Node[] };
+    const cy = document.querySelector<HTMLElement & { _cyreg?: { cy?: Cy } }>(selector)?._cyreg?.cy;
+    if (cy === undefined) return null;
+    const focus = cy.nodes().filter((n) => !n.hasClass("dimmed"));
+    const boxes = focus.map((n) => ({ id: n.id(), ...n.renderedBoundingBox({ includeLabels: true }) }));
+    const overlapping = boxes.flatMap((a, i) =>
+      boxes.slice(i + 1).flatMap((b) => (a.x1 < b.x2 && b.x1 < a.x2 && a.y1 < b.y2 && b.y1 < a.y2 ? [`${a.id} × ${b.id}`] : [])),
+    );
+    const outside = boxes.filter((b) => b.x1 < 0 || b.y1 < 0 || b.x2 > cy.width() || b.y2 > cy.height()).map((b) => b.id);
+    const selected = focus.find((n) => n.hasClass("selected"));
+    return { count: focus.length, overlapping, outside, selectedFont: selected === undefined ? 0 : parseFloat(selected.style("font-size")) * cy.zoom() };
+  }, canvas);
+  expect(layout).not.toBeNull();
+  expect(layout!.count).toBeGreaterThan(1);
+  expect(layout!.overlapping).toEqual([]);
+  expect(layout!.outside).toEqual([]);
+  expect(layout!.selectedFont).toBeGreaterThanOrEqual(24);
+  expect(layout!.selectedFont).toBeLessThanOrEqual(32);
+
+  const panel = page.locator(".graph-side section.entity");
+  await expect(panel.getByRole("heading", { level: 2 })).toHaveCSS("font-size", "44px");
+  const ask = panel.getByRole("button", { name: s.graphAskAbout });
+  await expect(ask).toHaveCSS("min-height", "64px");
+  expect((await ask.boundingBox())!.height).toBeGreaterThanOrEqual(64);
+  // 按鈕與「相關實體」標題之間留間距（#260 PR 3 審查）
+  const related = panel.getByRole("heading", { level: 3, name: s.relatedEntities });
+  expect((await related.boundingBox())!.y - ((await ask.boundingBox())!.y + (await ask.boundingBox())!.height)).toBeGreaterThanOrEqual(12);
 });
 
 // 手機寬度（#255）：展示模式登入後仍是頂端列，不會同時出現手機的頂端列、分段切換或分頁列（App 只渲染一種導覽）

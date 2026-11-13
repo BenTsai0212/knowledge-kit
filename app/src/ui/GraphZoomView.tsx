@@ -9,7 +9,7 @@ import { relationCounts } from "../graph/search";
 import { clampLabel, nodeLabels } from "./graph-labels";
 import { compositionDots, edgeWidth, NODE_LABEL_MAX_LINES, NODE_LABEL_MAX_WIDTH, nodeSize } from "./graph-style";
 import { arrange, bubbleId, CALM_LIMIT, detailOf, openEntities, panToCenter, SIDE_BUBBLE, viewOf, viewportFor, type ZoomLevel } from "./graph-zoom";
-import { areaOf, centerIn, currentStyle, fitAll, labelMeasure, markKeyboard, reveal, trackContainer, zoomTo, type GraphViewApi, type KeyboardMarks } from "./GraphView";
+import { areaOf, centerIn, currentStyle, fitAll, keepLabelSize, labelMeasure, markKeyboard, reveal, trackContainer, zoomTo, type GraphViewApi, type KeyboardMarks } from "./GraphView";
 import { EXPAND_MS, motionDuration, PAN_MS, watchReducedMotion } from "./motion";
 import { watchColorScheme } from "./theme";
 
@@ -65,7 +65,7 @@ function elements(p: Props): ElementDefinition[] {
       const label = labels.get(id) ?? "";
       return {
         data: { id, type: typeOf.get(id), label, shortLabel: clampLabel(label, measure, NODE_LABEL_MAX_WIDTH, NODE_LABEL_MAX_LINES), size: nodeSize(degree.get(id) ?? 0) },
-        classes: classNames({ entity: true, unlabelled: labelled !== null && !labelled.has(id), selected: id === selected, second: context(id) }),
+        classes: classNames({ entity: true, unlabelled: labelled !== null && !labelled.has(id), selected: id === selected, others: selected !== null && id !== selected, second: context(id) }),
       };
     }),
     ...view.bubbles.map((id) => {
@@ -170,6 +170,8 @@ export function GraphZoomView(props: Props) {
       instance.on("mouseout", "node", (e) => e.target.removeClass("hover"));
       cy.current = instance;
       untrack = trackContainer(container.current, instance);
+      // 展示模式：標籤維持畫面上的大小（縮放時重新計算字級）
+      keepLabelSize(instance);
       show(instance, null);
       shown.current = latest.current.level;
       markKeyboard(instance, keyboard);
