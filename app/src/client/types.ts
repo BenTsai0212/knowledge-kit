@@ -778,11 +778,15 @@ export interface UiStrings {
     evening: string;
     scope: string;
     commonQuestions: string;
+    // 「等你處理」（#331）：每則一列，{count} 是筆數、{time} 是最早一則回報的時間；Note 是列的副標
     waitingTitle: string;
     waitingDocuments: string;
     waitingConflicts: string;
     waitingReports: string;
     waitingEarliest: string;
+    waitingDocumentsNote: string;
+    waitingConflictsNote: string;
+    handleReports: string;
     startReview: string;
     waitingNone: string;
     askedTitle: string;
@@ -794,9 +798,14 @@ export interface UiStrings {
     recentDocumentsEmpty: string;
     viewedTitle: string;
     viewedEmpty: string;
+    // 空狀態的標題；viewedEmpty、updatesEmpty 是原因（#331）
+    viewedEmptyTitle: string;
+    // 「最近看過」下方的說明
+    viewedNote: string;
     // 一般員工的「有更新」（#284）：自己上傳的文件的審核結果；動作是「在圖譜中查看」（viewInGraph）或「查看進度」
     updatesTitle: string;
     updatesEmpty: string;
+    updatesEmptyTitle: string;
     viewProgress: string;
   };
   // 我的上傳（#284，docs/design.md「日常工具」的「我的上傳」）：上傳頁的兩段、每份的狀態（status*）、送出後的四步進度（step*）、

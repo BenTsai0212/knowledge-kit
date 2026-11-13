@@ -103,8 +103,8 @@
 - `GraphPage.tsx`：圖譜頁
 - `GraphView.tsx`：圖譜（cytoscape，動態載入）；`areaOf()`、`centerIn()` 與 `GraphZoomView` 共用；`cover` prop
 - `GraphZoomView.tsx`：大量節點時的三層語意縮放（見 `docs/graph.md`「三層語意縮放（畫面）」）；`cover` prop
-- `home.ts`：首頁的純函式
-- `HomePage.tsx`：首頁（登入後的預設頁）
+- `home.ts`：首頁的純函式（問過的問題與相對時間、狀態點、實體形狀等）
+- `HomePage.tsx`：首頁（登入後的預設頁）；桌機（`wide`）是畫板 `K-Home` 的版面（#331）
 - `identity-compare.ts`：身分對照的純函式：欄的順序與目前身分、目前的題目、一欄一欄送出、`C`／`Esc`
 - `IdentityCompare.tsx`：展示模式的身分對照，每個身分一欄，沿用 `AnswerView`（純函式在 `identity-compare.ts`），見 `docs/qa.md`「身分對照」
 - `IdentitySheet.tsx`：身分與語言面板的內容（手機、平板與桌機使用者卡的選單共用；身分單選卡附 `roles[].scope`、語言分段切換、更換邀請碼；帳號登入時只顯示帳號與角色）

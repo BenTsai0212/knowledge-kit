@@ -20,6 +20,8 @@ interface Props {
   role?: string;
   // 展示模式（#260）：預設問題由左欄的劇本取代，輸入區只留自由提問
   presets?: boolean;
+  // 桌機的首頁（#331，畫板 K-Home）：單行輸入框＋右側「提問」在上、常見問題在下，不顯示「每題獨立回答」的說明
+  compact?: boolean;
 }
 
 // 輸入框的 id：「縮短問題」按下後把焦點移到這裡
@@ -29,52 +31,56 @@ const HINT_ID = "question-hint";
 const roleLabel = (id: string, language: string) => clientConfig.access.roles.find((r) => r.id === id)?.label[language] ?? id;
 
 // 固定在問答頁下方的輸入區（#195）：一行可橫向捲動的預設問題（依情境分組）、自由提問、「每題獨立回答」的說明
-export function QuestionPanel({ language, disabled, text, onText, onAsk, limit, role, presets = true }: Props) {
+export function QuestionPanel({ language, disabled, text, onText, onAsk, limit, role, presets = true, compact = false }: Props) {
   const s = strings(language);
   const scenarios = role === undefined ? clientConfig.scenarios.scenarios : roleScenarios(clientConfig.scenarios, role);
   const off = disabled || limit !== null;
   // 接近 500 字時顯示字數，超過時邊線換 danger、下方說明、停用提問（不送出所以不計次）
   const length = questionLength(text);
   const blocked = off || text.trim() === "" || length.over;
+  // 預設問題（首頁是依身分的「常見問題」）：一般在輸入框上方，compact 時在下方
+  const presetList = presets && (
+    <div id={PRESETS_ID} className="presets" role="group" aria-label={role === undefined ? s.presetQuestions : s.home.commonQuestions}>
+      {role !== undefined ? (
+        // 首頁：不顯示情境名稱與情境角色（docs/design.md「展示功能的位置」：改成「常見問題」，依身分顯示）
+        scenarios.length > 0 && (
+          <div className="scenario">
+            <span className="muted">{s.home.commonQuestions}</span>
+            {scenarios.flatMap((scenario) =>
+              scenario.questions.map((q) => (
+                <button key={q.id} type="button" disabled={off} onClick={() => onAsk(q.text[language])}>
+                  {q.text[language]}
+                </button>
+              )),
+            )}
+          </div>
+        )
+      ) : scenarios.map((scenario) => (
+        <div key={scenario.id} className="scenario" role="group" aria-label={scenario.title[language]}>
+          <span className="muted">
+            {scenario.title[language]} · {s.scenarioRole}
+            {s.colon}
+            {roleLabel(scenario.role, language)}
+          </span>
+          {scenario.questions.map((q) => (
+            <button key={q.id} type="button" disabled={off} onClick={() => onAsk(q.text[language])}>
+              {q.text[language]}
+            </button>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
   return (
-    <section className="card composer">
+    <section className={compact ? "card composer composer--compact" : "card composer"}>
       {limit !== null && (
         <Notice kind="info" icon="◷" title={errorMessage(language, limit)}>
           {s.qaProblems.limitBrowse}
         </Notice>
       )}
-      {presets && <div id={PRESETS_ID} className="presets" role="group" aria-label={role === undefined ? s.presetQuestions : s.home.commonQuestions}>
-        {role !== undefined ? (
-          // 首頁：不顯示情境名稱與情境角色（docs/design.md「展示功能的位置」：改成「常見問題」，依身分顯示）
-          scenarios.length > 0 && (
-            <div className="scenario">
-              <span className="muted">{s.home.commonQuestions}</span>
-              {scenarios.flatMap((scenario) =>
-                scenario.questions.map((q) => (
-                  <button key={q.id} type="button" disabled={off} onClick={() => onAsk(q.text[language])}>
-                    {q.text[language]}
-                  </button>
-                )),
-              )}
-            </div>
-          )
-        ) : scenarios.map((scenario) => (
-          <div key={scenario.id} className="scenario" role="group" aria-label={scenario.title[language]}>
-            <span className="muted">
-              {scenario.title[language]} · {s.scenarioRole}
-              {s.colon}
-              {roleLabel(scenario.role, language)}
-            </span>
-            {scenario.questions.map((q) => (
-              <button key={q.id} type="button" disabled={off} onClick={() => onAsk(q.text[language])}>
-                {q.text[language]}
-              </button>
-            ))}
-          </div>
-        ))}
-      </div>}
+      {!compact && presetList}
       <form
-        className="free-question"
+        className={compact ? "free-question free-question--compact" : "free-question"}
         onSubmit={(e) => {
           e.preventDefault();
           if (blocked) return;
@@ -82,19 +88,33 @@ export function QuestionPanel({ language, disabled, text, onText, onAsk, limit, 
           onText("");
         }}
       >
-        <label>
-          {s.questionLabel}
-          <textarea
+        {compact ? (
+          <input
             id={QUESTION_INPUT_ID}
+            type="text"
             value={text}
-            rows={2}
             disabled={limit !== null}
+            aria-label={s.questionLabel}
             placeholder={s.questionPlaceholder}
             aria-invalid={length.over || undefined}
             aria-describedby={length.show ? HINT_ID : undefined}
             onChange={(e) => onText(e.target.value)}
           />
-        </label>
+        ) : (
+          <label>
+            {s.questionLabel}
+            <textarea
+              id={QUESTION_INPUT_ID}
+              value={text}
+              rows={2}
+              disabled={limit !== null}
+              placeholder={s.questionPlaceholder}
+              aria-invalid={length.over || undefined}
+              aria-describedby={length.show ? HINT_ID : undefined}
+              onChange={(e) => onText(e.target.value)}
+            />
+          </label>
+        )}
         <button type="submit" disabled={blocked}>
           {s.askButton}
         </button>
@@ -107,7 +127,8 @@ export function QuestionPanel({ language, disabled, text, onText, onAsk, limit, 
           </span>
         </p>
       )}
-      <p className="muted qa-independent">{s.qaIndependent}</p>
+      {compact && presetList}
+      {!compact && <p className="muted qa-independent">{s.qaIndependent}</p>}
     </section>
   );
 }

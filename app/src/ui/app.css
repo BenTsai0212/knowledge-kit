@@ -4165,8 +4165,9 @@ label.inline {
   padding: 0 0.75rem;
 }
 
-/* 首頁（#283，docs/design.md「日常工具」的「首頁」）：問候與可見範圍、提問框與常見問題、主管的「等你處理」、問過的問題 */
-/* 欄寬是 minmax(0, 1fr)：不截斷的長標題（最近新增的文件、問過的問題）不會把欄撐寬，各卡片不超出畫面（#288） */
+/* 首頁（#283，docs/design.md「日常工具」的「首頁」）：問候、提問框與常見問題、卡片（等你處理／有更新、問過的問題、最近新增的文件、最近看過）。
+   列、狀態點與按鈕的樣式照畫板 K-Home（#331）；手機與平板維持單欄，桌機（.home--wide）是 auto-fit 的兩欄 */
+/* 欄寬是 minmax(0, 1fr)：不截斷的長標題不會把欄撐寬，各卡片不超出畫面（#288） */
 .home {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -4186,110 +4187,312 @@ label.inline {
   margin: 0.25rem 0 0;
 }
 
-.home h3 {
-  margin: 0 0 0.5rem;
+.home__cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
 }
 
-.home__counts {
+.home__card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.home__card h3 {
+  margin: 0;
+}
+
+.home__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  /* 隱含的 auto 欄會被不換行的長標題撐寬，固定為容器寬度才會截斷（#288） */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+/* 每則一列：至少 52px；「有更新」「等你處理」是 surfaceRaised 底，其他是 border 框 */
+.home__row {
   display: flex;
   flex-wrap: wrap;
-  gap: 1.5rem;
-  margin: 0 0 0.75rem;
+  align-items: center;
+  gap: 8px 12px;
+  min-height: 52px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  box-sizing: border-box;
 }
 
-.home__counts dt {
+.home__row--raised {
+  background: var(--color-surfaceRaised);
+}
+
+.home__row--line {
+  border: 1px solid var(--color-border);
+}
+
+/* 展開的回報結果與再回報的表單接在列的下方 */
+.home__list > li > .home__row + * {
+  margin-top: 8px;
+}
+
+/* 狀態點：核准 success、審核中 primary、說法不同 conflict、回報 warning、退回 danger（home.ts 的 UpdateDot） */
+.home__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+}
+
+.home__dot--success {
+  background: var(--color-success);
+}
+
+.home__dot--primary {
+  background: var(--color-primary);
+}
+
+.home__dot--conflict {
+  background: var(--color-conflict);
+}
+
+.home__dot--warning {
+  background: var(--color-warning);
+}
+
+.home__dot--danger {
+  background: var(--color-danger);
+}
+
+.home__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* 標題、問題與文件標題可以截斷，完整文字在 title */
+.home__name,
+.home__question,
+.home__sub,
+.home__entity-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home__name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.home__sub {
+  font-size: 12px;
   color: var(--color-textMuted);
 }
 
-.home__counts dd {
+/* 列右側的動作：中性的框線按鈕 */
+.home__action {
+  flex: none;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.home__question {
+  flex: 1;
+  font-size: 14px;
+}
+
+/* 提問時間與文件日期 */
+.home__when {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-textMuted);
+}
+
+.home__again {
+  flex: none;
+  height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* 最近新增的文件：標題是打開時間軸的按鈕，右側是可見範圍（等級 · 專案）的中性標籤 */
+.home__documents button.home__name {
+  flex: 1;
+  color: var(--color-text);
+  font-weight: 400;
+  text-decoration: none;
+}
+
+.home__documents button.home__name:hover {
+  text-decoration: underline;
+}
+
+.home__tag {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: var(--radius-small);
+  background: var(--color-surfaceRaised);
+  color: var(--color-textMuted);
+  font-size: 12px;
+}
+
+/* 最近看過：圓角 40px 的按鈕，前面是實體類型色的形狀（人圓形、部門圓角方形、其他小圓角） */
+.home__chips {
+  list-style: none;
   margin: 0;
-  font-size: 1.5rem;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.home__chips > li {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.home__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.home__shape {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  background: var(--type-color);
+}
+
+.home__shape--round {
+  border-radius: var(--radius-pill);
+}
+
+.home__shape--rounded {
+  border-radius: 3px;
+}
+
+.home__shape--square {
+  border-radius: 2px;
+}
+
+.home__note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-textMuted);
+}
+
+/* 桌機（#331，畫板 K-Home）：問候 28px；卡片 auto-fit（最小 340px），寬螢幕兩欄、較窄時一欄。
+   三欄要 1060px（340px × 3＋間距），最寬 1040px 所以最多兩欄 */
+.home--wide {
+  max-width: 1040px;
+  gap: 24px;
+}
+
+.home--wide .home__top h2 {
+  font-size: 28px;
   font-weight: 700;
 }
 
-.home__asked ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  /* 隱含的 auto 欄會被不換行的長標題撐寬，固定為容器寬度才會截斷（#288） */
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.5rem;
+.home--wide .home__cards {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  align-items: start;
+  gap: 20px;
 }
 
-.home__asked li {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+.home--wide .home__card {
+  padding: 20px;
 }
 
-/* 清單中的問題可以截斷，完整文字在 title */
-.home__question {
+.home--wide .home__card h3 {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+/* 桌機首頁的提問框（QuestionPanel 的 compact）：單行 52px 輸入框＋右側 52px「提問」，下方一列常見問題（36px 的中性按鈕） */
+.composer--compact {
+  gap: 12px;
+  padding: 20px;
+}
+
+.free-question--compact {
+  align-items: stretch;
+  gap: 10px;
+}
+
+.free-question--compact input {
+  height: 52px;
+  padding: 0 16px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 12px;
+  background-color: var(--color-background);
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.free-question--compact input[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+.free-question--compact button {
+  height: 52px;
+  padding: 0 22px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.composer--compact .presets {
+  overflow-x: visible;
+  padding-bottom: 0;
+}
+
+.composer--compact .scenario {
   flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.home__asked button {
-  flex: none;
-}
-
-/* 最近新增的文件、最近看過的實體（#283）：文件標題與實體名稱可以截斷，完整文字在 title */
-.home__recent ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  /* 隱含的 auto 欄會被不換行的長標題撐寬，固定為容器寬度才會截斷（#288） */
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.5rem;
-}
-
-.home__recent li {
-  display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
+  white-space: normal;
 }
 
-.home__recent .home__name {
-  min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.composer--compact .scenario > span {
+  font-size: 13px;
 }
 
-/* 一般員工的「有更新」（#284）：每則一行（標題可以截斷，完整文字在 title）、狀態與一個動作；審核中的說明在下一行 */
-.home__updates ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  /* 隱含的 auto 欄會被不換行的長標題撐寬，固定為容器寬度才會截斷（#288） */
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.75rem;
-}
-
-.home__update {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.home__update .home__name {
-  min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.home__updates li > p {
-  margin: 0.25rem 0 0;
+.composer--compact .presets button {
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text);
+  font-size: 13px;
 }
 
 /* 我的上傳（#284，docs/design.md「日常工具」的「我的上傳」）：上傳頁頂端的兩段沿用待審頁的底線式分頁；

@@ -103,7 +103,7 @@ describe("首頁", () => {
     expect(rules().find((r) => r.selector === ".home" && r.media === null)?.decls["grid-template-columns"]).toBe("minmax(0, 1fr)");
   });
 
-  it.each([".home__recent ul", ".home__asked ul", ".home__updates ul"])("%s 的欄寬是 minmax(0, 1fr)：不換行的長標題以省略號截斷", (selector) => {
+  it.each([".home__list", ".home__cards"])("%s 的欄寬是 minmax(0, 1fr)：不換行的長標題以省略號截斷", (selector) => {
     expect(rules().find((r) => r.selector === selector && r.media === null)?.decls["grid-template-columns"]).toBe("minmax(0, 1fr)");
   });
 });
@@ -129,9 +129,8 @@ describe("頁面外層與清單的欄寬", () => {
     ".table-scroll": [".eval-overview", ".eval-page", ...page],
     ".eval-chip": [".eval-page", ...page],
     ".eval-outcome": [".eval-overview", ".eval-page", ...page],
-    ".home__question": [".home__asked ul", ".home", ...page],
-    ".home__recent .home__name": [".home__recent ul", ".home", ...page],
-    ".home__update .home__name": [".home__updates ul", ".home", ...page],
+    // 首頁的列與「最近看過」（#331）：桌機的卡片是 auto-fit（minmax(min(100%, 340px), 1fr)）
+    ".home__name, .home__question, .home__sub, .home__entity-name": [".home__list", ".home__cards", ".home--wide .home__cards", ".home", ...page],
     ".my-upload__title": [".my-uploads__list", ".my-uploads", ".upload", ...page],
     // 手機的時間軸（#282）：篩選晶片一行、橫向滑動；.timeline-page 不是 grid
     ".app--phone .timeline-filter": [...page],
