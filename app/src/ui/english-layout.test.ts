@@ -135,6 +135,9 @@ describe("頁面外層與清單的欄寬", () => {
     // 手機的時間軸（#282）：篩選晶片一行、橫向滑動；.timeline-page 不是 grid
     ".app--phone .timeline-filter": [...page],
     ".app--phone .timeline-filter button.chip": [...page],
+    // 手機的「回答提到」（#256）：一行、橫向滑動；.answer 不是 grid，.qa-center 與手機的 main.qa 是 flex
+    ".app--phone .mentions": [".conversation", ...page],
+    ".app--phone .mentions > p, .app--phone .mention-group": [".conversation", ...page],
   };
 
   // 不在畫面上占寬度的（絕對定位、只給報讀器）不算

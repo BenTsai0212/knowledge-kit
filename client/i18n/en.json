@@ -47,6 +47,7 @@
   "emptyAnswerAction": "Start with a sample question",
   "qaIndependent": "Each question is answered on its own; earlier questions are not taken into account.",
   "sessionQuestions": "This session",
+  "sessionQuestionsCount": "This session ({count})",
   "answerMentions": "Mentioned in this answer",
   "followUpTitle": "Ask next",
   "followUpOutgoing": "Which {type} does {name} have a “{relation}” relationship with?",
