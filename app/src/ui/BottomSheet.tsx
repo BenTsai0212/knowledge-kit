@@ -17,12 +17,14 @@ interface Props {
   className?: string;
   // 可展開：停在 56% 高、可往上拉到全高（沒有時高度依內容）
   expandable?: boolean;
+  // 標題列中、關閉按鈕前的按鈕（例如原文面板的上一個、下一個出處，#256）
+  actions?: ReactNode;
   children: ReactNode;
 }
 
 const close = (d: HTMLDialogElement) => closeDialog(d, prefersReducedMotion(), setTimeout, MOTION.base);
 
-export function BottomSheet({ open, onClose, title, language, className, expandable = false, children }: Props) {
+export function BottomSheet({ open, onClose, title, language, className, expandable = false, actions, children }: Props) {
   const s = strings(language);
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLElement | null>(null);
@@ -99,9 +101,12 @@ export function BottomSheet({ open, onClose, title, language, className, expanda
         <div className="bottom-sheet__header" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
           <span className="bottom-sheet__handle" aria-hidden="true" />
           <h2 id={titleId}>{title}</h2>
-          <button type="button" className="secondary" onClick={() => dialog.current !== null && close(dialog.current)}>
-            {s.dialogClose}
-          </button>
+          <div className="bottom-sheet__actions">
+            {actions}
+            <button type="button" className="secondary" onClick={() => dialog.current !== null && close(dialog.current)}>
+              {s.dialogClose}
+            </button>
+          </div>
         </div>
         {children}
       </div>

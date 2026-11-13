@@ -610,6 +610,7 @@ button.citation[aria-pressed="true"] {
 
 /* 原文螢光：亮色紙面上的螢光與紙面文字（Light 的 markReading 與 mark 相同）。
    不用 background 簡寫：簡寫會把刷過動畫用的 background-image 重設成 none（#227） */
+.source-sheet .highlight mark,
 .source .highlight mark {
   background-color: var(--color-markReading);
   color: var(--color-readingText);
@@ -748,6 +749,11 @@ main.qa > .source {
 
 main.qa > .source .source-text mark.entering {
   animation-delay: calc(var(--motion-fast) + var(--motion-base));
+}
+
+/* 手機的原文面板（#256）：等底部面板升起（kSheetUp，base，沒有延後）結束才刷過 */
+.source-sheet .source-text mark.entering {
+  animation-delay: var(--motion-base);
 }
 
 /* 切換頁籤回來時，已播過的回答不重播 */
@@ -1158,6 +1164,45 @@ main.qa > .source .source-text mark.entering {
 
 .bottom-sheet__header h2 {
   margin: 0;
+}
+
+.bottom-sheet__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* 手機的原文面板（SourceSheet.tsx，#256）：高 74%；標題列的上一個、下一個出處是 44×44px */
+.bottom-sheet.source-sheet {
+  height: 74dvh;
+}
+
+.source-step {
+  min-width: 44px;
+  padding: 0;
+  font-size: 1.25rem;
+}
+
+.source-sheet__title {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.source-sheet .source-text {
+  overflow-wrap: anywhere;
+}
+
+.source-sheet__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+/* 手機的實體面板（問答頁「回答提到」，#256）：停在 56% 高（docs/design.md「實體面板」） */
+.bottom-sheet.mention-sheet {
+  height: 56dvh;
 }
 
 .bottom-sheet button,

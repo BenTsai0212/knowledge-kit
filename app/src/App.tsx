@@ -2,6 +2,7 @@
 // canReview 的身分另有待審與評測台（需要邀請碼；線上 demo 不顯示評測台）；展示模式（?mode=presentation）只顯示問答與圖譜；引用跳回原文。
 // 登入後的預設頁是首頁（#283；需要邀請碼，展示模式沒有首頁）。
 // 問答頁是左導覽、中間對話、右側面板（原文或回答提到的實體）的三欄（#195，docs/qa.md「畫面」）。
+// 手機（≤ 600px）的原文與實體面板是底部面板（#256）。
 // 展示模式（#260）：左導覽換成頂端列（PresentationBar），問答頁的左欄是劇本（ScriptPanel）。
 import { useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
@@ -43,6 +44,11 @@ import { createExtractionRunner } from "./ui/extraction-runner";
 import { defaultView, evalsMode, onlineDemo, presentationMode, visibleViews, type View } from "./ui/online-demo";
 import { createRequestGate } from "./ui/requests";
 import { SourcePanel } from "./ui/SourcePanel";
+import { SourceSheet } from "./ui/SourceSheet";
+import { sourceGraphTarget, sourceSteps } from "./ui/source-steps";
+import { BottomSheet } from "./ui/BottomSheet";
+import { entityOptionLabel } from "./ui/graph-labels";
+import { canReport } from "./ui/report-helpers";
 import { strings } from "./client/i18n";
 import { TimelinePage } from "./ui/TimelinePage";
 import { UploadPage } from "./ui/UploadPage";
@@ -96,6 +102,10 @@ export function App() {
   const onViewed = (id: string) => setViewed((all) => ({ ...all, [identity]: rememberViewed(all[identity] ?? [], id) }));
   const nextTurn = useRef(0);
   const [source, setSource] = useState<SourceDocument | null>(null);
+  // 原文是從哪一題的引用標號打開的（手機的「出處 N／M」，#256）；段落旁的標示與其他頁面打開時為 null
+  const [sourceTurn, setSourceTurn] = useState<string | null>(null);
+  // 手機原文面板的「回報有錯」（#256）：打開該題的回報表單（count 每次加一）
+  const [reportRequest, setReportRequest] = useState<{ turn: string; count: number } | null>(null);
   // 右側面板一次顯示原文或實體其中一個；實體面板只用該題送出當下的圖譜（#195）
   const [entity, setEntity] = useState<{ graph: Graph; id: string } | null>(null);
   // 輸入框的文字（「接著問」填進來），與「在圖譜中查看」要選取的實體
@@ -362,12 +372,14 @@ export function App() {
     if (final?.error === "invalid_access_code") rejectAccessCode();
   }
 
-  async function onOpenSource(passageId: string) {
+  async function onOpenSource(passageId: string, turnId: string | null = null) {
     if (db === null) return;
     const ticket = sources.current.begin();
     const document = await readSource(db, identity, passageId);
-    if (ticket.isCurrent()) (setEntity(null), setSource(document));
+    if (ticket.isCurrent()) (setEntity(null), setSource(document), setSourceTurn(document === null ? null : turnId));
   }
+
+  const closeSource = () => (sources.current.cancel(), setSource(null));
 
   function onOpenEntity(graph: Graph, id: string) {
     sources.current.cancel();
@@ -384,8 +396,61 @@ export function App() {
   // 展示模式登入後是頂端列（#260），不論寬度都取代 Nav（手機寬度的排列見 app.css），所以畫面上只有它的「問答｜圖譜」切換，
   // 不會與手機的分段切換（layout.ts 的 usesSegmented，只剩展示模式的登入頁）同時出現
   const presentationBar = presentationMode && accessCode !== null;
+  const phone = layout === "phone" && !presentationBar;
+
+  // 原文與實體面板的容器依版面決定，集中在這裡（#256 決定 4）：手機是底部面板，其他是 main 中的右欄。
+  // 平板的滑出面板（#255）在這裡加 tablet 的分支
+  const sourceSheet = () => {
+    if (source === null) return null;
+    const turn = turns.find((t) => t.id === sourceTurn);
+    const answer = turn?.answer?.kind === "answer" ? turn.answer : undefined;
+    // 出處 N／M 只算回答引用到的段落（cited，#256 補充決定），不是送進 prompt 的全部段落（numbering）
+    const steps = answer === undefined ? null : sourceSteps(answer.cited, source.highlight);
+    const target = turn?.mentions === undefined ? null : sourceGraphTarget(turn.mentions.entities, source.highlight, source.passages.map((p) => p.id));
+    return (
+      <SourceSheet
+        language={language}
+        source={source}
+        steps={steps}
+        onStep={(passageId) => void onOpenSource(passageId, sourceTurn)}
+        onOpenSource={onOpenSource}
+        onViewInGraph={target === null ? undefined : () => (closeSource(), setGraphFocus(target), setView("graph"))}
+        // 展示模式不顯示「回報有錯」（#260），不能回報的題目也不顯示（與回答下方相同）
+        onReport={
+          turn === undefined || presentationMode || !canReport(turn)
+            ? undefined
+            : () => (closeSource(), setReportRequest((last) => ({ turn: turn.id, count: (last?.count ?? 0) + 1 })))
+        }
+        onClose={closeSource}
+      />
+    );
+  };
+  const sidePanel = () => (source === null ? null : <SourcePanel language={language} source={source} onOpenSource={onOpenSource} onClose={closeSource} />);
+  const mentionPanel = (inSheet: boolean) =>
+    entity !== null && (
+      <MentionPanel
+        graph={entity.graph}
+        entityId={entity.id}
+        language={language}
+        onSelect={(id) => setEntity({ graph: entity.graph, id })}
+        // 底部面板蓋住輸入區，所以手機上填進輸入框或切到圖譜時一併關閉面板
+        onFollowUp={(question) => (setDraft(question), inSheet && setEntity(null))}
+        onViewInGraph={(id) => (setGraphFocus(id), setView("graph"), inSheet && setEntity(null))}
+        onClose={() => setEntity(null)}
+        inSheet={inSheet}
+      />
+    );
+  // 手機的實體面板：高 56%（docs/design.md「實體面板」的停靠高度），名稱在面板的標題列
+  const mentionEntity = entity?.graph.entities.find((e) => e.id === entity.id);
+  const mentionSheet = () =>
+    entity !== null &&
+    mentionEntity !== undefined && (
+      <BottomSheet open onClose={() => setEntity(null)} title={entityOptionLabel(entity.graph, mentionEntity, language)} language={language} className="mention-sheet">
+        {mentionPanel(true)}
+      </BottomSheet>
+    );
   return (
-    <div className={layout === "phone" && !presentationBar ? "app app--phone" : "app"}>
+    <div className={phone ? "app app--phone" : "app"}>
       {/* 只渲染一種導覽結構：展示模式登入後是頂端列，沒有「更換邀請碼」與「這次的問題」（docs/design.md「隱藏與保留」）；
           其他情況手機是頂端列＋底部分頁列、其他寬度是左側導覽（#255；平板的圖示導覽列之後加入）。展示模式的登入頁照常用 Nav */}
       {presentationBar ? (
@@ -536,7 +601,7 @@ export function App() {
               onOpenSource={onOpenSource}
             />
           )}
-          {source !== null && <SourcePanel language={language} source={source} onOpenSource={onOpenSource} onClose={() => (sources.current.cancel(), setSource(null))} />}
+          {!phone && sidePanel()}
         </main>
       ) : accessCode === null ? (
         // 登入頁（#228、#287）：左側主視覺、右側登入面板與語意模型的下載進度；窄螢幕時主視覺在上
@@ -579,7 +644,7 @@ export function App() {
         </main>
       ) : (
         // 中間是對話與固定在下方的輸入區，右側是原文或實體面板（關閉時中間欄變寬）
-        <main className={source === null && entity === null ? "qa" : "qa with-panel"}>
+        <main className={phone || (source === null && entity === null) ? "qa" : "qa with-panel"}>
           {presentationMode && (
             <ScriptPanel language={language} conversations={conversations} current={scriptCurrent} disabled={retriever === null || answering || limit !== null} onAsk={onScript} />
           )}
@@ -614,6 +679,7 @@ export function App() {
               onAsk={onAsk}
               askDisabled={retriever === null || answering || limit !== null}
               onViewInGraph={(id) => (setGraphFocus(id), setView("graph"))}
+              reportRequest={reportRequest}
               onDraft={(question) => {
                 setDraft(question);
                 document.getElementById(QUESTION_INPUT_ID)?.focus();
@@ -629,20 +695,13 @@ export function App() {
               presets={!presentationMode}
             />
           </div>
-          {source !== null && <SourcePanel language={language} source={source} onOpenSource={onOpenSource} onClose={() => (sources.current.cancel(), setSource(null))} />}
-          {entity !== null && (
-            <MentionPanel
-              graph={entity.graph}
-              entityId={entity.id}
-              language={language}
-              onSelect={(id) => setEntity({ graph: entity.graph, id })}
-              onFollowUp={setDraft}
-              onViewInGraph={(id) => (setGraphFocus(id), setView("graph"))}
-              onClose={() => setEntity(null)}
-            />
-          )}
+          {!phone && sidePanel()}
+          {!phone && mentionPanel(false)}
         </main>
       )}
+      {/* 手機的原文與實體面板是底部面板（#256）：原生 <dialog> 在 top layer，放在 main 之外 */}
+      {phone && sourceSheet()}
+      {phone && view === "qa" && mentionSheet()}
     </div>
   );
 }

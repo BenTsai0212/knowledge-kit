@@ -365,6 +365,10 @@ export interface UiStrings {
   openSource: string;
   sourceTitle: string;
   closeSource: string;
+  // 手機原文面板的「出處 N／M」（{n}、{total}）與上一個、下一個出處（#256）
+  sourceStep: string;
+  sourcePrev: string;
+  sourceNext: string;
   views: string;
   tabQa: string;
   // 首頁的頁籤（#283）
