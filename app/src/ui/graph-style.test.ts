@@ -181,19 +181,49 @@ describe("展示模式的圖譜（#260，docs/design.md「展示模式」）", (
   const presentStyle = build({ ...variables, ...present }, false);
   const order = (selector: string, rules: Rules = presentStyle) => rules.findIndex((r) => r.selector === selector);
 
+  // 展示模式的字級是畫面上的大小：值是依 zoom 換算的函式（model 單位 = 畫面 px ÷ zoom）
+  const at = (zoom: number) => ({ cy: () => ({ zoom: () => zoom }) });
+  const onScreen = (value: unknown, zoom = 1) => {
+    const result = typeof value === "function" ? (value as (ele: ReturnType<typeof at>) => unknown)(at(zoom)) : value;
+    return typeof result === "string" ? parseFloat(result) * zoom : (result as number) * zoom;
+  };
+
   it("字級表：節點標籤 18px、選取的實體 26px，關係名稱等小字 16px；截斷的寬度等比例放大", () => {
     expect(presentSizes((name) => present[name] ?? "")).toEqual({ label: 18, selected: 26, small: 16 });
-    expect(rule("node", presentStyle)).toMatchObject({ "font-size": 18, "text-max-width": `${(NODE_LABEL_MAX_WIDTH * 18) / 12}px` });
-    expect(rule("node.selected", presentStyle)).toMatchObject({ "font-size": 26 });
-    expect(rule("edge", presentStyle)).toMatchObject({ "font-size": 16 });
+    expect(onScreen(rule("node", presentStyle)["font-size"])).toBe(18);
+    expect(onScreen(rule("node", presentStyle)["text-max-width"])).toBe((NODE_LABEL_MAX_WIDTH * 18) / 12);
+    expect(onScreen(rule("node.selected", presentStyle)["font-size"])).toBe(26);
+    expect(onScreen(rule("edge", presentStyle)["font-size"])).toBe(16);
     // 展示模式不用小於 16px 的字（docs/design.md 原則 1）：展示模式的規則（變灰與「只看它」之間）都至少 16px；
     // 它們排在所有設定字級的一般規則之後（cytoscape 以後面的規則為準），涵蓋節點、泡泡、側邊泡泡、關係名稱與聚合線
     const [start, end] = [order(".dimmed") + 1, order(".dimmed.isolated")];
-    const sizes = presentStyle.slice(start, end).flatMap((r) => (r.style["font-size"] === undefined ? [] : [r.style["font-size"] as number]));
+    const sizes = presentStyle.slice(start, end).flatMap((r) => (r.style["font-size"] === undefined ? [] : [onScreen(r.style["font-size"])]));
     expect(sizes.length).toBeGreaterThan(0);
     for (const size of sizes) expect(size).toBeGreaterThanOrEqual(16);
     expect(presentStyle.slice(end).every((r) => r.style["font-size"] === undefined)).toBe(true);
     expect(["node", "node.bubble", "node.side", "edge", "edge.aggregate"].every((sel) => presentStyle.slice(start, end).some((r) => sel.startsWith(r.selector)))).toBe(true);
+  });
+
+  it("標籤在畫面上的大小不隨 zoom 改變：字級、截斷寬度、與節點的距離、襯底與外框都除以 zoom（#260 PR 3 審查）", () => {
+    const node = rule("node", presentStyle);
+    for (const zoom of [0.5, 1, 2.5]) {
+      expect(onScreen(node["font-size"], zoom)).toBeCloseTo(18);
+      expect(onScreen(node["text-max-width"], zoom)).toBeCloseTo(168);
+      expect(onScreen(node["text-margin-y"], zoom)).toBeCloseTo(6);
+      expect(onScreen(node["text-background-padding"], zoom)).toBeCloseTo(2);
+      expect(onScreen(node["text-outline-width"], zoom)).toBeCloseTo(2);
+      expect(onScreen(rule("node.selected", presentStyle)["font-size"], zoom)).toBeCloseTo(26);
+      expect(onScreen(rule("edge", presentStyle)["font-size"], zoom)).toBeCloseTo(16);
+    }
+    // 群組泡泡的名稱在泡泡中央
+    expect(rule("node.bubble", presentStyle)["text-margin-y"]).toBe(0);
+    // 縮放時重新計算樣式（GraphView 與 GraphZoomView 都呼叫），排版時把標籤算進節點的大小
+    expect(graphView).toContain('cy.on("zoom", () => cy.style().update())');
+    expect(graphView).toContain("nodeDimensionsIncludeLabels: presenting()");
+    expect(graphView.match(/keepLabelSize\(instance\)/g)?.length).toBe(1);
+    expect(zoomView).toContain("keepLabelSize(instance)");
+    // 選取後由 presentFocus() 決定視角（presentation-camera.test.ts）
+    expect(graphView).toContain("presentFocus(cy, eles, selectedOf(next), panMs)");
   });
 
   it("選取實體以外的節點 28% 不透明：排在變灰（45%）之後、「只看它」（15%）與滑過、鍵盤的恢復之前", () => {

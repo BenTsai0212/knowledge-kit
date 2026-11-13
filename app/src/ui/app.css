@@ -1718,11 +1718,13 @@ main.qa > .source .source-text mark.entering {
   white-space: nowrap;
 }
 
+/* 與下方的「相關實體」標題留間距（桌機、展示模式與手機的實體面板相同，#260 PR 3 審查） */
 .entity-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.75rem;
+  margin-bottom: 1rem;
 }
 
 /* 實體面板（#240，docs/design.md「實體顏色」）：類型徽章是類型色 14% 的淡底、text 字，前面是類型的形狀；

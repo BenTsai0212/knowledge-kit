@@ -129,17 +129,31 @@ export function presentSizes(v: (name: string) => string): PresentSizes | null {
   return [label, selected, small].every((n) => Number.isFinite(n) && n > 0) ? { label, selected, small } : null;
 }
 
+// 展示模式的標籤是畫面上的大小（#260 PR 3 審查）：cytoscape 的字級是 model 單位、隨 zoom 放大，
+// 所以字級、截斷寬度、與節點的距離、襯底與外框都除以目前的 zoom；GraphView 的 keepLabelSize() 在縮放時重新計算
+type Zoomed<T> = (ele: { cy(): { zoom(): number } }) => T;
+export const onScreen =
+  (px: number): Zoomed<number> =>
+  (ele) =>
+    px / ele.cy().zoom();
+// 只接受長度字串的屬性（text-max-width、text-background-padding）
+const onScreenPx =
+  (px: number): Zoomed<string> =>
+  (ele) =>
+    `${px / ele.cy().zoom()}px`;
+
 // 展示模式（#260）：節點標籤與選取的實體放大，截斷的寬度依字級等比例放大（graph-labels.ts 以 12px、112px 截斷，比例不變）；
 // 選取實體以外的節點（others）28% 不透明，滑過時恢復；選取的關係用 primary 加粗並標上關係名稱
 function presentationRules(v: (name: string) => string, size: PresentSizes): StylesheetJson {
-  const width = (fontSize: number, base: number) => `${Math.round((base * fontSize) / NODE_LABEL_FONT_SIZE)}px`;
+  const width = (fontSize: number, base: number) => onScreenPx((base * fontSize) / NODE_LABEL_FONT_SIZE);
   const primary = { "line-color": v("--color-primary"), "target-arrow-color": v("--color-primary") };
+  const label = { "text-background-padding": onScreenPx(2), "text-outline-width": onScreen(2) };
   return [
-    { selector: "node", style: { "font-size": size.label, "text-max-width": width(size.label, NODE_LABEL_MAX_WIDTH) } },
-    { selector: "node.bubble", style: { "font-size": size.label, "text-max-width": width(size.label, 96) } },
-    { selector: "node.side", style: { "font-size": size.small } },
-    { selector: "edge", style: { "font-size": size.small } },
-    { selector: "node.selected", style: { "font-size": size.selected, "text-max-width": width(size.selected, NODE_LABEL_MAX_WIDTH) } },
+    { selector: "node", style: { "font-size": onScreen(size.label), "text-max-width": width(size.label, NODE_LABEL_MAX_WIDTH), "text-margin-y": onScreen(6), ...label } },
+    { selector: "node.bubble", style: { "font-size": onScreen(size.label), "text-max-width": width(size.label, 96), "text-margin-y": 0 } },
+    { selector: "node.side", style: { "font-size": onScreen(size.small) } },
+    { selector: "edge", style: { "font-size": onScreen(size.small), ...label } },
+    { selector: "node.selected", style: { "font-size": onScreen(size.selected), "text-max-width": width(size.selected, NODE_LABEL_MAX_WIDTH) } },
     { selector: "node.others", style: { opacity: PRESENT_OTHERS_OPACITY } },
     { selector: "node.others.hover", style: { opacity: 1 } },
     { selector: "edge.near", style: { label: "data(label)", width: PRESENT_NEAR_WIDTH, ...primary } },
