@@ -21,6 +21,8 @@ export interface AnswerState {
   // 回答提到的實體（#195）：以送出當下的身分讀出的圖譜，與從中挑出的實體（mentions.ts）。
   // 拒答時 entities 是空的，圖譜用來產生「可以試試」（#285）
   mentions?: { graph: Graph; entities: GraphEntity[] };
+  // 引用到的段落中說法不同（並存）的組合：兩段的引用標號（conflicts/marks.ts 的 citedConflicts()，#335）；只在桌機顯示
+  conflicts?: Array<[number, number]>;
   // 這一題送出的回報（#286）：回答下方顯示處理結果；再回報一次時換成新的回報
   reportId?: string;
 }
@@ -66,6 +68,7 @@ interface Props {
 }
 
 const { entityTypes } = clientConfig.knowledgeModel;
+const typeColor = (type: string) => entityTypes.find((t) => t.id === type)?.color ?? "var(--color-graphFallback)";
 
 // 回答完成後已播過動態的題目：切換頁籤回來重新掛載時不再播放（#227）
 const settled = new Set<string>();
@@ -120,6 +123,15 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
         );
     }
   };
+  // 卡片的小標：上傳那一項沒有（在卡片下方）
+  const suggestionKind = (x: RefusalSuggestion) => {
+    if (x.kind === "graph") return s.refusalKindGraph;
+    if (x.kind === "owner" || (x.kind === "step" && x.step === "askPerson")) return s.refusalKindPerson;
+    if (x.kind === "rephrase" || (x.kind === "step" && x.step === "rephrase")) return s.refusalKindRephrase;
+    return null;
+  };
+  // 色點的實體：問負責的人是負責人，其他是問題中的實體
+  const suggestionEntity = (x: RefusalSuggestion) => (x.kind === "step" ? null : x.kind === "owner" ? x.owner : x.entity);
   const suggestionKey = (x: RefusalSuggestion) => (x.kind === "step" ? x.step : `${x.kind}:${x.entity.id}`);
   const still = useRef(settled.has(id)).current;
   useEffect(() => {
@@ -191,8 +203,13 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
               <p className="muted">{s.refusalNextTitle}</p>
               <ul>
                 {refusalNextSteps({ canUpload, graph, question: state.question, language }).map((x, i) => (
-                  <li key={suggestionKey(x)} style={{ "--i": staggerIndex(i) } as CSSProperties}>
-                    {suggestion(x)}
+                  <li key={suggestionKey(x)} className={x.kind === "step" && x.step === "upload" ? "refusal-next__upload" : undefined} style={{ "--i": staggerIndex(i) } as CSSProperties}>
+                    {/* 桌機是並排的卡片（#335，畫板 K-Answer）：小標與實體的類型色點只在桌機顯示；上傳那一項是卡片下方的一行 */}
+                    {suggestionKind(x) !== null && <span className="refusal-kind">{suggestionKind(x)}</span>}
+                    <span className="refusal-step">
+                      {suggestionEntity(x) !== null && <span className="type-dot" style={{ "--type-color": typeColor(suggestionEntity(x)!.type) } as CSSProperties} aria-hidden="true" />}
+                      <span>{suggestion(x)}</span>
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -202,7 +219,12 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
         {/* 錯誤是中性的卡片，不用 danger（#280）；prompt_too_long 沒有送出，下一步是縮短問題 */}
         {answer?.kind === "error" && category !== "modelRefusal" && (
           <div className="problem" role="status">
+            {/* 桌機的圖示（#335，畫板 I-States）：可以再試是重新整理的箭頭，問題要改是縮短的線條；其他版面不顯示 */}
+            <svg className="problem-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d={category === "fixQuestion" ? "M4 7h16M4 12h10M4 17h6" : "M21 12a9 9 0 1 1-3-6.7M21 4v5h-5"} />
+            </svg>
             <p>{errorMessage(language, answer.error)}</p>
+            {category === "transient" && <p className="problem-kept">{s.qaProblems.kept}</p>}
             {answer.error === "prompt_too_long" && (
               <p className="problem-actions">
                 <span className="badge">{s.qaProblems.notSent}</span>
@@ -215,6 +237,15 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
         )}
         {answer?.kind === "answer" && (
           <>
+            {/* 說法不同（#335，畫板 QA）：兩段都被引用的並存組合，照 system 第 5 條並列、不寫「以…為準」；只在桌機顯示 */}
+            {state.conflicts?.map(([a, b]) => (
+              <p key={`${a}-${b}`} className="answer-conflict">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M7 4v16M17 4v16M3 8h8M13 16h8" />
+                </svg>
+                <span>{fill(s.answerConflict, { a, b })}</span>
+              </p>
+            ))}
             {answer.uncited && <p className="badge warning">{s.uncited}</p>}
             {answer.incomplete && (
               <p className="badge warning">

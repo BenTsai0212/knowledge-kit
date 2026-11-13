@@ -16,6 +16,7 @@ export function AdminNotice({ language, error, at }: Props) {
     <Notice
       kind="warning"
       title={s.qaProblems.adminTitle}
+      className="notice--admin"
       action={needsReload(error) ? { label: s.qaProblems.reload, onClick: () => window.location.reload() } : undefined}
     >
       {errorMessage(language, error)}

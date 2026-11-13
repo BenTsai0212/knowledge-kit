@@ -371,6 +371,8 @@ export interface UiStrings {
   answerMentions: string;
   // 桌機回答卡片開頭的「根據 N 段原文回答」（{count} 是引用到的段落數，#335）
   answerBasis: string;
+  // 桌機回答卡片中說法不同的提示列（#335）：{a}、{b} 是兩段的引用標號；照 system 第 5 條並列，不寫「以…為準」
+  answerConflict: string;
   followUpTitle: string;
   followUpOutgoing: string;
   followUpIncoming: string;
@@ -768,6 +770,10 @@ export interface UiStrings {
   refusalNextRephraseWith: string;
   refusalNextRephraseName: string;
   refusalGotoUpload: string;
+  // 桌機「可以試試」卡片的小標（#335，畫板 K-Answer）：在圖譜看、問負責的人、換個問法
+  refusalKindGraph: string;
+  refusalKindPerson: string;
+  refusalKindRephrase: string;
   // 不是拒答、但沒有任何有效引用的回答
   uncited: string;
   // 串流中斷或被截斷，保留已收到的內容
@@ -789,6 +795,8 @@ export interface UiStrings {
     adminTitle: string;
     adminDetails: string;
     reload: string;
+    // 桌機錯誤卡片：可以重新提問時的說明（#335，畫板 I-States）
+    kept: string;
   };
   errors: Record<AskErrorType, string>;
   // 不認得的錯誤類型

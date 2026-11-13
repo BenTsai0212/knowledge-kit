@@ -56,6 +56,7 @@
   "sessionQuestionsCount": "今回の質問（{count}）",
   "answerMentions": "この回答に登場",
   "answerBasis": "{count} 段落の原文に基づく回答",
+  "answerConflict": "出典 {a} と出典 {b} の内容が異なるため、回答では両方を並べています。",
   "followUpTitle": "続けて質問",
   "followUpOutgoing": "{name}から「{relation}」でつながる{type}は？",
   "followUpIncoming": "「{relation}」で{name}につながる{type}は？",
@@ -539,6 +540,9 @@
   "refusalNextRephraseWith": "「{name}」を使って聞き直す：",
   "refusalNextRephraseName": "「{name}」に関することを一つだけ聞き直す。",
   "refusalGotoUpload": "アップロードへ",
+  "refusalKindGraph": "グラフで見る",
+  "refusalKindPerson": "担当者に聞く",
+  "refusalKindRephrase": "聞き方を変える",
   "uncited": "出典の引用なし",
   "incomplete": "回答が途中で終わっています",
   "answerRetry": "もう一度質問する",
@@ -550,7 +554,8 @@
     "limitBrowse": "グラフ、タイムライン、原文は引き続き閲覧できます。",
     "adminTitle": "このデモは現在質問に回答できません",
     "adminDetails": "管理者向けの詳細",
-    "reload": "ページを再読み込み"
+    "reload": "ページを再読み込み",
+    "kept": "質問は保持されています。再質問すると新しい質問になります。"
   },
   "errors": {
     "forbidden_origin": "このアドレスからは質問できません。",

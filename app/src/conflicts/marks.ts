@@ -52,3 +52,21 @@ export async function readPassageMarks(tx: Transaction): Promise<Map<string, Pas
   }
   return marks;
 }
+
+// 桌機回答卡片的說法不同提示（#335）：同一題引用到的段落中，兩段都被引用、且已處理為「並存」的組合。
+// 回傳兩段的引用標號（numbering 中的位置＋1），小的在前，依標號排序。marks 是送出身分的 readPassageMarks()，所以只有兩段都看得到時才有
+export function citedConflicts(numbering: readonly string[], cited: readonly string[], marks: ReadonlyMap<string, readonly PassageMark[]>): Array<[number, number]> {
+  const citedSet = new Set(cited);
+  const pairs = new Map<string, [number, number]>();
+  for (const id of citedSet) {
+    for (const m of marks.get(id) ?? []) {
+      if (m.kind !== "conflict" || !citedSet.has(m.passageId)) continue;
+      const a = numbering.indexOf(id) + 1;
+      const b = numbering.indexOf(m.passageId) + 1;
+      if (a === 0 || b === 0 || a === b) continue;
+      const pair: [number, number] = a < b ? [a, b] : [b, a];
+      pairs.set(pair.join(","), pair);
+    }
+  }
+  return [...pairs.values()].sort((x, y) => x[0] - y[0] || x[1] - y[1]);
+}
