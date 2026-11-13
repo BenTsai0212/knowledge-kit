@@ -41,7 +41,7 @@ import { RetrievalNotice } from "./ui/RetrievalNotice";
 import { reportOf } from "./ui/report-helpers";
 import { PREPARING, sameDisplay, type ProviderStatus } from "./ui/retrieval-notice";
 import { ReviewPage } from "./ui/ReviewPage";
-import { rememberQuestion, rememberViewed, waitingSummary, type WaitingSummary } from "./ui/home";
+import { rememberQuestion, rememberViewed, waitingSummary, type AskedQuestion, type WaitingSummary } from "./ui/home";
 import { HomePage } from "./ui/HomePage";
 import { createExtractionRunner } from "./ui/extraction-runner";
 import { defaultView, demoCompare, evalsMode, onlineDemo, presentationMode, visibleViews, type View } from "./ui/online-demo";
@@ -103,8 +103,8 @@ export function App() {
   const turns = conversations[identity] ?? NO_TURNS;
   const setTurnsOf = (owner: string, change: (all: readonly Turn[]) => readonly Turn[]) =>
     setConversations((all) => ({ ...all, [owner]: change(all[owner] ?? NO_TURNS) }));
-  // 首頁的「問過的問題」（#283）：依身分分開，只存問題文字（不存回答）；切換身分或語言不清除，登出時清除
-  const [asked, setAsked] = useState<Readonly<Record<string, readonly string[]>>>({});
+  // 首頁的「問過的問題」（#283）：依身分分開，只存問題文字與提問時間（不存回答，#331）；切換身分或語言不清除，登出時清除
+  const [asked, setAsked] = useState<Readonly<Record<string, readonly AskedQuestion[]>>>({});
   // 首頁的「最近看過」（#283）：依身分分開，只存實體 id（圖譜選取的、問答右側面板打開的）；名稱與能否看到在首頁以目前身分讀取。登出時清除
   const [viewed, setViewed] = useState<Readonly<Record<string, readonly string[]>>>({});
   const onViewed = (id: string) => setViewed((all) => ({ ...all, [identity]: rememberViewed(all[identity] ?? [], id) }));
@@ -350,7 +350,7 @@ export function App() {
     const setTurns = (change: (all: readonly Turn[]) => readonly Turn[]) => setTurnsOf(owner, change);
     const update = (turn: Turn) => setTurns((all) => all.map((t) => (t.id === id ? turn : t)));
     setTurns((all) => [...all, { id, question, streaming: "" }]);
-    setAsked((all) => ({ ...all, [owner]: rememberQuestion(all[owner] ?? [], question) }));
+    setAsked((all) => ({ ...all, [owner]: rememberQuestion(all[owner] ?? [], question, new Date().toISOString()) }));
     const ctx = { retriever, transport: apiTransport({ accessCode }), model: client.model, displayName: client.displayName };
     const result = await ask(
       ctx,
@@ -718,6 +718,7 @@ export function App() {
             db={db}
             language={language}
             identity={identity}
+            wide={!phone && !tablet}
             waiting={canReview ? (pending?.identity === identity ? pending.summary : null) : undefined}
             // 一般員工的「有更新」：不能審核的身分；自己上傳的文件（#284）與已處理的回報（#286）
             updates={!canReview ? { extracting: activeExtractions, onOpenUpload: (id) => (setUploadFocus(id), setView("upload")) } : undefined}

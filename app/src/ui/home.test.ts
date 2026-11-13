@@ -1,7 +1,24 @@
 import { describe, expect, it } from "vitest";
 import type { AccessFile, ScenariosFile } from "../client/types";
 import type { ReviewDocument, ReviewStatus } from "../extraction/store";
-import { greetingPeriod, MAX_ASKED, MAX_UPDATES, MAX_VIEWED, rememberQuestion, rememberViewed, reportUpdates, roleScenarios, uploadUpdates, visibleScope, waitingSummary } from "./home";
+import {
+  askedWhen,
+  entityShape,
+  greetingPeriod,
+  MAX_ASKED,
+  MAX_UPDATES,
+  MAX_VIEWED,
+  rememberQuestion,
+  rememberViewed,
+  reportUpdates,
+  roleScenarios,
+  UPLOAD_DOT,
+  uploadUpdates,
+  visibleScope,
+  waitingRows,
+  waitingSummary,
+  type AskedQuestion,
+} from "./home";
 import type { AnswerReport } from "../reports/store";
 import { pendingCount } from "./review-helpers";
 
@@ -97,21 +114,79 @@ describe("uploadUpdates", () => {
 });
 
 describe("rememberQuestion", () => {
-  it("最新的在前，同一個問題只留最新的一次", () => {
-    expect(rememberQuestion(["b", "a"], "a")).toEqual(["a", "b"]);
-    expect(rememberQuestion(["b", "a"], "c")).toEqual(["c", "b", "a"]);
+  const at = "2026-11-13T09:00:00.000Z";
+  const q = (question: string, when = at): AskedQuestion => ({ question, at: when });
+  const questions = (asked: readonly AskedQuestion[]) => asked.map((x) => x.question);
+
+  it("最新的在前，同一個問題只留最新的一次（時間換成這次）", () => {
+    const later = "2026-11-13T10:00:00.000Z";
+    expect(rememberQuestion([q("b"), q("a")], "a", later)).toEqual([q("a", later), q("b")]);
+    expect(questions(rememberQuestion([q("b"), q("a")], "c", at))).toEqual(["c", "b", "a"]);
   });
 
-  it("去掉前後空白，空白的問題不記", () => {
-    expect(rememberQuestion(["a"], "  b \n")).toEqual(["b", "a"]);
-    expect(rememberQuestion(["a"], "   ")).toEqual(["a"]);
+  it("只存問題文字與提問時間：去掉前後空白，空白的問題不記", () => {
+    expect(rememberQuestion([q("a")], "  b \n", at)).toEqual([q("b"), q("a")]);
+    expect(rememberQuestion([q("a")], "   ", at)).toEqual([q("a")]);
+    expect(Object.keys(rememberQuestion([], "a", at)[0]).sort()).toEqual(["at", "question"]);
   });
 
   it(`最多保留 ${MAX_ASKED} 筆`, () => {
-    let asked: string[] = [];
-    for (let i = 0; i < MAX_ASKED + 5; i++) asked = rememberQuestion(asked, `q${i}`);
+    let asked: AskedQuestion[] = [];
+    for (let i = 0; i < MAX_ASKED + 5; i++) asked = rememberQuestion(asked, `q${i}`, at);
     expect(asked).toHaveLength(MAX_ASKED);
-    expect(asked[0]).toBe(`q${MAX_ASKED + 4}`);
+    expect(asked[0].question).toBe(`q${MAX_ASKED + 4}`);
+  });
+});
+
+describe("askedWhen", () => {
+  // 本地時間：以日曆日計算，不是 24 小時
+  const now = new Date(2026, 10, 13, 9, 0);
+  const at = (day: number, hour = 12) => new Date(2026, 10, day, hour).toISOString();
+
+  it("今天、昨天、幾天前（一週內以天）", () => {
+    expect(askedWhen(at(13, 8), now)).toEqual({ value: -0, unit: "day" });
+    expect(askedWhen(at(12, 23), now)).toEqual({ value: -1, unit: "day" });
+    expect(askedWhen(at(10), now)).toEqual({ value: -3, unit: "day" });
+  });
+
+  it("一週以上以週、一個月以上以月；未來的時間當作今天", () => {
+    expect(askedWhen(at(6), now)).toEqual({ value: -1, unit: "week" });
+    expect(askedWhen(new Date(2026, 9, 1).toISOString(), now)).toEqual({ value: -1, unit: "month" });
+    expect(askedWhen(at(14), now)).toEqual({ value: -0, unit: "day" });
+  });
+
+  it("交給 Intl.RelativeTimeFormat 顯示成「今天」「昨天」「3 天前」「上週」", () => {
+    const f = new Intl.RelativeTimeFormat("zh-TW", { numeric: "auto" });
+    const show = (iso: string) => {
+      const w = askedWhen(iso, now);
+      return f.format(w.value, w.unit);
+    };
+    expect([at(13), at(12), at(10), at(6)].map(show)).toEqual(["今天", "昨天", "3 天前", "上週"]);
+  });
+});
+
+describe("狀態點與實體形狀（#331，畫板 K-Home）", () => {
+  it("我的上傳：核准 success、審核中 primary、退回 danger", () => {
+    expect(UPLOAD_DOT).toEqual({ approved: "success", in_review: "primary", partly_rejected: "danger", rejected: "danger" });
+  });
+
+  it("等你處理：只列數字大於 0 的，待審文件 primary、說法不同 conflict、回報 warning", () => {
+    const base = { documents: 0, conflicts: 0, reports: 0, earliestReport: null, total: 0 };
+    expect(waitingRows(base)).toEqual([]);
+    expect(waitingRows({ ...base, documents: 3, conflicts: 2, reports: 1, total: 6 })).toEqual([
+      { kind: "documents", count: 3, dot: "primary" },
+      { kind: "conflicts", count: 2, dot: "conflict" },
+      { kind: "reports", count: 1, dot: "warning" },
+    ]);
+    expect(waitingRows({ ...base, reports: 2, total: 2 }).map((r) => r.kind)).toEqual(["reports"]);
+  });
+
+  it("最近看過：人是圓形、部門是圓角方形、其他是小圓角", () => {
+    expect(entityShape("person")).toBe("round");
+    expect(entityShape("team")).toBe("rounded");
+    expect(entityShape("building")).toBe("rounded");
+    expect(entityShape("folder")).toBe("square");
+    expect(entityShape(undefined)).toBe("square");
   });
 });
 

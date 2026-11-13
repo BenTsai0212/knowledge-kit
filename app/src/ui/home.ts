@@ -1,5 +1,5 @@
 // 首頁的純函式（#283，docs/design.md「日常工具」的「首頁」）：問候的時段、主管「等你處理」的數字、一般員工的「有更新」（#284）、
-// 問過的問題、依身分的常見問題與可見範圍。
+// 問過的問題與提問時間、依身分的常見問題與可見範圍；桌機版面對齊畫板 K-Home（#331）的狀態點與實體形狀。
 import type { AccessFile, ScenariosFile } from "../client/types";
 import type { ConflictItem } from "../conflicts/store";
 import type { ReviewDocument } from "../extraction/store";
@@ -84,12 +84,56 @@ export function reportUpdates(reports: readonly AnswerReport[], identity: string
 // 問過的問題最多保留的筆數
 export const MAX_ASKED = 20;
 
-// 問過的問題：只存問題文字，最新的在前；同一個問題只留最新的一次
-export function rememberQuestion(asked: readonly string[], question: string, max = MAX_ASKED): string[] {
+// 問過的問題（#331）：問題文字與提問時間（ISO 字串），不存回答
+export interface AskedQuestion {
+  question: string;
+  at: string;
+}
+
+// 問過的問題：最新的在前；同一個問題只留最新的一次（時間更新為這次）
+export function rememberQuestion(asked: readonly AskedQuestion[], question: string, at: string, max = MAX_ASKED): AskedQuestion[] {
   const text = question.trim();
   if (text === "") return [...asked];
-  return [text, ...asked.filter((q) => q !== text)].slice(0, max);
+  return [{ question: text, at }, ...asked.filter((q) => q.question !== text)].slice(0, max);
 }
+
+// 提問時間的相對說法（#331）：以本地日曆日計算；一週內以天、一個月內以週、之後以月。
+// 交給 Intl.RelativeTimeFormat（numeric: "auto"）顯示成「今天」「昨天」「3 天前」「上週」
+export function askedWhen(at: string, now: Date): { value: number; unit: "day" | "week" | "month" } {
+  const then = new Date(at);
+  const day = (d: Date) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86_400_000;
+  const days = Math.max(0, day(now) - day(then));
+  if (days < 7) return { value: -days, unit: "day" };
+  if (days < 30) return { value: -Math.floor(days / 7), unit: "week" };
+  return { value: -Math.floor(days / 30), unit: "month" };
+}
+
+// 「有更新」「等你處理」每則的狀態點（#331）：核准 success、審核中 primary、說法不同 conflict、回報 warning、退回 danger
+export type UpdateDot = "success" | "primary" | "conflict" | "warning" | "danger";
+
+export const UPLOAD_DOT: Record<UploadUpdate["status"], UpdateDot> = {
+  approved: "success",
+  in_review: "primary",
+  partly_rejected: "danger",
+  rejected: "danger",
+};
+
+// 主管的「等你處理」每則（#331）：只列數字大於 0 的；全部 0 時是空的
+export type WaitingRow = { kind: "documents" | "conflicts" | "reports"; count: number; dot: UpdateDot };
+
+export function waitingRows(w: WaitingSummary): WaitingRow[] {
+  const rows: WaitingRow[] = [
+    { kind: "documents", count: w.documents, dot: "primary" },
+    { kind: "conflicts", count: w.conflicts, dot: "conflict" },
+    { kind: "reports", count: w.reports, dot: "warning" },
+  ];
+  return rows.filter((r) => r.count > 0);
+}
+
+// 「最近看過」的形狀（#331，畫板 K-Home）：人是圓形、部門是圓角方形、其他（專案等）是小圓角
+export type EntityShape = "round" | "rounded" | "square";
+
+export const entityShape = (icon: string | undefined): EntityShape => (icon === "person" ? "round" : icon === "team" || icon === "building" ? "rounded" : "square");
 
 // 「最近看過」最多保留的實體數
 export const MAX_VIEWED = 5;
