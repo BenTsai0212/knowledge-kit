@@ -3,8 +3,8 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import {
   ACCESS_CODE,
-  accountOption,
   blockModelDownload,
+  chooseAccount,
   identityBadge,
   identitySheet,
   language,
@@ -110,11 +110,11 @@ test("帳號登入：使用者卡是帳號、角色、「看得到：…」與�
   await blockModelDownload(page);
   await routeFakeAsk(page);
   await page.goto("/");
-  // 登入頁：沒有使用者卡，標示只有「虛構資料」
-  await expect(userCard(page)).toHaveCount(0);
-  await expect(sidebar(page).locator(".sidebar__labels")).toHaveText(s.fictionalData);
+  // 登入頁：沒有左側欄（#334，登入前是頂端列）
   const panel = signInPanel(page);
-  await panel.getByLabel(s.signInAccount).selectOption({ label: accountOption(role) });
+  await expect(panel).toBeVisible();
+  await expect(sidebar(page)).toHaveCount(0);
+  await chooseAccount(panel, role);
   await panel.getByLabel(s.accessCodeLabel).fill(ACCESS_CODE);
   await panel.getByRole("button", { name: s.signInSubmit, exact: true }).click();
   await expect(userCard(page)).toBeVisible();

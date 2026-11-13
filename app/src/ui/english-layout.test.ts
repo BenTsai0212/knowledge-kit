@@ -116,6 +116,8 @@ describe("頁面外層與清單的欄寬", () => {
   const ancestors: Record<string, string[]> = {
     // 桌機的左側欄（#330）：flex 容器，在 .app 的第一欄（220px）
     ".sidebar__client": [".app"],
+    // 桌機登入頁的頂端列（#334）：flex 容器，在 .app 的第一列
+    ".entry-bar__wordmark": [".app"],
     // 手機的頂端列與分頁列（#255）：flex 容器，.app--phone 是 display: block
     ".mobile-brand__client": [".app"],
     ".identity-badge": [".app"],

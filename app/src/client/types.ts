@@ -337,6 +337,11 @@ export interface UiStrings {
   signInSubmit: string;
   signInWithCode: string;
   signInBack: string;
+  // 桌機登入面板（#334）：標題上方的 mono 小字（帳號登入、使用邀請碼體驗）、「登入」與「使用邀請碼體驗」之間的分隔字、帳號欄下方的說明
+  signInEyebrow: string;
+  accessCodeEyebrow: string;
+  signInOr: string;
+  signInAccountHint: string;
   signOut: string;
   // 手機頂端列的身分徽章（#255）：{role} 是目前身分的名稱；按下打開身分與語言面板
   identityBadge: string;
