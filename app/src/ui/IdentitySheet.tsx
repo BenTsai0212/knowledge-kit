@@ -1,11 +1,14 @@
 // 手機的身分與語言面板的內容（#255 PR 2，docs/design.md「問答（手機）」的身分與語言面板）：
 // 身分以單選卡列出，每張附 access.json 的 roles[].scope（一句「看得到什麼」，只說明看得到的範圍，#247）；
-// 語言是分段切換；最下方是「更換邀請碼」。帳號登入時身分固定，只顯示帳號與角色，按鈕是「登出」，與桌機的 IdentityControls 一致。
+// 語言是分段切換；最下方是「更換邀請碼」。帳號登入時身分固定，只顯示帳號與角色，按鈕是「登出」。
+// 平板的滑出面板與桌機左側欄的使用者卡選單（#330）也用這一份；桌機的帳號已在使用者卡上，選單只有語言與「登出」（hideAccount）。
 import { useId } from "react";
 import { clientConfig } from "../client/load";
 import { fill, strings } from "../client/i18n";
-import { ownName } from "./IdentityControls";
 import type { IdentityControl } from "./sign-in";
+
+// 語言以該語言自己的名稱顯示（例如 zh-TW → 中文（台灣））；桌機左側欄登入頁的語言選單共用
+export const ownName = (code: string) => new Intl.DisplayNames([code], { type: "language" }).of(code) ?? code;
 
 interface Props {
   language: string;
@@ -15,9 +18,11 @@ interface Props {
   onIdentity(identity: string): void;
   onLanguage(language: string): void;
   onChangeAccessCode?(): void;
+  // 帳號登入時不顯示帳號與角色（桌機的使用者卡上已有，#330 決定 2）
+  hideAccount?: boolean;
 }
 
-export function IdentitySheet({ language, identity, identityControl, account, onIdentity, onLanguage, onChangeAccessCode }: Props) {
+export function IdentitySheet({ language, identity, identityControl, account, onIdentity, onLanguage, onChangeAccessCode, hideAccount = false }: Props) {
   const s = strings(language);
   const id = useId();
   const roles = clientConfig.access.roles;
@@ -50,7 +55,7 @@ export function IdentitySheet({ language, identity, identityControl, account, on
           ))}
         </fieldset>
       )}
-      {identityControl === "account" && (
+      {identityControl === "account" && !hideAccount && (
         // 帳號登入：身分是登入的帳號，不能切換（docs/design.md「身分是登入的人，不是設定」）
         <p className="identity-account">
           {s.identity}

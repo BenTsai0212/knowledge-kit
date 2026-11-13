@@ -114,7 +114,8 @@ describe("頁面外層與清單的欄寬", () => {
   // （#288 審查：首頁的清單、待審頁的分頁列）。新增這類元素時，把它與祖先的 grid 加進這張表
   const page = ["main"];
   const ancestors: Record<string, string[]> = {
-    ".brand__wordmark": [".app"],
+    // 桌機的左側欄（#330）：flex 容器，在 .app 的第一欄（220px）
+    ".sidebar__client": [".app"],
     // 手機的頂端列與分頁列（#255）：flex 容器，.app--phone 是 display: block
     ".mobile-brand__client": [".app"],
     ".identity-badge": [".app"],

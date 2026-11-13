@@ -83,7 +83,6 @@ test("對話依身分分開保存：切到另一個身分時畫面上沒有前�
   await expect(answer).toHaveCount(1);
   await expect(answer.getByRole("heading", { name: question })).toBeVisible();
   await expect(answer.getByText(s.answering)).toHaveCount(0);
-  await expect(page.getByRole("navigation", { name: s.sessionQuestions }).getByRole("link")).toHaveText([question]);
 });
 
 test("待審只給 canReview 的身分；沒有 tools=evals 時，所有身分都看不到評測台", async ({ page }) => {

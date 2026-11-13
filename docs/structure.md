@@ -80,7 +80,7 @@
 - `AdminNotice.tsx`：需要管理者的說明（見 `docs/qa.md`「錯誤」）
 - `answer-motion.ts`：問答的逐句動態（見 `docs/qa.md`「畫面」的「動態」）
 - `app.css`：樣式（顏色與圓角只用 `theme.ts` 由 `client/theme.json` 設定的 CSS 變數，深色模式依 `prefers-color-scheme` 標上 `data-scheme` 後改用 `darkColors`，不寫死顏色；結構測試在 `theme.test.ts`）
-- `BottomSheet.tsx`：共用的底部面板（原生 `<dialog>`，關閉按鈕、Esc、點背景、往下拖關閉，焦點回到觸發的元件）；`expandable` 是 56%／全高，`side="right"` 是平板的右側滑出面板（原文、實體、身分與語言）
+- `BottomSheet.tsx`：共用的底部面板（原生 `<dialog>`，關閉按鈕、Esc、點背景、往下拖關閉，焦點回到觸發的元件）；`expandable` 是 56%／全高，`side="right"` 是平板的右側滑出面板（原文、實體、身分與語言），`side="popover"` 是桌機左側欄旁的身分與語言選單
 - `ConflictStatus.tsx`：比對狀態
 - `Conversation.tsx`：問答頁中間的對話
 - `cross-fade.ts`：切換語言、Light／Dark 的交叉淡換
@@ -107,8 +107,7 @@
 - `HomePage.tsx`：首頁（登入後的預設頁）
 - `identity-compare.ts`：身分對照的純函式：欄的順序與目前身分、目前的題目、一欄一欄送出、`C`／`Esc`
 - `IdentityCompare.tsx`：展示模式的身分對照，每個身分一欄，沿用 `AnswerView`（純函式在 `identity-compare.ts`），見 `docs/qa.md`「身分對照」
-- `IdentityControls.tsx`：左側導覽的身分、語言與更換邀請碼（手機改用 `IdentitySheet.tsx`）
-- `IdentitySheet.tsx`：手機的身分與語言面板的內容（身分單選卡附 `roles[].scope`、語言分段切換、更換邀請碼；帳號登入時只顯示帳號與角色）
+- `IdentitySheet.tsx`：身分與語言面板的內容（手機、平板與桌機使用者卡的選單共用；身分單選卡附 `roles[].scope`、語言分段切換、更換邀請碼；帳號登入時只顯示帳號與角色）
 - `layout.ts`：斷點（`layoutFor()`、`useLayout()`）、手機分頁的分配（`phoneTabs()`）、底部面板的拖曳門檻與 `sheetSnap()`、底部面板以上的可見部分 `visibleArea()`（純函式，測試在 `layout.test.ts`）
 - `MentionPanel.tsx`：問答頁的右側面板：回答提到的實體（純函式在 `mentions.ts`）
 - `mentions.ts`：`MentionPanel.tsx` 的純函式
@@ -132,7 +131,7 @@
 - `script.ts`：劇本的純函式（分組與順序、第 N／M 題、已問過、是否切換身分）
 - `ScriptPanel.tsx`：展示模式問答頁左欄的劇本，見 `docs/qa.md`「展示模式」
 - `SessionQuestions.tsx`：手機的「這次的問題（N）」按鈕與底部面板（#256）
-- `Sidebar.tsx`：左側導覽
+- `Sidebar.tsx`：桌機的左側欄（客戶名稱、頁面項目、「虛構資料 · 展示用權限」、使用者卡與身分和語言選單，#330）
 - `source-steps.ts`：「出處 N／M」與「在圖譜中查看」目標的純函式
 - `SourcePanel.tsx`：問答頁的右側面板：原文
 - `SourceSheet.tsx`：手機的原文面板（底部面板）

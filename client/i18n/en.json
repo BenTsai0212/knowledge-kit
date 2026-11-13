@@ -35,6 +35,7 @@
   "signOut": "Sign out",
   "identityBadge": "Identity: {role}. Change identity or language",
   "identityAndLanguage": "Identity and language",
+  "userCardScope": "Can see: {scope}",
   "navMore": "More",
   "presetQuestions": "Sample questions",
   "scenarioRole": "Scenario role",
