@@ -39,7 +39,8 @@ test.describe("1280×720", () => {
     await openApp(page);
     await switchIdentity(page, question.role);
     const input = page.getByPlaceholder(s.questionPlaceholder);
-    await expect(page.getByText(s.qaIndependent)).toBeVisible();
+    // 桌機的說明在頁首（#335）
+    await expect(page.getByText(s.qaHeaderNote)).toBeVisible();
     const before = await input.boundingBox();
 
     const first = await askPreset(page, 1);

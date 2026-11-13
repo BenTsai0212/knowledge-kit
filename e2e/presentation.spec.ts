@@ -96,8 +96,9 @@ test("一般模式（不帶參數）：字級與隱藏的元素不變", async ({
   expect(await page.locator("html").getAttribute("data-mode")).toBeNull();
   await expect(page.locator("body")).toHaveCSS("font-size", "16px");
   const answer = await askFirst(page);
-  await expect(answer.locator("h2")).toHaveCSS("font-size", "16.8px");
-  await expect(answer.locator(".answer-text")).toHaveCSS("font-size", "16px");
+  // 桌機的問題泡泡 16px、回答本文 17px（#335，畫板 QA）
+  await expect(answer.locator("h2")).toHaveCSS("font-size", "16px");
+  await expect(answer.locator(".answer-text")).toHaveCSS("font-size", "17px");
   await expect(answer.getByRole("button", { name: s.reportButton })).toBeVisible();
   // 桌機的「更換邀請碼」在使用者卡的選單裡（#330）
   await identityBadge(page).click();

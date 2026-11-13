@@ -22,6 +22,8 @@ interface Props {
   presets?: boolean;
   // 桌機的首頁（#331，畫板 K-Home）：單行輸入框＋右側「提問」在上、常見問題在下，不顯示「每題獨立回答」的說明
   compact?: boolean;
+  // 桌機的問答頁（#335，畫板 QA）：單行輸入列（輸入框與「提問」在同一個框內，Enter 送出），「每題獨立回答」的說明在頁首
+  line?: boolean;
 }
 
 // 輸入框的 id：「縮短問題」按下後把焦點移到這裡
@@ -31,7 +33,7 @@ const HINT_ID = "question-hint";
 const roleLabel = (id: string, language: string) => clientConfig.access.roles.find((r) => r.id === id)?.label[language] ?? id;
 
 // 固定在問答頁下方的輸入區（#195）：一行可橫向捲動的預設問題（依情境分組）、自由提問、「每題獨立回答」的說明
-export function QuestionPanel({ language, disabled, text, onText, onAsk, limit, role, presets = true, compact = false }: Props) {
+export function QuestionPanel({ language, disabled, text, onText, onAsk, limit, role, presets = true, compact = false, line = false }: Props) {
   const s = strings(language);
   const scenarios = role === undefined ? clientConfig.scenarios.scenarios : roleScenarios(clientConfig.scenarios, role);
   const off = disabled || limit !== null;
@@ -71,8 +73,16 @@ export function QuestionPanel({ language, disabled, text, onText, onAsk, limit, 
       ))}
     </div>
   );
+  const field = {
+    id: QUESTION_INPUT_ID,
+    value: text,
+    disabled: limit !== null,
+    placeholder: s.questionPlaceholder,
+    "aria-invalid": length.over || undefined,
+    "aria-describedby": length.show ? HINT_ID : undefined,
+  };
   return (
-    <section className={compact ? "card composer composer--compact" : "card composer"}>
+    <section className={compact ? "card composer composer--compact" : line ? "card composer composer--line" : "card composer"}>
       {limit !== null && (
         <Notice kind="info" icon="◷" title={errorMessage(language, limit)}>
           {s.qaProblems.limitBrowse}
@@ -102,17 +112,12 @@ export function QuestionPanel({ language, disabled, text, onText, onAsk, limit, 
           />
         ) : (
           <label>
-            {s.questionLabel}
-            <textarea
-              id={QUESTION_INPUT_ID}
-              value={text}
-              rows={2}
-              disabled={limit !== null}
-              placeholder={s.questionPlaceholder}
-              aria-invalid={length.over || undefined}
-              aria-describedby={length.show ? HINT_ID : undefined}
-              onChange={(e) => onText(e.target.value)}
-            />
+            <span className={line ? "visually-hidden" : undefined}>{s.questionLabel}</span>
+            {line ? (
+              <input type="text" {...field} onChange={(e) => onText(e.target.value)} />
+            ) : (
+              <textarea rows={2} {...field} onChange={(e) => onText(e.target.value)} />
+            )}
           </label>
         )}
         <button type="submit" disabled={blocked}>
@@ -128,7 +133,7 @@ export function QuestionPanel({ language, disabled, text, onText, onAsk, limit, 
         </p>
       )}
       {compact && presetList}
-      {!compact && <p className="muted qa-independent">{s.qaIndependent}</p>}
+      {!compact && !line && <p className="muted qa-independent">{s.qaIndependent}</p>}
     </section>
   );
 }

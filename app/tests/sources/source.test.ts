@@ -4,7 +4,7 @@ import { clientConfig } from "../../src/client/load";
 import { dataset } from "../../src/dataset/load";
 import { seedDataset } from "../../src/dataset/seed";
 import { openDatabase, type Database } from "../../src/db/database";
-import { readSource } from "../../src/sources/source";
+import { readCitedSources, readSource } from "../../src/sources/source";
 import { expectedVisible } from "../db/oracle";
 import type { Sample } from "../db/sample";
 
@@ -65,5 +65,31 @@ describe("readSource", { timeout: 30_000 }, () => {
 
   it("不存在的段落回 null", async () => {
     expect(await readSource(db, "manager", "nope")).toBeNull();
+  });
+});
+
+describe("readCitedSources（桌機原文欄的「這次回答的出處」，#335）", { timeout: 30_000 }, () => {
+  const kickoff = documents.find((d) => d.passages.some((p) => p.id === "bluewing-kickoff-zh-01"))!;
+  const numbering = ["bluewing-kickoff-zh-03", "bluewing-kickoff-zh-02", "bluewing-kickoff-zh-01"];
+
+  it("依第一次引用的順序、同一段一次；引用標號是 numbering 中的位置，¶ 是看得到的段落中的順序", async () => {
+    const cited = ["bluewing-kickoff-zh-02", "bluewing-kickoff-zh-03", "bluewing-kickoff-zh-02"];
+    expect(await readCitedSources(db, "manager", numbering, cited)).toEqual([
+      { passageId: "bluewing-kickoff-zh-02", citation: 2, title: kickoff.title, paragraph: 2 },
+      { passageId: "bluewing-kickoff-zh-03", citation: 1, title: kickoff.title, paragraph: 3 },
+    ]);
+  });
+
+  it("每個身分：只列出看得到的段落，¶ 與 readSource() 的段落順序一致", async () => {
+    for (const id of IDENTITIES) {
+      const visible = new Set(expectedVisible(access, sample, id).passages);
+      const all = documents.flatMap((d) => d.passages.map((p) => p.id));
+      const items = await readCitedSources(db, id, all, all);
+      expect(items.map((x) => x.passageId), String(id)).toEqual(all.filter((p) => visible.has(p)));
+      for (const item of items) {
+        const doc = await readSource(db, id, item.passageId);
+        expect(doc!.passages[item.paragraph - 1].id).toBe(item.passageId);
+      }
+    }
   });
 });

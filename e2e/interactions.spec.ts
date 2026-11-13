@@ -78,7 +78,8 @@ test("深色模式：依 prefers-color-scheme 切換配色，切回淺色時恢�
   await expect.poll(background).toBe(rgb(theme.darkColors.background));
   await expect.poll(() => page.evaluate(() => getComputedStyle(document.body).color)).toBe(rgb(theme.darkColors.text));
   // 表單元件跟著主題，不是瀏覽器系統控制項的灰底（#239）
-  const question = page.locator("textarea").first();
+  // 桌機的問答頁是單行的輸入框（#335）
+  const question = page.getByPlaceholder(s.questionPlaceholder);
   await expect(question).toHaveCSS("background-color", rgb(theme.darkColors.surface));
   await expect(question).toHaveCSS("color", rgb(theme.darkColors.text));
   await page.emulateMedia({ colorScheme: "light" });
