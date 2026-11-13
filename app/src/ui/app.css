@@ -3880,14 +3880,15 @@ label.inline {
   color: var(--color-textMuted);
 }
 
+/* 右側內距留給自繪的下拉箭頭（select 的 background-image），文字不壓到箭頭 */
 .entry-bar__language select {
   height: 40px;
-  padding: 0 10px;
+  padding: 0 2rem 0 10px;
   font-size: 14px;
 }
 
-/* 登入面板（#287）：欄位一欄一列；停用的密碼欄是虛線框，看得出不能輸入 */
-.sign-in label {
+/* 登入面板（#287）：欄位一欄一列（帳號單選卡除外，見 .account-card） */
+.sign-in label:not(.account-card) {
   display: grid;
 }
 
@@ -3897,11 +3898,6 @@ label.inline {
 
 .sign-in p {
   margin: 0;
-}
-
-.sign-in__password {
-  border-style: dashed;
-  background-color: transparent;
 }
 
 .entry__panel button.link {
@@ -3925,6 +3921,7 @@ label.inline {
 
 .account-card {
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 10px;
   min-height: 52px;
@@ -3955,6 +3952,7 @@ label.inline {
 }
 
 .account-card__text {
+  flex: 1;
   display: grid;
   gap: 1px;
   min-width: 0;
@@ -4012,7 +4010,9 @@ label.inline {
     font-weight: 700;
   }
 
-  .entry__panel .access-code label {
+  /* 標籤在上、輸入框滿寬（「使用邀請碼體驗」的表單也一樣） */
+  .entry__panel .access-code label:not(.account-card) {
+    display: grid;
     gap: 6px;
     font-size: 13px;
     font-weight: 600;
@@ -4032,12 +4032,19 @@ label.inline {
     font-weight: 600;
   }
 
-  .sign-in__password {
+  /* 停用的密碼欄：虛線框、透明底，看得出不能輸入；placeholder 與一般輸入框同字級，不另外降低不透明度。
+     選擇器要比共用的 input:not([type="checkbox"], [type="radio"]) 具體，否則框線與字級被蓋掉 */
+  .entry__panel input.sign-in__password {
     height: 48px;
     padding: 0 14px;
+    border: 1px dashed var(--color-textMuted);
+    background-color: transparent;
+    font-size: 16px;
+    font-weight: 500;
+    opacity: 1;
   }
 
-  .entry-code {
+  .entry__panel input.entry-code {
     height: 52px;
     padding: 0 14px;
     font-family: var(--font-mono);
