@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ALL, expand, focusOf, keepVisible, nearRelations, only, selectedOf } from "./expansion";
+import { ALL, expand, focusOf, freshEntities, keepVisible, nearRelations, only, selectedOf } from "./expansion";
 import type { Graph } from "./read";
 
 const graph = (entities: string[], relations: [id: string, from: string, to: string][]): Graph => ({
@@ -68,5 +68,19 @@ describe("逐步展開（#199）", () => {
   it("關係名稱只在選取節點的相連關係顯示；沒有選取時都不顯示", () => {
     expect(sorted(nearRelations(g, "c"))).toEqual(["cb", "cd", "ce"]);
     expect(sorted(nearRelations(g, null))).toEqual([]);
+  });
+});
+
+describe("剛展開（#336）", () => {
+  it("往下展開一層時，這一層才進入聚焦集合的實體", () => {
+    expect(sorted(freshEntities(g, ["a"], ["a", "b"]))).toEqual(["c", "e"]);
+    expect(sorted(freshEntities(g, ["a", "b"], ["a", "b", "c"]))).toEqual(["d"]);
+  });
+
+  it("從全部開始、只看它、回到全部、點回路徑上的一段時沒有", () => {
+    expect(freshEntities(g, ALL, ["a"]).size).toBe(0);
+    expect(freshEntities(g, ["a", "b"], ["c"]).size).toBe(0);
+    expect(freshEntities(g, ["a", "b"], ALL).size).toBe(0);
+    expect(freshEntities(g, ["a", "b", "c"], ["a", "b"]).size).toBe(0);
   });
 });

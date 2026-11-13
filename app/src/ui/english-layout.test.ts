@@ -131,6 +131,8 @@ describe("頁面外層與清單的欄寬", () => {
     ".table-scroll": [".eval-overview", ".eval-page", ...page],
     ".eval-chip": [".eval-page", ...page],
     ".eval-outcome": [".eval-overview", ".eval-page", ...page],
+    // 桌機圖譜的層級路徑（#336）：一行、在列內橫向捲動；.graph-page--desktop 與 main.page 是 flex（min-width: 0）
+    ".graph-page--desktop .graph-trail": [".app", ...page],
     // 首頁的列與「最近看過」（#331）：桌機的卡片是 auto-fit（minmax(min(100%, 340px), 1fr)）
     ".home__name, .home__question, .home__sub, .home__entity-name": [".home__list", ".home__cards", ".home--wide .home__cards", ".home", ...page],
     ".my-upload__title": [".my-uploads__list", ".my-uploads", ".upload", ...page],
@@ -200,7 +202,8 @@ describe("排版規則", () => {
           .filter(([p, v]) => /^(?:width|max-width|inline-size|max-inline-size)$/.test(p) && /\d(?:px|rem|em|ch)\b/.test(v))
           .map(([p, v]) => `${r.selector} { ${p}: ${v} }`),
       );
-    expect(fixed).toEqual([".icon-button { width: 2rem }"]);
+    // 桌機圖譜的放大／縮小（#336）也是沒有文字的圖示按鈕
+    expect(fixed).toEqual([".icon-button { width: 2rem }", ".graph-zoom-buttons button { width: 44px }"]);
   });
 
   it("只有名稱類可以截斷：按鈕、分段、晶片沒有 text-overflow", () => {

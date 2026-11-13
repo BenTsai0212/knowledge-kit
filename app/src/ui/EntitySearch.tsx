@@ -21,9 +21,11 @@ interface Props {
   onPick(entityId: string): void;
   // 清空輸入框時（多跳路徑的兩端）
   onClear?(): void;
+  // 桌機的圖譜頁首（#336，畫板 Graph）：標籤只給報讀器，輸入框前有搜尋 icon，placeholder 是標籤
+  field?: boolean;
 }
 
-export function EntitySearch({ graph, language, label, types = null, value = null, onPick, onClear }: Props) {
+export function EntitySearch({ graph, language, label, types = null, value = null, onPick, onClear, field = false }: Props) {
   const s = strings(language);
   const id = useId();
   // null＝沒有在輸入，顯示選定實體的名稱
@@ -55,9 +57,18 @@ export function EntitySearch({ graph, language, label, types = null, value = nul
   };
 
   return (
-    <div className="entity-search">
-      <label htmlFor={`${id}-input`}>{label}</label>
+    <div className={field ? "entity-search entity-search--field" : "entity-search"}>
+      <label htmlFor={`${id}-input`} className={field ? "visually-hidden" : undefined}>
+        {label}
+      </label>
+      {field && (
+        <svg className="entity-search__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" />
+          <path d="M20 20l-3.5-3.5" />
+        </svg>
+      )}
       <input
+        placeholder={field ? label : undefined}
         id={`${id}-input`}
         type="search"
         role="combobox"

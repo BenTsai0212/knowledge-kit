@@ -411,6 +411,14 @@ export interface UiStrings {
   graphAskAbout: string;
   // 手機的圖譜（#257）：「篩選與找路徑」按鈕與它打開的底部面板的標題
   graphFilters: string;
+  // 桌機的圖譜（#336，畫板 Graph、G-Scale）：頁首的「找路徑」、畫布右下的放大／縮小（aria-label）、
+  // 畫布左下圖例的說明、剛展開的節點下方的標示、畫布上方工具列的「清單模式」
+  graphFindPath: string;
+  graphZoomIn: string;
+  graphZoomOut: string;
+  graphLegendNote: string;
+  graphJustExpanded: string;
+  graphListMode: string;
   // 圖譜的鍵盤操作與報讀（#289，docs/design.md「圖譜的鍵盤操作與螢幕報讀器」）：外框的 aria-roledescription 與 aria-label、
   // 報讀的句型（enter 接 current；move 的 {relations} 是以 sentenceJoin 接起來的 relation 句子，同一方向的多種關係以 relationJoin 合併）
   graphKeyboard: {

@@ -119,7 +119,7 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
 
 | 檔案 | 內容 |
 | --- | --- |
-| `ui/GraphPage.tsx` | 中間是搜尋框、圖例兼類型篩選與圖，右側是實體面板與多跳路徑（見下方「找起點與右側面板」）；讀取圖譜；切換身分或語言時重新讀取，之後才回來的舊結果忽略（`ui/requests.ts`）；逐步展開（見下方「逐步展開」）：已展開的路徑（「已展開：A → B」，每一段可點回到該層）與「回到全部」；從問答頁的「在圖譜中查看」打開時從該實體開始展開（`initialSelected`，看不到時顯示全部，#195、#199） |
+| `ui/GraphPage.tsx` | 中間是搜尋框、圖例兼類型篩選與圖，右側是實體面板與多跳路徑（見下方「找起點與右側面板」；桌機的版面見下方「桌機」）；讀取圖譜；切換身分或語言時重新讀取，之後才回來的舊結果忽略（`ui/requests.ts`）；逐步展開（見下方「逐步展開」）：已展開的路徑（「已展開：A → B」，每一段可點回到該層）與「回到全部」；從問答頁的「在圖譜中查看」打開時從該實體開始展開（`initialSelected`，看不到時顯示全部，#195、#199） |
 | `ui/GraphView.tsx`（鄰近圖） | 問答頁右側的實體面板也用它畫以實體為中心的小圖（`compact`，見 [docs/qa.md](qa.md)「回答提到」） |
 | `ui/GraphView.tsx` | 以 cytoscape 畫圖：節點帶實體類型、看得到的關聯數（大小），邊帶看得到的出處數（線粗）；標籤是 `names[介面語言]`，邊的標籤是關係類型的 `label`，只在選取節點的相連關係顯示；傳入 `expansion` 時（圖譜頁）聚焦集合以外變灰並播放展開的動態 |
 | `ui/graph-style.ts` | cytoscape 的樣式（見下方「節點與線」）：從 `theme.json` 的 CSS 變數讀出顏色（找不到實體類型時用 `graphFallback`、圓形與通用圖示），標籤加上背景色的外框與 `surface` 襯底、長標籤換行；系統切換淺色／深色時由 `GraphView.tsx` 重新套用（深色模式的實體色調亮）（[client-config.md](client-config.md)「`theme.json`」） |
@@ -127,15 +127,16 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
 | `ui/EntityPanel.tsx` | 圖譜頁的右側面板（設計系統 v1，#240）：類型徽章（類型色 14% 淡底、`text` 字，前面是類型的形狀）、名稱、關聯／文件／出處數（`fonts.mono`）；「在問答中問」（主要按鈕）、「只看它」（次要按鈕）；關係清單（方向、關係名稱、對方、出處數，點對方從它繼續展開）；出現的文件（每份文件的標題下，提到它的原文片段放在 `reading` 紙面，實體名稱以 `markReading` 標出，見下方「出現的文件」；點標題以 `readSource()` 打開原文；經審核進來的文件可以「撤回此文件對它的核准」（只撤回這個實體與連帶的關係，小型外框按鈕），先列出會消失的實體與關係，見 [docs/extraction.md](extraction.md)「畫面」） |
 | `graph/search.ts`、`ui/EntitySearch.tsx` | 搜尋、類型篩選與「關聯最多」（純函式）；以名稱搜尋實體的輸入框（`combobox`＋`listbox`，圖譜上方與多跳路徑的兩端共用） |
 | `graph/expansion.ts`、`ui/motion.ts` | 逐步展開的狀態（純函式）；動態的時間與「減少動態效果」的判斷 |
-| `ui/PathPanel.tsx` | 多跳路徑（右側面板下方的可收合區塊，#199）：以搜尋框選起點與終點（起點預設為目前選取的實體），在圖上標示路徑、其他變灰，逐步列出每個關係與它的出處；找不到時顯示固定文字「找不到這兩個實體之間的路徑。」，不區分原因 |
+| `ui/PathPanel.tsx` | 多跳路徑（右側面板下方的可收合區塊，#199；桌機是頁首「找路徑」打開的面板，#336）：以搜尋框選起點與終點（起點預設為目前選取的實體），在圖上標示路徑、其他變灰，逐步列出每個關係與它的出處；找不到時顯示固定文字「找不到這兩個實體之間的路徑。」，不區分原因 |
 | `ui/TimelinePage.tsx`、`ui/timeline-view.ts` | 時間軸（#241，[docs/design.md](design.md)）：三欄格線（日期 `YYYY-MM-DD` 靠右、時間軸線與圓點、文件卡片），依日期由新到舊列出介面語言的文件與看得到的段落；沒有日期的文件放在最下方的「未註明日期」區。依實體篩選是一排晶片（「全部」＋實體，前面是類型的形狀與顏色，`aria-pressed`）：讀出全部文件後在畫面上篩選，不符合的文件降到 45% 不透明、圓點變灰，不移除（符合的文件與 `readTimeline()` 的 `entityId` 篩選相同，`app/tests/graph/timeline.test.ts` 檢查）。卡片列出標題、可見等級、語言、「提到」的實體（只有看得到的），段落旁是說法不同的標示（`PassageMarks.tsx`）；看不到的文件完全不出現，不顯示數量或任何痕跡。本次工作階段上傳的文件加上「上傳」標籤，從上傳頁跳過來時捲動到該文件並標示後淡出（`animationend` 時結束；減少動態效果時不淡出）（[docs/upload.md](upload.md)）。同一份文件的多語言版本合併成一張卡片尚未實作（#241 決定） |
 | `ui/graph-labels.ts` | 實體、類型、關係類型的顯示文字與相關實體；出處的語言（`sourcesForLanguage()`，見下方）；顯示名稱相同的實體（兩位林志明）加上第一個相關實體的名稱以便區分（`entityOptionLabel()`、`nodeLabels()`，見「限制」的同名實體） |
 
 - **節點與線**（#199；設計系統 v1 見 #240、[docs/design.md](design.md)「實體顏色」）：
   - 節點是「形狀＋填色」：形狀依類型的 `icon` 與入口頁主視覺相同（`ui/entry-hero.ts` 的 `heroShape()`：人員圓形、部門圓角方形、專案小圓角方形，`graph-style.ts` 的 `NODE_SHAPES`），填色是實體類型的 `color`，深色模式以 `color-mix(in srgb, 類型色 75%, text)` 調亮（與主視覺相同），圖示是 `surface` 色（`knowledge-model.json` 的 `icon`，[client-config.md](client-config.md)「`entityTypes[]`」）。圖示在填色上的對比由 `check:client` 檢查（[client-config.md](client-config.md)「對比度」）。圖例是圖示＋類型名稱。
   - 節點大小＝看得到的關聯數（`nodeSize()`：32px 起，每個關聯加 4px，最多 64px）；線粗＝看得到的出處數（`edgeWidth()`：1 個 1.75px，每多一個加 0.75px，最多 5 個）。
-  - 選取的節點：外面一圈 `background` 間隙（`border`）＋2px `text` 外環（cytoscape 的 `outline`）。
-  - 連線是 `border` 加深一階（`color-mix(in srgb, border 75%, text)`，不另設 token，#240 決定 2）；關係名稱用 `fonts.mono` 小字、`surface` 襯底。
+  - 選取的節點（#336，畫板 `Graph`）：外面一圈 4px `surface` 間隙（`border`，`border-position: outside`）＋3px `text` 外環（cytoscape 的 `outline`），名稱是 `text` 底、`surface` 字的反白標籤。展示模式維持 `background` 間隙＋2px 外環、名稱不反白。
+  - 連線是 `border` 加深一階（`color-mix(in srgb, border 75%, text)`，不另設 token，#240 決定 2）；關係名稱是 `text` 色 11px、`surface` 底加 1px `border` 的小標籤（#336；展示模式維持 `fonts.mono`、沒有外框）。
+  - **剛展開**（#336）：從路徑往下展開一層時，這一層才進入聚焦集合的節點（`graph/expansion.ts` 的 `freshEntities()`）加上 `fresh`，名稱下方標「剛展開」、標籤用 `primary`；只看它、回到全部、點回路徑上的一段時清除。展示模式不標。
   - 找到路徑時：路徑上的線用 `primary`、寬 5px，路徑節點加 `primary` 外環。
   - 圖只畫 `readGraph()` 的可見圖：看不到的實體與關係完全不出現，不畫虛線框、上鎖或任何「有內容被隱藏」的痕跡（[docs/qa.md](qa.md)「拒答」的「不透露是否有看不到的文件」）。
   - 圖譜容器是 `border` 色、24px 間距的淡點陣背景（`app.css` 的 `.graph-canvas`）。
@@ -165,10 +166,18 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
   - **實體面板**：點節點、搜尋、在清單選取或鍵盤 `Enter` 時打開（`BottomSheet` 的 `expandable`：停在 56% 高，往上拉到全高，`ui/layout.ts` 的 `sheetSnap()`），內容是 `EntityPanel`；面板是 modal，關閉只收起面板，選取與展開路徑不變，再點節點重新打開（#257 決定 1、3）。
   - **選取的節點平移到面板以上的中央**：面板開著時 `GraphPage` 傳入 `cover`（`SHEET_HALF`），`GraphView` 與 `GraphZoomView`（細節層）以 `layout.ts` 的 `visibleArea()`（畫布上緣到面板上緣）為可見部分，以 `graph-zoom.ts` 的 `panToCenter()`（`GraphView.tsx` 的 `centerIn()`）把選取的節點平移到它的中央。**只平移、不縮小**：圖譜頁維持目前的縮放，細節層的縮放與沒有面板時相同（以整個畫布的 `viewportFor()` 計算）；聚焦集合超出可見部分時由使用者自己拖曳或縮放（可見部分可能很矮，例如上方多了「已展開」一列時，縮小到放得進會讓節點小到看不出是哪個實體，#323 修正要求）。面板打開但選取沒變（再點同一個節點）時同樣平移。往上拉到全高時圖不再移動。
   - E2E 見 `e2e/graph-mobile.spec.ts`（390×844）；雙指縮放、往上拉的手感與 safe area 由人在實機確認。
+- **桌機**（#336，畫板 `Graph`、`G-Scale`；`useLayout() === "desktop"` 且不是展示模式時，手機、平板與展示模式不變）：
+  - 頁面不留邊。左欄：頁首一列是標題（`h2`，左側欄的客戶名稱已是 `h1`）、搜尋框（44px、最少 240px、搜尋 icon，標籤只給報讀器、placeholder 是標籤；`EntitySearch` 的 `field`）與「找路徑」（44px，`aria-expanded`）；「找路徑」打開浮在畫布右上的面板（`PathPanel` 的 `panel`，內容與結果和可收合區塊相同），Esc 或再按一次關閉，焦點回到按鈕。
+  - 畫布上方的工具列：左邊是已展開的路徑或麵包屑（只佔一行，太長時在列內橫向捲動，路徑變長時畫布不移動），右邊是類型圖例膠囊（核取方塊畫成類型的形狀，沒勾時空心、文字變淡）、「只顯示關聯 ≥ N」、「清單模式」（`aria-pressed` 的切換按鈕）。
+  - 畫布（`.graph-stage`）：`surface`、1px `border`、圓角 20px、24px 點狀底紋，高度填滿到視窗底部（最少 480px；視窗高 900px 以上時最少 720px，`.graph-stage` 的最小高度 722px 含上下 1px 框線，裡面的畫布是 720px）。左下是圖例（類型的形狀＋名稱＋「形狀＋顏色雙重區分」，`aria-hidden`，報讀器讀工具列的膠囊），右下是放大／縮小（各 44px、`aria-label`，與鍵盤的 `+`／`-` 相同）；縮放按鈕在 DOM 中排在外框之前，Tab 離開外框時直接到實體欄。
+  - 實體欄（`.graph-entity-column`）：只在有選取時出現，寬 340px、左邊 1px `border`、`surface` 底、整個高度，各欄自己捲動。`EntityPanel` 的 `wide`：類型膠囊、名稱 28px／700、「關聯 N · 文件 N · 出處 N」、「在問答中問」（`primary` 44px）＋「只看它」；相關實體是 52px 的列（類型的形狀＋名稱＋右側關係名稱與方向，整列可點，按鈕的名稱只有實體名稱）；出現的文件是 `surfaceRaised` 卡片（文件名＋摘錄，實體名稱用 `mark`／`markText`，Dark 是 `markSoft` 字）。
+  - 沒有選取時不顯示「關聯最多」的清單（畫布佔滿寬度）；鍵盤進入外框時的「目前」仍是關聯最多的實體。手機、平板與展示模式照舊列出。
+  - **選取與逐步展開時的縮放上限**（#336 修正要求）：節點標籤在畫面上不超過 16px（`graph-style.ts` 的 `FOCUS_MAX_ZOOM` ＝ 16 ÷ 12，關係標籤同比例），下限是標籤原本的 12px（`FOCUS_MIN_ZOOM`）：全覽的縮放在範圍外時縮放到上限或下限。聚焦集合放得進畫布（四邊留 40px）時選取的節點平移到中央，再把聚焦集合推回畫布內，邊緣的節點與標籤不被切掉；放不進時整個放進畫布（這時可能小於下限；`graph-zoom.ts` 的 `focusViewport()`）。選取時右側的實體欄同時出現、畫布變窄，所以計算前先 `cy.resize()` 重新量畫布（否則以舊的寬度置中，右邊的節點落在畫布外）。大量節點時的細節層同樣以這個上限計算（`viewportFor()` 的 `maxZoom`）。沒有選取時的全覽、`+`／`-` 與縮放按鈕不受限；手機、平板與展示模式照舊（`GraphPage` 只在桌機傳入 `maxFocusZoom`）。
+  - E2E 見 `e2e/graph-desktop.spec.ts`（1440×900）：另檢查選取關聯最多的實體後，節點標籤的實際字級（12px × zoom）在 12～16px 之間。
 - **鍵盤操作與報讀**（#289，規格見 [docs/design.md](design.md)「圖譜的鍵盤操作與螢幕報讀器」；分 3 個 PR 完成）：
   - 圖譜外框（`GraphPage.tsx` 的 `.graph-frame`）是 `tabIndex=0`、`role="application"`、`aria-roledescription`「知識圖譜」的元素，在 Tab 順序中只佔一個位置；canvas 不能取得 DOM 焦點，所以「目前的實體」與「游標」是 `GraphPage` 的 state，以 cytoscape 的 class 畫出（`kb-current`：`focus` 色 3px 實線圈；`kb-cursor`：虛線圈；`kb-near`：連到目前實體的線加粗成 `primary` 並標出關係名稱），只在外框有鍵盤焦點（`:focus-visible`）時畫。圖譜頁的畫布對報讀器隱藏（`aria-hidden`），問答頁的鄰近圖不變。
   - 已實作的按鍵：`Tab` 進入（目前的實體＝選取的實體；沒有選取時是關聯最多的實體，只畫圈與報讀，按 `Enter` 前不展開、不改實體面板，#289 決定 2）、`←`／`→`（目前實體的相關實體，依版面位置從 12 點鐘方向順時針，兩端相接；類型篩選掉的不列入）、`Enter`（前往游標所在的實體，等同點節點）、`Backspace`（展開路徑的上一段，與麵包屑一致，#289 決定 3；只有一層時回到全部，等同「回到全部」；已是全部時報讀「已經是第一個實體」）、`Space`（只看目前的實體＋`isolated`；目前的實體已是「只看它」時回到按之前的展開）、`A`（在問答中問，與實體面板的按鈕相同）、`/`（焦點移到「搜尋名稱」，選了結果後回到外框並報讀進入）、`+`／`-`／`0`（以畫面中心縮放 1.25 倍、全部顯示）、`Esc`（回到全部；已是全部時焦點移到外框後的下一個可聚焦元素，#289 決定 4）、`?`（按鍵表，沿用置中的 `.dialog`，關閉後焦點回到外框，不重新報讀進入）。Backspace、Space 與按鍵表的內容是 `ui/graph-keyboard.ts` 的 `backStep()`、`toggleOnly()`、`KEY_HELP`（鍵帽是鍵盤上的符號與鍵名，不隨語言改變；說明在 `graphKeyboard` 的 `help*`）。
-  - 按鍵提示列（`.graph-keys`）在外框之後，只在外框有鍵盤焦點時出現（`.graph-frame:focus-visible + .graph-keys`）；對報讀器隱藏，內容與按鍵表相同。
+  - 按鍵提示列（`.graph-keys`）在外框之後，只在外框有鍵盤焦點時出現（`.graph-frame:focus-visible + .graph-keys`，桌機是 `.graph-stage:has(> .graph-frame:focus-visible) + .graph-keys`）；對報讀器隱藏，內容與按鍵表相同。
   - 自動平移：游標（沒有游標時是目前的實體）移到畫面外時平移到中央（`GraphView.tsx` 的 `reveal()`，`PAN_MS` 的 sweep），減少動態效果時直接到位；縮放與全部顯示同樣在減少動態效果時直接到位。E2E 見 `e2e/graph-keyboard.spec.ts`；清單的群組依身分以 oracle 比對見 `e2e/graph-scale.spec.ts`。
   - 報讀：每一步寫進外框下方一個視覺上隱藏的 `aria-live="polite"` 區域，200ms 去抖（只讀最後一次）。句型在 `client/i18n/` 的 `graphKeyboard`；關係說成「主詞 關係 受詞」，同一方向的多種關係合併在同一句（例如「林志明 隸屬、負責 產品研發部」），名稱用與畫面相同的消歧名稱（`entityOptionLabel()`）。類型篩選改變時報讀顯示的實體數。
   - 順序、按鍵對應與句子都是 `ui/graph-keyboard.ts` 的純函式，只用 `readGraph()` 的可見圖：數量、相關實體與關係都只算目前身分看得到的，句子不提及看不到的部分（#247，`graph-keyboard.test.ts` 以兩種身分的圖比對）。節點位置由 `GraphView` 從 cytoscape 讀出（`api` 的 `positions()`）後傳入。

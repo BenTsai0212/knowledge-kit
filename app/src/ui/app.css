@@ -2146,6 +2146,24 @@ main.qa > .source .source-text mark.entering {
   .entity-badge .type-dot {
     background: color-mix(in srgb, var(--type-color) 75%, var(--color-text));
   }
+
+  /* 桌機的圖譜（#336）：圖例、類型膠囊與相關實體的形狀一樣調亮；卡片摘錄中 mark 上的字用 markSoft（check:client 檢查的組合） */
+  .graph-legend .type-dot,
+  .entity-row .type-dot {
+    background: color-mix(in srgb, var(--type-color) 75%, var(--color-text));
+  }
+
+  .type-check {
+    border-color: color-mix(in srgb, var(--type-color) 75%, var(--color-text));
+  }
+
+  .type-check:checked {
+    background: color-mix(in srgb, var(--type-color) 75%, var(--color-text));
+  }
+
+  .entity-documents--cards .entity-excerpt mark {
+    color: var(--color-markSoft);
+  }
 }
 
 .entity h2 {
@@ -2261,6 +2279,457 @@ details.path summary {
   display: grid;
   gap: 0.5rem;
   margin: 0.75rem 0 0.5rem;
+}
+
+/* 桌機的圖譜（#336，畫板 Graph、G-Scale；GraphPage 的 graph-page--desktop，展示模式不套用）：
+   頁面不留邊，左邊是頁首、工具列與填滿剩下高度的畫布，右邊是貼齊右緣的整高實體欄（沒有選取時不顯示，畫布佔滿寬度）。
+   兩欄各自捲動 */
+main.page:has(> .graph-page--desktop) {
+  display: flex;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* 一般的 .graph-page 是 start 對齊；桌機改回 stretch，否則左欄與實體欄只有內容的高度，畫布停在最小高度、實體欄不到底（#336 修正要求） */
+.graph-page.graph-page--desktop {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: stretch;
+  min-width: 0;
+  max-width: none;
+  gap: 0;
+}
+
+.graph-page--desktop .graph-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  gap: 16px;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 28px clamp(16px, 3vw, 40px) 24px;
+}
+
+/* 頁首一列：標題 28px、右側搜尋框（44px、最少 240px、搜尋 icon）與「找路徑」（44px） */
+.graph-head {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.graph-head h2 {
+  margin: 0 auto 0 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.graph-head .entity-search {
+  flex: 0 1 280px;
+  min-width: 240px;
+}
+
+.entity-search__icon {
+  position: absolute;
+  top: 14px;
+  left: 12px;
+  color: var(--color-textMuted);
+  pointer-events: none;
+}
+
+.entity-search--field input[type="search"] {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px 0 36px;
+  border-radius: 12px;
+  font-size: 15px;
+}
+
+button.secondary.graph-path-button {
+  height: 44px;
+  padding: 0 16px;
+  border-color: var(--color-border);
+  border-radius: 12px;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+/* 找路徑的面板：浮在畫布右上，內容與結果和原本的可收合區塊相同 */
+.graph-path-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  width: min(400px, 100%);
+  border-radius: var(--radius-medium);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--color-overlay) 25%, transparent);
+}
+
+.path--panel h2 {
+  margin: 0;
+}
+
+/* 畫布上方的工具列（G-Scale）：左邊是層級路徑（已展開的路徑、麵包屑），右邊是類型膠囊、「只顯示關聯 ≥ N」、「清單模式」 */
+.graph-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+/* 層級路徑只佔一行（太長時在列內橫向捲動）：路徑變長時工具列不換行，畫布不移動（見 docs/graph.md「畫布不移動」） */
+.graph-page--desktop .graph-trail {
+  display: flex;
+  align-items: center;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 36px;
+  margin: 0;
+  padding: 0 4px;
+  overflow-x: auto;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.graph-page--desktop .graph-trail nav,
+.graph-page--desktop .graph-trail ol {
+  flex-wrap: nowrap;
+}
+
+.graph-page--desktop .graph-chips {
+  flex: 0 1 auto;
+  justify-content: flex-end;
+}
+
+.graph-page--desktop .graph-trail [aria-current] {
+  padding: 4px 10px;
+  border-radius: var(--radius-small);
+  background: var(--color-surfaceRaised);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.graph-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.graph-chips .legend {
+  gap: 6px;
+  margin: 0;
+}
+
+.graph-page--desktop .graph-mode {
+  margin-left: 0;
+}
+
+.graph-chip,
+.legend .graph-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+button.chip.graph-chip[aria-pressed="true"] {
+  padding: 0 11px;
+}
+
+/* 類型膠囊的核取方塊畫成類型的形狀（人員圓形、部門圓角方形、專案小圓角方形）：勾選時實心，沒勾時空心、文字變淡 */
+.type-check {
+  appearance: none;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin: 0;
+  border: 2px solid var(--type-color);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.type-check:checked {
+  background: var(--type-color);
+}
+
+.type-check.shape-block {
+  border-radius: 3px;
+}
+
+.type-check.shape-tile {
+  border-radius: 2px;
+}
+
+.graph-chip:has(.type-check:not(:checked)) {
+  color: var(--color-textMuted);
+}
+
+.graph-min.graph-chip input[type="number"] {
+  height: 24px;
+  padding: 0 4px;
+  border-radius: var(--radius-small);
+  font-family: var(--font-mono);
+}
+
+/* 畫布：surface、1px border、圓角 20px、24px 的點狀底紋，高度填滿到視窗底部（視窗高 900px 以上時至少 720px）。
+   最小高度含上下 1px 的框線，裡面畫圖的範圍（.graph-canvas）才是 720px（#336 修正要求） */
+.graph-stage {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 480px;
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  background-color: var(--color-surface);
+  background-image: radial-gradient(var(--color-border) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+@media (min-height: 900px) {
+  .graph-stage {
+    min-height: 722px;
+  }
+}
+
+/* 外框：畫布的大小只看外框，不受 cytoscape 畫出的 canvas 大小影響 */
+.graph-page--desktop .graph-frame {
+  position: relative;
+  z-index: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1 1 auto;
+  min-width: 0;
+  border-radius: 20px;
+}
+
+.graph-page--desktop .graph-canvas {
+  height: auto;
+  border: none;
+  border-radius: 20px;
+  background-image: none;
+}
+
+.graph-stage:has(> .graph-frame:focus-visible) + .graph-keys {
+  display: flex;
+}
+
+.graph-page--desktop .graph-list {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 480px;
+  border-radius: 20px;
+  background: var(--color-surface);
+}
+
+/* 畫布左下的圖例（類型的形狀＋名稱＋「形狀＋顏色雙重區分」）與右下的放大／縮小（各 44px） */
+.graph-legend {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  max-width: calc(100% - 120px);
+  margin: 0;
+  padding: 10px 14px;
+  list-style: none;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.graph-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.graph-legend .type-dot,
+.entity-row .type-dot {
+  width: 12px;
+  height: 12px;
+}
+
+.graph-zoom-buttons {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+}
+
+.graph-zoom-buttons button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text);
+}
+
+.graph-zoom-buttons button:hover {
+  background: var(--color-surfaceRaised);
+}
+
+/* 實體欄：寬 340px、左邊 1px border、surface 底、整個高度；面板本身不是卡片 */
+.graph-entity-column {
+  flex: 0 0 340px;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 32px 28px;
+  border-left: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.entity--wide .entity-badge {
+  height: 26px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.entity--wide h2 {
+  margin: 10px 0 0;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.entity--wide .entity-counts {
+  margin-top: 10px;
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+
+.entity--wide .entity-actions {
+  gap: 8px;
+  margin: 24px 0 0;
+}
+
+.entity--wide .entity-actions button {
+  height: 44px;
+  padding: 0 16px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.entity--wide .entity-actions button.secondary {
+  border-color: var(--color-border);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.entity--wide h3 {
+  margin: 24px 0 8px;
+  color: var(--color-textMuted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+/* 相關實體：52px 的列（1px border、圓角 10px），類型的形狀＋名稱＋右側關係名稱；整列可點（名稱按鈕的 ::after 蓋住整列） */
+.entity-rows {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entity-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+}
+
+.entity-row:hover {
+  background: var(--color-surfaceRaised);
+}
+
+.entity-row button.link {
+  min-width: 0;
+  color: var(--color-text);
+  font-size: 15px;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.entity-row button.link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.entity-row__relation {
+  flex: none;
+  margin-left: auto;
+  font-size: 13px;
+}
+
+/* 出現的文件：surfaceRaised 卡片（文件名＋摘錄），摘錄中的實體名稱用 mark */
+.entity-documents--cards {
+  gap: 10px;
+  margin: 0;
+}
+
+.entity-documents--cards .entity-document {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--color-surfaceRaised);
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.entity-documents--cards .entity-document > button.link {
+  color: var(--color-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.entity-documents--cards .entity-document > button.link:hover {
+  text-decoration: underline;
+}
+
+.entity-documents--cards .entity-excerpt {
+  margin: 6px 0 0;
+  padding: 0;
+  background: none;
+  color: var(--color-text);
+}
+
+.entity-documents--cards .entity-excerpt mark {
+  background-color: var(--color-mark);
+  color: var(--color-markText);
 }
 
 /* 窄的寬度（#199）：圖譜頁改為單欄（搜尋 → 圖 → 面板），圖的高度較低。手機（≤ 600px）改用下方的 graph-page--phone */

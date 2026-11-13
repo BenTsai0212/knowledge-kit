@@ -169,6 +169,33 @@ export const panToCenter = (position: Point, zoom: number, area: { width: number
   y: area.height / 2 - zoom * position.y,
 });
 
+// 桌機選取與逐步展開時的視角（#336 修正要求）：目前的縮放限制在 minZoom～maxZoom（標籤 12～16px）。
+// 聚焦集合（box，含標籤）在這個縮放下放得進畫布（四邊留 padding）時，選取的節點平移到中央，再把 box 推回畫布內，邊緣的節點與標籤不被切掉；
+// 放不進時改為把 box 整個放進畫布（縮放同樣不超過 maxZoom，這時可能小於 minZoom）
+export function focusViewport(
+  box: { x1: number; y1: number; x2: number; y2: number },
+  selected: Point | null,
+  zoom: number,
+  canvas: { width: number; height: number },
+  padding: number,
+  maxZoom: number,
+  minZoom = 0,
+): { zoom: number; pan: Point } {
+  const z = Math.min(Math.max(zoom, minZoom), maxZoom);
+  const fits = (box.x2 - box.x1) * z <= canvas.width - 2 * padding && (box.y2 - box.y1) * z <= canvas.height - 2 * padding;
+  if (!fits) return viewportFor(box, canvas, padding, maxZoom);
+  const anchor = selected ?? { x: (box.x1 + box.x2) / 2, y: (box.y1 + box.y2) / 2 };
+  const pan = panToCenter(anchor, z, canvas);
+  // box 超出某一邊時往回推（放得進，所以兩邊不會同時超出）
+  const inside = (p: number, lo: number, hi: number, size: number) => {
+    const [a, b] = [z * lo + p, z * hi + p];
+    if (a < padding) return p + (padding - a);
+    if (b > size - padding) return p - (b - (size - padding));
+    return p;
+  };
+  return { zoom: z, pan: { x: inside(pan.x, box.x1, box.x2, canvas.width), y: inside(pan.y, box.y1, box.y2, canvas.height) } };
+}
+
 // 麵包屑「全部 › 群組 › 實體」：依層級列出要顯示的段
 export function breadcrumb(level: ZoomLevel, cluster: string | null, selected: string | null): { kind: "all" | "cluster" | "entity"; id: string | null }[] {
   return [

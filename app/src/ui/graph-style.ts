@@ -3,6 +3,7 @@
 // 填色是實體類型色（Dark 調亮），圖示是 surface 色；找不到類型時用 graphFallback、圓形與通用圖示。節點大小＝關聯數，線粗＝出處數。
 // 逐步展開與找路徑時，聚焦集合以外的節點與線降低不透明度（dimmed，不隱藏）；關係名稱只在選取節點的相連關係（near）顯示。
 // 展示模式（#260）以 app.css 的 --present-* 放大標籤、選取實體以外的節點降到 28%（presentationRules()）。
+// 一般模式（#336，畫板 Graph）：選取的節點是 surface 間隙＋text 外環、名稱反白；關係名稱是加框的小標籤；剛展開的節點標「剛展開」。展示模式不套用
 // 圖只有目前身分看得到的實體與關係，這裡不畫任何「有內容被隱藏」的痕跡。
 import type { StylesheetJson } from "cytoscape";
 import type { EntityType } from "../client/types";
@@ -15,6 +16,12 @@ import { SECOND_OPACITY, SIDE_BUBBLE_OPACITY } from "./graph-zoom";
 export const NODE_LABEL_MAX_WIDTH = 112;
 export const NODE_LABEL_MAX_LINES = 2;
 export const NODE_LABEL_FONT_SIZE = 12;
+// 桌機選取與逐步展開時的縮放上限（#336 修正要求）：節點標籤在畫面上不超過 16px（關係標籤同比例，11px × 4/3 ≈ 14.7px）。
+// 畫板 Graph 選取後節點標籤 14px、關係標籤 12px；放得更大時標籤互相壓住、畫布邊緣的節點被切掉
+export const FOCUS_LABEL_MAX_PX = 16;
+export const FOCUS_MAX_ZOOM = FOCUS_LABEL_MAX_PX / NODE_LABEL_FONT_SIZE;
+// 下限是標籤原本的 12px（聚焦集合放得進畫布時才放大到這裡）
+export const FOCUS_MIN_ZOOM = 1;
 
 // 讀取 CSS 變數，例如 (name) => getComputedStyle(document.documentElement).getPropertyValue(name)
 export type ReadVariable = (name: string) => string;
@@ -33,6 +40,23 @@ export const KEYBOARD_RING = 3;
 export const PRESENT_OTHERS_OPACITY = 0.28;
 // 展示模式選取的關係的線粗
 export const PRESENT_NEAR_WIDTH = 5;
+
+// 選取的節點（#336，畫板 Graph）：4px surface 間隙＋3px text 外環
+export const SELECTED_GAP = 4;
+export const SELECTED_RING = 3;
+
+// 一般模式的關係名稱（#336）：text 色 11px、surface 底加 1px border 的小標籤
+function relationTag(v: (name: string) => string) {
+  return {
+    "font-size": 11,
+    "font-family": v("--font-body"),
+    color: v("--color-text"),
+    "text-background-padding": "3px",
+    "text-border-width": 1,
+    "text-border-color": v("--color-border"),
+    "text-border-opacity": 1,
+  };
+}
 
 // 關聯數 0 → 32px，每多一個關聯加 4px，最多 64px
 export function nodeSize(degree: number): number {
@@ -223,6 +247,9 @@ export function graphStyle(read: ReadVariable, types: TypeStyle[], transitionMs 
         ...transition,
       },
     },
+    // 一般模式的關係名稱（#336，畫板 Graph）：text 色小字、surface 底加 1px border 的小標籤。
+    // 展示模式維持原本的樣式（字級另由 presentationRules() 放大）；排在語意縮放的規則之前，聚合線的 fonts.mono 不受影響
+    ...(present === null ? [{ selector: "edge", style: relationTag(v) }] : []),
     // 關係名稱只在選取節點的相連關係顯示
     { selector: "edge.near", style: { label: "data(label)" } },
     ...zoomRules(v, types, dark),
@@ -232,10 +259,13 @@ export function graphStyle(read: ReadVariable, types: TypeStyle[], transitionMs 
     // 展示模式：放在變灰之後（28% 比 45% 更淡），「只看它」的 15% 與滑過、鍵盤的恢復之前
     ...(present === null ? [] : presentationRules(v, present)),
     { selector: ".dimmed.isolated", style: { opacity: ISOLATED_OPACITY } },
-    // 選取：外面一圈 background 間隙＋2px text 外環
+    // 選取（#336，畫板 Graph）：外面一圈 4px surface 間隙＋3px text 外環；展示模式維持 background 間隙＋2px text 外環
     {
       selector: "node.selected",
-      style: { "border-width": 2, "border-color": v("--color-background"), "outline-width": 2, "outline-color": v("--color-text") },
+      style:
+        present === null
+          ? { "border-width": SELECTED_GAP, "border-color": v("--color-surface"), "border-position": "outside", "outline-width": SELECTED_RING, "outline-color": v("--color-text") }
+          : { "border-width": 2, "border-color": v("--color-background"), "outline-width": 2, "outline-color": v("--color-text") },
     },
     // 找路徑的結果：路徑節點加 primary 外環，路徑上的線用 primary 加粗
     {
@@ -245,8 +275,25 @@ export function graphStyle(read: ReadVariable, types: TypeStyle[], transitionMs 
     { selector: "edge.path", style: { width: 5, "line-color": v("--color-primary"), "target-arrow-color": v("--color-primary") } },
     // 滑過變灰的節點時恢復 100% 不透明，標籤在要讀的時候可讀（#240 決定 3）
     { selector: "node.dimmed.hover", style: { opacity: 1 } },
+    // 剛展開（#336）：這一層展開才出現的節點，名稱下方標「剛展開」，標籤用 primary（展示模式不標）
+    ...(present === null ? [{ selector: "node.fresh", style: { label: "data(freshLabel)", color: v("--color-primary"), "font-weight": 600 } }] : []),
     // 選取與滑過時顯示完整名稱（#288），疊在其他節點的標籤上面
     { selector: "node.selected, node.hover", style: { label: "data(label)", "z-index": 10 } },
+    // 選取的名稱（#336）：text 底、surface 字的標籤（反白）。展示模式維持原本的樣式
+    ...(present === null
+      ? [
+          {
+            selector: "node.selected",
+            style: {
+              color: v("--color-surface"),
+              "font-weight": 600,
+              "text-background-color": v("--color-text"),
+              "text-background-padding": "4px",
+              "text-outline-width": 0,
+            },
+          },
+        ]
+      : []),
     // 鍵盤操作（#289，docs/design.md「圖譜的鍵盤操作與螢幕報讀器」）：目前的實體是 focus 色 3px 實線圈、游標是虛線圈；
     // 連到目前實體的線加粗成 primary 並標出關係名稱。鍵盤要看得到的元素不變灰（與 hover 相同恢復 100%）
     { selector: "node.kb-current", style: { "outline-width": KEYBOARD_RING, "outline-style": "solid", "outline-color": v("--color-focus"), "outline-offset": 2 } },

@@ -8,7 +8,7 @@ import type { Graph } from "../graph/read";
 import { relationCounts } from "../graph/search";
 import { clampLabel, nodeLabels } from "./graph-labels";
 import { compositionDots, edgeWidth, NODE_LABEL_MAX_LINES, NODE_LABEL_MAX_WIDTH, nodeSize } from "./graph-style";
-import { arrange, bubbleId, CALM_LIMIT, detailOf, openEntities, panToCenter, SIDE_BUBBLE, viewOf, viewportFor, type ZoomLevel } from "./graph-zoom";
+import { arrange, bubbleId, CALM_LIMIT, detailOf, MAX_VIEW_ZOOM, openEntities, panToCenter, SIDE_BUBBLE, VIEW_PADDING, viewOf, viewportFor, type ZoomLevel } from "./graph-zoom";
 import { areaOf, centerIn, currentStyle, fitAll, keepLabelSize, labelMeasure, markKeyboard, reveal, trackContainer, zoomTo, type GraphViewApi, type KeyboardMarks } from "./GraphView";
 import { EXPAND_MS, motionDuration, PAN_MS, watchReducedMotion } from "./motion";
 import { watchColorScheme } from "./theme";
@@ -31,6 +31,8 @@ interface Props {
   api?: RefObject<GraphViewApi | null>;
   // 手機的實體面板蓋住視窗下方的比例（#257，見 GraphView）：細節層選取的節點平移到面板以上的中央
   cover?: number;
+  // 桌機（#336 修正要求，見 GraphView）：細節層（選取實體）的縮放上限；沒有傳入時是 MAX_VIEW_ZOOM
+  maxFocusZoom?: number;
 }
 
 type Positions = Map<string, { x: number; y: number }>;
@@ -128,7 +130,8 @@ export function GraphZoomView(props: Props) {
     // 手機的實體面板開著時（#257），縮放與沒有面板時相同（以整個畫布計算），只把選取的節點平移到面板以上的中央
     const cover = p.cover ?? 0;
     shownCover.current = cover;
-    const whole = viewportFor(instance.elements().boundingBox(), { width: instance.width(), height: instance.height() });
+    const maxZoom = p.level === "detail" && p.maxFocusZoom !== undefined ? Math.min(MAX_VIEW_ZOOM, p.maxFocusZoom) : MAX_VIEW_ZOOM;
+    const whole = viewportFor(instance.elements().boundingBox(), { width: instance.width(), height: instance.height() }, VIEW_PADDING, maxZoom);
     const chosen = instance.$id(p.selected ?? "");
     const target =
       cover > 0 && p.level === "detail" && chosen.nonempty()

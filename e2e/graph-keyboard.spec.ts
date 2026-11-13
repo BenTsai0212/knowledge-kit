@@ -53,10 +53,12 @@ async function cursorInside(page: Page): Promise<boolean> {
   }, CANVAS);
 }
 
-// 「圖譜｜清單」切換的最後一個按鈕之後就是圖譜外框（沒有展開時「已展開」那一列沒有按鈕）：從它按 Tab 進入
+// 外框的前一個可聚焦元素按 Tab 進入：桌機（預設 1280×720，#336）是畫布右下的「縮小」（縮放按鈕在 DOM 中排在外框之前）；
+// 其他版面是「圖譜｜清單」切換的最後一個按鈕（沒有展開時「已展開」那一列沒有按鈕）
 async function tabIntoGraph(page: Page) {
   await waitForGraphIdle(page, CANVAS);
-  await page.getByRole("group", { name: k.modeLabel }).getByRole("button").last().focus();
+  const zoomOut = page.getByRole("button", { name: s.graphZoomOut, exact: true });
+  await ((await zoomOut.count()) > 0 ? zoomOut : page.getByRole("group", { name: k.modeLabel }).getByRole("button").last()).focus();
   await page.keyboard.press("Tab");
   await expect(frame(page)).toBeFocused();
 }
@@ -120,10 +122,10 @@ test("以鍵盤從進入圖譜走到另一個實體，報讀區說出每一步�
   await expect(frame(page)).toBeFocused();
   await expect.poll(async () => (await selectedNodes(page, CANVAS)).length).toBe(1);
 
-  // Tab：離開圖譜到實體面板
+  // Tab：離開圖譜到實體面板（桌機是右側的實體欄，#336）
   await page.keyboard.press("Tab");
   await expect(frame(page)).not.toBeFocused();
-  await expect(page.locator(".graph-side :focus")).toHaveCount(1);
+  await expect(page.locator(".graph-entity-column :focus")).toHaveCount(1);
   await expect(page.locator(".graph-keys")).toBeHidden();
 });
 
@@ -212,8 +214,9 @@ test("清單模式：切換、篩選共用、關係句的連結跳到該項、�
   await expect(page.getByRole("region", { name, exact: true })).toBeVisible();
   await expect(item).toHaveAttribute("aria-current", "true");
 
-  // 切回圖譜：選取的實體保留
-  await modes.getByRole("button", { name: k.modeGraph }).click();
+  // 切回圖譜：選取的實體保留（桌機的「清單模式」是一個切換按鈕，#336）
+  await modes.getByRole("button", { name: k.modeList }).click();
+  await expect(modes.getByRole("button", { name: k.modeList })).toHaveAttribute("aria-pressed", "false");
   await expect(frame(page)).toBeVisible();
   await expect.poll(() => selectedNodes(page, CANVAS)).toEqual([anchor.slice("graph-list-".length)]);
 

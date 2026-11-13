@@ -89,6 +89,12 @@
   "graphSourceCount": "出處 {count}",
   "graphAskAbout": "在問答中問",
   "graphFilters": "篩選與找路徑",
+  "graphFindPath": "找路徑",
+  "graphZoomIn": "放大",
+  "graphZoomOut": "縮小",
+  "graphLegendNote": "形狀＋顏色雙重區分",
+  "graphJustExpanded": "剛展開",
+  "graphListMode": "清單模式",
   "graphKeyboard": {
     "roleDescription": "知識圖譜",
     "label": "方向鍵沿著關係移動，Enter 前往",

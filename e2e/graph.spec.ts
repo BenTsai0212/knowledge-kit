@@ -99,7 +99,8 @@ test("逐步展開：聚焦在節點與直接相連的節點，其他變灰；�
   const all = (await snapshot(page))!;
   expect(all.dimmed).toEqual([]);
   expect(all.selected).toEqual([]);
-  await expect(page.getByText(s.selectEntity)).toBeVisible();
+  // 桌機（預設 1280×720）沒有選取時沒有實體欄，畫布佔滿寬度（#336）
+  await expect(page.locator(".graph-entity-column")).toHaveCount(0);
 });
 
 // 「已展開」那一列出現時畫布不能移動，否則 cytoscape 以舊的容器位置換算滑鼠座標，之後的點擊落在別的地方。
@@ -126,8 +127,10 @@ test("點第一個節點後，以畫面上的位置點相連的節點會選取�
   await page.mouse.click(first!.x, first!.y);
   await expect.poll(() => selectedNodes(page, CANVAS)).toEqual([first!.id]);
   await expect(trail(page)).toBeVisible();
-  // 「已展開」那一列出現後，畫布的位置不變
-  expect(await page.locator(CANVAS).boundingBox()).toEqual(box);
+  // 「已展開」那一列出現後，畫布的位置不變。桌機（預設 1280×720，#336）選取時右側的實體欄同時出現、畫布變窄，
+  // 所以不比對位置，改由下面以畫面上的位置點相連的節點，確認畫布移動後點擊仍落在正確的節點
+  if ((await page.locator(".graph-page--desktop").count()) === 0) expect(await page.locator(CANVAS).boundingBox()).toEqual(box);
+  else await expect(page.locator(".graph-entity-column")).toBeVisible();
 
   await waitForGraphIdle(page, CANVAS);
   const second = await clickableNode(page, CANVAS, await neighborsOf(page, CANVAS, first!.id));

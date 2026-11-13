@@ -16,6 +16,8 @@ import {
   nodeSize,
   PRESENT_OTHERS_OPACITY,
   presentSizes,
+  SELECTED_GAP,
+  SELECTED_RING,
 } from "./graph-style";
 import css from "./app.css?raw";
 import graphView from "./GraphView.tsx?raw";
@@ -108,9 +110,29 @@ describe("圖譜套用設計系統 v1（#240）", () => {
     });
   });
 
-  it("選取：background 間隙＋2px text 外環，不用淡色底或陰影", () => {
-    expect(rule("node.selected")).toEqual({ "border-width": 2, "border-color": colors.background, "outline-width": 2, "outline-color": colors.text });
+  it("選取：4px surface 間隙＋3px text 外環，名稱是 text 底、surface 字的標籤；不用淡色底或陰影（#336）", () => {
+    expect([SELECTED_GAP, SELECTED_RING]).toEqual([4, 3]);
+    expect(rule("node.selected")).toEqual({
+      "border-width": 4,
+      "border-color": colors.surface,
+      "border-position": "outside",
+      "outline-width": 3,
+      "outline-color": colors.text,
+      color: colors.surface,
+      "font-weight": 600,
+      "text-background-color": colors.text,
+      "text-background-padding": "4px",
+      "text-outline-width": 0,
+    });
+    expect(rule("node.selected", darkStyle)).toMatchObject({ color: darkColors.surface, "text-background-color": darkColors.text });
     expect(JSON.stringify(style)).not.toMatch(/underlay/);
+  });
+
+  it("剛展開（#336）：名稱下方標「剛展開」、primary；排在選取與滑過之前，選取或滑過時顯示完整名稱", () => {
+    expect(rule("node.fresh")).toEqual({ label: "data(freshLabel)", color: colors.primary, "font-weight": 600 });
+    const order = (selector: string) => style.findIndex((r) => r.selector === selector);
+    expect(order("node.fresh")).toBeLessThan(order("node.selected, node.hover"));
+    expect(graphView).toContain("freshLabel");
   });
 
   it("變灰：45% 不透明，「只看它」之後 15%；滑過時恢復 100%；不縮小、不換色", () => {
@@ -127,15 +149,21 @@ describe("圖譜套用設計系統 v1（#240）", () => {
     expect(graphView).toContain('instance.on("mouseout", "node", (e) => e.target.removeClass("hover"))');
   });
 
-  it("連線用 border 加深一階的顏色；關係名稱用 fonts.mono 小字、surface 底", () => {
+  it("連線用 border 加深一階的顏色；關係名稱是 text 色小字、surface 底加 1px border 的小標籤（#336）", () => {
     const edgeColor = mix(colors.border, EDGE_MIX, colors.text);
     expect(rule("edge")).toMatchObject({
       "line-color": edgeColor,
       "target-arrow-color": edgeColor,
-      "font-family": clientConfig.theme.fonts.mono,
+      "font-family": clientConfig.theme.fonts.body,
+      "font-size": 11,
+      color: colors.text,
       "text-background-color": colors.surface,
       "text-background-opacity": 1,
+      "text-border-width": 1,
+      "text-border-color": colors.border,
     });
+    // 聚合線的「N 段」仍是 fonts.mono（排在後面）
+    expect(rule("edge.aggregate")).toMatchObject({ "font-family": clientConfig.theme.fonts.mono });
     expect(rule("edge", darkStyle)).toMatchObject({ "line-color": mix(darkColors.border, EDGE_MIX, darkColors.text) });
   });
 
@@ -239,6 +267,14 @@ describe("展示模式的圖譜（#260，docs/design.md「展示模式」）", (
     expect(zoomView).toContain("others: selected !== null && id !== selected");
   });
 
+  it("一般模式的選取外環、反白名稱、加框的關係名稱與「剛展開」不套用（#336：展示模式的圖譜不變）", () => {
+    expect(rule("node.selected", presentStyle)).toMatchObject({ "border-width": 2, "border-color": colors.background, "outline-width": 2, "outline-color": colors.text });
+    expect(rule("node.selected", presentStyle)["text-background-color"]).toBeUndefined();
+    expect(rule("node.fresh", presentStyle)).toBeUndefined();
+    expect(rule("edge", presentStyle)["text-border-width"]).toBeUndefined();
+    expect(rule("edge", presentStyle)["font-family"]).toBe(clientConfig.theme.fonts.mono);
+  });
+
   it("選取的關係用 primary 加粗並標上關係名稱", () => {
     expect(rule("edge.near", presentStyle)).toMatchObject({ label: "data(label)", width: 5, "line-color": colors.primary, "target-arrow-color": colors.primary });
   });
@@ -265,7 +301,8 @@ describe("展示模式的圖譜（#260，docs/design.md「展示模式」）", (
 
   it("一般模式不變：讀不到 --present-* 時沒有展示模式的規則，字級 12px", () => {
     expect(presentSizes((name) => variables[name] ?? "")).toBeNull();
-    expect(style.length).toBe(presentStyle.length - 8);
+    // 一般模式多了加框的關係名稱、剛展開與反白的選取名稱（#336）
+    expect(style.length).toBe(presentStyle.length - 8 + 3);
     expect(rule("node")).toMatchObject({ "font-size": 12 });
     expect(rule("node.others")).toBeUndefined();
     expect(rule("edge.near")).toEqual({ label: "data(label)" });

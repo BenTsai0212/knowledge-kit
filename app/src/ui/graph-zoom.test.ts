@@ -4,8 +4,9 @@ import { clusterGraph, type ClusterModel } from "../graph/clusters";
 import type { Graph } from "../graph/read";
 import { clientConfig } from "../client/load";
 import { strings } from "../client/i18n";
-import { graphStyle } from "./graph-style";
-import { breadcrumb, bubbleId, CALM_LIMIT, detailOf, openEntities, ringPositions, SECOND_OPACITY, SIDE_BUBBLE, SIDE_BUBBLE_OPACITY, MAX_VIEW_ZOOM, VIEW_PADDING, panToCenter, viewOf, viewportFor, zoomLevel } from "./graph-zoom";
+import { FOCUS_LABEL_MAX_PX, FOCUS_MAX_ZOOM, FOCUS_MIN_ZOOM, graphStyle, NODE_LABEL_FONT_SIZE } from "./graph-style";
+import graphView from "./GraphView.tsx?raw";
+import { breadcrumb, bubbleId, CALM_LIMIT, detailOf, openEntities, ringPositions, SECOND_OPACITY, SIDE_BUBBLE, SIDE_BUBBLE_OPACITY, MAX_VIEW_ZOOM, VIEW_PADDING, panToCenter, viewOf, viewportFor, zoomLevel, focusViewport } from "./graph-zoom";
 import graphPage from "./GraphPage.tsx?raw";
 import zoomView from "./GraphZoomView.tsx?raw";
 
@@ -168,5 +169,68 @@ describe("樣式與效能設定", () => {
   it("門檻以下用現行的 GraphView；新的文字都在 client/i18n/", () => {
     expect(graphPage).toContain("scaleMode(filtered.entities.length, phone)");
     for (const language of ["zh-TW", "en"]) expect(Object.keys(strings(language).graphZoom).sort()).toEqual(["all", "breadcrumb", "minRelations", "moreMembers", "other", "segments"]);
+  });
+});
+
+// 桌機選取與逐步展開時的視角（#336 修正要求）：節點標籤在畫面上不超過 16px，聚焦集合留在畫布內
+describe("focusViewport()", () => {
+  const canvas = { width: 1000, height: 700 };
+  const inside = (v: { zoom: number; pan: { x: number; y: number } }, box: { x1: number; y1: number; x2: number; y2: number }, padding: number) => {
+    expect(v.zoom * box.x1 + v.pan.x).toBeGreaterThanOrEqual(padding - 1e-9);
+    expect(v.zoom * box.y1 + v.pan.y).toBeGreaterThanOrEqual(padding - 1e-9);
+    expect(v.zoom * box.x2 + v.pan.x).toBeLessThanOrEqual(canvas.width - padding + 1e-9);
+    expect(v.zoom * box.y2 + v.pan.y).toBeLessThanOrEqual(canvas.height - padding + 1e-9);
+  };
+
+  it("上限是節點標籤 16px 的縮放", () => {
+    expect(FOCUS_LABEL_MAX_PX).toBe(16);
+    expect(NODE_LABEL_FONT_SIZE * FOCUS_MAX_ZOOM).toBeCloseTo(16);
+  });
+
+  it("目前的縮放超過上限時縮小到上限，選取的節點在中央", () => {
+    const box = { x1: -100, y1: -100, x2: 100, y2: 100 };
+    const v = focusViewport(box, { x: 0, y: 0 }, 1.7, canvas, 40, FOCUS_MAX_ZOOM);
+    expect(v.zoom).toBeCloseTo(FOCUS_MAX_ZOOM);
+    expect(v.pan).toEqual({ x: 500, y: 350 });
+    inside(v, box, 40);
+  });
+
+  it("目前的縮放在上下限之間時沿用", () => {
+    const v = focusViewport({ x1: 0, y1: 0, x2: 100, y2: 100 }, { x: 50, y: 50 }, 1.1, canvas, 40, FOCUS_MAX_ZOOM, FOCUS_MIN_ZOOM);
+    expect(v.zoom).toBe(1.1);
+  });
+
+  it("目前的縮放小於下限、聚焦集合放得進時放大到下限（標籤 12px）", () => {
+    const v = focusViewport({ x1: 0, y1: 0, x2: 100, y2: 100 }, { x: 50, y: 50 }, 0.6, canvas, 40, FOCUS_MAX_ZOOM, FOCUS_MIN_ZOOM);
+    expect(v.zoom).toBe(FOCUS_MIN_ZOOM);
+    expect(NODE_LABEL_FONT_SIZE * v.zoom).toBe(12);
+  });
+
+  it("放大到下限就放不進時，以放得進的最大縮放（不小於目前）", () => {
+    const box = { x1: 0, y1: 0, x2: 1200, y2: 100 };
+    const v = focusViewport(box, { x: 0, y: 0 }, 0.6, canvas, 40, FOCUS_MAX_ZOOM, FOCUS_MIN_ZOOM);
+    expect(v.zoom).toBeCloseTo(920 / 1200);
+    expect(v.zoom).toBeGreaterThan(0.6);
+    inside(v, box, 40);
+  });
+
+  it("選取的節點在聚焦集合的邊上時，把聚焦集合推回畫布內（邊緣的節點與標籤不被切掉）", () => {
+    const box = { x1: 0, y1: 0, x2: 600, y2: 400 };
+    const v = focusViewport(box, { x: 0, y: 0 }, 1, canvas, 40, FOCUS_MAX_ZOOM);
+    expect(v.zoom).toBe(1);
+    inside(v, box, 40);
+  });
+
+  it("放不進畫布時整個放進畫布，縮放不超過上限", () => {
+    const box = { x1: 0, y1: 0, x2: 2000, y2: 400 };
+    const v = focusViewport(box, { x: 0, y: 0 }, 1.7, canvas, 40, FOCUS_MAX_ZOOM);
+    expect(v.zoom).toBeCloseTo(920 / 2000);
+    inside(v, box, 40);
+  });
+
+  it("只有桌機傳入上限（手機、平板、展示模式照舊）", () => {
+    expect(graphPage).toContain("maxFocusZoom={desktop ? FOCUS_MAX_ZOOM : undefined}");
+    expect(graphView).toMatch(/maxZoom !== undefined && cover === 0\) \{\s*(\/\/.*\n\s*)*cy\.resize\(\);/);
+    expect(zoomView).toMatch(/p\.level === "detail" && p\.maxFocusZoom !== undefined/);
   });
 });
