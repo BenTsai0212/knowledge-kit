@@ -230,7 +230,7 @@ describe("focusViewport()", () => {
 
   it("只有桌機傳入上限（手機、平板、展示模式照舊）", () => {
     expect(graphPage).toContain("maxFocusZoom={desktop ? FOCUS_MAX_ZOOM : undefined}");
-    expect(graphView).toMatch(/maxZoom !== undefined && cover === 0/);
+    expect(graphView).toMatch(/maxZoom !== undefined && cover === 0\) \{\s*(\/\/.*\n\s*)*cy\.resize\(\);/);
     expect(zoomView).toMatch(/p\.level === "detail" && p\.maxFocusZoom !== undefined/);
   });
 });

@@ -127,8 +127,10 @@ test("點第一個節點後，以畫面上的位置點相連的節點會選取�
   await page.mouse.click(first!.x, first!.y);
   await expect.poll(() => selectedNodes(page, CANVAS)).toEqual([first!.id]);
   await expect(trail(page)).toBeVisible();
-  // 「已展開」那一列出現後，畫布的位置不變
-  expect(await page.locator(CANVAS).boundingBox()).toEqual(box);
+  // 「已展開」那一列出現後，畫布的位置不變。桌機（預設 1280×720，#336）選取時右側的實體欄同時出現、畫布變窄，
+  // 所以不比對位置，改由下面以畫面上的位置點相連的節點，確認畫布移動後點擊仍落在正確的節點
+  if ((await page.locator(".graph-page--desktop").count()) === 0) expect(await page.locator(CANVAS).boundingBox()).toEqual(box);
+  else await expect(page.locator(".graph-entity-column")).toBeVisible();
 
   await waitForGraphIdle(page, CANVAS);
   const second = await clickableNode(page, CANVAS, await neighborsOf(page, CANVAS, first!.id));

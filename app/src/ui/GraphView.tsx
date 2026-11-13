@@ -327,6 +327,8 @@ function animateFocus(cy: Core, graph: Graph, previous: Expansion, next: Expansi
     return;
   }
   if (maxZoom !== undefined && cover === 0) {
+    // 桌機選取時右側的實體欄同時出現、畫布變窄：cytoscape 快取的畫布大小還是舊的，先重新量再計算視角
+    cy.resize();
     const anchor = selected.nonempty() ? { ...selected.position() } : null;
     const target = focusViewport(eles.boundingBox(), anchor, cy.zoom(), { width: cy.width(), height: cy.height() }, FOCUS_PADDING, maxZoom, FOCUS_MIN_ZOOM);
     if (panMs === 0) cy.viewport(target);
