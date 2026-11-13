@@ -23,7 +23,7 @@ import { apiTransport } from "./qa/api";
 import { readMyReport, readReports, writeReport } from "./reports/store";
 import { createProvider, preparesModel, PROVIDERS, type ActiveProvider, type ProgressListener } from "./retrieval/providers";
 import { openRetriever } from "./retrieval/retrieve";
-import { readSource, type SourceDocument } from "./sources/source";
+import { readCitedSources, readSource, type CitedSource, type SourceDocument } from "./sources/source";
 import { clearAccessCode, loadAccessCode, saveAccessCode } from "./ui/access-code";
 import { crossFade } from "./ui/cross-fade";
 import { EntryBar } from "./ui/EntryBar";
@@ -112,6 +112,10 @@ export function App() {
   const [source, setSource] = useState<SourceDocument | null>(null);
   // 原文是從哪一題的引用標號打開的（手機的「出處 N／M」，#256）；段落旁的標示與其他頁面打開時為 null
   const [sourceTurn, setSourceTurn] = useState<string | null>(null);
+  // 桌機原文欄的「這次回答的出處」（#335）：sourceTurn 那一題引用到的段落；同一題換出處時沿用
+  const [citedSources, setCitedSources] = useState<{ turn: string; items: CitedSource[] } | null>(null);
+  // 桌機原文欄以 ✕ 關閉後，焦點回到打開它的引用標號（#335）
+  const sourceOpener = useRef<HTMLElement | null>(null);
   // 手機原文面板的「回報有錯」（#256）：打開該題的回報表單（count 每次加一）
   const [reportRequest, setReportRequest] = useState<{ turn: string; count: number } | null>(null);
   // 右側面板一次顯示原文或實體其中一個；實體面板只用該題送出當下的圖譜（#195）
@@ -432,11 +436,26 @@ export function App() {
   async function onOpenSource(passageId: string, turnId: string | null = null, owner = identity) {
     if (db === null) return;
     const ticket = sources.current.begin();
+    if (globalThis.document.activeElement?.matches("button.citation")) sourceOpener.current = globalThis.document.activeElement as HTMLElement;
     const document = await readSource(db, owner, passageId);
-    if (ticket.isCurrent()) (setEntity(null), setSource(document), setSourceTurn(document === null ? null : turnId));
+    const answer = turns.find((t) => t.id === turnId)?.answer;
+    const cited =
+      turnId === null || answer?.kind !== "answer"
+        ? null
+        : // 原文欄開著、同一題換出處時沿用；重新打開時再讀（期間可能有內容被撤回）
+          source !== null && citedSources?.turn === turnId
+          ? citedSources
+          : { turn: turnId, items: await readCitedSources(db, owner, answer.numbering, answer.cited) };
+    if (ticket.isCurrent()) (setEntity(null), setSource(document), setSourceTurn(document === null ? null : turnId), setCitedSources(cited));
   }
 
   const closeSource = () => (sources.current.cancel(), setSource(null));
+  // 桌機原文欄的 ✕：焦點回到引用標號（還在畫面上時）
+  const closeSourcePanel = () => {
+    closeSource();
+    if (sourceOpener.current?.isConnected) sourceOpener.current.focus();
+    sourceOpener.current = null;
+  };
 
   function onOpenEntity(graph: Graph, id: string) {
     sources.current.cancel();
@@ -463,6 +482,8 @@ export function App() {
   // 桌機登入前（#334，畫板 K-Login）：沒有左側導覽，頂端列＋登入頁；沒有導覽可以切到其他頁，所以不論目前的頁籤都顯示登入頁。
   // 平板與手機的登入頁照舊（#327）
   const desktopEntry = layout === "desktop" && accessCode === null;
+  // 桌機登入後（≥ 1025px，展示模式除外）：問答頁照畫板 QA（#335）；app--desktop 讓桌機的樣式不影響手機、平板、展示模式與登入前的 app--entry
+  const desktop = !overlay && !presentationBar && !desktopEntry;
   // 身分對照只在展示模式的頂端列、開關開啟時（線上 demo 一律關閉，online-demo.ts 的 demoCompare）
   const compareEnabled = presentationBar && demoCompare;
   const compareDisabled = retriever === null || answering;
@@ -515,7 +536,17 @@ export function App() {
       />
     );
   };
-  const sidePanel = () => (source === null ? null : <SourcePanel language={language} source={source} onOpenSource={onOpenSource} onClose={closeSource} />);
+  const sidePanel = () =>
+    source === null ? null : (
+      <SourcePanel
+        language={language}
+        source={source}
+        // 從某一題的引用打開時，段落旁的標示與「這次回答的出處」都留在同一題（「原文 · 出處 N」與清單的選取）
+        onOpenSource={(passageId) => void onOpenSource(passageId, sourceTurn)}
+        cited={sourceTurn !== null && citedSources?.turn === sourceTurn ? citedSources.items : null}
+        onClose={closeSourcePanel}
+      />
+    );
   const mentionPanel = (inSheet: boolean) =>
     entity !== null && (
       <MentionPanel
@@ -540,7 +571,7 @@ export function App() {
       </BottomSheet>
     );
   return (
-    <div className={phone ? "app app--phone" : tablet ? "app app--tablet" : desktopEntry ? "app app--entry" : "app"}>
+    <div className={phone ? "app app--phone" : tablet ? "app app--tablet" : desktopEntry ? "app app--entry" : desktop ? "app app--desktop" : "app"}>
       {/* 只渲染一種導覽結構：展示模式登入後是頂端列，沒有「更換邀請碼」與「這次的問題」（docs/design.md「隱藏與保留」）；
           其他情況手機是頂端列＋底部分頁列、平板是左側的圖示導覽列、桌機是左側導覽（#255），桌機登入前是登入頁的頂端列（#334）。
           展示模式在手機與平板的登入頁照常用 Nav */}
@@ -742,6 +773,13 @@ export function App() {
             <ScriptPanel language={language} conversations={conversations} current={scriptCurrent} disabled={retriever === null || answering || limit !== null} onAsk={onScript} />
           )}
           <div className="qa-center">
+            {/* 桌機的頁首（#335）：「每一題獨立回答」的說明從輸入框下方移到這裡 */}
+            {desktop && (
+              <header className="qa-header">
+                <h1>{s.tabQa}</h1>
+                <p className="muted">{s.qaHeaderNote}</p>
+              </header>
+            )}
             {offline && <Notice kind="warning" title={s.qaProblems.offline} />}
             {db === null && <p className="card muted">{s.loading}</p>}
             {/* 線上 demo：提問會傳給模型供應商（#100 計畫第 8 項） */}
@@ -815,6 +853,7 @@ export function App() {
               onAsk={(question) => void (compare !== null ? runCompare(question) : onAsk(question))}
               limit={limit}
               presets={!presentationMode}
+              line={desktop}
             />
           </div>
           {!overlay && sidePanel()}

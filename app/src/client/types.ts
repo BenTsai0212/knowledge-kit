@@ -362,22 +362,31 @@ export interface UiStrings {
   emptyAnswerAction: string;
   // 三欄的問答頁（#195）：輸入框下方的說明（每題獨立回答）、左側導覽「這次的問題」
   qaIndependent: string;
+  // 桌機問答頁的頁首右側的說明（#335，畫板 QA）
+  qaHeaderNote: string;
   sessionQuestions: string;
   // 手機問答頁頂部的「這次的問題（N）」按鈕（#256）
   sessionQuestionsCount: string;
   // 回答下方的「回答提到」與右側的實體面板（#195 PR 2）；接著問的範本以 {name}、{relation}、{type} 組成，依關係的方向分兩種
   answerMentions: string;
+  // 桌機回答卡片開頭的「根據 N 段原文回答」（{count} 是引用到的段落數，#335）
+  answerBasis: string;
   followUpTitle: string;
   followUpOutgoing: string;
   followUpIncoming: string;
   viewInGraph: string;
   openSource: string;
   sourceTitle: string;
+  // 桌機原文欄的「原文 · 出處 N」（{n} 是回答中的引用標號，#335）
+  sourceHeading: string;
   closeSource: string;
   // 手機原文面板的「出處 N／M」（{n}、{total}）與上一個、下一個出處（#256）
   sourceStep: string;
   sourcePrev: string;
   sourceNext: string;
+  // 桌機原文欄的「這次回答的出處」清單與段落編號「¶N」（#335）
+  sourceCitedList: string;
+  paragraphNumber: string;
   views: string;
   tabQa: string;
   // 首頁的頁籤（#283）

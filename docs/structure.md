@@ -134,7 +134,7 @@
 - `SessionQuestions.tsx`：手機的「這次的問題（N）」按鈕與底部面板（#256）
 - `Sidebar.tsx`：桌機的左側欄（客戶名稱、頁面項目、「虛構資料 · 展示用權限」、使用者卡與身分和語言選單，#330）
 - `source-steps.ts`：「出處 N／M」與「在圖譜中查看」目標的純函式
-- `SourcePanel.tsx`：問答頁的右側面板：原文
+- `SourcePanel.tsx`：桌機的原文欄（段落編號、「這次回答的出處」，#335）
 - `SourceSheet.tsx`：手機的原文面板（底部面板）
 - `SourceText.tsx`：原文紙面，桌機與手機共用
 - `theme.ts`：由 `client/theme.json` 設定 CSS 變數（深色模式用 `darkColors`）
@@ -211,7 +211,7 @@
 
 引用跳回原文。
 
-- `source.ts`：`readSource()` 經 `withIdentity()` 讀取段落所屬文件中看得到的段落
+- `source.ts`：`readSource()` 經 `withIdentity()` 讀取段落所屬文件中看得到的段落；`readCitedSources()` 讀取一題回答引用到的段落的文件標題與段落編號
 
 ### `app/src/db/`
 
@@ -269,11 +269,13 @@ Playwright 的端對端測試（`*.spec.ts`）；設定在根目錄的 `playwrig
 - `mobile-qa.spec.ts`：手機的問答與原文面板（390×844）
 - `mobile.spec.ts`：手機的共同結構（390×844）
 - `presentation.spec.ts`：展示模式
+- `qa-desktop.spec.ts`：桌機的問答頁與原文欄（1440×900，#335）
 - `reports.spec.ts`：回答錯誤回報
 - `retract.spec.ts`：撤回
 - `review.spec.ts`：待審頁
 - `smoke.spec.ts`：冒煙
 - `support/app.ts`：共用操作（介面文字從選定客戶的 `i18n/` 讀取）
+- `support/citing-answer.ts`：引用每一段的假回答，找到檢索到至少 2 段的預設問題（手機與桌機的原文面板共用）
 - `support/client.ts`：讀取 `KK_CLIENT` 選定客戶的 JSON 並推算測試用的身分（不寫死角色、等級、專案）
 - `support/dataset.ts`：以 `app/src/evals/oracle.ts` 算出各身分看不到的段落；身分對照用的「只有一個身分看得到的題目」與只出現在答案段落的比對文字（`onlyOneSees()`）
 - `support/fake-ask.ts`：假的 `/api/ask`（含串流到一半的假回應）

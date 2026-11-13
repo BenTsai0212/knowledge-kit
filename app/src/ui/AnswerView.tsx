@@ -158,98 +158,105 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
   return (
     <section id={id} ref={ref} className={classes} style={{ "--done": doneStep } as CSSProperties} aria-live="polite">
       <h2>{heading ?? state.question}</h2>
-      {/* 串流中與完成後是同一個元素：已經升起的句子不重播 */}
-      {sentences !== null && (
-        <p className="answer-text">
-          {sentences.map((sentence, i) => (
-            <span key={i} className="sentence" style={{ "--i": sentenceStep(i, streamed.current) } as CSSProperties}>
-              {sentence.map((segment, j) => {
-                if ("text" in segment) return <Fragment key={j}>{segment.text}</Fragment>;
-                const passage = (answer as Extract<Answer, { kind: "answer" }>).numbering[segment.citation - 1];
-                return (
-                  <button key={j} type="button" className="citation" title={s.openSource} aria-pressed={openPassage === passage} onClick={() => onOpenSource(passage)}>
-                    {segment.citation}
-                  </button>
-                );
-              })}
-            </span>
-          ))}
-        </p>
-      )}
-      {answer === undefined && <p className="muted">{s.answering}</p>}
-      {refusalText !== null && (
-        <div className="refusal">
-          <p className="answer-text">{refusalText}</p>
-          {/* 下一步只依問題、上傳能力與看得到的圖譜決定，「資料沒寫」與「沒有權限」相同（docs/qa.md「拒答」、#285）；模型無法回答比照拒答（#280） */}
-          <div className="refusal-next">
-            <p className="muted">{s.refusalNextTitle}</p>
-            <ul>
-              {refusalNextSteps({ canUpload, graph, question: state.question, language }).map((x, i) => (
-                <li key={suggestionKey(x)} style={{ "--i": staggerIndex(i) } as CSSProperties}>
-                  {suggestion(x)}
-                </li>
-              ))}
-            </ul>
+      {/* 回答本體：桌機是問題泡泡下方的回答卡片（#335，畫板 QA）；其他版面沒有自己的樣式，與直接放在 section 中相同 */}
+      <div className="answer__body">
+        {/* 依據：引用到的段落數，與原文欄「這次回答的出處」、手機「出處 N／M」的 M 相同（#322）；只在桌機顯示 */}
+        {answer?.kind === "answer" && answer.cited.length > 0 && (
+          <p className="answer-basis">{fill(s.answerBasis, { count: new Set(answer.cited).size }, language)}</p>
+        )}
+        {/* 串流中與完成後是同一個元素：已經升起的句子不重播 */}
+        {sentences !== null && (
+          <p className="answer-text">
+            {sentences.map((sentence, i) => (
+              <span key={i} className="sentence" style={{ "--i": sentenceStep(i, streamed.current) } as CSSProperties}>
+                {sentence.map((segment, j) => {
+                  if ("text" in segment) return <Fragment key={j}>{segment.text}</Fragment>;
+                  const passage = (answer as Extract<Answer, { kind: "answer" }>).numbering[segment.citation - 1];
+                  return (
+                    <button key={j} type="button" className="citation" title={s.openSource} aria-pressed={openPassage === passage} onClick={() => onOpenSource(passage)}>
+                      {segment.citation}
+                    </button>
+                  );
+                })}
+              </span>
+            ))}
+          </p>
+        )}
+        {answer === undefined && <p className="muted">{s.answering}</p>}
+        {refusalText !== null && (
+          <div className="refusal">
+            <p className="answer-text">{refusalText}</p>
+            {/* 下一步只依問題、上傳能力與看得到的圖譜決定，「資料沒寫」與「沒有權限」相同（docs/qa.md「拒答」、#285）；模型無法回答比照拒答（#280） */}
+            <div className="refusal-next">
+              <p className="muted">{s.refusalNextTitle}</p>
+              <ul>
+                {refusalNextSteps({ canUpload, graph, question: state.question, language }).map((x, i) => (
+                  <li key={suggestionKey(x)} style={{ "--i": staggerIndex(i) } as CSSProperties}>
+                    {suggestion(x)}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
-        </div>
-      )}
-      {/* 錯誤是中性的卡片，不用 danger（#280）；prompt_too_long 沒有送出，下一步是縮短問題 */}
-      {answer?.kind === "error" && category !== "modelRefusal" && (
-        <div className="problem" role="status">
-          <p>{errorMessage(language, answer.error)}</p>
-          {answer.error === "prompt_too_long" && (
-            <p className="problem-actions">
-              <span className="badge">{s.qaProblems.notSent}</span>
-              <button type="button" className="secondary" onClick={onShorten}>
-                {s.qaProblems.shorten}
-              </button>
-            </p>
-          )}
-        </div>
-      )}
-      {answer?.kind === "answer" && (
-        <>
-          {answer.uncited && <p className="badge warning">{s.uncited}</p>}
-          {answer.incomplete && (
-            <p className="badge warning">
-              {s.incomplete}
-              {answer.error !== undefined && `${s.colon}${errorMessage(language, answer.error)}`}
-            </p>
-          )}
-          {state.mentions !== undefined && state.mentions.entities.length > 0 && (
-            <Mentions language={language} {...state.mentions} onOpenEntity={onOpenEntity} openEntity={openEntity} />
-          )}
-        </>
-      )}
-      {retryable && (
-        <p className="retry">
-          <button type="button" className="secondary" disabled={retryDisabled} onClick={onRetry}>
-            {s.answerRetry}
-          </button>
-        </p>
-      )}
-      {onReport !== undefined &&
-        canReport(state) &&
-        (state.reportId === undefined || again ? (
-          <ReportForm
-            // 從原文面板要求回報時重建成展開的表單（again 只在建立時讀取）
-            key={again ? "again" : "idle"}
-            language={language}
-            initial={defaultCategory(state)}
-            open={again}
-            onReport={(category, note) => onReport(category, note).then(() => setAgain(false))}
-            onCancel={again ? () => setAgain(false) : undefined}
-          />
-        ) : (
-          <ReportStatus
-            language={language}
-            reportId={state.reportId}
-            read={readReport}
-            onReportAgain={() => setAgain(true)}
-            onAskAgain={onRetry}
-            askDisabled={retryDisabled}
-          />
-        ))}
+        )}
+        {/* 錯誤是中性的卡片，不用 danger（#280）；prompt_too_long 沒有送出，下一步是縮短問題 */}
+        {answer?.kind === "error" && category !== "modelRefusal" && (
+          <div className="problem" role="status">
+            <p>{errorMessage(language, answer.error)}</p>
+            {answer.error === "prompt_too_long" && (
+              <p className="problem-actions">
+                <span className="badge">{s.qaProblems.notSent}</span>
+                <button type="button" className="secondary" onClick={onShorten}>
+                  {s.qaProblems.shorten}
+                </button>
+              </p>
+            )}
+          </div>
+        )}
+        {answer?.kind === "answer" && (
+          <>
+            {answer.uncited && <p className="badge warning">{s.uncited}</p>}
+            {answer.incomplete && (
+              <p className="badge warning">
+                {s.incomplete}
+                {answer.error !== undefined && `${s.colon}${errorMessage(language, answer.error)}`}
+              </p>
+            )}
+            {state.mentions !== undefined && state.mentions.entities.length > 0 && (
+              <Mentions language={language} {...state.mentions} onOpenEntity={onOpenEntity} openEntity={openEntity} />
+            )}
+          </>
+        )}
+        {retryable && (
+          <p className="retry">
+            <button type="button" className="secondary" disabled={retryDisabled} onClick={onRetry}>
+              {s.answerRetry}
+            </button>
+          </p>
+        )}
+        {onReport !== undefined &&
+          canReport(state) &&
+          (state.reportId === undefined || again ? (
+            <ReportForm
+              // 從原文面板要求回報時重建成展開的表單（again 只在建立時讀取）
+              key={again ? "again" : "idle"}
+              language={language}
+              initial={defaultCategory(state)}
+              open={again}
+              onReport={(category, note) => onReport(category, note).then(() => setAgain(false))}
+              onCancel={again ? () => setAgain(false) : undefined}
+            />
+          ) : (
+            <ReportStatus
+              language={language}
+              reportId={state.reportId}
+              read={readReport}
+              onReportAgain={() => setAgain(true)}
+              onAskAgain={onRetry}
+              askDisabled={retryDisabled}
+            />
+          ))}
+      </div>
     </section>
   );
 }

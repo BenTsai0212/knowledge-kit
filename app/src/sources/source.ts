@@ -34,3 +34,24 @@ export function readSource(db: Database, identityId: string | null, passageId: s
     return { ...doc, passages: passages.map((p) => ({ ...p, marks: marks.get(p.id) ?? [] })), highlight: passageId };
   });
 }
+
+// 桌機原文欄的「這次回答的出處」（#335）：一題回答引用到的段落，與手機「出處 N／M」相同的資料（cited，依第一次引用的順序、同一段一次）
+export interface CitedSource {
+  passageId: string;
+  // 回答中的引用標號（numbering 中的位置＋1）
+  citation: number;
+  title: string;
+  // 段落在文件中是這個身分看得到的第幾段（與原文欄的「¶N」相同）
+  paragraph: number;
+}
+
+// 逐段以 readSource() 讀取，權限同樣交給 RLS；之後看不到的段落（例如被撤回）不列出
+export async function readCitedSources(db: Database, identityId: string | null, numbering: readonly string[], cited: readonly string[]): Promise<CitedSource[]> {
+  const items: CitedSource[] = [];
+  for (const passageId of new Set(cited)) {
+    const doc = await readSource(db, identityId, passageId);
+    if (doc === null) continue;
+    items.push({ passageId, citation: numbering.indexOf(passageId) + 1, title: doc.title, paragraph: doc.passages.findIndex((p) => p.id === passageId) + 1 });
+  }
+  return items;
+}
