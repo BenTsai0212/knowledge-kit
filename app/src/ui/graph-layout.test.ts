@@ -123,6 +123,9 @@ describe("畫布與工具列", () => {
       "background-size": "24px 24px",
     });
     expect(cssText).toMatch(/@media \(min-height: 900px\) \{\s*\.graph-stage \{\s*min-height: 722px;/);
+    // 左欄與實體欄撐滿頁面的高度（一般的 .graph-page 是 start 對齊），畫布才填滿到視窗底部
+    expect(rule(".graph-page.graph-page--desktop")).toMatchObject({ "align-items": "stretch" });
+    expect(rule(".graph-page--desktop .graph-frame")).toMatchObject({ "grid-template-columns": "minmax(0, 1fr)", "grid-template-rows": "minmax(0, 1fr)" });
     expect(rule(".graph-zoom-buttons button")).toMatchObject({ width: "44px", height: "44px" });
     expect(graphPage).toContain("aria-label={s.graphZoomIn}");
     expect(graphPage).toContain("aria-label={s.graphZoomOut}");

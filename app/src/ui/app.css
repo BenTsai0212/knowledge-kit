@@ -2290,9 +2290,11 @@ main.page:has(> .graph-page--desktop) {
   overflow: hidden;
 }
 
+/* 一般的 .graph-page 是 start 對齊；桌機改回 stretch，否則左欄與實體欄只有內容的高度，畫布停在最小高度、實體欄不到底（#336 修正要求） */
 .graph-page.graph-page--desktop {
   display: flex;
   flex: 1 1 auto;
+  align-items: stretch;
   min-width: 0;
   max-width: none;
   gap: 0;
@@ -2500,10 +2502,13 @@ button.chip.graph-chip[aria-pressed="true"] {
   }
 }
 
+/* 外框：畫布的大小只看外框，不受 cytoscape 畫出的 canvas 大小影響 */
 .graph-page--desktop .graph-frame {
   position: relative;
   z-index: 0;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   flex: 1 1 auto;
   min-width: 0;
   border-radius: 20px;

@@ -205,7 +205,12 @@ test("面板的長連結換行時靠左對齊；節點標籤換行並以底色�
     return {
       textAlign: getComputedStyle(button).textAlign,
       lefts: [...range.getClientRects()].map((r) => r.left - box.left),
-      top: box.top - button.closest("li")!.getBoundingClientRect().top,
+      // 項目內容的上緣（桌機的文件卡片有 padding，#336）
+      top: (() => {
+        const li = button.closest("li")!;
+        const style = getComputedStyle(li);
+        return box.top - (li.getBoundingClientRect().top + parseFloat(style.paddingTop) + parseFloat(style.borderTopWidth));
+      })(),
     };
   });
   expect(["start", "left"]).toContain(lines.textAlign);

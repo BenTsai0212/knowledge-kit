@@ -53,10 +53,12 @@ async function cursorInside(page: Page): Promise<boolean> {
   }, CANVAS);
 }
 
-// 「圖譜｜清單」切換的最後一個按鈕之後就是圖譜外框（沒有展開時「已展開」那一列沒有按鈕）：從它按 Tab 進入
+// 外框的前一個可聚焦元素按 Tab 進入：桌機（預設 1280×720，#336）是畫布右下的「縮小」（縮放按鈕在 DOM 中排在外框之前）；
+// 其他版面是「圖譜｜清單」切換的最後一個按鈕（沒有展開時「已展開」那一列沒有按鈕）
 async function tabIntoGraph(page: Page) {
   await waitForGraphIdle(page, CANVAS);
-  await page.getByRole("group", { name: k.modeLabel }).getByRole("button").last().focus();
+  const zoomOut = page.getByRole("button", { name: s.graphZoomOut, exact: true });
+  await ((await zoomOut.count()) > 0 ? zoomOut : page.getByRole("group", { name: k.modeLabel }).getByRole("button").last()).focus();
   await page.keyboard.press("Tab");
   await expect(frame(page)).toBeFocused();
 }

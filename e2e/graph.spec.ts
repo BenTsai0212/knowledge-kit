@@ -99,7 +99,8 @@ test("逐步展開：聚焦在節點與直接相連的節點，其他變灰；�
   const all = (await snapshot(page))!;
   expect(all.dimmed).toEqual([]);
   expect(all.selected).toEqual([]);
-  await expect(page.getByText(s.selectEntity)).toBeVisible();
+  // 桌機（預設 1280×720）沒有選取時沒有實體欄，畫布佔滿寬度（#336）
+  await expect(page.locator(".graph-entity-column")).toHaveCount(0);
 });
 
 // 「已展開」那一列出現時畫布不能移動，否則 cytoscape 以舊的容器位置換算滑鼠座標，之後的點擊落在別的地方。
