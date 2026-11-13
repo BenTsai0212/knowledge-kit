@@ -123,7 +123,7 @@ export function tab(page: Page, label: string): Locator {
 }
 
 // 包在 <label> 裡的欄位：無障礙名稱含有欄位目前的值（例如下拉選單選中的項目），所以以 label 文字的開頭找
-const field = (page: Page, label: string, tag: "input" | "select") => page.locator("label").filter({ hasText: startsWith(label) }).locator(tag);
+export const field = (page: Page, label: string, tag: "input" | "select") => page.locator("label").filter({ hasText: startsWith(label) }).locator(tag);
 
 // 切換頁籤
 export async function openTab(page: Page, label: string): Promise<void> {

@@ -1,6 +1,6 @@
 // 互動的邊角（#66）：上傳寫入中按 Esc、評測執行中離開頁籤、深色模式。/api/ask 一律是假的回應（support/fake-ask.ts）。
 import { expect, test } from "@playwright/test";
-import { EVALS_PATH, openApp, openTab, s, switchIdentity } from "./support/app";
+import { EVALS_PATH, field, openApp, openTab, s, switchIdentity } from "./support/app";
 import { NO_REVIEWER, NO_UPLOADER, reviewer, theme, uploader } from "./support/client";
 
 // #RRGGBB → getComputedStyle 的 rgb(r, g, b)
@@ -81,8 +81,18 @@ test("深色模式：依 prefers-color-scheme 切換配色，切回淺色時恢�
   const question = page.locator("textarea").first();
   await expect(question).toHaveCSS("background-color", rgb(theme.darkColors.surface));
   await expect(question).toHaveCSS("color", rgb(theme.darkColors.text));
-  await expect(page.locator("select").first()).toHaveCSS("background-color", rgb(theme.darkColors.surface));
   await page.emulateMedia({ colorScheme: "light" });
   await expect(question).toHaveCSS("background-color", rgb(theme.colors.surface));
   await expect.poll(background).toBe(rgb(theme.colors.background));
+
+  // 下拉選單也跟著主題（#239）。桌機的語言選單已移進使用者卡的選單（#330），以上傳頁的可見等級選單檢查
+  test.skip(uploader === undefined, NO_UPLOADER);
+  await switchIdentity(page, uploader!.id);
+  await openTab(page, s.tabUpload);
+  const select = field(page, s.uploadVisibility, "select");
+  await expect(select).toBeVisible();
+  await expect(select).toHaveCSS("background-color", rgb(theme.colors.surface));
+  await page.emulateMedia({ colorScheme: "dark" });
+  await expect(select).toHaveCSS("background-color", rgb(theme.darkColors.surface));
+  await expect(select).toHaveCSS("color", rgb(theme.darkColors.text));
 });
