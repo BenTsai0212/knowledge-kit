@@ -45,6 +45,7 @@ import { defaultView, evalsMode, onlineDemo, presentationMode, visibleViews, typ
 import { createRequestGate } from "./ui/requests";
 import { SourcePanel } from "./ui/SourcePanel";
 import { SourceSheet } from "./ui/SourceSheet";
+import { SessionQuestions } from "./ui/SessionQuestions";
 import { sourceGraphTarget, sourceSteps } from "./ui/source-steps";
 import { BottomSheet } from "./ui/BottomSheet";
 import { entityOptionLabel } from "./ui/graph-labels";
@@ -393,6 +394,9 @@ export function App() {
     if (entity !== null) onViewed(entity.id);
   }, [entity?.id]);
 
+  // 「這次的問題」點一題：捲到該題（桌機的左側導覽、手機的底部面板共用）
+  const scrollToTurn = (id: string) => void document.getElementById(id)?.scrollIntoView({ block: "start" });
+
   const Nav = layout === "phone" ? MobileNav : layout === "tablet" ? NavRail : Sidebar;
   // 展示模式登入後是頂端列（#260），不論寬度都取代 Nav（手機寬度的排列見 app.css），所以畫面上只有它的「問答｜圖譜」切換，
   // 不會與手機的分段切換（layout.ts 的 usesSegmented，只剩展示模式的登入頁）同時出現
@@ -505,7 +509,7 @@ export function App() {
             ),
           }}
           questions={turns}
-          onQuestion={(id) => void document.getElementById(id)?.scrollIntoView({ block: "start" })}
+          onQuestion={scrollToTurn}
         />
       )}
       {loadFailed ? (
@@ -660,6 +664,8 @@ export function App() {
             {onlineDemo.enabled && <p className="badge warning">{s.demoQaNotice}</p>}
             <RetrievalNotice language={language} preparesModel={preparesModel(client.retrieval)} status={providerStatus} compact={presentationMode} />
             {adminError !== null && <AdminNotice language={language} {...adminError} />}
+            {/* 手機的「這次的問題」在問答頁頂部（#256 決定 1）；展示模式不顯示（#260） */}
+            {phone && !presentationMode && <SessionQuestions language={language} questions={turns} onQuestion={scrollToTurn} />}
             <Conversation
               language={language}
               turns={turns}

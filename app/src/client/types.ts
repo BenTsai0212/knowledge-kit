@@ -356,6 +356,8 @@ export interface UiStrings {
   // 三欄的問答頁（#195）：輸入框下方的說明（每題獨立回答）、左側導覽「這次的問題」
   qaIndependent: string;
   sessionQuestions: string;
+  // 手機問答頁頂部的「這次的問題（N）」按鈕（#256）
+  sessionQuestionsCount: string;
   // 回答下方的「回答提到」與右側的實體面板（#195 PR 2）；接著問的範本以 {name}、{relation}、{type} 組成，依關係的方向分兩種
   answerMentions: string;
   followUpTitle: string;

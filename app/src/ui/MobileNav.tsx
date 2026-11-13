@@ -1,7 +1,7 @@
 // 手機的導覽（#255，docs/design.md「手機的共同結構」）：頂端列（產品 icon、客戶名稱、身分徽章；下方一行「虛構資料」「展示用權限」）、
 // 底部分頁列（首頁、問答、圖譜、時間軸或上傳、更多；分配見 layout.ts 的 phoneTabs()）。只有兩個頁籤時（展示模式的登入頁）改用頂端列下方的分段切換；
 // 展示模式登入後不渲染本元件，改用 PresentationBar（#260）。
-// 身分徽章打開身分與語言面板，「更多」打開列出其餘頁面的面板，兩者都是底部面板。「這次的問題」在手機上先不顯示（#255 決定 4）
+// 身分徽章打開身分與語言面板，「更多」打開列出其餘頁面的面板，兩者都是底部面板。「這次的問題」在問答頁頂部（SessionQuestions，#256 決定 1）
 import { useState } from "react";
 import { clientConfig } from "../client/load";
 import { fill, strings } from "../client/i18n";

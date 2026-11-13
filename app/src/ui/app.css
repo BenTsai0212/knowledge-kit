@@ -178,6 +178,7 @@ main.qa.with-panel {
   min-height: 0;
   overflow-y: auto;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   align-content: start;
   gap: 1rem;
 }
@@ -1240,6 +1241,112 @@ main.qa > .source .source-text mark.entering {
   background: var(--color-surfaceRaised);
   color: var(--color-primary);
   font-weight: 700;
+}
+
+/* 手機的問答頁（#256，docs/design.md「問答（手機）」）：整頁捲動，問答頁至少填滿頂端列與分頁列之間，
+   輸入區（預設問題、輸入框與提問按鈕）以 sticky 固定在分頁列上方；內容不多時也在最下方，捲到底時對話不被蓋住 */
+.app.app--phone:has(> main.qa) {
+  display: flex;
+  flex-direction: column;
+}
+
+.app--phone main.qa,
+.app--phone .qa-center,
+.app--phone .conversation {
+  flex: 1 0 auto;
+  overflow: visible;
+}
+
+.app--phone main.qa {
+  display: flex;
+  flex-direction: column;
+}
+
+.app--phone .qa-center {
+  padding-bottom: 0;
+}
+
+/* 輸入區是貼齊分頁列的整寬列（不是浮起的卡片） */
+.app--phone .composer {
+  position: sticky;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  z-index: 5;
+  margin: 0 -1rem;
+  border-width: 1px 0 0;
+  border-radius: 0;
+}
+
+/* 「這次的問題」捲到某一題時，題目不被 sticky 的頂端列蓋住 */
+.app--phone .conversation > .answer {
+  scroll-margin-top: 7rem;
+}
+
+/* 預設問題與「回答提到」：一行、橫向滑動（預設問題在桌機已是一行，見 .presets） */
+.app--phone .presets,
+.app--phone .mentions {
+  scroll-snap-type: x proximity;
+}
+
+.app--phone .presets button,
+.app--phone .mention-group > button {
+  scroll-snap-align: start;
+}
+
+.app--phone .mentions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.app--phone .mentions > p,
+.app--phone .mention-group {
+  flex: none;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+/* 引用標號：高 24px（不上標，不推開行高）；觸控範圍以透明的 ::after 補到 44×44px。
+   句子與「回答提到」也是 position: relative（動態），z-index 讓觸控範圍不被後面的元素蓋住 */
+.app--phone button.citation {
+  position: relative;
+  z-index: 1;
+  min-width: 24px;
+  height: 24px;
+  line-height: 24px;
+  vertical-align: middle;
+  text-align: center;
+}
+
+.app--phone button.citation::after {
+  content: "";
+  position: absolute;
+  inset: calc(50% - 22px);
+}
+
+/* 「這次的問題（N）」（SessionQuestions.tsx，#256 決定 1）：問答頁頂部的按鈕，打開列出問題的底部面板 */
+.session-questions-button {
+  align-self: flex-start;
+  min-height: 44px;
+}
+
+.session-questions-list {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.session-questions-list button {
+  width: 100%;
+  border: none;
+  background: none;
+  color: var(--color-primary);
+  padding: 0.5rem 0.75rem;
+  text-align: start;
+  overflow-wrap: anywhere;
 }
 
 /* 身分與語言面板（IdentitySheet.tsx）：高 66% */

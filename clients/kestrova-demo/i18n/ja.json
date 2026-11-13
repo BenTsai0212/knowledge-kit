@@ -47,6 +47,7 @@
   "emptyAnswerAction": "サンプルの質問から始める",
   "qaIndependent": "質問ごとに個別に回答します。前の質問は考慮しません。",
   "sessionQuestions": "今回の質問",
+  "sessionQuestionsCount": "今回の質問（{count}）",
   "answerMentions": "この回答に登場",
   "followUpTitle": "続けて質問",
   "followUpOutgoing": "{name}から「{relation}」でつながる{type}は？",

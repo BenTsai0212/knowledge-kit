@@ -47,6 +47,7 @@
   "emptyAnswerAction": "從預設問題開始",
   "qaIndependent": "每一題都是獨立回答，不會參考上一題。",
   "sessionQuestions": "這次的問題",
+  "sessionQuestionsCount": "這次的問題（{count}）",
   "answerMentions": "回答提到",
   "followUpTitle": "接著問",
   "followUpOutgoing": "{name}{relation}哪些{type}？",

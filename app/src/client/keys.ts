@@ -215,7 +215,7 @@ const uiStrings = {
   identityBadge: "required", identityAndLanguage: "required", navMore: "required",
   presetQuestions: "required", scenarioRole: "required", questionLabel: "required",
   questionPlaceholder: "required", askButton: "required", answering: "required", emptyAnswer: "required", emptyAnswerReason: "required", emptyAnswerAction: "required",
-  qaIndependent: "required", sessionQuestions: "required", answerMentions: "required", followUpTitle: "required",
+  qaIndependent: "required", sessionQuestions: "required", sessionQuestionsCount: "required", answerMentions: "required", followUpTitle: "required",
   followUpOutgoing: "required", followUpIncoming: "required", viewInGraph: "required",
   openSource: "required", sourceTitle: "required", closeSource: "required", sourceStep: "required", sourcePrev: "required", sourceNext: "required", views: "required", tabQa: "required", tabHome: "required",
   tabGraph: "required", legend: "required", graphEmpty: "required", graphEmptyReason: "required", switchIdentity: "required", selectEntity: "required",
