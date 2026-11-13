@@ -15,13 +15,23 @@ const sessionSheet = (page: Page) => page.locator("dialog.session-questions-shee
 const noHorizontalScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
 const box = async (el: Locator) => (await el.boundingBox())!;
 
-// 以輸入框提問，等這一題回答完
+// 等回答區塊（含子元素）的進場動態結束：getBoundingClientRect() 會算進 transform，
+// 動態中量到的是縮放後的尺寸與位置（#326 修正要求）。無限循環的動態不會結束，不等。
+async function settled(el: Locator) {
+  await el.evaluate(async (node) => {
+    const finite = node.getAnimations({ subtree: true }).filter((a) => a.effect?.getComputedTiming().endTime !== Infinity);
+    await Promise.all(finite.map((a) => a.finished.catch(() => undefined)));
+  });
+}
+
+// 以輸入框提問，等這一題回答完、動態結束；之後才量尺寸或位置
 async function ask(page: Page, question: string): Promise<Locator> {
   await page.getByPlaceholder(s.questionPlaceholder).fill(question);
   await page.getByRole("button", { name: s.askButton, exact: true }).click();
   const answer = answers(page).last();
   await expect(answer.getByRole("heading", { name: question })).toBeVisible();
   await expect(answer.getByText(s.answering)).toHaveCount(0);
+  await settled(answer);
   return answer;
 }
 
