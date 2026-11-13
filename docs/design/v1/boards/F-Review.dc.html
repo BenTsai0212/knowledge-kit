@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>待審</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;700&amp;family=Noto+Sans+TC:wght@400;500;700;900&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2340C8}a:hover{color:#14171A}
+</style>
+</helmet>
+<div style="width: 100%; min-height: 1000px; box-sizing: border-box; background: {{t.bg}}; color: {{t.text}}; font-family: Inter, 'Noto Sans TC', sans-serif; display: flex; flex-wrap: wrap; align-items: stretch">
+
+  <nav aria-label="頁面" style="flex: 1 1 200px; max-width: 220px; box-sizing: border-box; padding: 20px 14px; display: flex; flex-direction: column; gap: 4px; background: {{t.surface}}; border-right: 1px solid {{t.line}}">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 8px 16px">
+      <svg width="28" height="28" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="11" fill="{{t.raised}}"></rect><path d="M17 12v24M17 24 32 13.5M17 24l15 10.5" fill="none" stroke="{{t.text}}" stroke-width="4.5" stroke-linecap="round"></path><circle cx="32" cy="34.5" r="5" fill="{{t.primary}}"></circle><circle cx="32" cy="13.5" r="5" fill="{{t.evid}}"></circle></svg>
+      <span style="font-size: 16px; font-weight: 900">範例公司</span>
+    </div>
+    <a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; color: {{t.text}}; text-decoration: none; font-size: 15px">問答</a>
+    <a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; color: {{t.text}}; text-decoration: none; font-size: 15px">圖譜</a>
+    <a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; color: {{t.text}}; text-decoration: none; font-size: 15px">時間軸</a>
+    <a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; color: {{t.text}}; text-decoration: none; font-size: 15px">上傳</a>
+    <a href="#" aria-current="page" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; background: {{t.inkBg}}; color: {{t.inkFg}}; text-decoration: none; font-size: 15px; font-weight: 700">待審<span style="margin-left: auto; min-width: 22px; height: 22px; padding: 0 6px; box-sizing: border-box; border-radius: 999px; background: {{t.inkFg}}; color: {{t.inkBg}}; font-size: 12px; display: inline-flex; align-items: center; justify-content: center">11</span></a>
+    <a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; color: {{t.text}}; text-decoration: none; font-size: 15px">評測台</a>
+    <div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; border: 1px dashed {{t.dash}}">
+      <span style="font-size: 12px; color: {{t.muted}}">虛構資料 · 展示用權限</span>
+      <span style="display: inline-flex; align-items: center; height: 32px; padding: 0 10px; border-radius: 999px; background: {{t.inkBg}}; color: {{t.inkFg}}; font-size: 13px; font-weight: 700; align-self: flex-start">身分 · 主管</span>
+    </div>
+  </nav>
+
+  <main style="flex: 999 1 640px; min-width: 0; box-sizing: border-box; padding: 32px clamp(16px, 3vw, 48px); display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+      <h1 style="margin: 0; font-size: 28px; font-weight: 700">待審</h1>
+      <button type="button" onClick="{{toggleDark}}" aria-pressed="{{darkPressed}}" style="margin-left: auto; height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 600 13px Inter, 'Noto Sans TC', sans-serif">{{modeLabel}}</button>
+    </div>
+
+    <div role="tablist" aria-label="審核狀態" style="display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid {{t.line}}">
+      <button type="button" role="tab" aria-selected="true" style="height: 44px; padding: 0 14px; border: 0; border-bottom: 2px solid {{t.text}}; background: transparent; color: {{t.text}}; font: 700 14px Inter, 'Noto Sans TC', sans-serif">待審 11</button>
+      <button type="button" role="tab" aria-selected="false" style="height: 44px; padding: 0 14px; border: 0; background: transparent; color: {{t.muted}}; font: 14px Inter, 'Noto Sans TC', sans-serif">已退回</button>
+      <button type="button" role="tab" aria-selected="false" style="height: 44px; padding: 0 14px; border: 0; background: transparent; color: {{t.muted}}; font: 14px Inter, 'Noto Sans TC', sans-serif">已處理的說法不同</button>
+      <button type="button" role="tab" aria-selected="false" style="height: 44px; padding: 0 14px; border: 0; background: transparent; color: {{t.muted}}; font: 14px Inter, 'Noto Sans TC', sans-serif">回報 2</button>
+    </div>
+
+    <article style="display: flex; flex-direction: column; border-radius: 16px; background: {{t.surface}}; border: 1px solid {{t.line}}; overflow: hidden">
+      <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 18px 20px; border-bottom: 1px solid {{t.line}}">
+        <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><h2 style="margin: 0; font-size: 18px; font-weight: 700">青翼專案啟動會議紀錄</h2><span style="font-size: 12px; padding: 2px 8px; border-radius: 6px; background: {{t.primarySoft}}">上傳</span><span style="font-size: 12px; padding: 2px 8px; border-radius: 6px; background: {{t.raised}}; color: {{t.muted}}">內部 · 青翼專案</span></div>
+          <p style="margin: 0; font-size: 13px; color: {{t.muted}}">核准後新增 2 個實體、3 段關係；1 個實體合併到圖譜已有的實體</p>
+        </div>
+        <div style="margin-left: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+          <span style="font-size: 13px; color: {{t.conflictText}}; padding: 4px 10px; border-radius: 8px; background: {{t.conflictSoft}}">還有 2 組需要你確認</span>
+          <button type="button" style="height: 44px; padding: 0 16px; border: 0; border-radius: 10px; background: {{t.primary}}; color: {{t.onPrimary}}; font: 700 14px Inter, 'Noto Sans TC', sans-serif">核准這份文件的全部</button>
+        </div>
+      </header>
+
+      <div style="display: flex; flex-direction: column; gap: 6px; padding: 16px 20px">
+        <p style="margin: 0 0 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: {{t.muted}}">實體 4</p>
+
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; min-height: 56px; padding: 6px 14px; border-radius: 12px; background: {{t.raised}}">
+          <span style="width: 12px; height: 12px; border-radius: 999px; background: {{t.ePerson}}"></span><span style="font-size: 15px">周大衛</span><span style="font-size: 12px; color: {{t.primary}}; font-weight: 700">新增</span>
+          <span style="font-size: 12px; color: {{t.muted}}">出處（1）</span>
+          <span style="margin-left: auto; display: flex; gap: 6px"><button type="button" style="height: 40px; padding: 0 12px; border-radius: 8px; border: 1px solid {{t.line}}; background: transparent; color: {{t.text}}; font: 13px Inter, 'Noto Sans TC', sans-serif">退回</button><button type="button" style="height: 40px; padding: 0 14px; border: 0; border-radius: 8px; background: {{t.primary}}; color: {{t.onPrimary}}; font: 700 13px Inter, 'Noto Sans TC', sans-serif">核准</button></span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-radius: 12px; background: {{t.raised}}; box-shadow: inset 0 0 0 1.5px {{t.warning}}">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px"><span style="width: 12px; height: 12px; border-radius: 999px; background: {{t.ePerson}}"></span><span style="font-size: 15px">林志明</span><span style="font-size: 12px; color: {{t.primary}}; font-weight: 700">新增</span><span style="margin-left: auto; font-size: 13px; color: {{t.warning}}">請填寫所有語言的名稱</span></div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding-left: 24px">
+            <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: {{t.muted}}">繁體中文<input type="text" value="林志明" style="height: 40px; padding: 0 10px; border-radius: 8px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 14px Inter, 'Noto Sans TC', sans-serif"></label>
+            <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: {{t.muted}}">English<input type="text" placeholder="必填" style="height: 40px; padding: 0 10px; border-radius: 8px; border: 1.5px solid {{t.warning}}; background: {{t.surface}}; color: {{t.text}}; font: 14px Inter, 'Noto Sans TC', sans-serif"></label>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border-radius: 12px; background: {{t.raised}}">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px"><span style="width: 12px; height: 12px; border-radius: 999px; background: {{t.ePerson}}"></span><span style="font-size: 15px">王小明</span><span style="font-size: 12px; color: {{t.muted}}">需逐筆決定：請選擇合併對象或建立新實體</span></div>
+          <div role="radiogroup" aria-label="王小明的處理方式" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding-left: 24px">
+            <label style="display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 12px; border-radius: 10px; border: 1.5px solid {{t.primary}}; background: {{t.surface}}; font-size: 14px"><input type="radio" name="wang" checked style="width: 18px; height: 18px; accent-color: {{t.primary}}"><span>合併到 <b>王小明</b><br><span style="font-size: 12px; color: {{t.muted}}">圖譜已有 · 系統建議</span></span></label>
+            <label style="display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 12px; border-radius: 10px; border: 1px solid {{t.line}}; background: {{t.surface}}; font-size: 14px"><input type="radio" name="wang" style="width: 18px; height: 18px; accent-color: {{t.primary}}">建立新實體</label>
+          </div>
+          <p style="margin: 0; padding-left: 24px; font-size: 12px; color: {{t.muted}}">合併後，看得到這份文件的人也會看到此實體。</p>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 14px; border-radius: 12px; background: {{t.raised}}">
+          <span style="width: 12px; height: 12px; border-radius: 4px; background: {{t.eTeam}}"></span><span style="font-size: 15px">產品研發部</span><span style="font-size: 12px; color: {{t.muted}}">圖譜已有 · 自動合併</span>
+        </div>
+
+        <p style="margin: 14px 0 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: {{t.muted}}">關係 3</p>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-height: 52px; padding: 6px 14px; border-radius: 12px; background: {{t.raised}}; font-size: 14px">王小明 <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: {{t.primary}}">—負責→</span> 青翼專案</div>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-height: 52px; padding: 6px 14px; border-radius: 12px; background: {{t.raised}}; font-size: 14px">林志明 <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: {{t.primary}}">—參與→</span> 青翼專案<span style="margin-left: auto; font-size: 12px; color: {{t.muted}}">兩端的實體核准後才能核准</span></div>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-height: 52px; padding: 6px 14px; border-radius: 12px; background: {{t.raised}}; font-size: 14px">周大衛 <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: {{t.primary}}">—參與→</span> 青翼專案</div>
+
+        <p style="margin: 14px 0 4px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: {{t.conflict}}">說法不同 1</p>
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 12px; background: {{t.conflictSoft}}">
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+            <div style="padding: 10px 12px; border-radius: 10px; background: {{t.surface}}; font-size: 13px; line-height: 1.6"><span style="font-size: 12px; color: {{t.muted}}">新說法 · 本文件 ¶2</span><br>預計 2026 年第二季上市。</div>
+            <div style="padding: 10px 12px; border-radius: 10px; background: {{t.surface}}; font-size: 13px; line-height: 1.6"><span style="font-size: 12px; color: {{t.muted}}">既有說法 · 青翼專案進度更新 ¶1</span><br>上市時間延後至 2026 年第三季。</div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px">
+            <button type="button" style="height: 40px; padding: 0 12px; border-radius: 8px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 13px Inter, 'Noto Sans TC', sans-serif">確實說法不同，兩者並存</button>
+            <button type="button" style="height: 40px; padding: 0 12px; border-radius: 8px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 13px Inter, 'Noto Sans TC', sans-serif">新說法取代舊說法</button>
+            <button type="button" style="height: 40px; padding: 0 12px; border-radius: 8px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 13px Inter, 'Noto Sans TC', sans-serif">不算說法不同</button>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 16px 20px; border-radius: 16px; background: {{t.surface}}; border: 1px solid {{t.line}}">
+      <h2 style="margin: 0; font-size: 16px; font-weight: 700">青翼桌供應商會議筆記</h2>
+      <span style="font-size: 12px; padding: 2px 8px; border-radius: 6px; background: {{t.primarySoft}}">上傳</span>
+      <span style="font-size: 13px; color: {{t.muted}}">3 項 · 沒有需要你確認的項目</span>
+      <button type="button" aria-expanded="false" style="margin-left: auto; height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid {{t.line}}; background: transparent; color: {{t.text}}; font: 13px Inter, 'Noto Sans TC', sans-serif">展開</button>
+    </article>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { dark: false }; }
+  renderVals() {
+    const L = { bg: '#F5F6F3', surface: '#FFFFFF', raised: '#EDEFF2', text: '#14171A', muted: '#5B6470', line: '#DDE1E4', primary: '#2340C8', onPrimary: '#FFFFFF', primarySoft: '#E6EAFB', evid: '#E8B800', dash: '#9AA3AE', inkBg: '#14171A', inkFg: '#FFFFFF', conflict: '#A3266A', conflictSoft: '#FCE8F1', conflictText: '#7A1D50', warning: '#9A3D00', ePerson: '#3D7AB8', eTeam: '#2E7D5B' };
+    const D = { bg: '#0A0D14', surface: '#111621', raised: '#182030', text: '#E7ECF5', muted: '#8B97AD', line: '#253044', primary: '#3EE6D2', onPrimary: '#04201D', primarySoft: '#16302E', evid: '#FFB547', dash: '#3B4A63', inkBg: '#E7ECF5', inkFg: '#0A0D14', conflict: '#FF7AA8', conflictSoft: '#2A1420', conflictText: '#FFD3E2', warning: '#FF9466', ePerson: '#7FB2EB', eTeam: '#5CC294' };
+    const d = this.state.dark;
+    return {
+      t: d ? D : L,
+      modeLabel: d ? 'Dark' : 'Light',
+      darkPressed: d ? 'true' : 'false',
+      toggleDark: () => this.setState({ dark: !d })
+    };
+  }
+}
+</script>
+</body>
+</html>

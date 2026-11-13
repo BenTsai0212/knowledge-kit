@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>大量節點時的圖譜</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;700&amp;family=Noto+Sans+TC:wght@400;500;700;900&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2340C8}a:hover{color:#14171A}
+@keyframes kZoom{from{opacity:0;transform:scale(.92)}}
+@keyframes kPop{from{opacity:0;transform:scale(.4)}}
+.z-in{animation:kZoom 400ms cubic-bezier(.2,0,0,1) backwards}
+.z-pop{animation:kPop 300ms cubic-bezier(.2,0,0,1) backwards}
+.rm *{animation:none !important}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</helmet>
+<div class="{{rmCls}}" style="width: 1440px; height: 1180px; box-sizing: border-box; padding: 52px 64px; background: {{t.bg}}; color: {{t.text}}; font-family: Inter, 'Noto Sans TC', sans-serif; display: flex; flex-direction: column; gap: 24px">
+
+  <header style="display: flex; justify-content: space-between; align-items: flex-end; gap: 24px">
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <p style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 0.1em; color: {{t.primary}}">GRAPH AT SCALE</p>
+      <h1 style="margin: 0; font-size: 36px; font-weight: 900; line-height: 1.2">先看結構，再看細節：三層語意縮放</h1>
+      <p style="margin: 0; font-size: 14px; color: {{t.muted}}">示意情境：一個約 200 個實體、400 段關係的客戶（數量為假設，非參考情境資料）。點泡泡或節點可以往下一層。</p>
+    </div>
+    <div style="display: flex; gap: 8px; flex: none">
+      <div role="group" aria-label="層級" style="display: flex; padding: 4px; border-radius: 12px; background: {{t.raised}}">
+        <sc-for list="{{levels}}" as="lv" hint-placeholder-count="3">
+          <button type="button" onClick="{{lv.go}}" aria-pressed="{{lv.pressed}}" style="height: 40px; padding: 0 14px; border: 0; border-radius: 9px; background: {{lv.bg}}; color: {{t.text}}; font: {{lv.weight}} 14px Inter, 'Noto Sans TC', sans-serif">{{lv.label}}</button>
+        </sc-for>
+      </div>
+      <button type="button" onClick="{{toggleDark}}" aria-pressed="{{darkPressed}}" style="height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 600 13px 'JetBrains Mono', monospace">{{modeLabel}}</button>
+    </div>
+  </header>
+
+  <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 24px">
+
+    <div style="display: flex; flex-direction: column; gap: 12px; min-height: 0">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+        <nav aria-label="層級路徑" style="display: flex; align-items: center; gap: 6px; font-size: 14px">
+          <sc-for list="{{crumbs}}" as="c" hint-placeholder-count="3">
+            <span style="display: inline-flex; align-items: center; gap: 6px"><button type="button" onClick="{{c.go}}" style="height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: {{c.bg}}; color: {{c.color}}; font: {{c.weight}} 14px Inter, 'Noto Sans TC', sans-serif; cursor: pointer">{{c.label}}</button><span style="color: {{t.dash}}">{{c.sep}}</span></span>
+          </sc-for>
+        </nav>
+        <div style="margin-left: auto; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px">
+          <span style="display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border-radius: 999px; border: 1px solid {{t.line}}; background: {{t.surface}}"><span style="width: 10px; height: 10px; border-radius: 999px; background: {{t.eP}}"></span>人員</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border-radius: 999px; border: 1px solid {{t.line}}; background: {{t.surface}}"><span style="width: 10px; height: 10px; border-radius: 3px; background: {{t.eT}}"></span>部門</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border-radius: 999px; border: 1px solid {{t.line}}; background: {{t.surface}}"><span style="width: 10px; height: 10px; border-radius: 2px; background: {{t.eJ}}"></span>專案</span>
+          <span style="display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid {{t.line}}; background: {{t.surface}}">只顯示關聯 ≥ <b style="font-family: 'JetBrains Mono', monospace">2</b></span>
+          <span style="display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid {{t.line}}; background: {{t.surface}}">清單模式</span>
+        </div>
+      </div>
+
+      <div style="position: relative; flex: 1; min-height: 0; border-radius: 18px; background: {{t.surface}}; border: 1px solid {{t.line}}; overflow: hidden; background-image: radial-gradient({{t.dot}} 1px, transparent 1px); background-size: 24px 24px">
+
+        <sc-if value="{{l1}}" hint-placeholder-val="{{ true }}">
+          <div class="z-in" style="position: absolute; inset: 0">
+            <sc-for list="{{aggEdges}}" as="e" hint-placeholder-count="7">
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%"><line x1="{{e.x1}}" y1="{{e.y1}}" x2="{{e.x2}}" y2="{{e.y2}}" stroke="{{t.edge}}" stroke-width="{{e.w}}" stroke-linecap="round" vector-effect="non-scaling-stroke"></line></svg>
+              <span style="position: absolute; left: {{e.mx}}%; top: {{e.my}}%; transform: translate(-50%, -50%); padding: 2px 8px; border-radius: 999px; background: {{t.surface}}; border: 1px solid {{t.line}}; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {{t.muted}}">{{e.n}}</span>
+            </sc-for>
+            <sc-for list="{{clusters}}" as="c" hint-placeholder-count="6">
+              <button type="button" onClick="{{c.go}}" aria-label="{{c.aria}}" class="z-pop" style="position: absolute; left: {{c.x}}%; top: {{c.y}}%; width: {{c.d}}; height: {{c.d}}; margin: {{c.m}}; border-radius: 999px; border: 2px solid {{c.color}}; background: {{c.soft}}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: {{t.text}}; cursor: pointer; animation-delay: {{c.delay}}; font-family: Inter, 'Noto Sans TC', sans-serif">
+                <span style="font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700; line-height: 1">{{c.n}}</span>
+                <span style="font-size: 13px; font-weight: 700">{{c.label}}</span>
+                <span style="display: flex; gap: 3px"><span style="width: 7px; height: 7px; border-radius: 999px; background: {{t.eP}}"></span><span style="width: 7px; height: 7px; border-radius: 2px; background: {{t.eT}}"></span><span style="width: 7px; height: 7px; border-radius: 1px; background: {{t.eJ}}"></span></span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{l2}}" hint-placeholder-val="{{ false }}">
+          <div class="z-in" style="position: absolute; inset: 0">
+            <div style="position: absolute; left: 46%; top: 50%; width: 64%; height: 82%; transform: translate(-50%, -50%); border-radius: 50%; border: 1.5px dashed {{t.eT}}; background: {{t.tSoft}}"></div>
+            <sc-for list="{{innerEdges}}" as="e" hint-placeholder-count="40">
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%"><line x1="{{e.x1}}" y1="{{e.y1}}" x2="{{e.x2}}" y2="{{e.y2}}" stroke="{{e.c}}" stroke-width="{{e.w}}" vector-effect="non-scaling-stroke"></line></svg>
+            </sc-for>
+            <sc-for list="{{innerNodes}}" as="n" hint-placeholder-count="48">
+              <div class="z-pop" style="position: absolute; left: {{n.x}}%; top: {{n.y}}%; width: {{n.s}}; height: {{n.s}}; margin: {{n.m}}; border-radius: {{n.r}}; background: {{n.c}}; opacity: {{n.o}}; animation-delay: {{n.delay}}"></div>
+            </sc-for>
+            <sc-for list="{{hubLabels}}" as="h" hint-placeholder-count="4">
+              <button type="button" onClick="{{h.go}}" style="position: absolute; left: {{h.x}}%; top: {{h.y}}%; transform: translate(-50%, 10px); padding: 2px 8px; border: 0; border-radius: 6px; background: {{t.surface}}; color: {{t.text}}; font: 600 12px Inter, 'Noto Sans TC', sans-serif; cursor: pointer; box-shadow: 0 0 0 1px {{t.line}}">{{h.label}}</button>
+            </sc-for>
+            <sc-for list="{{edgeClusters}}" as="c" hint-placeholder-count="5">
+              <button type="button" onClick="{{c.go}}" style="position: absolute; left: {{c.x}}%; top: {{c.y}}%; width: 60px; height: 60px; margin: -30px 0 0 -30px; border-radius: 999px; border: 1.5px solid {{c.color}}; background: {{c.soft}}; opacity: 0.75; display: flex; flex-direction: column; align-items: center; justify-content: center; color: {{t.text}}; cursor: pointer; font-family: Inter, 'Noto Sans TC', sans-serif"><span style="font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; line-height: 1">{{c.n}}</span><span style="font-size: 10px">{{c.label}}</span></button>
+            </sc-for>
+            <span style="position: absolute; left: 16px; bottom: 14px; font-size: 12px; color: {{t.muted}}">標籤只給關聯最多的節點；其他節點滑過或選取時才顯示名稱</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{l3}}" hint-placeholder-val="{{ false }}">
+          <div class="z-in" style="position: absolute; inset: 0">
+            <sc-for list="{{egoEdges}}" as="e" hint-placeholder-count="6">
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%"><line x1="{{e.x1}}" y1="{{e.y1}}" x2="{{e.x2}}" y2="{{e.y2}}" stroke="{{e.c}}" stroke-width="{{e.w}}" stroke-dasharray="{{e.dash}}" vector-effect="non-scaling-stroke"></line></svg>
+              <span style="position: absolute; left: {{e.mx}}%; top: {{e.my}}%; transform: translate(-50%, -50%); padding: 1px 7px; border-radius: 6px; background: {{t.surface}}; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {{t.muted}}; opacity: {{e.lo}}">{{e.label}}</span>
+            </sc-for>
+            <sc-for list="{{egoNodes}}" as="n" hint-placeholder-count="7">
+              <div class="z-pop" style="position: absolute; left: {{n.x}}%; top: {{n.y}}%; width: 0; height: 0; animation-delay: {{n.delay}}">
+                <div style="position: absolute; left: {{n.off}}; top: {{n.off}}; width: {{n.s}}; height: {{n.s}}; border-radius: {{n.r}}; background: {{n.c}}; opacity: {{n.o}}; box-shadow: {{n.ring}}"></div>
+                <span style="position: absolute; left: 0; top: {{n.lt}}; transform: translateX(-50%); white-space: nowrap; font-size: {{n.fs}}; font-weight: {{n.fw}}; color: {{n.lc}}">{{n.label}}</span>
+              </div>
+            </sc-for>
+            <span style="position: absolute; left: 66%; top: 74%; display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 999px; border: 1.5px dashed {{t.dash}}; font-size: 13px; color: {{t.muted}}">＋45 位成員 · 展開</span>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <aside style="display: flex; flex-direction: column; gap: 14px; overflow: hidden">
+      <div style="display: flex; flex-direction: column; gap: 10px; padding: 18px; border-radius: 16px; background: {{t.surface}}; border: 1px solid {{t.line}}">
+        <p style="margin: 0; font-size: 16px; font-weight: 700">依可見節點數切換呈現</p>
+        <div style="display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 10px; font-size: 13px; line-height: 1.6">
+          <span style="font-family: 'JetBrains Mono', monospace; font-weight: 500">≤ 60</span><span>全部節點＋全部標籤（目前的參考情境 14 個）</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-weight: 500">61–300</span><span>先顯示群組泡泡；點開一群時，其他群縮小停在邊緣；標籤只給關聯前 10% 與選取的節點</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-weight: 500">&gt; 300</span><span>只顯示群組，展開時才載入群內節點；大群再分子群</span>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px; padding: 18px; border-radius: 16px; background: {{t.surface}}; border: 1px solid {{t.line}}; font-size: 13px; line-height: 1.65">
+        <p style="margin: 0; font-size: 16px; font-weight: 700">群組與聚合</p>
+        <span>群組先依「容器」類型分（部門、專案）；知識模型沒有容器類型時，用社群偵測自動分群，名稱取群內關聯最多的實體。</span>
+        <span>兩群之間有 2 段以上關係時合併成一條線：粗細代表數量，標上數字。</span>
+        <span>泡泡裡的三個小點是群內的類型組成。</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px; padding: 18px; border-radius: 16px; background: {{t.surface}}; border: 1px solid {{t.line}}; font-size: 13px; line-height: 1.65">
+        <p style="margin: 0; font-size: 16px; font-weight: 700">永遠有路回去</p>
+        <span>麵包屑顯示目前層級，點任一層回去；搜尋名稱直接跳到細節層。</span>
+        <span>「清單模式」以文字列出同一份資料，給鍵盤與螢幕報讀器使用者。</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px; padding: 18px; border-radius: 16px; background: {{t.surface}}; border: 1px solid {{t.line}}; font-size: 13px; line-height: 1.65">
+        <p style="margin: 0; font-size: 16px; font-weight: 700">動態與效能</p>
+        <span>切換層級是語意縮放：泡泡放大成群內節點（expand 300），畫面平移到該群（sweep 400）；返回時節點收回泡泡。</span>
+        <span>可見節點超過 150 個時關閉節點浮動與彈簧；排版結果快取；畫面外的節點不畫標籤。</span>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1180}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { level: 1, dark: false }; }
+  renderVals() {
+    const s = this.state;
+    const L = { bg: '#F5F6F3', surface: '#FFFFFF', raised: '#EDEFF2', text: '#14171A', muted: '#5B6470', line: '#DDE1E4', dash: '#9AA3AE', dot: '#E3E6EA', edge: '#B9C0C8', primary: '#2340C8', eP: '#3D7AB8', eT: '#2E7D5B', eJ: '#7A52C7', pSoft: 'rgba(61,122,184,0.12)', tSoft: 'rgba(46,125,91,0.08)', jSoft: 'rgba(122,82,199,0.12)', faint: '#C9CED4' };
+    const D = { bg: '#0A0D14', surface: '#111621', raised: '#182030', text: '#E7ECF5', muted: '#8B97AD', line: '#253044', dash: '#3B4A63', dot: '#1A2232', edge: '#3B4A63', primary: '#3EE6D2', eP: '#7FB2EB', eT: '#5CC294', eJ: '#B89CF0', pSoft: 'rgba(127,178,235,0.14)', tSoft: 'rgba(92,194,148,0.08)', jSoft: 'rgba(184,156,240,0.14)', faint: '#2A3548' };
+    const t = s.dark ? D : L;
+    const go = (lv) => () => this.setState({ level: lv });
+
+    const C = [
+      ['rd', '產品研發部', 48, 28, 40, 'T'], ['bw', '青翼專案', 27, 50, 20, 'J'], ['ops', '營運部', 36, 74, 38, 'T'],
+      ['lp', '長堤專案', 19, 82, 74, 'J'], ['sales', '業務部', 41, 50, 72, 'T'], ['ppl', '人資部', 22, 18, 76, 'T']
+    ];
+    const col = (k) => (k === 'T' ? t.eT : (k === 'J' ? t.eJ : t.eP));
+    const soft = (k) => (k === 'T' ? t.tSoft : (k === 'J' ? t.jSoft : t.pSoft));
+    const pos = {}; C.forEach((c) => { pos[c[0]] = [c[3], c[4]]; });
+    const clusters = C.map((c, i) => { const d = Math.round(44 + Math.sqrt(c[2]) * 12); return { label: c[1], n: c[2], x: c[3], y: c[4], d: d + 'px', m: (-d / 2) + 'px 0 0 ' + (-d / 2) + 'px', color: col(c[5]), soft: soft(c[5]), delay: (i * 60) + 'ms', aria: c[1] + '，' + c[2] + ' 個實體，展開', go: go(2) }; });
+    const AE = [['rd', 'bw', 14], ['ops', 'lp', 11], ['rd', 'sales', 5], ['sales', 'ops', 4], ['rd', 'ppl', 3], ['bw', 'ops', 2], ['ppl', 'sales', 2]];
+    const aggEdges = AE.map(([a, b, n]) => ({ x1: pos[a][0], y1: pos[a][1], x2: pos[b][0], y2: pos[b][1], mx: (pos[a][0] + pos[b][0]) / 2, my: (pos[a][1] + pos[b][1]) / 2, n: n + ' 段', w: (1 + n * 0.45).toFixed(1) }));
+
+    let seed = 11;
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    const cx = 46, cy = 50, rx = 28, ry = 36;
+    const hubs = [[cx, cy, 'T', '產品研發部'], [cx - 12, cy - 16, 'P', '王小明'], [cx + 10, cy - 20, 'J', '青翼桌原型'], [cx + 14, cy + 12, 'P', '周大衛']];
+    const pts = hubs.map((h) => ({ x: h[0], y: h[1], k: h[2], hub: true }));
+    while (pts.length < 48) {
+      const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * 0.92;
+      const p = { x: +(cx + Math.cos(a) * rx * r).toFixed(1), y: +(cy + Math.sin(a) * ry * r).toFixed(1), k: rnd() < 0.75 ? 'P' : (rnd() < 0.5 ? 'J' : 'T'), hub: false };
+      if (pts.every((q) => Math.hypot((q.x - p.x) * 1.4, q.y - p.y) > 4)) pts.push(p);
+    }
+    const innerEdges = [];
+    pts.forEach((a, i) => {
+      if (i > 0 && i < 4) { innerEdges.push({ x1: a.x, y1: a.y, x2: pts[0].x, y2: pts[0].y, c: t.edge, w: 1.6 }); return; }
+      if (i >= 4) {
+        const hubIdx = [0, 1, 2, 3].sort((p, q) => Math.hypot(pts[p].x - a.x, pts[p].y - a.y) - Math.hypot(pts[q].x - a.x, pts[q].y - a.y))[0];
+        innerEdges.push({ x1: a.x, y1: a.y, x2: pts[hubIdx].x, y2: pts[hubIdx].y, c: t.faint, w: 1 });
+      }
+    });
+    const innerNodes = pts.map((p, i) => { const sz = p.hub ? 22 : 9; return { x: p.x, y: p.y, s: sz + 'px', m: (-sz / 2) + 'px 0 0 ' + (-sz / 2) + 'px', r: p.k === 'P' ? '999px' : (p.k === 'T' ? (p.hub ? '6px' : '3px') : '2px'), c: col(p.k), o: p.hub ? '1' : '0.75', delay: (100 + i * 12) + 'ms' }; });
+    const hubLabels = hubs.map((h, i) => ({ x: h[0], y: h[1], label: h[3], go: i === 1 ? go(3) : go(2) }));
+    const edgeClusters = [['青翼專案', 27, 86, 16, 'J'], ['營運部', 36, 88, 46, 'T'], ['長堤專案', 19, 86, 80, 'J'], ['業務部', 41, 10, 82, 'T'], ['人資部', 22, 8, 22, 'T']]
+      .map((c) => ({ label: c[0], n: c[1], x: c[2], y: c[3], color: col(c[4]), soft: soft(c[4]), go: go(1) }));
+
+    const E = [['王小明', 50, 46, 'P', 30, true], ['產品研發部', 28, 30, 'T', 26, false], ['青翼專案', 74, 28, 'J', 26, false], ['周大衛', 70, 70, 'P', 16, false], ['林志明', 26, 68, 'P', 16, false], ['人資部', 16, 18, 'T', 14, false], ['吳宜蓁', 86, 52, 'P', 14, false]];
+    const second = { '周大衛': 1, '林志明': 1, '人資部': 1, '吳宜蓁': 1 };
+    const egoNodes = E.map((n, i) => ({
+      x: n[1], y: n[2], s: n[4] + 'px', off: (-n[4] / 2) + 'px', lt: (n[4] / 2 + 6) + 'px',
+      r: n[3] === 'P' ? '999px' : (n[3] === 'T' ? '7px' : '5px'), c: col(n[3]),
+      o: second[n[0]] ? '0.45' : '1', ring: n[5] ? '0 0 0 4px ' + t.surface + ', 0 0 0 6px ' + t.text : 'none',
+      label: n[0], fs: n[5] ? '15px' : '13px', fw: n[5] ? '700' : (second[n[0]] ? '400' : '600'), lc: second[n[0]] ? t.muted : t.text, delay: (i * 70) + 'ms'
+    }));
+    const ep = {}; E.forEach((n) => { ep[n[0]] = [n[1], n[2]]; });
+    const EE = [['王小明', '產品研發部', '隸屬・負責', false], ['王小明', '青翼專案', '負責', false], ['產品研發部', '林志明', '隸屬', true], ['青翼專案', '周大衛', '參與', true], ['產品研發部', '人資部', '', true], ['青翼專案', '吳宜蓁', '', true]];
+    const egoEdges = EE.map(([a, b, label, dim]) => ({ x1: ep[a][0], y1: ep[a][1], x2: ep[b][0], y2: ep[b][1], mx: (ep[a][0] + ep[b][0]) / 2, my: (ep[a][1] + ep[b][1]) / 2, label, lo: label ? '1' : '0', c: dim ? t.faint : t.primary, w: dim ? 1 : 2.4, dash: dim ? '4 4' : 'none' }));
+
+    const crumbDefs = [['全部', 1], ['產品研發部', 2], ['王小明', 3]].slice(0, s.level);
+    const crumbs = crumbDefs.map((c, i) => { const last = i === crumbDefs.length - 1; return { label: c[0], go: go(c[1]), sep: last ? '' : '›', bg: last ? t.raised : 'transparent', color: last ? t.text : t.primary, weight: last ? '700' : '500' }; });
+    const levelDefs = [['1 · 全覽', 1], ['2 · 群組', 2], ['3 · 細節', 3]];
+    return {
+      t, clusters, aggEdges, innerEdges, innerNodes, hubLabels, edgeClusters, egoNodes, egoEdges, crumbs,
+      l1: s.level === 1, l2: s.level === 2, l3: s.level === 3,
+      levels: levelDefs.map((l) => ({ label: l[0], go: go(l[1]), pressed: s.level === l[1] ? 'true' : 'false', bg: s.level === l[1] ? t.surface : 'transparent', weight: s.level === l[1] ? '700' : '500' })),
+      rmCls: '',
+      modeLabel: s.dark ? 'DARK' : 'LIGHT',
+      darkPressed: s.dark ? 'true' : 'false',
+      toggleDark: () => this.setState({ dark: !s.dark })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -5,7 +5,8 @@
 - 設計規格（實作依據）：[design.md](../../design.md)；決策與理由：[ADR 0008](../../adr/0008-design-system.md)
 - 動態的 keyframes 原始碼：[motion-reference.md](../motion-reference.md)
 - 改動 v1 的畫面或流程時，同一個 PR 更新本文件；整體改版時另開 `docs/design/v2/`，本文件保留為 v1 的紀錄。
-- 畫布只是設計過程的工作區；repo 中的本文件與 [design.md](../../design.md) 才是正本。
+- **視覺（版面、尺寸、層次、元件樣式）以畫面流程圖引用的畫板為準**：畫板原始碼在 [boards/](boards/README.md)（對照表、顏色名稱與 token、不實作的內容都在那裡）；[design.md](../../design.md) 是規則與數值的文字說明（#329）。
+- **優先順序**：權限與行為的決定（#247 等 Issue 的 `## 決定`、ADR）＞ 畫板 ＞ [design.md](../../design.md) 的文字。畫板與決定衝突時以決定為準，在對應的視覺對齊 Issue 中逐項註明；已知的衝突列在 [boards/README.md](boards/README.md)「已知與決定衝突的地方」。
 
 ## 原則
 

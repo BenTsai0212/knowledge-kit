@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>手機版問答</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;700&amp;family=Noto+Sans+TC:wght@400;500;700;900&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2340C8}a:hover{color:#14171A}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1080px; box-sizing: border-box; padding: 40px 64px; background: {{t.board}}; color: {{t.text}}; font-family: Inter, 'Noto Sans TC', sans-serif; display: flex; flex-direction: column; gap: 24px">
+
+  <header style="display: grid; grid-template-columns: minmax(0, 1fr) 560px auto; gap: 32px; align-items: end">
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <p style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 0.1em; color: {{t.primary}}">MOBILE · 390 × 844</p>
+      <h1 style="margin: 0; font-size: 32px; font-weight: 900; line-height: 1.2">手機上，出處和身分仍然一指可達</h1>
+      <p style="margin: 0; font-size: 14px; line-height: 1.6; color: {{t.muted}}">導覽移到底部；原文、身分改成從底部升起的面板，往下滑關閉。觸控目標至少 44px。</p>
+    </div>
+    <div style="display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 6px 12px; padding: 14px 16px; border-radius: 14px; background: {{t.surface}}; border: 1px solid {{t.line}}; font-size: 12px; line-height: 1.55">
+      <b style="font-family: 'JetBrains Mono', monospace">≤ 600</b><span>手機：底部分頁列；原文、實體、身分用底部面板</span>
+      <b style="font-family: 'JetBrains Mono', monospace">601–1024</b><span>平板：左側圖示導覽列＋兩欄；原文從右側滑出覆蓋</span>
+      <b style="font-family: 'JetBrains Mono', monospace">≥ 1025</b><span>桌機：維持現行三欄</span>
+    </div>
+    <button type="button" onClick="{{toggleDark}}" aria-pressed="{{darkPressed}}" style="height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 600 13px 'JetBrains Mono', monospace">{{modeLabel}}</button>
+  </header>
+
+  <div style="display: flex; justify-content: space-between; gap: 32px">
+
+    <div style="display: flex; flex-direction: column; gap: 10px; align-items: center">
+      <div style="position: relative; width: 390px; height: 844px; border-radius: 40px; overflow: hidden; background: {{t.bg}}; box-shadow: 0 0 0 10px {{t.bezel}}, 0 24px 48px rgba(10,13,20,0.18); display: flex; flex-direction: column">
+        <div style="display: flex; align-items: center; gap: 10px; height: 60px; padding: 8px 16px 0; box-sizing: border-box">
+          <svg width="28" height="28" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="11" fill="{{t.surface}}" stroke="{{t.line}}"></rect><path d="M17 12v24M17 24 32 13.5M17 24l15 10.5" fill="none" stroke="{{t.text}}" stroke-width="4.5" stroke-linecap="round"></path><circle cx="32" cy="34.5" r="5" fill="{{t.primary}}"></circle><circle cx="32" cy="13.5" r="5" fill="{{t.mark}}"></circle></svg>
+          <span style="font-size: 17px; font-weight: 900">範例公司</span>
+          <button type="button" style="margin-left: auto; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border: 0; border-radius: 999px; background: {{t.inkBg}}; color: {{t.inkFg}}; font: 700 13px Inter, 'Noto Sans TC', sans-serif">一般員工<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+        </div>
+        <div style="display: flex; gap: 6px; padding: 4px 16px 8px">
+          <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; border: 1px dashed {{t.dash}}; font-size: 11px; color: {{t.muted}}">虛構資料</span>
+          <span style="display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; border: 1px dashed {{t.dash}}; font-size: 11px; color: {{t.muted}}">展示用權限</span>
+        </div>
+
+        <div style="flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 12px; padding: 8px 16px">
+          <div style="align-self: flex-end; max-width: 82%; padding: 10px 14px; border-radius: 16px 16px 4px 16px; background: {{t.inkBg}}; color: {{t.inkFg}}; font-size: 15px; line-height: 1.55">青翼專案的負責人是誰？什麼時候上市？</div>
+          <article style="display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 16px; background: {{t.surface}}; border: 1px solid {{t.line}}">
+            <span style="font-size: 12px; color: {{t.muted}}">根據 3 段原文回答</span>
+            <p style="margin: 0; font-size: 16px; line-height: 1.85">青翼專案由產品研發部經理王小明負責<span style="display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 24px; margin-left: 4px; padding: 0 6px; border-radius: 6px; background: {{t.markSoft}}; color: {{t.markText}}; box-shadow: inset 0 0 0 1px {{t.markLine}}; font-family: 'JetBrains Mono', monospace; font-size: 12px; vertical-align: 1px">1</span>。原訂第二季上市<span style="display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 24px; margin-left: 4px; padding: 0 6px; border-radius: 6px; background: {{t.markSoft}}; color: {{t.markText}}; box-shadow: inset 0 0 0 1px {{t.markLine}}; font-family: 'JetBrains Mono', monospace; font-size: 12px; vertical-align: 1px">2</span>，已延後至第三季<span style="display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 24px; margin-left: 4px; padding: 0 6px; border-radius: 6px; background: {{t.markSoft}}; color: {{t.markText}}; box-shadow: inset 0 0 0 1px {{t.markLine}}; font-family: 'JetBrains Mono', monospace; font-size: 12px; vertical-align: 1px">3</span>。</p>
+            <div style="padding: 10px 12px; border-radius: 10px; background: {{t.conflictSoft}}; color: {{t.conflictText}}; font-size: 13px; line-height: 1.55">出處 2 與 3 的上市時間不同</div>
+            <div style="display: flex; gap: 6px; overflow: hidden">
+              <span style="flex: none; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid {{t.line}}; font-size: 13px"><span style="width: 9px; height: 9px; border-radius: 999px; background: {{t.eP}}"></span>王小明</span>
+              <span style="flex: none; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid {{t.line}}; font-size: 13px"><span style="width: 9px; height: 9px; border-radius: 2px; background: {{t.eJ}}"></span>青翼專案</span>
+              <span style="flex: none; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid {{t.line}}; font-size: 13px"><span style="width: 9px; height: 9px; border-radius: 3px; background: {{t.eT}}"></span>產品研發部</span>
+            </div>
+          </article>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px; padding: 8px 12px 10px; background: {{t.bg}}">
+          <div style="display: flex; gap: 6px; overflow: hidden">
+            <span style="flex: none; display: inline-flex; align-items: center; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid {{t.line}}; background: {{t.surface}}; font-size: 13px">到職滿一年有幾天年假？</span>
+            <span style="flex: none; display: inline-flex; align-items: center; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid {{t.line}}; background: {{t.surface}}; font-size: 13px">人資部的經理是誰？</span>
+          </div>
+          <div style="display: flex; gap: 6px; padding: 5px; border-radius: 14px; border: 1.5px solid {{t.inputLine}}; background: {{t.surface}}">
+            <span style="flex: 1; display: flex; align-items: center; height: 44px; padding: 0 10px; font-size: 15px; color: {{t.muted}}">輸入問題</span>
+            <span style="display: inline-flex; align-items: center; height: 44px; padding: 0 18px; border-radius: 10px; background: {{t.primary}}; color: {{t.onPrimary}}; font-size: 15px; font-weight: 700">提問</span>
+          </div>
+        </div>
+
+        <nav aria-label="頁面" style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); height: 72px; padding-bottom: 12px; box-sizing: border-box; border-top: 1px solid {{t.line}}; background: {{t.surface}}">
+          <sc-for list="{{tabs}}" as="tb" hint-placeholder-count="5">
+            <a href="#" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: {{tb.color}}; text-decoration: none; font-size: 11px; font-weight: {{tb.weight}}">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{tb.icon}}"></path></svg>{{tb.label}}
+            </a>
+          </sc-for>
+        </nav>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: {{t.muted}}">問答：預設問題一行橫向滑動；輸入框固定在分頁列上方</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; align-items: center">
+      <div style="position: relative; width: 390px; height: 844px; border-radius: 40px; overflow: hidden; background: {{t.bg}}; box-shadow: 0 0 0 10px {{t.bezel}}, 0 24px 48px rgba(10,13,20,0.18)">
+        <div style="position: absolute; inset: 0; padding: 120px 16px; opacity: 0.5">
+          <div style="height: 180px; border-radius: 16px; background: {{t.surface}}"></div>
+        </div>
+        <div style="position: absolute; inset: 0; background: {{t.overlay}}"></div>
+        <section aria-label="原文" style="position: absolute; left: 0; right: 0; bottom: 0; height: 74%; border-radius: 24px 24px 0 0; background: {{t.surface}}; display: flex; flex-direction: column; gap: 12px; padding: 10px 16px 24px; box-sizing: border-box">
+          <span style="align-self: center; width: 40px; height: 5px; border-radius: 999px; background: {{t.dash}}"></span>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <span style="font-size: 13px; color: {{t.muted}}">原文 · 出處 1／3</span>
+            <span style="margin-left: auto; display: flex; gap: 4px">
+              <button type="button" aria-label="上一個出處" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid {{t.line}}; background: transparent; color: {{t.text}}; font-size: 18px">‹</button>
+              <button type="button" aria-label="下一個出處" style="width: 44px; height: 44px; border-radius: 10px; border: 1px solid {{t.line}}; background: transparent; color: {{t.text}}; font-size: 18px">›</button>
+            </span>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px"><span style="font-size: 18px; font-weight: 700">青翼專案啟動會議紀錄</span><span style="font-size: 11px; padding: 2px 8px; border-radius: 6px; background: {{t.raised}}; color: {{t.muted}}">內部</span></div>
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 14px; background: {{t.reading}}; color: {{t.readingText}}; font-size: 16px; line-height: 1.9">
+            <p style="margin: 0"><span style="background: {{t.markReading}}; box-shadow: 0 0 0 2px {{t.markReading}}; border-radius: 2px">青翼專案由產品研發部經理王小明負責，成員包括周大衛與林志明。</span></p>
+            <p style="margin: 0; opacity: 0.7">專案目標是開發一款可調式辦公桌「青翼桌」，預計 2026 年第二季上市。</p>
+          </div>
+          <div style="display: flex; gap: 8px">
+            <span style="flex: 1; display: inline-flex; align-items: center; justify-content: center; height: 48px; border-radius: 12px; border: 1px solid {{t.line}}; font-size: 14px">在圖譜中查看</span>
+            <span style="flex: 1; display: inline-flex; align-items: center; justify-content: center; height: 48px; border-radius: 12px; border: 1px solid {{t.line}}; font-size: 14px">回報有錯</span>
+          </div>
+        </section>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: {{t.muted}}">原文：點引用標號時從底部升起；左右切換出處；往下滑關閉</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; align-items: center">
+      <div style="position: relative; width: 390px; height: 844px; border-radius: 40px; overflow: hidden; background: {{t.bg}}; box-shadow: 0 0 0 10px {{t.bezel}}, 0 24px 48px rgba(10,13,20,0.18)">
+        <div style="position: absolute; inset: 0; padding: 120px 16px; opacity: 0.5">
+          <div style="height: 180px; border-radius: 16px; background: {{t.surface}}"></div>
+        </div>
+        <div style="position: absolute; inset: 0; background: {{t.overlay}}"></div>
+        <section aria-label="身分與語言" style="position: absolute; left: 0; right: 0; bottom: 0; height: 66%; border-radius: 24px 24px 0 0; background: {{t.surface}}; display: flex; flex-direction: column; gap: 12px; padding: 10px 16px 24px; box-sizing: border-box">
+          <span style="align-self: center; width: 40px; height: 5px; border-radius: 999px; background: {{t.dash}}"></span>
+          <div style="display: flex; align-items: baseline; gap: 8px"><span style="font-size: 18px; font-weight: 700">身分</span><span style="font-size: 12px; color: {{t.muted}}">展示用權限：切換後，同一題會得到不同的答案</span></div>
+          <div role="radiogroup" aria-label="身分" style="display: flex; flex-direction: column; gap: 8px">
+            <sc-for list="{{roles}}" as="r" hint-placeholder-count="3">
+              <label style="display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 0 14px; border-radius: 12px; border: {{r.border}}; background: {{r.bg}}">
+                <input type="radio" name="role" checked="{{r.checked}}" style="width: 20px; height: 20px; accent-color: {{t.primary}}">
+                <span style="display: flex; flex-direction: column; gap: 2px"><b style="font-size: 15px">{{r.label}}</b><span style="font-size: 12px; color: {{t.muted}}">{{r.desc}}</span></span>
+              </label>
+            </sc-for>
+          </div>
+          <span style="font-size: 18px; font-weight: 700; margin-top: 8px">語言</span>
+          <div role="group" aria-label="語言" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 4px; border-radius: 12px; background: {{t.raised}}">
+            <span style="display: flex; align-items: center; justify-content: center; height: 44px; border-radius: 9px; background: {{t.surface}}; font-size: 14px; font-weight: 700">繁體中文</span>
+            <span style="display: flex; align-items: center; justify-content: center; height: 44px; border-radius: 9px; font-size: 14px; color: {{t.muted}}">English</span>
+          </div>
+          <span style="margin-top: auto; font-size: 12px; color: {{t.muted}}">更換邀請碼也在這裡</span>
+        </section>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: {{t.muted}}">身分：點右上角的身分徽章打開；身分永遠看得見</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1080}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { dark: false }; }
+  renderVals() {
+    const L = { board: '#EDEFEA', bg: '#F5F6F3', surface: '#FFFFFF', raised: '#EDEFF2', text: '#14171A', muted: '#5B6470', line: '#DDE1E4', dash: '#9AA3AE', bezel: '#14171A', primary: '#2340C8', onPrimary: '#FFFFFF', inkBg: '#14171A', inkFg: '#FFFFFF', inputLine: '#14171A', mark: '#FFE066', markSoft: '#FFF3BF', markText: '#14171A', markLine: '#E8B800', markReading: '#FFE066', reading: '#FFFFFF', readingText: '#14171A', conflictSoft: '#FCE8F1', conflictText: '#7A1D50', overlay: 'rgba(20,23,26,0.45)', eP: '#3D7AB8', eT: '#2E7D5B', eJ: '#7A52C7', selBg: '#E6EAFB' };
+    const D = { board: '#05070B', bg: '#0A0D14', surface: '#111621', raised: '#182030', text: '#E7ECF5', muted: '#8B97AD', line: '#253044', dash: '#3B4A63', bezel: '#2A3548', primary: '#3EE6D2', onPrimary: '#04201D', inkBg: '#E7ECF5', inkFg: '#0A0D14', inputLine: '#3B4A63', mark: '#FFB547', markSoft: '#3A2A0E', markText: '#FFD9A0', markLine: '#7A5A20', markReading: '#FFE2B0', reading: '#F4F6FA', readingText: '#141A24', conflictSoft: '#2A1420', conflictText: '#FFD3E2', overlay: 'rgba(0,0,0,0.6)', eP: '#7FB2EB', eT: '#5CC294', eJ: '#B89CF0', selBg: '#16302E' };
+    const d = this.state.dark;
+    const t = d ? D : L;
+    const I = {
+      chat: 'M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z',
+      graph: 'M6 8a2 2 0 1 0 0-.01M18 9a2 2 0 1 0 0-.01M10 19a2 2 0 1 0 0-.01M8 7l8 1.5M7 9l2 8M16.5 10.5l-5 7',
+      time: 'M4 12h16M8 8v8M16 6v12',
+      upload: 'M12 16V4M7 9l5-5 5 5M5 20h14',
+      more: 'M5 12h.01M12 12h.01M19 12h.01'
+    };
+    const tabs = [['問答', I.chat, true], ['圖譜', I.graph], ['時間軸', I.time], ['上傳', I.upload], ['更多', I.more]]
+      .map((x) => ({ label: x[0], icon: x[1], color: x[2] ? t.primary : t.muted, weight: x[2] ? '700' : '500' }));
+    const roles = [['訪客', '只看得到公開文件'], ['一般員工', '公開與內部文件、青翼專案', true], ['主管', '包含機密文件、所有專案；可以審核']]
+      .map((r) => ({ label: r[0], desc: r[1], checked: !!r[2], border: r[2] ? '1.5px solid ' + t.primary : '1px solid ' + t.line, bg: r[2] ? t.selBg : 'transparent' }));
+    return {
+      t, tabs, roles,
+      modeLabel: d ? 'DARK' : 'LIGHT',
+      darkPressed: d ? 'true' : 'false',
+      toggleDark: () => this.setState({ dark: !d })
+    };
+  }
+}
+</script>
+</body>
+</html>

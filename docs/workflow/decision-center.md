@@ -61,6 +61,8 @@ MCP 不能用時，見 [modules.md](modules.md#備援github-mcp-不能用時) �
 
 **E2E 以 PR 上的 `E2E` 結果為準**（ADR 0010）：綠燈時不在本機重跑完整 E2E 與單元測試，只做視覺檢查（下載 `playwright-report-<客戶>` 看截圖）、邏輯審查，以及一次合併多個 PR 時的整合測試。E2E 因 GitHub 端異常（例如安裝瀏覽器失敗、服務中斷）而失敗時，由決策中心重跑或改在本機驗證，不對 runner 貼修正要求；只有程式本身造成的失敗才貼修正要求。〔來源：#306，PR 階段看不到 E2E 時版面問題來回修了 4 輪（#299）｜E2E 改為必要檢查且 GitHub 端異常會自動重跑後〕
 
+**有對應畫板的 PR**：審查時把實作截圖（`playwright-report-<客戶>`）與 `docs/design/v1/boards/` 的畫板並排比對；對照表見 [boards/README.md](../design/v1/boards/README.md)，畫板與決定衝突時以決定為準。〔來源：#329，視覺改以畫面流程圖的畫板為準｜不刪〕
+
 **風險依「改了哪些檔案」判斷**，不只看 PR 標題與描述。改到以下類別的 PR 屬於高風險，逐檔細讀：
 
 - CI、hook 與規則文件（`AGENTS.md`、憲法、workflow 手冊）

@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>評測台</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;700&amp;family=Noto+Sans+TC:wght@400;500;700;900&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2340C8}a:hover{color:#14171A}
+</style>
+</helmet>
+<div style="width: 100%; min-height: 1120px; box-sizing: border-box; background: {{t.bg}}; color: {{t.text}}; font-family: Inter, 'Noto Sans TC', sans-serif; display: flex; flex-wrap: wrap; align-items: stretch">
+
+  <nav aria-label="頁面" style="flex: 1 1 200px; max-width: 220px; box-sizing: border-box; padding: 20px 14px; display: flex; flex-direction: column; gap: 4px; background: {{t.surface}}; border-right: 1px solid {{t.line}}">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 8px 16px">
+      <svg width="28" height="28" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="11" fill="{{t.raised}}"></rect><path d="M17 12v24M17 24 32 13.5M17 24l15 10.5" fill="none" stroke="{{t.text}}" stroke-width="4.5" stroke-linecap="round"></path><circle cx="32" cy="34.5" r="5" fill="{{t.primary}}"></circle><circle cx="32" cy="13.5" r="5" fill="{{t.evid}}"></circle></svg>
+      <span style="font-size: 16px; font-weight: 900">範例公司</span>
+    </div>
+    <a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; color: {{t.text}}; text-decoration: none; font-size: 15px">問答</a>
+    <a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; color: {{t.text}}; text-decoration: none; font-size: 15px">圖譜</a>
+    <a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; color: {{t.text}}; text-decoration: none; font-size: 15px">時間軸</a>
+    <a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; color: {{t.text}}; text-decoration: none; font-size: 15px">上傳</a>
+    <a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; color: {{t.text}}; text-decoration: none; font-size: 15px">待審</a>
+    <a href="#" aria-current="page" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; background: {{t.inkBg}}; color: {{t.inkFg}}; text-decoration: none; font-size: 15px; font-weight: 700">評測台</a>
+    <div style="margin-top: auto; padding: 12px; border-radius: 12px; border: 1px dashed {{t.dash}}; font-size: 12px; color: {{t.muted}}">虛構資料 · 展示用權限</div>
+  </nav>
+
+  <main style="flex: 999 1 640px; min-width: 0; box-sizing: border-box; padding: 32px clamp(16px, 3vw, 48px); display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+      <h1 style="margin: 0; font-size: 28px; font-weight: 700">評測台</h1>
+      <span style="font-size: 14px; color: {{t.muted}}">題庫 58 題 · 3 種身分 · 8 種類別</span>
+      <button type="button" onClick="{{toggleDark}}" aria-pressed="{{darkPressed}}" style="margin-left: auto; height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 600 13px Inter, 'Noto Sans TC', sans-serif">{{modeLabel}}</button>
+    </div>
+    <p style="margin: 0; padding: 10px 14px; border-radius: 10px; border: 1px dashed {{t.dash}}; font-size: 13px; color: {{t.muted}}">設計稿說明：以下的通過數與百分比是版面示意，不是實際評測結果。</p>
+
+    <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px">
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: 16px; background: {{t.surface}}; border: 1px solid {{t.line}}">
+        <h2 style="margin: 0; font-size: 17px; font-weight: 700">評測設定</h2>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; background: {{t.raised}}">
+            <span style="font-size: 13px; font-weight: 700">設定 A</span>
+            <label style="display: flex; justify-content: space-between; align-items: center; font-size: 13px">topK<input type="text" value="5" aria-label="設定 A topK" style="width: 56px; height: 36px; padding: 0 8px; border-radius: 8px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 14px 'JetBrains Mono', monospace"></label>
+            <label style="display: flex; justify-content: space-between; align-items: center; font-size: 13px">minScore<input type="text" value="0.1" aria-label="設定 A minScore" style="width: 56px; height: 36px; padding: 0 8px; border-radius: 8px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 14px 'JetBrains Mono', monospace"></label>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; background: {{t.raised}}">
+            <span style="font-size: 13px; font-weight: 700">設定 B</span>
+            <label style="display: flex; justify-content: space-between; align-items: center; font-size: 13px">topK<input type="text" value="8" aria-label="設定 B topK" style="width: 56px; height: 36px; padding: 0 8px; border-radius: 8px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 14px 'JetBrains Mono', monospace"></label>
+            <label style="display: flex; justify-content: space-between; align-items: center; font-size: 13px">minScore<input type="text" value="0.2" aria-label="設定 B minScore" style="width: 56px; height: 36px; padding: 0 8px; border-radius: 8px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 14px 'JetBrains Mono', monospace"></label>
+          </div>
+        </div>
+        <label style="display: flex; gap: 10px; align-items: center; min-height: 32px; font-size: 13px"><input type="checkbox" checked style="width: 18px; height: 18px; accent-color: {{t.primary}}">同時跑設定 B，與設定 A 並排比較</label>
+        <label style="display: flex; gap: 10px; align-items: center; min-height: 32px; font-size: 13px"><input type="checkbox" style="width: 18px; height: 18px; accent-color: {{t.primary}}">答案正確改用模型評分（每題多呼叫一次）</label>
+        <p style="margin: 0; font-size: 12px; color: {{t.muted}}">目前有 1 份上傳的文件，不納入評測。</p>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap">
+          <button type="button" style="height: 44px; padding: 0 18px; border: 0; border-radius: 10px; background: {{t.primary}}; color: {{t.onPrimary}}; font: 700 14px Inter, 'Noto Sans TC', sans-serif">開始評測</button>
+          <button type="button" style="height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid {{t.line}}; background: transparent; color: {{t.text}}; font: 500 14px Inter, 'Noto Sans TC', sans-serif">下載 JSON</button>
+          <button type="button" style="height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid {{t.line}}; background: transparent; color: {{t.text}}; font: 500 14px Inter, 'Noto Sans TC', sans-serif">下載品質報告</button>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: 16px; background: {{t.surface}}; border: 1px solid {{t.line}}">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px"><h2 style="margin: 0; font-size: 17px; font-weight: 700">總覽</h2><span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: {{t.muted}}">評測完成 · 58／58</span></div>
+        <div style="display: grid; grid-template-columns: minmax(0, 1.2fr) 70px minmax(0, 1fr) minmax(0, 1fr); font-size: 13px">
+          <span style="padding: 8px 0; color: {{t.muted}}">指標</span><span style="padding: 8px 0; color: {{t.muted}}">門檻</span><span style="padding: 8px 0; color: {{t.muted}}">設定 A</span><span style="padding: 8px 0; color: {{t.muted}}">設定 B</span>
+          <sc-for list="{{metrics}}" as="m" hint-placeholder-count="4">
+            <span style="padding: 10px 0; border-top: 1px solid {{t.line}}; font-weight: 600">{{m.name}}</span>
+            <span style="padding: 10px 0; border-top: 1px solid {{t.line}}; font-family: 'JetBrains Mono', monospace; font-size: 12px">{{m.th}}</span>
+            <span style="display: flex; flex-direction: column; gap: 4px; padding: 10px 0; border-top: 1px solid {{t.line}}"><span style="font-family: 'JetBrains Mono', monospace; font-size: 12px">{{m.a}}</span><span style="align-self: flex-start; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: {{m.aBg}}; color: {{m.aFg}}">{{m.aV}}</span></span>
+            <span style="display: flex; flex-direction: column; gap: 4px; padding: 10px 0; border-top: 1px solid {{t.line}}"><span style="font-family: 'JetBrains Mono', monospace; font-size: 12px">{{m.b}}</span><span style="align-self: flex-start; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: {{m.bBg}}; color: {{m.bFg}}">{{m.bV}}</span></span>
+          </sc-for>
+        </div>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: 16px; background: {{t.surface}}; border: 1px solid {{t.line}}">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+        <h2 style="margin: 0; font-size: 17px; font-weight: 700">每題的結果</h2>
+        <label style="display: flex; gap: 8px; align-items: center; font-size: 13px"><input type="checkbox" checked style="width: 18px; height: 18px; accent-color: {{t.primary}}">只顯示兩組不同的題目</label>
+        <span style="margin-left: auto; font-size: 12px; color: {{t.muted}}">● 正確　○ 不正確　◇ 正確拒答</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 44px minmax(0, 1fr) 100px 70px 90px 90px; align-items: center; font-size: 13px; overflow-x: auto">
+        <span style="padding: 8px 0; color: {{t.muted}}">#</span><span style="padding: 8px 0; color: {{t.muted}}">問題</span><span style="padding: 8px 0; color: {{t.muted}}">類別</span><span style="padding: 8px 0; color: {{t.muted}}">身分</span><span style="padding: 8px 0; color: {{t.muted}}">設定 A</span><span style="padding: 8px 0; color: {{t.muted}}">設定 B</span>
+        <sc-for list="{{rows}}" as="r" hint-placeholder-count="5">
+          <span style="padding: 12px 0; border-top: 1px solid {{t.line}}; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: {{t.muted}}">{{r.n}}</span>
+          <span style="padding: 12px 12px 12px 0; border-top: 1px solid {{t.line}}; line-height: 1.5">{{r.q}}</span>
+          <span style="padding: 12px 0; border-top: 1px solid {{t.line}}"><span style="padding: 2px 8px; border-radius: 6px; background: {{t.raised}}; font-size: 12px">{{r.cat}}</span></span>
+          <span style="padding: 12px 0; border-top: 1px solid {{t.line}}; font-size: 12px">{{r.role}}</span>
+          <span style="padding: 12px 0; border-top: 1px solid {{t.line}}; color: {{r.aC}}; font-weight: 600">{{r.a}}</span>
+          <span style="padding: 12px 0; border-top: 1px solid {{t.line}}; color: {{r.bC}}; font-weight: 600">{{r.b}}</span>
+        </sc-for>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: 12px; background: {{t.raised}}">
+        <p style="margin: 0; font-size: 13px; font-weight: 700">展開 #22 · 青翼桌預計什麼時候上市？</p>
+        <p style="margin: 0; font-size: 13px; line-height: 1.7">設定 B 回答：原訂 2026 年第二季，已延後至第三季<span style="display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 18px; margin: 0 2px 0 4px; padding: 0 5px; border-radius: 5px; background: {{t.markSoft}}; color: {{t.markText}}; font-family: 'JetBrains Mono', monospace; font-size: 11px">1</span><span style="display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 18px; margin: 0 2px; padding: 0 5px; border-radius: 5px; background: {{t.markSoft}}; color: {{t.markText}}; font-family: 'JetBrains Mono', monospace; font-size: 11px">2</span>。</p>
+        <p style="margin: 0; font-size: 12px; color: {{t.muted}}">關鍵重點：第三季 ✓ · 說法不同需並列 ✓ · 引用：青翼專案進度更新 ¶1、青翼專案啟動會議紀錄 ¶2</p>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1120}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { dark: false }; }
+  renderVals() {
+    const L = { bg: '#F5F6F3', surface: '#FFFFFF', raised: '#EDEFF2', text: '#14171A', muted: '#5B6470', line: '#DDE1E4', primary: '#2340C8', onPrimary: '#FFFFFF', evid: '#E8B800', dash: '#9AA3AE', inkBg: '#14171A', inkFg: '#FFFFFF', markSoft: '#FFF3BF', markText: '#14171A', success: '#1A6E33', successSoft: '#E3F1E7', warning: '#9A3D00', warningSoft: '#FBEBDF' };
+    const D = { bg: '#0A0D14', surface: '#111621', raised: '#182030', text: '#E7ECF5', muted: '#8B97AD', line: '#253044', primary: '#3EE6D2', onPrimary: '#04201D', evid: '#FFB547', dash: '#3B4A63', inkBg: '#E7ECF5', inkFg: '#0A0D14', markSoft: '#3A2A0E', markText: '#FFD9A0', success: '#6CC489', successSoft: '#15291D', warning: '#FF9466', warningSoft: '#2E1A10' };
+    const d = this.state.dark;
+    const t = d ? D : L;
+    const v = (pass) => pass ? ['通過', t.successSoft, t.success] : ['未通過', t.warningSoft, t.warning];
+    const m = (name, th, a, ap, b, bp) => { const x = v(ap), y = v(bp); return { name, th, a, b, aV: x[0], aBg: x[1], aFg: x[2], bV: y[0], bBg: y[1], bFg: y[2] }; };
+    const ok = '● 正確', ng = '○ 不正確', rf = '◇ 正確拒答';
+    const row = (n, q, cat, role, a, b) => ({ n, q, cat, role, a, b, aC: a === ng ? t.warning : t.success, bC: b === ng ? t.warning : t.success });
+    return {
+      t,
+      metrics: [
+        m('引用正確', '≥ 90%', '51／55（93%）', true, '53／55（96%）', true),
+        m('答案正確', '≥ 80%', '42／50（84%）', true, '46／50（92%）', true),
+        m('權限滲漏', '≤ 0 題', '0 題', true, '1 題', false),
+        m('正確拒答', '≥ 100%', '8／8（100%）', true, '7／8（88%）', false)
+      ],
+      rows: [
+        row('22', '青翼桌預計什麼時候上市？', '說法不同', '一般員工', ng, ok),
+        row('13', '青翼桌的材料成本是多少？', '權限', '主管', ok, ok),
+        row('29', '上班時間是幾點到幾點？', '跨語言', '訪客', ng, ok),
+        row('48', '誰負責招聘新人？', '同義詞', '訪客', ok, ng),
+        row('54', '番茄炒蛋要怎麼做？', '完全無關', '一般員工', rf, ng)
+      ],
+      modeLabel: d ? 'Dark' : 'Light',
+      darkPressed: d ? 'true' : 'false',
+      toggleDark: () => this.setState({ dark: !d })
+    };
+  }
+}
+</script>
+</body>
+</html>

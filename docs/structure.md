@@ -129,6 +129,7 @@
 - `ReviewPage.tsx`：待審頁（含「說法不同」的並列與處理）
 - `script.ts`：劇本的純函式（分組與順序、第 N／M 題、已問過、是否切換身分）
 - `ScriptPanel.tsx`：展示模式問答頁左欄的劇本，見 `docs/qa.md`「展示模式」
+- `SessionQuestions.tsx`：手機的「這次的問題（N）」按鈕與底部面板（#256）
 - `Sidebar.tsx`：左側導覽
 - `source-steps.ts`：「出處 N／M」與「在圖譜中查看」目標的純函式
 - `SourcePanel.tsx`：問答頁的右側面板：原文
@@ -307,6 +308,8 @@ Playwright 的端對端測試（`*.spec.ts`）；設定在根目錄的 `playwrig
 
 - `adr/`：決策紀錄
 - `deploy.md`：線上 demo 的部署步驟、驗收清單、回退與費用上限（部署由人執行；ADR 0005）
+- `design/v1/boards/`：設計畫布「畫面流程圖」引用的畫板原始碼（`*.dc.html`，原樣保存、以 sha256 核對）；視覺以畫板為準，只供參考，不被 `app/` import、不進 build（#329）
+- `design/v1/boards/README.md`：畫板與頁面的對照、顏色名稱與 token 的對照、不實作的內容與已知衝突
 - `playbook/`：方法與文件套件（需求確認清單、資料盤點表、資料安全說明、評測題庫建立步驟、驗收指標、落地新客戶步驟 `new-client-setup.md`）；入口是 [docs/playbook/README.md](playbook/README.md)，英文版在 `docs/playbook/en/`，兩份一起改
 - `rfcs/`：專案章程
 - `workflow/`：憲法與 workflow 手冊

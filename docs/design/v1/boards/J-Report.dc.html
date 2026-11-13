@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>品質報告</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#2340C8}a:hover{color:#14171A}
+</style>
+</helmet>
+<div style="width: 2160px; height: 1380px; box-sizing: border-box; padding: 48px 56px; background: #DADDD6; color: #14171A; font-family: system-ui, 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif; display: flex; gap: 48px">
+
+  <div style="display: flex; flex-direction: column; gap: 10px">
+    <div style="width: 794px; box-sizing: border-box; display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 8px; background: #FFF3BF; border: 1px solid #E8B800; font-size: 13px">
+      <b>螢幕顯示（列印時隱藏）</b>「原因」「處理方式」可以直接填寫，但不會自動保存；填好後請列印成 PDF 或另存網頁。
+    </div>
+
+    <section aria-label="第 1 頁" style="position: relative; width: 794px; height: 1123px; box-sizing: border-box; padding: 56px 60px; background: #FFFFFF; box-shadow: 0 4px 24px rgba(20,23,26,0.18); display: flex; flex-direction: column; gap: 26px">
+      <header style="display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 16px; border-bottom: 2px solid #14171A">
+        <div style="display: flex; align-items: center; gap: 10px">
+          <svg width="30" height="30" viewBox="0 0 48 48" aria-hidden="true"><path d="M17 12v24M17 24 32 13.5M17 24l15 10.5" fill="none" stroke="#14171A" stroke-width="3.5" stroke-linecap="round"></path><circle cx="17" cy="24" r="3.5" fill="#14171A"></circle><circle cx="32" cy="34.5" r="4.5" fill="#14171A"></circle><circle cx="32" cy="13.5" r="4" fill="#FFFFFF" stroke="#14171A" stroke-width="2.5"></circle></svg>
+          <div style="display: flex; flex-direction: column"><b style="font-size: 20px">品質報告</b><span style="font-size: 12px; color: #4A5260">Knowledge Kit</span></div>
+        </div>
+        <div style="display: grid; grid-template-columns: auto auto; gap: 2px 12px; font-size: 12px; text-align: right; color: #2A2F35">
+          <span style="color: #4A5260">客戶</span><b>範例公司</b>
+          <span style="color: #4A5260">評測日期</span><span>2026-11-11（UTC）</span>
+          <span style="color: #4A5260">題庫版本</span><span style="font-family: ui-monospace, monospace">3f9a1c7e02b4（示意）</span>
+        </div>
+      </header>
+
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <h1 style="margin: 0; font-size: 30px; line-height: 1.35; font-weight: 900">58 題測試：權限滲漏 0，四項指標都達到交付門檻（兩次都達到）</h1>
+        <p style="margin: 0; font-size: 13px; line-height: 1.7; color: #2A2F35">58 題，有滲漏的題目 0 題；四項指標都達到門檻，另一次評測（2026-11-10）也達到，兩次結果不同的題目 3 題。（數值為版面示意）</p>
+      </div>
+
+      <section style="display: flex; flex-direction: column; gap: 10px">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 700">四項指標與交付門檻</h2>
+        <div style="display: grid; grid-template-columns: 100px minmax(0, 1fr) 96px 82px 70px; align-items: center; column-gap: 14px; font-size: 13px">
+          <span style="color: #4A5260; font-size: 11px">指標</span><span style="color: #4A5260; font-size: 11px">結果（虛線是門檻）</span><span style="color: #4A5260; font-size: 11px">本次</span><span style="color: #4A5260; font-size: 11px">第二次</span><span style="color: #4A5260; font-size: 11px">是否達到</span>
+          <sc-for list="{{metrics}}" as="m" hint-placeholder-count="4">
+            <b style="padding: 12px 0; border-top: 1px solid #D5D9DE">{{m.name}}</b>
+            <div style="position: relative; height: 14px; border-radius: 3px; background: #EDEFF2; margin: 12px 0; border-top: 1px solid transparent">
+              <div style="position: absolute; left: 0; top: 0; bottom: 0; width: {{m.w}}%; border-radius: 3px; background: #14171A"></div>
+              <div style="position: absolute; left: {{m.th}}%; top: -5px; bottom: -5px; border-left: 2px dashed #9A3D00"></div>
+            </div>
+            <span style="padding: 12px 0; border-top: 1px solid #D5D9DE; font-variant-numeric: tabular-nums">{{m.v}}</span>
+            <span style="padding: 12px 0; border-top: 1px solid #D5D9DE; color: #4A5260; font-variant-numeric: tabular-nums">{{m.v2}}</span>
+            <b style="padding: 12px 0; border-top: 1px solid #D5D9DE">✓ 兩次</b>
+          </sc-for>
+        </div>
+        <p style="margin: 0; font-size: 11px; color: #4A5260">門檻：引用正確 ≥ 90%、答案正確 ≥ 80%、權限滲漏 ≤ 0 題、正確拒答 ≥ 100%（目前的 client.json）</p>
+      </section>
+
+      <section style="display: flex; flex-direction: column; gap: 10px">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 700">權限</h2>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+          <sc-for list="{{roles}}" as="r" hint-placeholder-count="3">
+            <div style="display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border: 1px solid #D5D9DE; border-radius: 8px">
+              <span style="font-size: 12px; color: #4A5260">{{r.name}} · {{r.n}} 題</span>
+              <span style="font-size: 22px; font-weight: 900">滲漏 0 題</span>
+            </div>
+          </sc-for>
+        </div>
+        <p style="margin: 0; font-size: 12px; line-height: 1.7; color: #2A2F35">滲漏 0 表示：這個身分的題目沒有檢索到、送給模型或引用該身分看不到的段落與文件，回答也沒有提到不該出現的內容。</p>
+      </section>
+
+      <section style="display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; border: 1.5px solid #14171A; border-radius: 8px">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 700">這份報告不代表什麼</h2>
+        <span style="font-size: 12px; line-height: 1.7">· 結果是在這組 58 題測試中的表現，不是整體的正確率。</span>
+        <span style="font-size: 12px; line-height: 1.7">· 權限是展示用的權限，不是正式系統的安全保證。</span>
+        <span style="font-size: 12px; line-height: 1.7">· 評測用的是資料集的 16 份文件，不含上傳的文件。</span>
+      </section>
+
+      <footer style="margin-top: auto; display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid #D5D9DE; font-size: 11px; color: #4A5260"><span>範例公司 · 品質報告</span><span>第 1／2 頁</span></footer>
+    </section>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 10px; padding-top: 50px">
+    <section aria-label="第 2 頁" style="width: 794px; height: 1123px; box-sizing: border-box; padding: 56px 60px; background: #FFFFFF; box-shadow: 0 4px 24px rgba(20,23,26,0.18); display: flex; flex-direction: column; gap: 24px">
+      <header style="display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 12px; border-bottom: 2px solid #14171A">
+        <b style="font-size: 20px">附錄（給知識負責人）</b><span style="font-size: 12px; color: #4A5260">從新的一頁開始列印</span>
+      </header>
+
+      <section style="display: flex; flex-direction: column; gap: 8px">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 700">身分 × 題目類別（通過數／題數）</h2>
+        <div style="display: grid; grid-template-columns: 80px repeat(8, minmax(0, 1fr)); font-size: 12px; text-align: center; border: 1px solid #D5D9DE; border-radius: 6px; overflow: hidden">
+          <span style="padding: 8px 4px; background: #EDEFF2; font-weight: 700; text-align: left">身分</span>
+          <sc-for list="{{cats}}" as="c" hint-placeholder-count="8"><span style="padding: 8px 4px; background: #EDEFF2; font-weight: 700">{{c}}</span></sc-for>
+          <sc-for list="{{matrix}}" as="cell" hint-placeholder-count="27">
+            <span style="padding: 9px 4px; border-top: 1px solid #D5D9DE; text-align: {{cell.align}}; font-weight: {{cell.weight}}; font-variant-numeric: tabular-nums; background: {{cell.bg}}">{{cell.v}}</span>
+          </sc-for>
+        </div>
+        <p style="margin: 0; font-size: 11px; color: #4A5260">任一指標未通過或有滲漏就不算通過；✕ 表示該格有未通過的題目。主管的可見等級最高，只呈現各類別的彙總，不列題目序號。</p>
+      </section>
+
+      <section style="display: flex; flex-direction: column; gap: 8px">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 700">未通過的題目</h2>
+        <div style="display: grid; grid-template-columns: 48px 70px 70px 90px minmax(0, 1fr) minmax(0, 1fr); font-size: 12px; border: 1px solid #D5D9DE; border-radius: 6px; overflow: hidden">
+          <span style="padding: 8px; background: #EDEFF2; font-weight: 700">序號</span><span style="padding: 8px; background: #EDEFF2; font-weight: 700">身分</span><span style="padding: 8px; background: #EDEFF2; font-weight: 700">類別</span><span style="padding: 8px; background: #EDEFF2; font-weight: 700">沒通過</span><span style="padding: 8px; background: #EDEFF2; font-weight: 700">原因</span><span style="padding: 8px; background: #EDEFF2; font-weight: 700">處理方式</span>
+          <sc-for list="{{fails}}" as="f" hint-placeholder-count="3">
+            <span style="padding: 10px 8px; border-top: 1px solid #D5D9DE; font-variant-numeric: tabular-nums">{{f.n}}</span>
+            <span style="padding: 10px 8px; border-top: 1px solid #D5D9DE">{{f.role}}</span>
+            <span style="padding: 10px 8px; border-top: 1px solid #D5D9DE">{{f.cat}}</span>
+            <span style="padding: 10px 8px; border-top: 1px solid #D5D9DE">{{f.metric}}</span>
+            <span style="margin: 6px; padding: 4px 6px; min-height: 30px; border: 1px dashed #9AA3AE; border-radius: 4px; color: {{f.c1}}">{{f.reason}}</span>
+            <span style="margin: 6px; padding: 4px 6px; min-height: 30px; border: 1px dashed #9AA3AE; border-radius: 4px; color: {{f.c2}}">{{f.fix}}</span>
+          </sc-for>
+        </div>
+        <p style="margin: 0; font-size: 11px; color: #4A5260">另有主管 1 題未通過（跨語言，只列彙總）。序號是題目在 questions.json 的順序，只對同一個題庫版本有效。虛線框是可填寫的欄位，列印時框線變成底線。</p>
+      </section>
+
+      <section style="display: flex; flex-direction: column; gap: 8px">
+        <h2 style="margin: 0; font-size: 15px; font-weight: 700">測試條件</h2>
+        <div style="display: grid; grid-template-columns: 110px minmax(0, 1fr) 110px minmax(0, 1fr); gap: 8px 14px; font-size: 12px; line-height: 1.6">
+          <span style="color: #4A5260">題庫版本</span><span style="font-family: ui-monospace, monospace">3f9a1c7e02b4（58 題，2026-11-11）</span>
+          <span style="color: #4A5260">覆蓋範圍</span><span>答案段落涵蓋 12／16 份文件</span>
+          <span style="color: #4A5260">檢索設定</span><span>topK 5、minScore 0.1</span>
+          <span style="color: #4A5260">檢索方式</span><span>keyword-hash</span>
+          <span style="color: #4A5260">判定方式</span><span>關鍵重點</span>
+          <span style="color: #4A5260">呼叫次數</span><span>58 次</span>
+          <span style="color: #4A5260">開始 – 結束</span><span>2026-11-11 06:02 – 06:19（UTC）</span>
+          <span style="color: #4A5260">另一次評測</span><span>2026-11-10，設定相同</span>
+        </div>
+      </section>
+
+      <footer style="margin-top: auto; display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid #D5D9DE; font-size: 11px; color: #4A5260"><span>範例公司 · 品質報告</span><span>第 2／2 頁</span></footer>
+    </section>
+  </div>
+
+  <aside style="flex: 1; display: flex; flex-direction: column; gap: 16px; padding-top: 50px; font-size: 14px; line-height: 1.7">
+    <p style="margin: 0; font-size: 13px; letter-spacing: 0.1em; color: #2340C8; font-family: ui-monospace, monospace">QUALITY REPORT</p>
+    <h1 style="margin: 0; font-size: 30px; font-weight: 900; line-height: 1.25">給決策者看第一頁，給知識負責人看附錄</h1>
+    <div style="display: flex; flex-direction: column; gap: 6px"><b>第一頁 30 秒讀完</b><span>結論式標題直接回答「能不能交付」；四項指標用條狀圖對照門檻虛線，旁邊是第二次的結果；權限只講「滲漏 0」。</span></div>
+    <div style="display: flex; flex-direction: column; gap: 6px"><b>黑白列印也看得懂</b><span>通過與否用 ✓／✕ 與文字，不靠顏色；條狀圖是墨色，門檻是虛線；底色只用淺灰。</span></div>
+    <div style="display: flex; flex-direction: column; gap: 6px"><b>自成一頁</b><span>沿用現行規則：不用外部字型、圖片或 script。字型用系統字型堆疊（本畫板也是），icon 是內嵌的單色版。</span></div>
+    <div style="display: flex; flex-direction: column; gap: 6px"><b>機密</b><span>只放序號、類別、身分、數字與判定；不放題目文字、回答與段落。可見等級最高的身分只列彙總。</span></div>
+    <div style="display: flex; flex-direction: column; gap: 6px"><b>可填寫欄位</b><span>螢幕上是虛線框；列印時變成底線並隱藏上方的說明條。</span></div>
+    <div style="display: flex; flex-direction: column; gap: 6px"><b>沒跑完、有未達時</b><span>標題改用現有文字：「，評測沒有跑完，不判定是否達到門檻」或「，{指標}未達門檻」；未達的列標 ✕ 未達，條狀圖不改顏色，只加粗門檻線。</span></div>
+    <p style="margin: 0; padding: 12px 14px; border-radius: 10px; background: #FFFFFF; font-size: 13px">報告中的通過數、題庫版本、覆蓋範圍與時間都是版面示意；題數與身分、類別的分佈是參考情境的實際題庫。</p>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2160,"height":1380}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const cats = ['情境', '權限', '題庫外', '說法不同', '套取機密', '跨語言', '同義詞', '完全無關'];
+    const M = { '訪客': [[3, 3], [1, 1], [1, 1], null, [1, 1], [2, 2], [1, 2], [1, 1]], '一般員工': [[6, 6], [6, 6], [1, 1], [2, 2], [1, 1], [7, 9], [3, 3], [2, 2]], '主管': [[3, 3], [2, 2], [1, 1], null, null, [7, 8], [1, 1], [2, 2]] };
+    const matrix = [];
+    Object.keys(M).forEach((role) => {
+      matrix.push({ v: role, align: 'left', weight: '700', bg: 'transparent' });
+      M[role].forEach((c) => {
+        if (!c) { matrix.push({ v: '—', align: 'center', weight: '400', bg: 'transparent' }); return; }
+        const fail = c[0] < c[1];
+        matrix.push({ v: (fail ? '✕ ' : '') + c[0] + '／' + c[1], align: 'center', weight: fail ? '700' : '400', bg: fail ? '#F5F6F3' : 'transparent' });
+      });
+    });
+    return {
+      cats, matrix,
+      metrics: [
+        { name: '引用正確', v: '40／41（98%）', v2: '41／41', w: 98, th: 90 },
+        { name: '答案正確', v: '38／41（93%）', v2: '37／41', w: 93, th: 80 },
+        { name: '權限滲漏', v: '0 題', v2: '0 題', w: 100, th: 100 },
+        { name: '正確拒答', v: '17／17（100%）', v2: '17／17', w: 100, th: 100 }
+      ],
+      roles: [{ name: '訪客', n: 11 }, { name: '一般員工', n: 30 }, { name: '主管', n: 17 }],
+      fails: [
+        { n: '30', role: '一般員工', cat: '跨語言', metric: '答案正確', reason: '英文段落的用詞與題目不同，檢索不到', fix: '改用語意檢索後重測', c1: '#14171A', c2: '#14171A' },
+        { n: '33', role: '一般員工', cat: '跨語言', metric: '引用正確', reason: '（點此填寫）', fix: '（點此填寫）', c1: '#9AA3AE', c2: '#9AA3AE' },
+        { n: '48', role: '訪客', cat: '同義詞', metric: '答案正確', reason: '（點此填寫）', fix: '（點此填寫）', c1: '#9AA3AE', c2: '#9AA3AE' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

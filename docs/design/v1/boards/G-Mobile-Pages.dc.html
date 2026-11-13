@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>手機版其他頁面</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;700&amp;family=Noto+Sans+TC:wght@400;500;700;900&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2340C8}a:hover{color:#14171A}
+</style>
+</helmet>
+<div style="width: 2400px; height: 1080px; box-sizing: border-box; padding: 40px 56px; background: {{t.board}}; color: {{t.text}}; font-family: Inter, 'Noto Sans TC', sans-serif; display: flex; flex-direction: column; gap: 22px">
+
+  <header style="display: flex; justify-content: space-between; align-items: flex-end; gap: 24px">
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <p style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 0.1em; color: {{t.primary}}">MOBILE · 其他頁面</p>
+      <h1 style="margin: 0; font-size: 30px; font-weight: 900">建置與審核的頁面，在手機上也能完成一件事</h1>
+      <p style="margin: 0; font-size: 14px; color: {{t.muted}}">沿用手機的共同結構（頂端列、底部分頁列、底部面板）。分頁列依身分只列可用的頁面：一般員工 4 個；主管有「更多」，收納待審與評測台。</p>
+    </div>
+    <button type="button" onClick="{{toggleDark}}" aria-pressed="{{darkPressed}}" style="height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 600 13px 'JetBrains Mono', monospace">{{modeLabel}}</button>
+  </header>
+
+  <div style="display: flex; gap: 40px">
+
+    <div style="display: flex; flex-direction: column; gap: 10px; align-items: center">
+      <div style="width: 390px; height: 844px; border-radius: 40px; overflow: hidden; background: {{t.bg}}; box-shadow: 0 0 0 10px {{t.bezel}}; display: flex; flex-direction: column">
+        <div style="display: flex; align-items: center; gap: 10px; height: 56px; padding: 8px 16px 0; box-sizing: border-box"><span style="font-size: 17px; font-weight: 900">範例公司</span><span style="margin-left: auto; height: 34px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 999px; background: {{t.inkBg}}; color: {{t.inkFg}}; font-size: 13px; font-weight: 700">一般員工</span></div>
+        <div style="display: flex; align-items: baseline; gap: 8px; padding: 8px 16px 4px"><span style="font-size: 22px; font-weight: 700">時間軸</span><span style="font-size: 13px; color: {{t.muted}}">5 份文件</span></div>
+        <div style="display: flex; gap: 6px; padding: 6px 16px 10px; overflow: hidden">
+          <span style="flex: none; display: inline-flex; align-items: center; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid {{t.line}}; background: {{t.surface}}; font-size: 13px">全部</span>
+          <span style="flex: none; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 999px; border: 1.5px solid {{t.primary}}; background: {{t.primarySoft}}; font-size: 13px; font-weight: 700"><span style="width: 9px; height: 9px; border-radius: 2px; background: {{t.eJ}}"></span>青翼專案</span>
+          <span style="flex: none; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid {{t.line}}; background: {{t.surface}}; font-size: 13px"><span style="width: 9px; height: 9px; border-radius: 999px; background: {{t.eP}}"></span>王小明</span>
+          <span style="flex: none; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid {{t.line}}; background: {{t.surface}}; font-size: 13px"><span style="width: 9px; height: 9px; border-radius: 3px; background: {{t.eT}}"></span>產品研發部</span>
+        </div>
+        <div style="flex: 1; overflow: hidden; display: grid; grid-template-columns: 46px 14px minmax(0, 1fr); column-gap: 8px; align-content: start; padding: 0 16px">
+          <sc-for list="{{tl}}" as="d" hint-placeholder-count="5">
+            <span style="padding-top: 16px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {{t.muted}}; text-align: right">{{d.date}}</span>
+            <span style="position: relative; display: flex; justify-content: center"><span style="position: absolute; top: 0; bottom: 0; width: 2px; background: {{t.line}}"></span><span style="position: relative; margin-top: 18px; width: 10px; height: 10px; border-radius: 999px; background: {{d.dot}}; box-shadow: 0 0 0 3px {{t.bg}}"></span></span>
+            <div style="padding: 6px 0">
+              <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 12px; background: {{t.surface}}; border: 1px solid {{t.line}}; opacity: {{d.o}}">
+                <span style="font-size: 15px; font-weight: 700; line-height: 1.4">{{d.title}}</span>
+                <span style="align-self: flex-start; font-size: 11px; padding: 1px 7px; border-radius: 6px; background: {{t.raised}}; color: {{t.muted}}">{{d.vis}}</span>
+                <sc-if value="{{d.conflict}}" hint-placeholder-val="{{ false }}"><span style="align-self: flex-start; padding: 3px 8px; border-radius: 6px; background: {{t.conflictSoft}}; color: {{t.conflictText}}; font-size: 12px">{{d.note}}</span></sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <nav aria-label="頁面" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); height: 72px; padding-bottom: 12px; box-sizing: border-box; border-top: 1px solid {{t.line}}; background: {{t.surface}}">
+          <sc-for list="{{tabs4time}}" as="tb" hint-placeholder-count="4"><a href="#" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: {{tb.color}}; text-decoration: none; font-size: 11px; font-weight: {{tb.weight}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{tb.icon}}"></path></svg>{{tb.label}}</a></sc-for>
+        </nav>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: {{t.muted}}">時間軸：日期欄縮到 46px；篩選晶片橫向滑動</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; align-items: center">
+      <div style="width: 390px; height: 844px; border-radius: 40px; overflow: hidden; background: {{t.bg}}; box-shadow: 0 0 0 10px {{t.bezel}}; display: flex; flex-direction: column">
+        <div style="display: flex; align-items: center; gap: 10px; height: 56px; padding: 8px 16px 0; box-sizing: border-box"><span style="font-size: 17px; font-weight: 900">範例公司</span><span style="margin-left: auto; height: 34px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 999px; background: {{t.inkBg}}; color: {{t.inkFg}}; font-size: 13px; font-weight: 700">一般員工</span></div>
+        <div style="flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 12px; padding: 8px 16px 12px">
+          <span style="font-size: 22px; font-weight: 700">上傳</span>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px">
+              <span style="height: 4px; border-radius: 999px; background: {{t.primary}}"></span><span style="height: 4px; border-radius: 999px; background: {{t.primary}}"></span><span style="height: 4px; border-radius: 999px; background: linear-gradient(90deg, {{t.primary}} 66%, {{t.line}} 66%)"></span><span style="height: 4px; border-radius: 999px; background: {{t.line}}"></span><span style="height: 4px; border-radius: 999px; background: {{t.line}}"></span>
+            </div>
+            <span style="font-size: 13px"><b>模型萃取</b> <span style="font-family: 'JetBrains Mono', monospace; color: {{t.muted}}">第 2／3 批</span></span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px; background: {{t.raised}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{t.text}}" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l4 4v14H6z"></path><path d="M14 3v4h4"></path></svg><span style="font-size: 14px; font-weight: 700">kickoff.md</span><span style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {{t.muted}}">3 段</span></div>
+          <div style="padding: 14px 16px; border-radius: 12px; background: {{t.reading}}; color: {{t.readingText}}; font-size: 15px; line-height: 2">
+            <span style="border-bottom: 3px solid {{t.eJ}}">青翼專案</span>由<span style="border-bottom: 3px solid {{t.eT}}">產品研發部</span>經理<span style="border-bottom: 3px solid {{t.eP}}">王小明</span>負責，成員包括周大衛與林志明。
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+            <div style="padding: 10px 12px; border-radius: 10px; background: {{t.surface}}; border: 1px solid {{t.line}}"><p style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700">3</p><p style="margin: 0; font-size: 12px; color: {{t.muted}}">實體（萃取中）</p></div>
+            <div style="padding: 10px 12px; border-radius: 10px; background: {{t.surface}}; border: 1px solid {{t.line}}"><p style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700">2</p><p style="margin: 0; font-size: 12px; color: {{t.muted}}">關係</p></div>
+          </div>
+          <p style="margin: 0; font-size: 12px; line-height: 1.6; color: {{t.muted}}">萃取在背景執行，可以切到其他頁；完成後「上傳」分頁的小點會亮起。</p>
+          <div style="margin-top: auto; display: flex; gap: 8px">
+            <span style="flex: 1; display: inline-flex; align-items: center; justify-content: center; height: 48px; border-radius: 12px; border: 1px solid {{t.line}}; font-size: 14px">再上傳一份</span>
+          </div>
+        </div>
+        <nav aria-label="頁面" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); height: 72px; padding-bottom: 12px; box-sizing: border-box; border-top: 1px solid {{t.line}}; background: {{t.surface}}">
+          <sc-for list="{{tabs4up}}" as="tb" hint-placeholder-count="4"><a href="#" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: {{tb.color}}; text-decoration: none; font-size: 11px; font-weight: {{tb.weight}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{tb.icon}}"></path></svg>{{tb.label}}</a></sc-for>
+        </nav>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: {{t.muted}}">上傳：五個步驟縮成一條；目前步驟以文字與真實批數說明</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; align-items: center">
+      <div style="position: relative; width: 390px; height: 844px; border-radius: 40px; overflow: hidden; background: {{t.bg}}; box-shadow: 0 0 0 10px {{t.bezel}}; display: flex; flex-direction: column">
+        <div style="display: flex; align-items: center; gap: 10px; height: 56px; padding: 8px 16px 0; box-sizing: border-box"><span style="font-size: 17px; font-weight: 900">範例公司</span><span style="margin-left: auto; height: 34px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 999px; background: {{t.inkBg}}; color: {{t.inkFg}}; font-size: 13px; font-weight: 700">主管</span></div>
+        <div role="tablist" aria-label="審核狀態" style="display: flex; gap: 2px; padding: 4px 12px 0; border-bottom: 1px solid {{t.line}}; overflow: hidden">
+          <span role="tab" aria-selected="true" style="flex: none; display: inline-flex; align-items: center; height: 44px; padding: 0 10px; border-bottom: 2px solid {{t.text}}; font-size: 14px; font-weight: 700">待審 11</span>
+          <span role="tab" aria-selected="false" style="flex: none; display: inline-flex; align-items: center; height: 44px; padding: 0 10px; font-size: 14px; color: {{t.muted}}">已退回</span>
+          <span role="tab" aria-selected="false" style="flex: none; display: inline-flex; align-items: center; height: 44px; padding: 0 10px; font-size: 14px; color: {{t.muted}}">已處理的說法不同</span>
+          <span role="tab" aria-selected="false" style="flex: none; display: inline-flex; align-items: center; height: 44px; padding: 0 10px; font-size: 14px; color: {{t.muted}}">回報 2</span>
+        </div>
+        <div style="flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 8px; padding: 12px 16px">
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <span style="font-size: 16px; font-weight: 700">青翼專案啟動會議紀錄 <span style="font-size: 11px; font-weight: 500; padding: 1px 6px; border-radius: 6px; background: {{t.primarySoft}}">上傳</span></span>
+            <span style="font-size: 12px; color: {{t.muted}}">核准後新增 2 個實體、3 段關係</span>
+            <span style="align-self: flex-start; margin-top: 4px; padding: 3px 9px; border-radius: 8px; background: {{t.conflictSoft}}; color: {{t.conflictText}}; font-size: 12px">還有 2 組需要你確認</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 0 12px; border-radius: 12px; background: {{t.raised}}"><span style="width: 11px; height: 11px; border-radius: 999px; background: {{t.eP}}"></span><span style="font-size: 15px">周大衛</span><span style="font-size: 11px; color: {{t.primary}}; font-weight: 700">新增</span><span style="margin-left: auto; display: flex; gap: 6px"><span style="display: inline-flex; align-items: center; height: 40px; padding: 0 10px; border-radius: 8px; border: 1px solid {{t.line}}; font-size: 13px">退回</span><span style="display: inline-flex; align-items: center; height: 40px; padding: 0 12px; border-radius: 8px; background: {{t.primary}}; color: {{t.onPrimary}}; font-size: 13px; font-weight: 700">核准</span></span></div>
+          <div style="display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 0 12px; border-radius: 12px; background: {{t.raised}}; box-shadow: inset 0 0 0 1.5px {{t.warning}}"><span style="width: 11px; height: 11px; border-radius: 999px; background: {{t.eP}}"></span><span style="font-size: 15px">林志明</span><span style="margin-left: auto; font-size: 12px; color: {{t.warning}}">缺英文名稱 · 填寫 ›</span></div>
+          <div style="display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 0 12px; border-radius: 12px; background: {{t.raised}}"><span style="width: 11px; height: 11px; border-radius: 999px; background: {{t.eP}}"></span><span style="font-size: 15px">王小明</span><span style="margin-left: auto; font-size: 13px; color: {{t.primary}}; font-weight: 600">選擇處理方式 ›</span></div>
+          <div style="display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 0 12px; border-radius: 12px; background: {{t.conflictSoft}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{t.conflictText}}" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M7 4v16M17 4v16M3 8h8M13 16h8"></path></svg><span style="font-size: 14px; color: {{t.conflictText}}">說法不同 · 上市時間</span><span style="margin-left: auto; font-size: 13px; color: {{t.conflictText}}; font-weight: 600">並列比較 ›</span></div>
+          <span style="font-size: 12px; color: {{t.muted}}">關係 3 · 展開</span>
+        </div>
+        <div style="padding: 10px 16px; border-top: 1px solid {{t.line}}; background: {{t.bg}}"><span style="display: flex; align-items: center; justify-content: center; height: 48px; border-radius: 12px; background: {{t.primary}}; color: {{t.onPrimary}}; font-size: 15px; font-weight: 700">核准這份文件的全部</span></div>
+        <nav aria-label="頁面" style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); height: 72px; padding-bottom: 12px; box-sizing: border-box; border-top: 1px solid {{t.line}}; background: {{t.surface}}">
+          <sc-for list="{{tabs5more}}" as="tb" hint-placeholder-count="5"><a href="#" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: {{tb.color}}; text-decoration: none; font-size: 11px; font-weight: {{tb.weight}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{tb.icon}}"></path></svg>{{tb.label}}</a></sc-for>
+        </nav>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: {{t.muted}}">待審：需要決定的項目打開底部面板處理；「核准全部」固定在下方</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; align-items: center">
+      <div style="width: 390px; height: 844px; border-radius: 40px; overflow: hidden; background: {{t.bg}}; box-shadow: 0 0 0 10px {{t.bezel}}; display: flex; flex-direction: column">
+        <div style="display: flex; align-items: center; gap: 10px; height: 56px; padding: 8px 16px 0; box-sizing: border-box"><span style="font-size: 17px; font-weight: 900">範例公司</span><span style="margin-left: auto; height: 34px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 999px; background: {{t.inkBg}}; color: {{t.inkFg}}; font-size: 13px; font-weight: 700">主管</span></div>
+        <div style="flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 12px; padding: 8px 16px 12px">
+          <div style="display: flex; align-items: baseline; gap: 8px"><span style="font-size: 22px; font-weight: 700">評測台</span><span style="font-size: 13px; color: {{t.muted}}">58 題 · 評測完成</span></div>
+          <div style="display: flex; align-items: center; min-height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid {{t.line}}; background: {{t.surface}}; font-size: 13px">評測設定 <span style="margin-left: 8px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {{t.muted}}">A topK 5 · B topK 8</span><span style="margin-left: auto">›</span></div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+            <sc-for list="{{evm}}" as="m" hint-placeholder-count="4">
+              <div style="display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 12px; background: {{t.surface}}; border: 1px solid {{t.line}}">
+                <span style="font-size: 12px; color: {{t.muted}}">{{m.name}}</span>
+                <span style="font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700">{{m.v}}</span>
+                <span style="font-size: 11px; font-weight: 700; color: {{t.success}}">✓ 通過（≥ {{m.th}}）</span>
+              </div>
+            </sc-for>
+          </div>
+          <label style="display: flex; align-items: center; gap: 8px; min-height: 40px; font-size: 13px"><input type="checkbox" checked style="width: 20px; height: 20px; accent-color: {{t.primary}}">只顯示兩組不同的題目</label>
+          <sc-for list="{{evr}}" as="r" hint-placeholder-count="3">
+            <div style="display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 52px; padding: 0 12px; border-radius: 10px; background: {{t.raised}}; font-size: 13px">
+              <span style="font-family: 'JetBrains Mono', monospace; color: {{t.muted}}">#{{r.n}}</span>
+              <span>{{r.cat}} · {{r.role}}</span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px">A {{r.a}} · B {{r.b}}</span>
+            </div>
+          </sc-for>
+          <p style="margin: 0; font-size: 11px; color: {{t.muted}}">數值為版面示意。點一題打開底部面板看回答與引用。</p>
+          <div style="margin-top: auto"><span style="display: flex; align-items: center; justify-content: center; height: 48px; border-radius: 12px; border: 1px solid {{t.line}}; font-size: 14px">下載品質報告</span></div>
+        </div>
+        <nav aria-label="頁面" style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); height: 72px; padding-bottom: 12px; box-sizing: border-box; border-top: 1px solid {{t.line}}; background: {{t.surface}}">
+          <sc-for list="{{tabs5more}}" as="tb" hint-placeholder-count="5"><a href="#" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: {{tb.color}}; text-decoration: none; font-size: 11px; font-weight: {{tb.weight}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{tb.icon}}"></path></svg>{{tb.label}}</a></sc-for>
+        </nav>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: {{t.muted}}">評測台：手機上以「看結果」為主；設定收合，題目一題一列</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; align-items: center">
+      <div style="position: relative; width: 390px; height: 844px; border-radius: 40px; overflow: hidden; background: {{t.bg}}; box-shadow: 0 0 0 10px {{t.bezel}}">
+        <div style="position: absolute; inset: 0; padding: 80px 16px; opacity: 0.5"><div style="height: 160px; border-radius: 16px; background: {{t.surface}}"></div></div>
+        <div style="position: absolute; inset: 0; background: {{t.overlay}}"></div>
+        <section aria-label="更多" style="position: absolute; left: 0; right: 0; bottom: 0; border-radius: 24px 24px 0 0; background: {{t.surface}}; display: flex; flex-direction: column; gap: 8px; padding: 10px 16px 92px">
+          <span style="align-self: center; width: 40px; height: 5px; border-radius: 999px; background: {{t.dash}}"></span>
+          <span style="font-size: 18px; font-weight: 700; padding: 6px 0">更多</span>
+          <div style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 14px; border-radius: 12px; background: {{t.raised}}; font-size: 16px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12l2 2 4-4M4 4h16v16H4z"></path></svg>待審<span style="margin-left: auto; min-width: 26px; height: 26px; padding: 0 8px; box-sizing: border-box; border-radius: 999px; background: {{t.primary}}; color: {{t.onPrimary}}; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">11</span></div>
+          <div style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 14px; border-radius: 12px; background: {{t.raised}}; font-size: 16px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7"></path></svg>評測台<span style="margin-left: auto; color: {{t.muted}}">›</span></div>
+          <span style="font-size: 12px; color: {{t.muted}}; padding-top: 4px">依身分只列出可用的頁面；評測台只在網址帶 ?tools=evals 時出現。</span>
+        </section>
+        <nav aria-label="頁面" style="position: absolute; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); height: 72px; padding-bottom: 12px; box-sizing: border-box; border-top: 1px solid {{t.line}}; background: {{t.surface}}">
+          <sc-for list="{{tabs5more}}" as="tb" hint-placeholder-count="5"><a href="#" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: {{tb.color}}; text-decoration: none; font-size: 11px; font-weight: {{tb.weight}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{tb.icon}}"></path></svg>{{tb.label}}</a></sc-for>
+        </nav>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: {{t.muted}}">更多：主管才有；待審數量直接標在這裡</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2400,"height":1080}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { dark: false }; }
+  renderVals() {
+    const L = { board: '#EDEFEA', bg: '#F5F6F3', surface: '#FFFFFF', raised: '#EDEFF2', text: '#14171A', muted: '#5B6470', line: '#DDE1E4', dash: '#9AA3AE', bezel: '#14171A', primary: '#2340C8', primarySoft: '#E6EAFB', onPrimary: '#FFFFFF', inkBg: '#14171A', inkFg: '#FFFFFF', reading: '#FFFFFF', readingText: '#14171A', conflictSoft: '#FCE8F1', conflictText: '#7A1D50', warning: '#9A3D00', success: '#1A6E33', overlay: 'rgba(20,23,26,0.45)', eP: '#3D7AB8', eT: '#2E7D5B', eJ: '#7A52C7' };
+    const D = { board: '#05070B', bg: '#0A0D14', surface: '#111621', raised: '#182030', text: '#E7ECF5', muted: '#8B97AD', line: '#253044', dash: '#3B4A63', bezel: '#2A3548', primary: '#3EE6D2', primarySoft: '#16302E', onPrimary: '#04201D', inkBg: '#E7ECF5', inkFg: '#0A0D14', reading: '#F4F6FA', readingText: '#141A24', conflictSoft: '#2A1420', conflictText: '#FFD3E2', warning: '#FF9466', success: '#6CC489', overlay: 'rgba(0,0,0,0.6)', eP: '#7FB2EB', eT: '#5CC294', eJ: '#B89CF0' };
+    const d = this.state.dark;
+    const t = d ? D : L;
+    const I = {
+      chat: 'M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z',
+      graph: 'M6 8a2 2 0 1 0 0-.01M18 9a2 2 0 1 0 0-.01M10 19a2 2 0 1 0 0-.01M8 7l8 1.5M7 9l2 8M16.5 10.5l-5 7',
+      time: 'M4 12h16M8 8v8M16 6v12',
+      upload: 'M12 16V4M7 9l5-5 5 5M5 20h14',
+      more: 'M5 12h.01M12 12h.01M19 12h.01'
+    };
+    const mk = (defs, active) => defs.map((x) => ({ label: x[0], icon: x[1], color: x[0] === active ? t.primary : t.muted, weight: x[0] === active ? '700' : '500' }));
+    const four = [['問答', I.chat], ['圖譜', I.graph], ['時間軸', I.time], ['上傳', I.upload]];
+    const five = four.concat([['更多', I.more]]);
+    const doc = (date, title, vis, match, note) => ({ date, title, vis, o: match ? '1' : '0.45', dot: match ? t.eJ : t.line, conflict: !!note, note: note || '' });
+    return {
+      t,
+      tabs4time: mk(four, '時間軸'), tabs4up: mk(four, '上傳'), tabs5more: mk(five, '更多'),
+      tl: [
+        doc('01-05', '員工手冊', '公開', false),
+        doc('01-12', '組織與主管名單', '內部', false),
+        doc('02-02', '資訊安全規定', '內部', false),
+        doc('02-10', '青翼專案啟動會議紀錄', '內部', true, '與〈青翼專案進度更新〉的說法不同'),
+        doc('05-15', '青翼專案進度更新', '內部', true, '與〈青翼專案啟動會議紀錄〉的說法不同')
+      ],
+      evm: [{ name: '引用正確', v: '98%', th: '90%' }, { name: '答案正確', v: '93%', th: '80%' }, { name: '權限滲漏', v: '0 題', th: '0' }, { name: '正確拒答', v: '100%', th: '100%' }],
+      evr: [{ n: '22', cat: '說法不同', role: '一般員工', a: '○', b: '●' }, { n: '30', cat: '跨語言', role: '一般員工', a: '○', b: '●' }, { n: '48', cat: '同義詞', role: '訪客', a: '●', b: '○' }],
+      modeLabel: d ? 'DARK' : 'LIGHT', darkPressed: d ? 'true' : 'false',
+      toggleDark: () => this.setState({ dark: !d })
+    };
+  }
+}
+</script>
+</body>
+</html>

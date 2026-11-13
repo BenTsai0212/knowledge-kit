@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>手機日常工具</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;700&amp;family=Noto+Sans+TC:wght@400;500;700;900&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width: 2400px; height: 1080px; box-sizing: border-box; padding: 40px 56px; background: {{t.board}}; color: {{t.text}}; font-family: Inter, 'Noto Sans TC', sans-serif; display: flex; flex-direction: column; gap: 22px">
+
+  <header style="display: flex; justify-content: space-between; align-items: flex-end; gap: 24px">
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <p style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 0.1em; color: {{t.primary}}">MOBILE · 日常工具</p>
+      <h1 style="margin: 0; font-size: 30px; font-weight: 900">手機上的登入與首頁：打開就知道今天有什麼</h1>
+      <p style="margin: 0; font-size: 14px; color: {{t.muted}}">分頁列加入「首頁」並放在最左：一般員工是 首頁、問答、圖譜、時間軸、上傳；主管的時間軸收進「更多」，與待審、評測台放在一起。</p>
+    </div>
+    <button type="button" onClick="{{toggleDark}}" aria-pressed="{{darkPressed}}" style="height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 600 13px 'JetBrains Mono', monospace">{{modeLabel}}</button>
+  </header>
+
+  <div style="display: flex; gap: 40px">
+
+    <!-- 1 登入：邀請碼 -->
+    <div style="display: flex; flex-direction: column; gap: 10px; align-items: center">
+      <div style="width: 390px; height: 844px; border-radius: 40px; overflow: hidden; background: #070A10; box-shadow: 0 0 0 10px {{t.bezel}}; display: flex; flex-direction: column; color: #E7ECF5">
+        <div style="position: relative; height: 290px; flex: none; overflow: hidden; background: radial-gradient(ellipse at 50% 55%, #121A2A 0%, #070A10 72%)" role="img" aria-label="知識圖譜的節點彼此連結">
+          <svg viewBox="0 0 390 330" width="390" height="330" aria-hidden="true" style="position: absolute; inset: 0">
+            <g stroke="#26324A" stroke-width="1"><line x1="40" y1="70" x2="120" y2="40"/><line x1="300" y1="50" x2="360" y2="110"/><line x1="30" y1="250" x2="90" y2="290"/><line x1="320" y1="260" x2="370" y2="220"/></g>
+            <g stroke="#2E3A50" stroke-width="1.6"><line x1="195" y1="165" x2="110" y2="110"/><line x1="195" y1="165" x2="285" y2="120"/><line x1="195" y1="165" x2="250" y2="245"/><line x1="195" y1="165" x2="120" y2="235"/><line x1="110" y1="110" x2="120" y2="235"/><line x1="285" y1="120" x2="250" y2="245"/></g>
+            <line x1="195" y1="165" x2="285" y2="120" stroke="#3EE6D2" stroke-width="3" stroke-linecap="round" stroke-dasharray="18 200"/>
+            <g fill="#2A3650"><circle cx="40" cy="70" r="3"/><circle cx="120" cy="40" r="2.5"/><circle cx="300" cy="50" r="3"/><circle cx="360" cy="110" r="2.5"/><circle cx="30" cy="250" r="3"/><circle cx="90" cy="290" r="2.5"/><circle cx="320" cy="260" r="3"/><circle cx="370" cy="220" r="2.5"/></g>
+            <circle cx="195" cy="165" r="11" fill="#3EE6D2" stroke="#070A10" stroke-width="4"/>
+            <circle cx="110" cy="110" r="8" fill="#7FB2EB" stroke="#070A10" stroke-width="4"/>
+            <rect x="277" y="112" width="16" height="16" rx="3" fill="#5CC294" stroke="#070A10" stroke-width="4"/>
+            <rect x="242" y="237" width="16" height="16" rx="2" fill="#B89CF0" stroke="#070A10" stroke-width="4"/>
+            <circle cx="120" cy="235" r="7" fill="#FFB547" stroke="#070A10" stroke-width="4"/>
+          </svg>
+          <div style="position: absolute; left: 16px; top: 18px; display: flex; align-items: center; gap: 8px"><span style="font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700">Knowledge Kit</span><span style="height: 22px; padding: 0 8px; border-radius: 6px; border: 1px dashed #3B4A63; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #8B97AD; display: inline-flex; align-items: center">虛構資料</span></div>
+        </div>
+        <form style="flex: 1; display: flex; flex-direction: column; gap: 10px; padding: 18px 20px 26px; background: #0D111A; border-top: 1px solid #1C2433">
+          <h2 style="margin: 0; font-size: 22px; font-weight: 700">帳號登入</h2>
+          <div role="radiogroup" aria-label="展示帳號" style="display: flex; flex-direction: column; gap: 6px">
+            <span style="display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 12px; border-radius: 10px; border: 1px solid #253044; font: 500 14px 'JetBrains Mono', monospace"><span style="width: 14px; height: 14px; box-sizing: border-box; border-radius: 999px; border: 1.5px solid #3B4A63"></span>guest@example.test</span>
+            <span style="display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 12px; border-radius: 10px; border: 1.5px solid #3EE6D2; font: 500 14px 'JetBrains Mono', monospace"><span style="width: 14px; height: 14px; box-sizing: border-box; border-radius: 999px; border: 5px solid #3EE6D2"></span>staff@example.test</span>
+            <span style="display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 12px; border-radius: 10px; border: 1px solid #253044; font: 500 14px 'JetBrains Mono', monospace"><span style="width: 14px; height: 14px; box-sizing: border-box; border-radius: 999px; border: 1.5px solid #3B4A63"></span>manager@example.test</span>
+          </div>
+          <input type="password" disabled aria-label="密碼" placeholder="展示版不需要密碼" style="height: 46px; padding: 0 14px; border-radius: 10px; border: 1px dashed #3B4A63; background: transparent; color: #8B97AD; font: 15px Inter, 'Noto Sans TC', sans-serif">
+          <div style="display: flex; flex-direction: column; gap: 6px; margin-top: auto">
+            <div style="display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #8B97AD"><span>SEMANTIC MODEL</span><span>52／84 MB</span></div>
+            <div style="height: 4px; border-radius: 999px; background: #1C2433; overflow: hidden"><div style="width: 62%; height: 100%; background: #3EE6D2"></div></div>
+          </div>
+          <button type="submit" style="height: 52px; border: 0; border-radius: 12px; background: #3EE6D2; color: #04201D; font: 700 16px Inter, 'Noto Sans TC', sans-serif">登入</button>
+          <button type="button" style="height: 44px; border-radius: 12px; border: 1px solid #253044; background: transparent; color: #E7ECF5; font: 600 14px Inter, 'Noto Sans TC', sans-serif">使用邀請碼體驗</button>
+        </form>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: {{t.muted}}">登入 · 帳號登入（主要）：主視覺縮到上方；展示帳號固定身分、密碼欄停用，下方是使用邀請碼體驗</p>
+    </div>
+
+    <!-- 2 使用邀請碼體驗 -->
+    <div style="display: flex; flex-direction: column; gap: 10px; align-items: center">
+      <div style="width: 390px; height: 844px; border-radius: 40px; overflow: hidden; background: {{t.bg}}; box-shadow: 0 0 0 10px {{t.bezel}}; display: flex; flex-direction: column">
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: 24px 20px">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.12em; color: {{t.primary}}">ACCESS</span>
+          <h2 style="margin: 0; font-size: 24px; font-weight: 700">使用邀請碼體驗</h2>
+          <input type="text" aria-label="邀請碼" value="DEMO-OPEN" style="height: 52px; padding: 0 14px; border-radius: 12px; border: 1.5px solid {{t.text}}; background: {{t.surface}}; color: {{t.text}}; font: 500 17px 'JetBrains Mono', monospace">
+          <p style="margin: 0; font-size: 13px; line-height: 1.6; color: {{t.muted}}">與現行相同：邀請碼決定身分，進入後可以切換身分。</p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 0 20px 32px">
+          <button type="button" style="height: 52px; border: 0; border-radius: 12px; background: {{t.primary}}; color: {{t.onPrimary}}; font: 700 16px Inter, 'Noto Sans TC', sans-serif">開始使用</button>
+          <button type="button" style="height: 44px; border: 0; background: transparent; color: {{t.primary}}; font: 600 14px Inter, 'Noto Sans TC', sans-serif">← 改用帳號登入</button>
+        </div>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: {{t.muted}}">登入 · 使用邀請碼體驗：與現行相同，可以切換身分</p>
+    </div>
+
+    <!-- 3 首頁：一般員工 -->
+    <div style="display: flex; flex-direction: column; gap: 10px; align-items: center">
+      <div style="width: 390px; height: 844px; border-radius: 40px; overflow: hidden; background: {{t.bg}}; box-shadow: 0 0 0 10px {{t.bezel}}; display: flex; flex-direction: column">
+        <div style="display: flex; align-items: center; gap: 10px; height: 56px; padding: 8px 16px 0; box-sizing: border-box"><span style="font-size: 17px; font-weight: 900">範例公司</span><span style="margin-left: auto; height: 34px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-radius: 999px; background: {{t.inkBg}}; color: {{t.inkFg}}; font-size: 13px; font-weight: 700">一般員工</span></div>
+        <div style="flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 14px; padding: 10px 16px 12px">
+          <span style="font-size: 22px; font-weight: 700">{{greet}}</span>
+          <div style="display: flex; align-items: center; gap: 8px; height: 50px; padding: 0 6px 0 14px; border-radius: 14px; border: 1.5px solid {{t.line}}; background: {{t.surface}}"><span style="flex: 1; font-size: 15px; color: {{t.muted}}">想知道什麼？</span><span style="height: 38px; padding: 0 14px; border-radius: 10px; background: {{t.primary}}; color: {{t.onPrimary}}; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center">提問</span></div>
+          <div style="display: flex; gap: 6px; overflow: hidden"><sc-for list="{{faq}}" as="q" hint-placeholder-count="3"><span style="flex: none; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid {{t.line}}; font-size: 13px; display: inline-flex; align-items: center">{{q}}</span></sc-for></div>
+          <section style="display: flex; flex-direction: column; gap: 8px">
+            <b style="font-size: 15px">有更新 <span style="font-weight: 400; color: {{t.muted}}">3</span></b>
+            <sc-for list="{{staffTodo}}" as="r" hint-placeholder-count="3">
+              <div style="display: flex; align-items: center; gap: 10px; min-height: 60px; padding: 8px 12px; border-radius: 12px; background: {{t.surface}}; border: 1px solid {{t.line}}">
+                <span style="flex: none; width: 8px; height: 8px; border-radius: 999px; background: {{r.dot}}"></span>
+                <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 600; line-height: 1.35">{{r.title}}</span><span style="font-size: 12px; color: {{t.muted}}">{{r.sub}}</span></span>
+                <span aria-hidden="true" style="color: {{t.muted}}; font-size: 18px">›</span>
+              </div>
+            </sc-for>
+          </section>
+          <section style="display: flex; flex-direction: column; gap: 6px">
+            <b style="font-size: 15px">問過的問題</b>
+            <sc-for list="{{history}}" as="h" hint-placeholder-count="3">
+              <div style="display: flex; align-items: center; gap: 8px; min-height: 44px; border-bottom: 1px solid {{t.line}}; font-size: 14px"><span style="flex: 1; min-width: 0">{{h.q}}</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {{t.muted}}">{{h.when}}</span></div>
+            </sc-for>
+          </section>
+        </div>
+        <nav aria-label="頁面" style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); height: 72px; padding-bottom: 12px; box-sizing: border-box; border-top: 1px solid {{t.line}}; background: {{t.surface}}">
+          <sc-for list="{{tabsStaff}}" as="tb" hint-placeholder-count="5"><a href="#" style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: {{tb.color}}; text-decoration: none; font-size: 11px; font-weight: {{tb.weight}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{tb.icon}}"></path></svg>{{tb.label}}<sc-if value="{{tb.badge}}"><span style="position: absolute; top: 8px; left: 50%; margin-left: 6px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: {{t.primary}}; color: {{t.onPrimary}}; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">{{tb.badge}}</span></sc-if></a></sc-for>
+        </nav>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: {{t.muted}}">首頁 · 一般員工：問候依本地時間、不顯示名字；提問框在最上；「有更新」只列三則，點了進對應頁面</p>
+    </div>
+
+    <!-- 4 首頁：主管 -->
+    <div style="display: flex; flex-direction: column; gap: 10px; align-items: center">
+      <div style="width: 390px; height: 844px; border-radius: 40px; overflow: hidden; background: {{t.bg}}; box-shadow: 0 0 0 10px {{t.bezel}}; display: flex; flex-direction: column">
+        <div style="display: flex; align-items: center; gap: 10px; height: 56px; padding: 8px 16px 0; box-sizing: border-box"><span style="font-size: 17px; font-weight: 900">範例公司</span><span style="margin-left: auto; height: 34px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 999px; background: {{t.inkBg}}; color: {{t.inkFg}}; font-size: 13px; font-weight: 700">主管</span></div>
+        <div style="flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 14px; padding: 10px 16px 12px">
+          <span style="font-size: 22px; font-weight: 700">{{greet}}</span>
+          <section style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+            <div style="display: flex; flex-direction: column; gap: 4px; padding: 14px; border-radius: 14px; background: {{t.surface}}; border: 1.5px solid {{t.conflict}}"><span style="font-family: 'Space Grotesk', sans-serif; font-size: 34px; font-weight: 700; line-height: 1">3</span><span style="font-size: 14px; font-weight: 700">待審文件</span><span style="font-size: 12px; color: {{t.conflictText}}">2 組說法不同</span></div>
+            <div style="display: flex; flex-direction: column; gap: 4px; padding: 14px; border-radius: 14px; background: {{t.surface}}; border: 1px solid {{t.line}}"><span style="font-family: 'Space Grotesk', sans-serif; font-size: 34px; font-weight: 700; line-height: 1">2</span><span style="font-size: 14px; font-weight: 700">回報有錯</span><span style="font-size: 12px; color: {{t.muted}}">最早 2 天前</span></div>
+          </section>
+          <span style="height: 50px; border-radius: 12px; background: {{t.primary}}; color: {{t.onPrimary}}; font-size: 15px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">開始審核</span>
+          <div style="display: flex; align-items: center; gap: 8px; height: 50px; padding: 0 6px 0 14px; border-radius: 14px; border: 1.5px solid {{t.line}}; background: {{t.surface}}"><span style="flex: 1; font-size: 15px; color: {{t.muted}}">想知道什麼？</span><span style="height: 38px; padding: 0 14px; border-radius: 10px; border: 1px solid {{t.line}}; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center">提問</span></div>
+          <section style="display: flex; flex-direction: column; gap: 6px">
+            <b style="font-size: 15px">最近新增的文件</b>
+            <sc-for list="{{docs}}" as="d" hint-placeholder-count="3">
+              <div style="display: flex; align-items: center; gap: 10px; min-height: 48px; border-bottom: 1px solid {{t.line}}"><span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {{t.muted}}">{{d.date}}</span><span style="flex: 1; min-width: 0; font-size: 14px">{{d.title}}</span><span style="font-size: 11px; padding: 1px 7px; border-radius: 6px; background: {{t.raised}}; color: {{t.muted}}">{{d.tag}}</span></div>
+            </sc-for>
+          </section>
+        </div>
+        <nav aria-label="頁面" style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); height: 72px; padding-bottom: 12px; box-sizing: border-box; border-top: 1px solid {{t.line}}; background: {{t.surface}}">
+          <sc-for list="{{tabsManager}}" as="tb" hint-placeholder-count="5"><a href="#" style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: {{tb.color}}; text-decoration: none; font-size: 11px; font-weight: {{tb.weight}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{tb.icon}}"></path></svg>{{tb.label}}<sc-if value="{{tb.badge}}"><span style="position: absolute; top: 8px; left: 50%; margin-left: 6px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: {{t.primary}}; color: {{t.onPrimary}}; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">{{tb.badge}}</span></sc-if></a></sc-for>
+        </nav>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: {{t.muted}}">首頁 · 主管：待辦的數字放最上；「更多」的徽章是待審＋回報</p>
+    </div>
+
+    <!-- 5 我的上傳＋詳情面板 -->
+    <div style="display: flex; flex-direction: column; gap: 10px; align-items: center">
+      <div style="position: relative; width: 390px; height: 844px; border-radius: 40px; overflow: hidden; background: {{t.bg}}; box-shadow: 0 0 0 10px {{t.bezel}}; display: flex; flex-direction: column">
+        <div style="display: flex; align-items: center; gap: 10px; height: 56px; padding: 8px 16px 0; box-sizing: border-box"><span style="font-size: 17px; font-weight: 900">範例公司</span><span style="margin-left: auto; height: 34px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 999px; background: {{t.inkBg}}; color: {{t.inkFg}}; font-size: 13px; font-weight: 700">一般員工</span></div>
+        <div style="display: flex; gap: 4px; padding: 6px 16px"><span style="height: 38px; padding: 0 12px; border-radius: 8px; font-size: 14px; color: {{t.muted}}; display: inline-flex; align-items: center">新增文件</span><span style="height: 38px; padding: 0 12px; border-radius: 8px; background: {{t.raised}}; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center">我的上傳 3</span></div>
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 6px 16px">
+          <sc-for list="{{uploads}}" as="u" hint-placeholder-count="3">
+            <div style="display: flex; align-items: center; gap: 10px; min-height: 64px; padding: 8px 12px; border-radius: 12px; background: {{t.surface}}; border: {{u.border}}"><span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><b style="font-size: 14px">{{u.title}}</b><span style="font-size: 12px; color: {{t.muted}}">{{u.meta}}</span></span><span style="height: 26px; padding: 0 9px; border-radius: 999px; background: {{u.chipBg}}; color: {{u.chipFg}}; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center">{{u.status}}</span></div>
+          </sc-for>
+        </div>
+        <div style="position: absolute; inset: 0; background: {{t.overlay}}"></div>
+        <div role="dialog" aria-label="青翼桌測試回饋" style="position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; gap: 10px; padding: 10px 16px 28px; border-radius: 20px 20px 0 0; background: {{t.surface}}">
+          <span style="align-self: center; width: 40px; height: 5px; border-radius: 999px; background: {{t.line}}"></span>
+          <div style="display: flex; align-items: center; gap: 8px"><b style="font-size: 18px">青翼桌測試回饋</b><span style="margin-left: auto; height: 26px; padding: 0 9px; border-radius: 999px; background: {{t.warningSoft}}; color: {{t.warning}}; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center">部分退回</span></div>
+          <p style="margin: 0; font-size: 14px; line-height: 1.6">主管核准了 3 項、退回 2 項。退回的實體與關係不會進入圖譜。</p>
+          <sc-for list="{{items}}" as="i" hint-placeholder-count="5">
+            <div style="display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 12px; border-radius: 10px; background: {{t.raised}}; font-size: 14px"><span style="width: 9px; height: 9px; border-radius: 999px; background: {{i.color}}"></span><span style="flex: 1">{{i.name}}</span><span style="font-size: 12px; font-weight: 700; color: {{i.fg}}">{{i.state}}</span></div>
+          </sc-for>
+          <span style="height: 48px; margin-top: 4px; border-radius: 12px; border: 1px solid {{t.line}}; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center">重新上傳修正版</span>
+        </div>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: {{t.muted}}">我的上傳：點一份從底部升起詳情；回報結果沿用回答下方的卡片</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2400,"height":1080}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { dark: false }; }
+  renderVals() {
+    const L = { board: '#EDEFEA', bg: '#F5F6F3', surface: '#FFFFFF', raised: '#EDEFF2', text: '#14171A', muted: '#5B6470', line: '#DDE1E4', bezel: '#14171A', primary: '#2340C8', primarySoft: '#E6EAFB', onPrimary: '#FFFFFF', evid: '#E8B800', inkBg: '#14171A', inkFg: '#FFFFFF', conflict: '#A3266A', conflictText: '#7A1D50', warning: '#9A3D00', warningSoft: '#FCEBDD', success: '#1A6E33', successSoft: '#E3F1E6', overlay: 'rgba(20,23,26,0.45)', eP: '#3D7AB8', eT: '#2E7D5B', eJ: '#7A52C7' };
+    const D = { board: '#05070B', bg: '#0A0D14', surface: '#111621', raised: '#182030', text: '#E7ECF5', muted: '#8B97AD', line: '#253044', bezel: '#2A3548', primary: '#3EE6D2', primarySoft: '#16302E', onPrimary: '#04201D', evid: '#FFB547', inkBg: '#E7ECF5', inkFg: '#0A0D14', conflict: '#FF7AA8', conflictText: '#FFD3E2', warning: '#FF9466', warningSoft: '#2E1B12', success: '#6CC489', successSoft: '#13261A', overlay: 'rgba(0,0,0,0.6)', eP: '#7FB2EB', eT: '#5CC294', eJ: '#B89CF0' };
+    const d = this.state.dark, t = d ? D : L;
+    const I = {
+      home: 'M3 11l9-7 9 7M5 10v10h14V10',
+      chat: 'M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z',
+      graph: 'M6 8a2 2 0 1 0 0-.01M18 9a2 2 0 1 0 0-.01M10 19a2 2 0 1 0 0-.01M8 7l8 1.5M7 9l2 8M16.5 10.5l-5 7',
+      time: 'M4 12h16M8 8v8M16 6v12',
+      upload: 'M12 16V4M7 9l5-5 5 5M5 20h14',
+      more: 'M5 12h.01M12 12h.01M19 12h.01'
+    };
+    const mk = (defs, active) => defs.map((x) => ({ label: x[0], icon: x[1], badge: x[2] || '', color: x[0] === active ? t.primary : t.muted, weight: x[0] === active ? '700' : '500' }));
+    const ok = { state: '已核准', fg: t.success }, no = { state: '退回', fg: t.warning };
+    const hr = new Date().getHours();
+    return {
+      t,
+      greet: hr >= 5 && hr <= 11 ? '早安' : (hr >= 12 && hr <= 17 ? '午安' : '晚安'),
+      tabsStaff: mk([['首頁', I.home], ['問答', I.chat], ['圖譜', I.graph], ['時間軸', I.time], ['上傳', I.upload]], '首頁'),
+      tabsManager: mk([['首頁', I.home], ['問答', I.chat], ['圖譜', I.graph], ['上傳', I.upload], ['更多', I.more, '5']], '首頁'),
+      faq: ['到職滿一年有幾天年假？', '人資部的經理是誰？', '青翼專案由誰負責？'],
+      staffTodo: [
+        { dot: t.success, title: '「青翼桌供應商會議筆記」已核准', sub: '新增 2 個實體 · 昨天' },
+        { dot: t.primary, title: '「青翼專案啟動會議紀錄」審核中', sub: '主管核准後才會出現在問答與圖譜' },
+        { dot: t.success, title: '你回報的回答已處理', sub: '人資部的經理是誰？· 不是錯誤' }
+      ],
+      history: [{ q: '青翼專案現在的進度？', when: '昨天' }, { q: '資訊安全規定對筆電有什麼要求？', when: '3 天前' }, { q: '產品研發部有哪些人？', when: '上週' }],
+      docs: [{ date: '05-15', title: '青翼專案進度更新', tag: '內部' }, { date: '04-20', title: '長堤專案進度報告', tag: '內部' }, { date: '03-20', title: '2026 年組織調整與調薪方案', tag: '機密' }],
+      uploads: [
+        { title: '青翼專案啟動會議紀錄', meta: '剛剛上傳', status: '審核中', chipBg: t.primarySoft, chipFg: t.primary, border: '1px solid ' + t.line },
+        { title: '青翼桌供應商會議筆記', meta: '5 天前', status: '已核准', chipBg: t.successSoft, chipFg: t.success, border: '1px solid ' + t.line },
+        { title: '青翼桌測試回饋', meta: '1 週前', status: '部分退回', chipBg: t.warningSoft, chipFg: t.warning, border: '1.5px solid ' + t.primary }
+      ],
+      items: [Object.assign({ name: '青翼桌', color: t.eJ }, ok), Object.assign({ name: '周大衛', color: t.eP }, ok), Object.assign({ name: '測試小組', color: t.eT }, no), Object.assign({ name: '周大衛 —參與→ 測試小組', color: t.muted }, no), Object.assign({ name: '周大衛 —參與→ 青翼專案', color: t.muted }, ok)],
+      modeLabel: d ? 'DARK' : 'LIGHT', darkPressed: d ? 'true' : 'false', toggleDark: () => this.setState({ dark: !d })
+    };
+  }
+}
+</script>
+</body>
+</html>
