@@ -99,7 +99,7 @@
 - `graph-keyboard.ts`：圖譜的鍵盤操作與報讀的順序、按鍵與句型（純函式，見 `docs/graph.md`「鍵盤操作與報讀」）
 - `graph-list.ts`：清單模式的分群與關係句的純函式、「圖譜｜清單」的選擇
 - `graph-style.ts`：圖譜的配色（深色模式切換時重新套用）
-- `graph-zoom.ts`：三層語意縮放的層級、細節層與圖上元素的純函式；`panToCenter()` 在手機實體面板開著時，把選取的節點平移到面板以上的中央
+- `graph-zoom.ts`：三層語意縮放的層級、細節層與圖上元素的純函式；`panToCenter()` 在手機實體面板開著時，把選取的節點平移到面板以上的中央；`focusViewport()` 是桌機選取時的視角（縮放上限，聚焦集合留在畫布內）
 - `GraphList.tsx`：圖譜的清單模式
 - `GraphPage.tsx`：圖譜頁；桌機是畫板 `Graph`、`G-Scale` 的版面（#336）
 - `GraphView.tsx`：圖譜（cytoscape，動態載入）；`areaOf()`、`centerIn()` 與 `GraphZoomView` 共用；`cover` prop

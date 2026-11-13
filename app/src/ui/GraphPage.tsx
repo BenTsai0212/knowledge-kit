@@ -34,6 +34,7 @@ import {
 } from "./graph-keyboard";
 import { GraphView, type GraphViewApi } from "./GraphView";
 import { breadcrumb, detailOf, zoomLevel } from "./graph-zoom";
+import { FOCUS_MAX_ZOOM } from "./graph-style";
 import { GraphZoomView } from "./GraphZoomView";
 import { SHEET_HALF, useLayout } from "./layout";
 import { prefersReducedMotion } from "./motion";
@@ -560,6 +561,7 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
           keyboard={focused ? { current, cursor } : null}
           api={view}
           cover={sheetCover}
+          maxFocusZoom={desktop ? FOCUS_MAX_ZOOM : undefined}
         />
       ) : (
         <GraphView
@@ -574,6 +576,7 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
           keyboard={focused ? { current, cursor } : null}
           api={view}
           cover={sheetCover}
+          maxFocusZoom={desktop ? FOCUS_MAX_ZOOM : undefined}
         />
       )}
     </div>

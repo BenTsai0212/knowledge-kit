@@ -2480,7 +2480,8 @@ button.chip.graph-chip[aria-pressed="true"] {
   font-family: var(--font-mono);
 }
 
-/* 畫布：surface、1px border、圓角 20px、24px 的點狀底紋，高度填滿到視窗底部（視窗高 900px 以上時至少 720px） */
+/* 畫布：surface、1px border、圓角 20px、24px 的點狀底紋，高度填滿到視窗底部（視窗高 900px 以上時至少 720px）。
+   最小高度含上下 1px 的框線，裡面畫圖的範圍（.graph-canvas）才是 720px（#336 修正要求） */
 .graph-stage {
   position: relative;
   display: flex;
@@ -2495,7 +2496,7 @@ button.chip.graph-chip[aria-pressed="true"] {
 
 @media (min-height: 900px) {
   .graph-stage {
-    min-height: 720px;
+    min-height: 722px;
   }
 }
 

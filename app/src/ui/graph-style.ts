@@ -16,6 +16,12 @@ import { SECOND_OPACITY, SIDE_BUBBLE_OPACITY } from "./graph-zoom";
 export const NODE_LABEL_MAX_WIDTH = 112;
 export const NODE_LABEL_MAX_LINES = 2;
 export const NODE_LABEL_FONT_SIZE = 12;
+// 桌機選取與逐步展開時的縮放上限（#336 修正要求）：節點標籤在畫面上不超過 16px（關係標籤同比例，11px × 4/3 ≈ 14.7px）。
+// 畫板 Graph 選取後節點標籤 14px、關係標籤 12px；放得更大時標籤互相壓住、畫布邊緣的節點被切掉
+export const FOCUS_LABEL_MAX_PX = 16;
+export const FOCUS_MAX_ZOOM = FOCUS_LABEL_MAX_PX / NODE_LABEL_FONT_SIZE;
+// 下限是標籤原本的 12px（聚焦集合放得進畫布時才放大到這裡）
+export const FOCUS_MIN_ZOOM = 1;
 
 // 讀取 CSS 變數，例如 (name) => getComputedStyle(document.documentElement).getPropertyValue(name)
 export type ReadVariable = (name: string) => string;

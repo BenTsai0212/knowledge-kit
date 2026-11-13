@@ -7,9 +7,9 @@ import type { PathStep } from "../graph/path";
 import type { Graph } from "../graph/read";
 import { relationCounts } from "../graph/search";
 import { clampLabel, nodeLabels, type MeasureText } from "./graph-labels";
-import { edgeWidth, graphStyle, NODE_LABEL_FONT_SIZE, NODE_LABEL_MAX_LINES, NODE_LABEL_MAX_WIDTH, nodeSize, presentSizes } from "./graph-style";
+import { edgeWidth, FOCUS_MIN_ZOOM, graphStyle, NODE_LABEL_FONT_SIZE, NODE_LABEL_MAX_LINES, NODE_LABEL_MAX_WIDTH, nodeSize, presentSizes } from "./graph-style";
 import { visibleArea } from "./layout";
-import { panToCenter } from "./graph-zoom";
+import { focusViewport, panToCenter } from "./graph-zoom";
 import { EXPAND_MS, MOTION, motionDuration, PAN_MS, watchReducedMotion } from "./motion";
 import { presentationArrangement, type Box, type EdgeShape, type NodeShape, type Point } from "./presentation-camera";
 import { isDark, watchColorScheme } from "./theme";
@@ -38,6 +38,8 @@ interface Props {
   api?: RefObject<GraphViewApi | null>;
   // 手機的實體面板蓋住視窗下方的比例（#257，停在 56% 時是 SHEET_HALF；沒有面板時 0）：選取的節點平移到面板以上的中央
   cover?: number;
+  // 桌機（#336 修正要求）：選取與逐步展開時的縮放上限（graph-style.ts 的 FOCUS_MAX_ZOOM）；沒有傳入時（手機、平板、展示模式）照舊
+  maxFocusZoom?: number;
 }
 
 export interface KeyboardMarks {
@@ -296,7 +298,8 @@ const FOCUS_PADDING = 40;
 // 展開後的動態：新的線描出來；畫面平滑移動，讓選取的節點靠近中央（聚焦集合放不進畫面時改為聚焦集合整個放進畫面）；回到全部時顯示全貌。
 // 手機的實體面板開著時（cover > 0），只平移：選取的節點放在面板以上的中央，縮放不變；聚焦集合超出可見部分時由使用者自己拖曳或縮放（#257）
 // 展示模式改由 presentFocus() 決定 zoom 與位置：聚焦集合與標籤整個放進畫面、標籤不重疊
-function animateFocus(cy: Core, graph: Graph, previous: Expansion, next: Expansion, reduced: boolean, cover: number) {
+// 桌機傳入 maxZoom 時改由 focusViewport() 決定：縮放在 FOCUS_MIN_ZOOM～maxZoom（標籤 12～16px），聚焦集合放得進時選取的節點靠近中央、整個聚焦集合留在畫布內
+function animateFocus(cy: Core, graph: Graph, previous: Expansion, next: Expansion, reduced: boolean, cover: number, maxZoom?: number) {
   const [expandMs, panMs] = [motionDuration(reduced, EXPAND_MS), motionDuration(reduced, PAN_MS)];
   cy.stop(true, false);
   const center = (eles: CollectionReturnValue) => (panMs === 0 ? cy.center(eles) : cy.animate({ center: { eles } }, { duration: panMs, easing: "ease-in-out" }));
@@ -321,6 +324,13 @@ function animateFocus(cy: Core, graph: Graph, previous: Expansion, next: Expansi
   const eles = cy.nodes().filter((n) => focus.entities.has(n.id()));
   if (presenting()) {
     presentFocus(cy, eles, selectedOf(next), panMs);
+    return;
+  }
+  if (maxZoom !== undefined && cover === 0) {
+    const anchor = selected.nonempty() ? { ...selected.position() } : null;
+    const target = focusViewport(eles.boundingBox(), anchor, cy.zoom(), { width: cy.width(), height: cy.height() }, FOCUS_PADDING, maxZoom, FOCUS_MIN_ZOOM);
+    if (panMs === 0) cy.viewport(target);
+    else cy.animate(target, { duration: panMs, easing: "ease-in-out" });
     return;
   }
   const [box, extent] = [eles.boundingBox(), cy.extent()];
@@ -354,7 +364,7 @@ export function trackContainer(element: HTMLElement, cy: Core): () => void {
   };
 }
 
-export function GraphView({ graph, language, selected, path, onSelect, expansion, excluded = NONE, isolated = false, compact = false, labelGraph = graph, keyboard = null, api, cover = 0 }: Props) {
+export function GraphView({ graph, language, selected, path, onSelect, expansion, excluded = NONE, isolated = false, compact = false, labelGraph = graph, keyboard = null, api, cover = 0, maxFocusZoom }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const cy = useRef<Core | null>(null);
   // tap 事件在 cytoscape 實例建立時註冊，以 ref 取得最新的 onSelect
@@ -396,6 +406,13 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
       const focus = focusOf(graph, expansion ?? ALL);
       if (presenting() && focus !== null && path === null && !compact)
         presentFocus(instance, instance.nodes().filter((n) => focus.entities.has(n.id())), selectedOf(expansion ?? ALL), 0);
+      // 桌機：一開始就有聚焦集合時，同樣以縮放上限放到位（#336 修正要求）
+      else if (maxFocusZoom !== undefined && focus !== null && path === null && !compact) {
+        const chosen = instance.$id(selectedOf(expansion ?? ALL) ?? "");
+        const eles = instance.nodes().filter((n) => focus.entities.has(n.id()));
+        const canvas = { width: instance.width(), height: instance.height() };
+        instance.viewport(focusViewport(eles.boundingBox(), chosen.nonempty() ? { ...chosen.position() } : null, instance.zoom(), canvas, FOCUS_PADDING, maxFocusZoom, FOCUS_MIN_ZOOM));
+      }
     });
     return () => {
       cancelled = true;
@@ -442,7 +459,7 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
       return;
     }
     markFresh(cy.current, graph, applied.current, next);
-    animateFocus(cy.current, graph, applied.current, next, reduced.current, cover);
+    animateFocus(cy.current, graph, applied.current, next, reduced.current, cover, maxFocusZoom);
     applied.current = next;
   }, [expansion, path, excluded, isolated, cover]);
 
