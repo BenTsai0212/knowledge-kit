@@ -2,34 +2,342 @@
 
 每個路徑的職責，以及結構測試守的界線（例如只經 `retrieve()` 取段落、客戶資料只用 `@client/…`、顏色只用 CSS 變數、語言規則只放 `app/src/language/`）。改 `app/`、`worker/`、`client/` 前先讀本文件；指令與硬規則見 [AGENTS.md](../AGENTS.md)。〔#142 從 `AGENTS.md` 第 3 節移來〕
 
-| 路徑 | 內容 |
-| --- | --- |
-| `app/` | 前端（Vite＋React＋TypeScript）；`index.html` 與 `src/`；`dev/` 是只在 `npm run dev` 提供的開發用頁面（語意向量的量測頁，不進 `dist/`，見 `docs/retrieval.md`「瀏覽器量測」）；`src/client/` 是 `client/` 設定的型別與讀取（改 Schema 時同步修改，見 `docs/client-config.md`）；`src/client/i18n.ts` 是介面文字唯一的讀取模組（`strings()`、`fill()`、`errorMessage()`；結構測試在 `i18n.test.ts`）；`src/client/source-scan.ts` 是結構測試共用的原始碼掃描；客戶資料一律以 `@client/…` 別名讀取，不以相對路徑指到 `client/`（`client/schema/` 除外；結構測試在 `src/client/client-dir.test.ts`） |
-| `app/src/dataset/` | 資料集（`client/data/`）的型別、鍵清單、讀取（`load.ts`）、跨檔檢查（`validate.ts`）與匯入（`seed.ts`） |
-| `app/src/retrieval/` | 檢索：`retrieve.ts` 經 `withIdentity()` 取段落再計分；`VectorProvider` 接口（`types.ts`）、預設實作 `keyword-hash`（`tokenize.ts`、`keyword-hash.ts`）；語意向量實作在 `semantic/`（可選，`@huggingface/transformers` 只在 `semantic/runtime.ts` 以動態 import 載入）；使用哪個實作只在 `providers.ts` 決定（`providers.test.ts` 檢查）；說明見 `docs/retrieval.md`；預設問題的檢索測試是 target 測試 `scenarios.target.test.ts`（案例與涵蓋規則在 `scenario-cases.ts`，一律以 `keyword-hash` 檢索） |
-| `app/src/language/` | 語言模組（#83）：語言或文字類別的規則（文字類別與切詞方式 `scripts.ts`、停用詞 `stopwords.ts`、對外函式 `text.ts`），檢索的 `tokenize.ts` 與上傳的 `chunk.ts` 經由它處理；其他地方不得放這類規則（`structure.test.ts` 檢查）；說明見 `docs/retrieval.md`「語言模組」 |
-| `app/src/qa/` | 問答：`answer.ts` 的 `ask()`（`retrieve()` → 本機拒答 → `prompt.ts` 組 prompt → `/api/ask` → 拒答標記、`unwrap.ts` 移除外層標籤與 `citations.ts` 的引用解析）；`compare.ts` 的 `askEach()` 是展示模式的身分對照（每個身分各呼叫一次 `ask()`）；`types.ts` 是 `/api/ask` 的傳輸接口，`api.ts`（＋`sse.ts`）是真的實作，`testing.ts` 是測試用的假實作（測試不呼叫真實 API）；只透過 `retrieve()` 取得段落（`structure.test.ts` 檢查）；說明見 `docs/qa.md` |
-| `app/src/ui/` | 畫面（入口是 `app/src/App.tsx`，左側導覽 `Sidebar.tsx` 的頁籤切換首頁（`HomePage.tsx`，純函式在 `home.ts`，登入後的預設頁）、問答、圖譜、時間軸、上傳、待審與評測台；問答頁是左導覽、中間對話 `Conversation.tsx`、右側面板（原文 `SourcePanel.tsx` 或回答提到的實體 `MentionPanel.tsx`，純函式在 `mentions.ts`）的三欄，見 `docs/qa.md`「畫面」；App 也在背景執行上傳後的萃取與說法不同的比對）：待審頁是 `ReviewPage.tsx`（核准計畫在 `review-helpers.ts`；含「說法不同」的並列與處理；「回報」分頁是 `ReportList.tsx`，問答的「回報有錯」由 `report-helpers.ts` 組成回報，回答下方與首頁的回報結果是 `ReportResult.tsx`），萃取狀態是 `ExtractionStatus.tsx`，比對狀態是 `ConflictStatus.tsx`，評測台是 `EvalPage.tsx`（純函式在 `eval-helpers.ts`），拒答下方的下一步是 `refusal-next-steps.ts`（見 `docs/qa.md`「拒答」），問答錯誤的五類是 `qa-errors.ts`、需要管理者的說明是 `AdminNotice.tsx`（見 `docs/qa.md`「錯誤」），時間軸與原文面板的標示是 `PassageMarks.tsx`；入口頁的主視覺是 `EntryHero.tsx`（版面的純函式在 `entry-hero.ts`，見 `docs/design.md`「入口頁主視覺」），頁首的產品 icon 是 `ProductIcon.tsx`（favicon 在 `app/public/favicon.svg`，見 `docs/design.md`「產品 icon（K 晶格）」），共用的提示框是 `Notice.tsx`，檔案選擇是 `FilePicker.tsx`（原生 input 視覺上隱藏，按鈕與檔名跟著主題與翻譯，見 `docs/design.md`「表單元件」），可見等級與專案的標籤是 `AccessBadges.tsx`；元件（`*.tsx`；圖譜是 `GraphPage.tsx`、`GraphView.tsx`（cytoscape，動態載入；配色是 `graph-style.ts`，深色模式切換時重新套用；鍵盤操作與報讀的順序、按鍵與句型是 `graph-keyboard.ts`（純函式，見 `docs/graph.md`「鍵盤操作與報讀」）；大量節點時的三層語意縮放是 `GraphZoomView.tsx`（層級、細節層與圖上元素的純函式在 `graph-zoom.ts`，見 `docs/graph.md`「三層語意縮放（畫面）」）；清單模式是 `GraphList.tsx`（分群與關係句的純函式、「圖譜｜清單」的選擇在 `graph-list.ts`）；實體類型的圖示集是 `entity-icons.ts`，圖例的圖示是 `EntityIcon.tsx`；展開的動態與「減少動態效果」的判斷是 `motion.ts`）；動態的刻度與 CSS 變數 `--motion-*`、`--ease-*` 是 `motion.ts`，問答的逐句動態是 `answer-motion.ts`（見 `docs/qa.md`「畫面」的「動態」）、`EntityPanel.tsx`（圖譜頁的右側面板）、`PathPanel.tsx`、`EntitySearch.tsx`（以名稱搜尋實體），時間軸是 `TimelinePage.tsx`（區段與篩選的純函式在 `timeline-view.ts`，見 `docs/graph.md`））、介面文字一律以 `app/src/client/i18n.ts` 的 `strings()` 取得（翻譯檔在 `client/i18n/`）、樣式是 `app.css`（顏色與圓角只用 `theme.ts` 由 `client/theme.json` 設定的 CSS 變數，深色模式依 `prefers-color-scheme` 標上 `data-scheme` 後改用 `darkColors`，不寫死顏色；結構測試在 `theme.test.ts`）、`access-code.ts`（邀請碼只放 `sessionStorage`）、`online-demo.ts`（線上 demo 的 build 時開關 `VITE_ONLINE_DEMO`、`VITE_PUBLIC_ACCESS_CODE` 的唯一讀取處，預設關閉；開啟時隱藏評測台，見 `docs/qa.md`「線上 demo」；也是展示模式 `?mode=presentation` 的唯一讀取處，只顯示問答與圖譜，見 `docs/qa.md`「展示模式」；以及開啟評測台的 `?tools=evals`，見 `docs/evals.md`「開啟評測台」；身分對照的開關 `VITE_DEMO_COMPARE`，預設關閉、線上 demo 一律關閉，見 `docs/qa.md`「身分對照」）、`requests.ts`（切換身分或語言時捨棄進行中的提問）、`gone-motion.ts`（切換身分時看不到的內容消失）與 `cross-fade.ts`（切換語言、Light／Dark 的交叉淡換）；說明見 `docs/qa.md`「畫面」 |
-| `app/src/graph/` | 知識圖譜：`read.ts` 的 `readGraph()` 經 `withIdentity()` 一次讀出看得到的實體、關係與出處段落；`path.ts` 的 `shortestPath()` 在可見圖上找最短路徑；`expansion.ts` 是圖譜頁逐步展開的狀態（純函式，只用可見圖）；`search.ts` 是圖譜頁的搜尋、類型篩選與「關聯最多」（純函式，只用可見圖）；`clusters.ts` 是大量節點時的門檻、分群與聚合線（純函式，只用可見圖，#254）；`timeline.ts` 的 `readTimeline()` 依日期列出看得到的文件與段落；`recent.ts` 是首頁的「最近新增的文件」與「最近看過」的實體（權限測試在 `app/tests/graph/`）；說明見 `docs/graph.md` |
-| `app/src/upload/` | 上傳（說明見 `docs/upload.md`；畫面是 `app/src/ui/UploadPage.tsx`，其中「我的上傳」是 `app/src/ui/MyUploads.tsx`，狀態與四步進度的純函式在 `my-uploads.ts`）：`parse.ts` 擷取純文字（`pdf.ts`、`docx.ts` 以動態 import 載入 `pdfjs-dist`、`mammoth`，見 ADR 0002；上限是 `parse.ts` 的常數）、`markdown.ts`、`chunk.ts` 切段；`write.ts` 的 `uploadDocument()` 經 `withIdentity()` 寫入文件與段落（`kk_app` 唯一的寫入；權限由 RLS 執行，見 `docs/data-model.md`「寫入規則」，測試在 `app/tests/upload/`） |
-| `app/src/extraction/` | 上傳文件的萃取（說明見 `docs/extraction.md`）：`run.ts` 分批呼叫 `/api/ask`（`batch.ts`、`prompt.ts`）、`output.ts` 解析與驗證、`merge.ts` 合併比對；`store.ts` 經 `withIdentity()` 寫入待審、讀取待審區與我的上傳（`readMyUploads()`）、核准與退回（只用 INSERT；規則由 RLS 執行，見 `docs/data-model.md`「待審與核准」，測試在 `app/tests/extraction/`） |
-| `app/src/conflicts/` | 上傳文件與既有段落的說法不同（#51，說明見 `docs/conflicts.md`）：`run.ts` 在萃取後以上傳者的身分挑選段落（`select.ts`）、呼叫一次 `/api/ask`（`prompt.ts`）、解析與驗證（`output.ts`）；`store.ts` 經 `withIdentity()` 寫入偵測結果、讀取與處理（只用 INSERT；規則由 RLS 執行，見 `docs/data-model.md`「說法不同」，測試在 `app/tests/conflicts/`）；`marks.ts` 是時間軸與原文面板的標示（在 `readTimeline()`、`readSource()` 的交易中讀取） |
-| `app/src/reports/` | 回答錯誤回報（ADR 0007 決定 7）：`store.ts` 經 `withIdentity()` 寫入回報、讀取與處理（只用 INSERT；規則由 RLS 執行，見 `docs/data-model.md`「回答錯誤回報」，測試在 `app/tests/reports/`）；畫面是問答的「回報有錯」（`app/src/ui/AnswerView.tsx`）與待審頁的「回報」分頁（`app/src/ui/ReportList.tsx`），見 `docs/qa.md`「回報有錯」 |
-| `app/src/evals/` | 評測台（#62，說明見 `docs/evals.md`）：題庫（`client/evals/`）的型別、鍵清單與讀取（`types.ts`、`keys.ts`、`load.ts`）、需要資料集的檢查（`validate.ts`）；`oracle.ts` 是權限讀取規則的獨立實作（`expectedVisible()`，`app/tests/db/oracle.ts` 重新匯出）；`score.ts` 是評分的純函式（引用、關鍵重點、拒答、禁止內容、滲漏、指標彙總；滲漏的反向驗證在 `app/tests/evals/`）；`run.ts` 是執行（評測專用的記憶體資料庫 `openEvalDatabase()`、預計呼叫次數、逐題執行、停止與錯誤處理、兩組檢索設定），`grade.ts` 是模型評分的 prompt 與解析（全文在 `docs/evals.md`，`docs.test.ts` 檢查）；`report.ts` 是給客戶的品質報告的內容（純函式，只放序號、類別、身分、數字與判定），`report-html.ts` 把它轉成自成一頁的 HTML；畫面是 `app/src/ui/EvalPage.tsx`；測試只用假的 `/api/ask` |
-| `app/src/sources/` | 引用跳回原文：`source.ts` 的 `readSource()` 經 `withIdentity()` 讀取段落所屬文件中看得到的段落 |
-| `app/src/db/` | 資料層（PGlite＋RLS）：`database.ts` 是唯一入口，`migrations/*.sql` 是 migration；說明見 `docs/data-model.md` |
-| `app/tests/` | 需要放在 `app/src/` 之外的測試（例如會用到被禁止 SQL 的越權測試）；`fixtures/large-graph.ts` 是圖譜分群用的虛構大型資料（固定種子、240 個實體，不放進 `client/`，#254） |
-| `worker/` | Cloudflare Worker（TypeScript）：`GET /api/health`、`POST /api/ask`（`ask.ts`：同站、邀請碼、body、每日次數的檢查；`upstream.ts`、`sse.ts`：轉發到 Claude Messages API 並轉成精簡的 SSE）；`models.ts` 是模型白名單，`usage.ts` 是計數用的 Durable Object，`testing.ts` 是測試用的假實作；其他請求交給 `dist/` 靜態檔。API 格式、錯誤類型、secret 與已知限制見 `worker/README.md` |
-| `client/` | 客戶設定（`*.json`）、介面翻譯檔（`i18n/<語言>.json`，含拒答文字與各錯誤訊息）、JSON Schema（`schema/`）、虛構資料集（`data/`）與評測題庫（`evals/questions.json`，見 `docs/evals.md`）；參考情境與測試基準，`KK_CLIENT` 可改用 `clients/<名稱>/`，說明見 `docs/client-config.md`、`docs/dataset.md` |
-| `clients/` | 各客戶的設定（`clients/<名稱>/`，結構同 `client/` 但不含 `schema/`）；本 repo 只放虛構的示範客戶，真實客戶放在各自的 fork（#77 決定 7、`clients/README.md`） |
-| `e2e/` | Playwright 的端對端測試（`*.spec.ts`：冒煙 `smoke`、越權 `access`、互動邊角 `interactions`、首頁 `home`、展示模式 `presentation`、待審頁 `review`、撤回 `retract`、回答錯誤回報 `reports`、三欄版面 `layout`、回答提到 `mentions`；線上 demo 的設定 `demo`，只在 `VITE_ONLINE_DEMO=1` 的 build 執行）；`support/client.ts` 讀取 `KK_CLIENT` 選定客戶的 JSON 並推算測試用的身分（不寫死角色、等級、專案），`support/fake-ask.ts` 是假的 `/api/ask`（含串流到一半的假回應），`support/app.ts` 是共用操作（介面文字從選定客戶的 `i18n/` 讀取），`support/dataset.ts` 以 `app/src/evals/oracle.ts` 算出各身分看不到的段落，`support/skip-reporter.ts` 列出略過的測試與原因（參考情境有略過時失敗）；`fixtures/` 是上傳用的虛構檔案；設定在根目錄的 `playwright.config.ts`（說明見 `docs/testing.md`） |
-| `scripts/` | 專案腳本（Node ESM，不在 `typecheck` 範圍內）：`client-dir.mjs`（`KK_CLIENT` 對應的客戶資料夾，`vite.config.ts`、`vitest.config.ts`、`vitest.clients.config.ts` 與 `check-client.mjs` 共用）、`check-client.mjs`、`check-clients.mjs`（客戶檢查）、`check-sensitive.mjs`（敏感資料檢查）、`ort-wasm.mjs`（語意向量 provider 的 ONNX Runtime WASM：build 時依客戶設定複製到 `dist/ort/` 並檢查單檔上限，`vite.config.ts` 使用）、`playbook.test.mjs`（`docs/playbook/` 繁中與英文的檔名、`##` 標題數量與相對連結）、`doc-commands.test.mjs`（Markdown 的 shell 指令區塊不加 `#` 註解，說明寫在區塊外）；`fixtures/invalid-client/` 是故意寫錯的測試資料 |
-| `package.json`、`vite.config.ts`、`vitest.config.ts`、`vitest.clients.config.ts`（客戶檢查的 target 測試）、`playwright.config.ts`、`tsconfig.node.json`、`wrangler.jsonc`（頂層供本機 `wrangler dev`，`env.demo` 是線上 demo） | 根目錄的指令與設定（單一 `package.json`，不用 workspaces） |
-| `docs/deploy.md` | 線上 demo 的部署步驟、驗收清單、回退與費用上限（部署由人執行；ADR 0005） |
-| `docs/workflow/` | 憲法與 workflow 手冊 |
-| `docs/rfcs/`、`docs/adr/` | 專案章程與決策紀錄 |
-| `docs/playbook/` | 方法與文件套件（需求確認清單、資料盤點表、資料安全說明、評測題庫建立步驟、驗收指標、落地新客戶步驟 `new-client-setup.md`）；入口是 [docs/playbook/README.md](playbook/README.md)，英文版在 `docs/playbook/en/`，兩份一起改 |
-| `tools/workflow/` | workflow 工具（Node，自帶 `package.json`；各工具的參數見 `tools/workflow/README.md`）；`hooks/confirm-main.mjs` 是合併與 push 到 main 前的確認 hook；`check-pr-body.mjs` 檢查 PR 描述有 `Closes`／`Refs #N`（`fast-lane` 除外）；`check-post-body.mjs` 是 agent 貼出 PR 描述與留言前的檢查（#104）；`read-trusted.mjs` 讀取 Issue 與 PR，只輸出可信身分的內容（#127）；`personal-paths.test.mjs` 檢查開發流程工具的檔案沒有 `/Users/<名稱>`、`/home/<名稱>` 形式的個人路徑（#96，fork 後要改的地方見 `docs/workflow/fork.md`）；`doc-rules.test.mjs` 檢查規則文件（一份正本、相對連結、`AGENTS.md` 的行數上限）；`runner/` 是自動化模組的 runner（ADR 0003，指令見 `AGENTS.md` 第 2 節）；`bootstrap-github.mjs`、`config.json` 不適用（見 `AGENTS.md` 第 2 節） |
-| `.claude/settings.json` | Claude Code 設定：在 `PreToolUse`（Bash）註冊確認 hook |
-| `templates/` | Claude Project 範本與預設不啟用的模組檔案 |
-| `.github/` | Issue／PR 範本、標籤定義、CI（`workflows/ci.yml`：`checks` 與 `clients` job；`workflows/pr-body.yml`：PR 描述檢查；`workflows/sensitive.yml`：敏感資料檢查；`workflows/e2e.yml`：Playwright，參考情境與每個客戶各一格）；沒有部署 workflow |
+## 寫法
+
+平行的 PR 改到同一行就會衝突（git 以行為單位合併，有衝突的 PR 不會觸發 CI），所以本文件一個檔案一行（#314）：
+
+- 每個路徑一個 `###` 小節：標題是路徑，下面一段簡短說明（整個路徑共同的職責與界線），再以清單列出檔案。
+- 清單**一個檔案（或一組成對的檔案）一行**，格式是 `` - `檔名`：說明 ``；檔名寫相對於小節路徑的路徑（例如 `src/ask.ts`）。只列需要說明的檔案。
+- 清單依每行第一個行內程式碼（檔名）排序：不分大小寫，依字元碼比較（`-`、`.`、`/` 排在數字與英文字母前）。
+- 新增檔案時只在正確的位置**插入一行**，不修改既有的行；刪除或改名時只動那一行。
+- 每行不超過 300 字；放不下時把細節寫到 `docs/` 的對應文件，這裡只留連結。
+- 結構測試在 `scripts/structure-doc.test.mjs`（行長與排序）。
+
+## 路徑
+
+### `app/`
+
+前端（Vite＋React＋TypeScript）。客戶資料一律以 `@client/…` 別名讀取，不以相對路徑指到 `client/`（`client/schema/` 除外；結構測試在 `src/client/client-dir.test.ts`）。
+
+- `dev/`：只在 `npm run dev` 提供的開發用頁面（語意向量的量測頁，不進 `dist/`，見 `docs/retrieval.md`「瀏覽器量測」）
+- `index.html`：入口 HTML
+- `src/`：原始碼，各模組的資料夾見以下各節
+- `src/App.tsx`：畫面的入口（見 `app/src/ui/`）；也在背景執行上傳後的萃取與說法不同的比對
+- `src/client/`：`client/` 設定的型別與讀取（改 Schema 時同步修改，見 `docs/client-config.md`）
+- `src/client/client-dir.test.ts`：結構測試：客戶資料只以 `@client/…` 別名讀取
+- `src/client/i18n.ts`：介面文字唯一的讀取模組（`strings()`、`fill()`、`errorMessage()`；結構測試在 `i18n.test.ts`）
+- `src/client/source-scan.ts`：結構測試共用的原始碼掃描
+
+### `app/src/dataset/`
+
+資料集（`client/data/`）的型別、鍵清單、讀取、跨檔檢查與匯入。
+
+- `load.ts`：讀取
+- `seed.ts`：匯入
+- `validate.ts`：跨檔檢查
+
+### `app/src/retrieval/`
+
+檢索；說明見 `docs/retrieval.md`。
+
+- `keyword-hash.ts`：預設實作 `keyword-hash`（切詞在 `tokenize.ts`）
+- `providers.ts`：使用哪個實作只在這裡決定（`providers.test.ts` 檢查）
+- `retrieve.ts`：經 `withIdentity()` 取段落再計分
+- `scenario-cases.ts`：預設問題的檢索測試的案例與涵蓋規則
+- `scenarios.target.test.ts`：預設問題的檢索測試（target 測試，案例在 `scenario-cases.ts`，一律以 `keyword-hash` 檢索）
+- `semantic/`：語意向量實作（可選）
+- `semantic/runtime.ts`：`@huggingface/transformers` 只在這裡以動態 import 載入
+- `tokenize.ts`：預設實作 `keyword-hash` 的切詞
+- `types.ts`：`VectorProvider` 接口
+
+### `app/src/language/`
+
+語言模組（#83）：語言或文字類別的規則；檢索的 `tokenize.ts` 與上傳的 `chunk.ts` 經由它處理，其他地方不得放這類規則（`structure.test.ts` 檢查）；說明見 `docs/retrieval.md`「語言模組」。
+
+- `scripts.ts`：文字類別與切詞方式
+- `stopwords.ts`：停用詞
+- `text.ts`：對外函式
+
+### `app/src/qa/`
+
+問答；只透過 `retrieve()` 取得段落（`structure.test.ts` 檢查）；說明見 `docs/qa.md`。
+
+- `answer.ts`：`ask()`（`retrieve()` → 本機拒答 → `prompt.ts` 組 prompt → `/api/ask` → 拒答標記、`unwrap.ts` 移除外層標籤與 `citations.ts` 的引用解析）
+- `api.ts`、`sse.ts`：`/api/ask` 傳輸接口真的實作
+- `citations.ts`：引用解析
+- `compare.ts`：`askEach()`，展示模式的身分對照（每個身分各呼叫一次 `ask()`）
+- `prompt.ts`：組 prompt
+- `testing.ts`：`/api/ask` 傳輸接口測試用的假實作（測試不呼叫真實 API）
+- `types.ts`：`/api/ask` 的傳輸接口
+- `unwrap.ts`：移除外層標籤
+
+### `app/src/ui/`
+
+畫面（入口是 `app/src/App.tsx`）。左側導覽的頁籤切換首頁（登入後的預設頁）、問答、圖譜、時間軸、上傳、待審與評測台；問答頁是左導覽、中間對話、右側面板（原文或回答提到的實體）的三欄，見 `docs/qa.md`「畫面」。元件是 `*.tsx`；介面文字一律以 `app/src/client/i18n.ts` 的 `strings()` 取得（翻譯檔在 `client/i18n/`）。
+
+- `access-code.ts`：邀請碼只放 `sessionStorage`
+- `AccessBadges.tsx`：可見等級與專案的標籤
+- `AdminNotice.tsx`：需要管理者的說明（見 `docs/qa.md`「錯誤」）
+- `answer-motion.ts`：問答的逐句動態（見 `docs/qa.md`「畫面」的「動態」）
+- `app.css`：樣式（顏色與圓角只用 `theme.ts` 由 `client/theme.json` 設定的 CSS 變數，深色模式依 `prefers-color-scheme` 標上 `data-scheme` 後改用 `darkColors`，不寫死顏色；結構測試在 `theme.test.ts`）
+- `BottomSheet.tsx`：共用的底部面板（原生 `<dialog>`，關閉按鈕、Esc、點背景、往下拖關閉，焦點回到觸發的元件）；`expandable` 是 56%／全高，`side="right"` 是平板的右側滑出面板（原文、實體、身分與語言）
+- `ConflictStatus.tsx`：比對狀態
+- `Conversation.tsx`：問答頁中間的對話
+- `cross-fade.ts`：切換語言、Light／Dark 的交叉淡換
+- `entity-icons.ts`：實體類型的圖示集
+- `EntityIcon.tsx`：圖例的圖示
+- `EntityPanel.tsx`：圖譜頁的右側面板
+- `EntitySearch.tsx`：以名稱搜尋實體
+- `entry-hero.ts`：入口頁主視覺版面的純函式
+- `EntryHero.tsx`：入口頁的主視覺（見 `docs/design.md`「入口頁主視覺」）
+- `eval-helpers.ts`：評測台的純函式
+- `EvalPage.tsx`：評測台
+- `ExtractionStatus.tsx`：萃取狀態
+- `FilePicker.tsx`：檔案選擇（原生 input 視覺上隱藏，按鈕與檔名跟著主題與翻譯，見 `docs/design.md`「表單元件」）
+- `gone-motion.ts`：切換身分時看不到的內容消失
+- `graph-keyboard.ts`：圖譜的鍵盤操作與報讀的順序、按鍵與句型（純函式，見 `docs/graph.md`「鍵盤操作與報讀」）
+- `graph-list.ts`：清單模式的分群與關係句的純函式、「圖譜｜清單」的選擇
+- `graph-style.ts`：圖譜的配色（深色模式切換時重新套用）
+- `graph-zoom.ts`：三層語意縮放的層級、細節層與圖上元素的純函式；`panToCenter()` 在手機實體面板開著時，把選取的節點平移到面板以上的中央
+- `GraphList.tsx`：圖譜的清單模式
+- `GraphPage.tsx`：圖譜頁
+- `GraphView.tsx`：圖譜（cytoscape，動態載入）；`areaOf()`、`centerIn()` 與 `GraphZoomView` 共用；`cover` prop
+- `GraphZoomView.tsx`：大量節點時的三層語意縮放（見 `docs/graph.md`「三層語意縮放（畫面）」）；`cover` prop
+- `home.ts`：首頁的純函式
+- `HomePage.tsx`：首頁（登入後的預設頁）
+- `IdentityControls.tsx`：左側導覽的身分、語言與更換邀請碼（手機改用 `IdentitySheet.tsx`）
+- `IdentitySheet.tsx`：手機的身分與語言面板的內容（身分單選卡附 `roles[].scope`、語言分段切換、更換邀請碼；帳號登入時只顯示帳號與角色）
+- `layout.ts`：斷點（`layoutFor()`、`useLayout()`）、手機分頁的分配（`phoneTabs()`）、底部面板的拖曳門檻與 `sheetSnap()`、底部面板以上的可見部分 `visibleArea()`（純函式，測試在 `layout.test.ts`）
+- `MentionPanel.tsx`：問答頁的右側面板：回答提到的實體（純函式在 `mentions.ts`）
+- `mentions.ts`：`MentionPanel.tsx` 的純函式
+- `MobileNav.tsx`：≤ 600px 時取代左側導覽的手機頂端列＋底部分頁列（含「更多」面板與展示模式的分段切換），見 `docs/design.md`「手機與平板」
+- `motion.ts`：動態的刻度與 CSS 變數 `--motion-*`、`--ease-*`；圖譜展開的動態與「減少動態效果」的判斷
+- `NavRail.tsx`：平板（601–1024px）的左側圖示導覽列，與 `Sidebar`、`MobileNav` 共用 `NavProps`；App 依 `useLayout()` 只渲染其中一種
+- `Notice.tsx`：共用的提示框
+- `online-demo.ts`：唯一讀取處：線上 demo 的 `VITE_ONLINE_DEMO`、`VITE_PUBLIC_ACCESS_CODE`（預設關閉；開啟時隱藏評測台），展示模式 `?mode=presentation`（只顯示問答與圖譜），評測台的 `?tools=evals`，身分對照的 `VITE_DEMO_COMPARE`（預設關閉、線上 demo 一律關閉）；見 `docs/qa.md`「線上 demo」「展示模式」「身分對照」、`docs/evals.md`「開啟評測台」
+- `PassageMarks.tsx`：時間軸與原文面板的標示
+- `PathPanel.tsx`：圖譜頁的路徑面板
+- `PresentationBar.tsx`：展示模式登入後的頂端列（不論寬度都取代 `Sidebar`／`MobileNav`），見 `docs/qa.md`「展示模式」
+- `ProductIcon.tsx`：頁首的產品 icon（favicon 在 `app/public/favicon.svg`，見 `docs/design.md`「產品 icon（K 晶格）」）
+- `qa-errors.ts`：問答錯誤的五類（見 `docs/qa.md`「錯誤」）
+- `refusal-next-steps.ts`：拒答下方的下一步（見 `docs/qa.md`「拒答」）
+- `report-helpers.ts`：問答的「回報有錯」組成回報
+- `ReportList.tsx`：待審頁的「回報」分頁
+- `ReportResult.tsx`：回答下方與首頁的回報結果
+- `requests.ts`：切換身分或語言時捨棄進行中的提問
+- `review-helpers.ts`：待審頁的核准計畫
+- `ReviewPage.tsx`：待審頁（含「說法不同」的並列與處理）
+- `script.ts`：劇本的純函式（分組與順序、第 N／M 題、已問過、是否切換身分）
+- `ScriptPanel.tsx`：展示模式問答頁左欄的劇本，見 `docs/qa.md`「展示模式」
+- `Sidebar.tsx`：左側導覽
+- `source-steps.ts`：「出處 N／M」與「在圖譜中查看」目標的純函式
+- `SourcePanel.tsx`：問答頁的右側面板：原文
+- `SourceSheet.tsx`：手機的原文面板（底部面板）
+- `SourceText.tsx`：原文紙面，桌機與手機共用
+- `theme.ts`：由 `client/theme.json` 設定 CSS 變數（深色模式用 `darkColors`）
+- `timeline-view.ts`：時間軸的區段與篩選的純函式
+- `TimelinePage.tsx`：時間軸（見 `docs/graph.md`）
+
+### `app/src/graph/`
+
+知識圖譜；說明見 `docs/graph.md`，權限測試在 `app/tests/graph/`。
+
+- `clusters.ts`：大量節點時的門檻、分群與聚合線（純函式，只用可見圖，#254）
+- `expansion.ts`：圖譜頁逐步展開的狀態（純函式，只用可見圖）
+- `path.ts`：`shortestPath()` 在可見圖上找最短路徑
+- `read.ts`：`readGraph()` 經 `withIdentity()` 一次讀出看得到的實體、關係與出處段落
+- `recent.ts`：首頁的「最近新增的文件」與「最近看過」的實體
+- `search.ts`：圖譜頁的搜尋、類型篩選與「關聯最多」（純函式，只用可見圖）
+- `timeline.ts`：`readTimeline()` 依日期列出看得到的文件與段落
+
+### `app/src/upload/`
+
+上傳；說明見 `docs/upload.md`。畫面是 `app/src/ui/UploadPage.tsx`，其中「我的上傳」是 `app/src/ui/MyUploads.tsx`，狀態與四步進度的純函式在 `app/src/ui/my-uploads.ts`。
+
+- `chunk.ts`：切段
+- `docx.ts`：以動態 import 載入 `mammoth`（見 ADR 0002）
+- `markdown.ts`：Markdown 的擷取
+- `parse.ts`：擷取純文字（上限是這裡的常數）
+- `pdf.ts`：以動態 import 載入 `pdfjs-dist`（見 ADR 0002）
+- `write.ts`：`uploadDocument()` 經 `withIdentity()` 寫入文件與段落（`kk_app` 唯一的寫入；權限由 RLS 執行，見 `docs/data-model.md`「寫入規則」，測試在 `app/tests/upload/`）
+
+### `app/src/extraction/`
+
+上傳文件的萃取；說明見 `docs/extraction.md`。
+
+- `batch.ts`：分批
+- `merge.ts`：合併比對
+- `output.ts`：解析與驗證
+- `prompt.ts`：prompt
+- `run.ts`：分批呼叫 `/api/ask`
+- `store.ts`：經 `withIdentity()` 寫入待審、讀取待審區與我的上傳（`readMyUploads()`）、核准與退回（只用 INSERT；規則由 RLS 執行，見 `docs/data-model.md`「待審與核准」，測試在 `app/tests/extraction/`）
+
+### `app/src/conflicts/`
+
+上傳文件與既有段落的說法不同（#51）；說明見 `docs/conflicts.md`。
+
+- `marks.ts`：時間軸與原文面板的標示（在 `readTimeline()`、`readSource()` 的交易中讀取）
+- `output.ts`：解析與驗證
+- `prompt.ts`：prompt
+- `run.ts`：在萃取後以上傳者的身分挑選段落、呼叫一次 `/api/ask`、解析與驗證
+- `select.ts`：挑選段落
+- `store.ts`：經 `withIdentity()` 寫入偵測結果、讀取與處理（只用 INSERT；規則由 RLS 執行，見 `docs/data-model.md`「說法不同」，測試在 `app/tests/conflicts/`）
+
+### `app/src/reports/`
+
+回答錯誤回報（ADR 0007 決定 7）。畫面是問答的「回報有錯」（`app/src/ui/AnswerView.tsx`）與待審頁的「回報」分頁（`app/src/ui/ReportList.tsx`），見 `docs/qa.md`「回報有錯」。
+
+- `store.ts`：經 `withIdentity()` 寫入回報、讀取與處理（只用 INSERT；規則由 RLS 執行，見 `docs/data-model.md`「回答錯誤回報」，測試在 `app/tests/reports/`）
+
+### `app/src/evals/`
+
+評測台（#62）；說明見 `docs/evals.md`，畫面是 `app/src/ui/EvalPage.tsx`；測試只用假的 `/api/ask`。
+
+- `grade.ts`：模型評分的 prompt 與解析（全文在 `docs/evals.md`，`docs.test.ts` 檢查）
+- `keys.ts`：題庫（`client/evals/`）的鍵清單
+- `load.ts`：題庫的讀取
+- `oracle.ts`：權限讀取規則的獨立實作（`expectedVisible()`，`app/tests/db/oracle.ts` 重新匯出）
+- `report-html.ts`：把 `report.ts` 的內容轉成自成一頁的 HTML
+- `report.ts`：給客戶的品質報告的內容（純函式，只放序號、類別、身分、數字與判定）
+- `run.ts`：執行（評測專用的記憶體資料庫 `openEvalDatabase()`、預計呼叫次數、逐題執行、停止與錯誤處理、兩組檢索設定）
+- `score.ts`：評分的純函式（引用、關鍵重點、拒答、禁止內容、滲漏、指標彙總；滲漏的反向驗證在 `app/tests/evals/`）
+- `types.ts`：題庫的型別
+- `validate.ts`：需要資料集的檢查
+
+### `app/src/sources/`
+
+引用跳回原文。
+
+- `source.ts`：`readSource()` 經 `withIdentity()` 讀取段落所屬文件中看得到的段落
+
+### `app/src/db/`
+
+資料層（PGlite＋RLS）；說明見 `docs/data-model.md`。
+
+- `database.ts`：唯一入口
+- `migrations/*.sql`：migration
+
+### `app/tests/`
+
+需要放在 `app/src/` 之外的測試（例如會用到被禁止 SQL 的越權測試）。
+
+- `fixtures/large-graph.ts`：圖譜分群用的虛構大型資料（固定種子、240 個實體，不放進 `client/`，#254）
+
+### `worker/`
+
+Cloudflare Worker（TypeScript）：`GET /api/health`、`POST /api/ask`；其他請求交給 `dist/` 靜態檔。API 格式、錯誤類型、secret 與已知限制見 `worker/README.md`。
+
+- `src/ask.ts`：`POST /api/ask` 的同站、邀請碼、body、每日次數的檢查
+- `src/models.ts`：模型白名單
+- `src/sse.ts`：轉成精簡的 SSE
+- `src/testing.ts`：測試用的假實作
+- `src/upstream.ts`：轉發到 Claude Messages API
+- `src/usage.ts`：計數用的 Durable Object
+
+### `client/`
+
+客戶設定；參考情境與測試基準，`KK_CLIENT` 可改用 `clients/<名稱>/`；說明見 `docs/client-config.md`、`docs/dataset.md`。
+
+- `*.json`：客戶設定
+- `data/`：虛構資料集
+- `evals/questions.json`：評測題庫（見 `docs/evals.md`）
+- `i18n/<語言>.json`：介面翻譯檔（含拒答文字與各錯誤訊息）
+- `schema/`：JSON Schema
+
+### `clients/`
+
+各客戶的設定（`clients/<名稱>/`，結構同 `client/` 但不含 `schema/`）；本 repo 只放虛構的示範客戶，真實客戶放在各自的 fork（#77 決定 7、`clients/README.md`）。
+
+### `e2e/`
+
+Playwright 的端對端測試（`*.spec.ts`）；設定在根目錄的 `playwright.config.ts`，說明見 `docs/testing.md`。
+
+- `access.spec.ts`：越權
+- `demo.spec.ts`：線上 demo 的設定，只在 `VITE_ONLINE_DEMO=1` 的 build 執行
+- `entry-touch.spec.ts`：入口（手機與平板）與觸控目標（#255 PR 4）
+- `fixtures/`：上傳用的虛構檔案
+- `graph-mobile.spec.ts`：手機的圖譜（390×844）的版面、「篩選與找路徑」與實體面板
+- `home.spec.ts`：首頁
+- `interactions.spec.ts`：互動邊角
+- `layout.spec.ts`：三欄版面
+- `mentions.spec.ts`：回答提到
+- `mobile-pages.spec.ts`：手機的時間軸、上傳、待審、評測台與更多（375×812）
+- `mobile-qa.spec.ts`：手機的問答與原文面板（390×844）
+- `mobile.spec.ts`：手機的共同結構（390×844）
+- `presentation.spec.ts`：展示模式
+- `reports.spec.ts`：回答錯誤回報
+- `retract.spec.ts`：撤回
+- `review.spec.ts`：待審頁
+- `smoke.spec.ts`：冒煙
+- `support/app.ts`：共用操作（介面文字從選定客戶的 `i18n/` 讀取）
+- `support/client.ts`：讀取 `KK_CLIENT` 選定客戶的 JSON 並推算測試用的身分（不寫死角色、等級、專案）
+- `support/dataset.ts`：以 `app/src/evals/oracle.ts` 算出各身分看不到的段落
+- `support/fake-ask.ts`：假的 `/api/ask`（含串流到一半的假回應）
+- `support/skip-reporter.ts`：列出略過的測試與原因（參考情境有略過時失敗）
+
+### `scripts/`
+
+專案腳本（Node ESM，不在 `typecheck` 範圍內）。
+
+- `check-client.mjs`：客戶檢查
+- `check-clients.mjs`：客戶檢查（所有客戶）
+- `check-sensitive.mjs`：敏感資料檢查
+- `client-dir.mjs`：`KK_CLIENT` 對應的客戶資料夾（`vite.config.ts`、`vitest.config.ts`、`vitest.clients.config.ts` 與 `check-client.mjs` 共用）
+- `doc-commands.test.mjs`：Markdown 的 shell 指令區塊不加 `#` 註解，說明寫在區塊外
+- `fixtures/invalid-client/`：故意寫錯的測試資料
+- `ort-wasm.mjs`：語意向量 provider 的 ONNX Runtime WASM：build 時依客戶設定複製到 `dist/ort/` 並檢查單檔上限（`vite.config.ts` 使用）
+- `playbook.test.mjs`：`docs/playbook/` 繁中與英文的檔名、`##` 標題數量與相對連結
+- `structure-doc.test.mjs`：本文件的寫法（清單每行不超過 300 字、每個小節的清單依檔名排序）
+
+### 根目錄
+
+根目錄的指令與設定（單一 `package.json`，不用 workspaces）。
+
+- `package.json`：指令與相依套件
+- `playwright.config.ts`：Playwright 的設定
+- `tsconfig.node.json`：根目錄設定檔的 tsconfig
+- `vite.config.ts`：Vite 的設定
+- `vitest.clients.config.ts`：客戶檢查的 target 測試
+- `vitest.config.ts`：Vitest 的設定
+- `wrangler.jsonc`：頂層供本機 `wrangler dev`，`env.demo` 是線上 demo
+
+### `docs/`
+
+文件。
+
+- `adr/`：決策紀錄
+- `deploy.md`：線上 demo 的部署步驟、驗收清單、回退與費用上限（部署由人執行；ADR 0005）
+- `playbook/`：方法與文件套件（需求確認清單、資料盤點表、資料安全說明、評測題庫建立步驟、驗收指標、落地新客戶步驟 `new-client-setup.md`）；入口是 [docs/playbook/README.md](playbook/README.md)，英文版在 `docs/playbook/en/`，兩份一起改
+- `rfcs/`：專案章程
+- `workflow/`：憲法與 workflow 手冊
+
+### `tools/workflow/`
+
+workflow 工具（Node，自帶 `package.json`；各工具的參數見 `tools/workflow/README.md`）；`bootstrap-github.mjs`、`config.json` 不適用（見 `AGENTS.md` 第 2 節）。
+
+- `check-post-body.mjs`：agent 貼出 PR 描述與留言前的檢查（#104）
+- `check-pr-body.mjs`：檢查 PR 描述有 `Closes`／`Refs #N`（`fast-lane` 除外）
+- `doc-rules.test.mjs`：檢查規則文件（一份正本、相對連結、`AGENTS.md` 的行數上限）
+- `hooks/confirm-main.mjs`：合併與 push 到 main 前的確認 hook
+- `personal-paths.test.mjs`：檢查開發流程工具的檔案沒有 `/Users/<名稱>`、`/home/<名稱>` 形式的個人路徑（#96，fork 後要改的地方見 `docs/workflow/fork.md`）
+- `read-trusted.mjs`：讀取 Issue 與 PR，只輸出可信身分的內容（#127）
+- `runner/`：自動化模組的 runner（ADR 0003，指令見 `AGENTS.md` 第 2 節）
+
+### `.claude/`
+
+Claude Code 設定。
+
+- `settings.json`：在 `PreToolUse`（Bash）註冊確認 hook
+
+### `templates/`
+
+Claude Project 範本與預設不啟用的模組檔案。
+
+### `.github/`
+
+Issue／PR 範本、標籤定義與 CI；沒有部署 workflow。
+
+- `workflows/ci.yml`：`checks` 與 `clients` job
+- `workflows/e2e.yml`：Playwright，參考情境與每個客戶各一格
+- `workflows/pr-body.yml`：PR 描述檢查
+- `workflows/sensitive.yml`：敏感資料檢查
