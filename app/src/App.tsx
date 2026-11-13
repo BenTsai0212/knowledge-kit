@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { clientConfig } from "./client/load";
 import { planConflicts, runConflicts, shouldDetectConflicts, type ConflictState } from "./conflicts/run";
+import { citedConflicts, readPassageMarks } from "./conflicts/marks";
 import { readConflicts } from "./conflicts/store";
 import { dataset } from "./dataset/load";
 import { seedDataset } from "./dataset/seed";
@@ -310,6 +311,13 @@ export function App() {
     return graph === null ? undefined : { graph, entities: mentionedEntities(graph, result) };
   }
 
+  // 桌機回答卡片的說法不同提示（#335）：以送出的身分讀段落的標示（RLS 只讓兩段都看得到的決定被讀到）；讀取失敗或引用不到兩段時不顯示
+  async function readCitedConflicts(result: Answer, owner: string): Promise<AnswerState["conflicts"]> {
+    if (result.kind !== "answer" || new Set(result.cited).size < 2 || db === null) return undefined;
+    const marks = await db.withIdentity(owner, readPassageMarks).catch(() => null);
+    return marks === null ? undefined : citedConflicts(result.numbering, result.cited, marks);
+  }
+
   const closeCompare = () => (compares.current.cancel(), setCompare(null));
 
   // 身分對照（#261）：以每個身分各呼叫一次 ask()（askEach()，依身分順序一欄一欄送出），與一般提問同一條路、欄之間不共用結果。
@@ -380,8 +388,9 @@ export function App() {
     if (result.kind !== "error") setAdminError(null);
     // 以送出當下的身分讀圖譜，讀完才結束這一題，期間仍停用送出
     const mentions = await readMentions(result, owner);
+    const conflicts = await readCitedConflicts(result, owner);
     if (!ticket.isCurrent()) return;
-    update({ id, question, streaming: "", answer: result, mentions });
+    update({ id, question, streaming: "", answer: result, mentions, conflicts });
   }
 
   // 以上傳時記錄的身分寫入待審；邀請碼用開始（或重試）當下的碼，沒有碼時記為失敗，輸入後可以重試
@@ -780,7 +789,7 @@ export function App() {
                 <p className="muted">{s.qaHeaderNote}</p>
               </header>
             )}
-            {offline && <Notice kind="warning" title={s.qaProblems.offline} />}
+            {offline && <Notice kind="warning" title={s.qaProblems.offline} className="notice--offline" />}
             {db === null && <p className="card muted">{s.loading}</p>}
             {/* 線上 demo：提問會傳給模型供應商（#100 計畫第 8 項） */}
             {onlineDemo.enabled && <p className="badge warning">{s.demoQaNotice}</p>}

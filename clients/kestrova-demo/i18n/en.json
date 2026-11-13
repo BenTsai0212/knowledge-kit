@@ -56,6 +56,7 @@
   "sessionQuestionsCount": "This session ({count})",
   "answerMentions": "Mentioned in this answer",
   "answerBasis": "Based on {count, plural, one {# passage} other {# passages}}",
+  "answerConflict": "Sources {a} and {b} say different things; the answer lists both.",
   "followUpTitle": "Ask next",
   "followUpOutgoing": "Which {type} does {name} have a “{relation}” relationship with?",
   "followUpIncoming": "Which {type} has a “{relation}” relationship with {name}?",
@@ -533,6 +534,9 @@
   "refusalNextRephraseWith": "Ask about “{name}” another way:",
   "refusalNextRephraseName": "Ask again about just one thing related to “{name}”.",
   "refusalGotoUpload": "Go to Upload",
+  "refusalKindGraph": "View in graph",
+  "refusalKindPerson": "Ask the owner",
+  "refusalKindRephrase": "Rephrase",
   "uncited": "No sources cited",
   "incomplete": "Incomplete answer",
   "answerRetry": "Ask again",
@@ -544,7 +548,8 @@
     "limitBrowse": "You can still browse the graph, timeline, and sources.",
     "adminTitle": "This demo can't answer questions right now",
     "adminDetails": "Details for the administrator",
-    "reload": "Reload page"
+    "reload": "Reload page",
+    "kept": "Your question is kept; asking again starts a new question."
   },
   "errors": {
     "forbidden_origin": "Questions can't be asked from this address.",

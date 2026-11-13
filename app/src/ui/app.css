@@ -5203,6 +5203,279 @@ label.inline {
   color: var(--color-primary);
 }
 
+/* 桌機回答卡片的狀態（#335 PR 2，畫板 QA、K-Answer、I-States）：說法不同、拒答、回報結果、錯誤與額度、「回報有錯」。
+   只在 app--desktop 之下顯示或改樣式；只給桌機的元素（說法不同的提示列、拒答卡片的小標與色點、錯誤的圖示與說明）在其他版面不顯示 */
+.answer-conflict,
+.refusal-kind,
+.refusal-next .type-dot,
+.problem-icon,
+.problem-kept {
+  display: none;
+}
+
+/* 說法不同：本文下方 conflictSoft 底、conflictText 字的提示列（圖示＋文字） */
+.app--desktop .answer-conflict {
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--color-conflictSoft);
+  color: var(--color-conflictText);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.app--desktop .answer-conflict svg,
+.app--desktop .problem-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 拒答：回答卡片內的文字＋「可以試試」；下一步是並排的 surfaceRaised 卡片（小標＋內容，實體附類型色），上傳是卡片下方的一行 */
+.app--desktop .answer__body > .refusal {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0;
+  border: none;
+}
+
+.app--desktop .refusal > .answer-text {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.app--desktop .refusal-next > p {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.app--desktop .refusal-next ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.app--desktop .refusal-next li {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surfaceRaised);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.app--desktop .refusal-kind {
+  display: block;
+  font-size: 12px;
+  color: var(--color-textMuted);
+}
+
+.app--desktop .refusal-step {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.app--desktop .refusal-next .type-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+}
+
+.app--desktop .refusal-next li.refusal-next__upload {
+  grid-column: 1 / -1;
+  padding: 4px 0 0;
+  border: none;
+  background: none;
+  font-size: 13px;
+  color: var(--color-textMuted);
+}
+
+.app--desktop .refusal-next__upload .refusal-step {
+  font-weight: 400;
+}
+
+/* 錯誤：回答卡片就是中性的卡片；圖示（warning）＋訊息＋「問題已保留…」，「重新提問」對齊訊息 */
+.app--desktop .answer__body > .problem {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  column-gap: 14px;
+  row-gap: 10px;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.app--desktop .problem > * {
+  grid-column: 2;
+  margin: 0;
+}
+
+.app--desktop .problem > .problem-icon {
+  display: block;
+  grid-column: 1;
+  grid-row: 1;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  color: var(--color-warning);
+}
+
+.app--desktop .problem > p:not(.problem-kept, .problem-actions) {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.app--desktop .problem-kept {
+  display: block;
+  font-size: 13px;
+  color: var(--color-textMuted);
+}
+
+.app--desktop .answer__body > .problem + .retry {
+  margin-top: -8px;
+  padding-left: 36px;
+}
+
+.app--desktop .answer__body > .retry button,
+.app--desktop .problem-actions button {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* 「回報有錯」：卡片內的次要按鈕（36px、圓角 8px、1px border、surface 底） */
+.app--desktop .answer__body > .report-open button.chip {
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* 回報結果：左邊 3px 的狀態色線、狀態色淡底（處理中 primary、不是錯誤 success、已撤回 warning） */
+.app--desktop .answer__body > .report-result {
+  --report-edge: var(--color-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: none;
+  border-left: 3px solid var(--report-edge);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--report-edge) 12%, var(--color-surface));
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.app--desktop .report-result--not_error {
+  --report-edge: var(--color-success);
+}
+
+.app--desktop .report-result--retracted {
+  --report-edge: var(--color-warning);
+}
+
+.app--desktop .answer__body > .report-result p {
+  margin: 0;
+}
+
+.app--desktop .report-result .report-result__head .badge {
+  min-height: 26px;
+  padding: 0 10px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.app--desktop .report-result__actions button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* 今天用完了（I-States）：輸入列上方 surfaceRaised 底的說明條，時鐘圖示用 text；離線提示同樣是中性的說明條 */
+.app--desktop .notice--limit,
+.app--desktop .notice--offline {
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: none;
+  border-radius: 12px;
+  background: var(--color-surfaceRaised);
+}
+
+.app--desktop .notice--limit .notice-icon,
+.app--desktop .notice--offline .notice-icon {
+  background: none;
+  color: var(--color-text);
+}
+
+.app--desktop .notice--limit .notice-body strong {
+  font-size: 15px;
+}
+
+.app--desktop .notice--limit .notice-body > div {
+  font-size: 13px;
+  color: var(--color-textMuted);
+}
+
+/* 需要管理者（I-States）：對話區頂端 conflictSoft 底、conflictText 字的說明，不另加圖示 */
+.app--desktop .notice--admin {
+  padding: 16px 18px;
+  border: none;
+  border-radius: 14px;
+  background: var(--color-conflictSoft);
+  color: var(--color-conflictText);
+}
+
+.app--desktop .notice--admin .notice-icon {
+  display: none;
+}
+
+.app--desktop .notice--admin .notice-body strong {
+  font-size: 16px;
+}
+
+.app--desktop .notice--admin .admin-details {
+  font-size: 13px;
+}
+
 /* 展示模式（#260，docs/design.md「展示模式」的「字級與主題」）：main.tsx 在 <html> 標上 data-mode="presentation"。
    只覆蓋字級與尺寸（--present-*），顏色 token 不變；一般模式的規則不讀這些變數，所以不受影響（presentation.test.ts 檢查）。
    圖譜節點標籤（18px、選取 26px）畫在 cytoscape 上：graph-style.ts 的 presentSizes() 讀 --present-graph-* 與 --present-label */

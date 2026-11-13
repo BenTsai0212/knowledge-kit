@@ -115,7 +115,7 @@
 - `MobileNav.tsx`：≤ 600px 時取代左側導覽的手機頂端列＋底部分頁列（含「更多」面板與展示模式的分段切換），見 `docs/design.md`「手機與平板」
 - `motion.ts`：動態的刻度與 CSS 變數 `--motion-*`、`--ease-*`；圖譜展開的動態與「減少動態效果」的判斷
 - `NavRail.tsx`：平板（601–1024px）的左側圖示導覽列，與 `Sidebar`、`MobileNav` 共用 `NavProps`；App 依 `useLayout()` 只渲染其中一種
-- `Notice.tsx`：共用的提示框
+- `Notice.tsx`：共用的提示框（`className` 依位置調整樣式，例如桌機問答頁的額度與需要管理者的說明條）
 - `online-demo.ts`：唯一讀取處：線上 demo 的 `VITE_ONLINE_DEMO`、`VITE_PUBLIC_ACCESS_CODE`（預設關閉；開啟時隱藏評測台），展示模式 `?mode=presentation`（只顯示問答與圖譜），評測台的 `?tools=evals`，身分對照的 `VITE_DEMO_COMPARE`（預設關閉、線上 demo 一律關閉）；見 `docs/qa.md`「線上 demo」「展示模式」「身分對照」、`docs/evals.md`「開啟評測台」
 - `PassageMarks.tsx`：時間軸與原文面板的標示
 - `PathPanel.tsx`：圖譜頁的路徑面板
@@ -179,7 +179,7 @@
 
 上傳文件與既有段落的說法不同（#51）；說明見 `docs/conflicts.md`。
 
-- `marks.ts`：時間軸與原文面板的標示（在 `readTimeline()`、`readSource()` 的交易中讀取）
+- `marks.ts`：時間軸與原文面板的標示（在 `readTimeline()`、`readSource()` 的交易中讀取）；桌機回答卡片的說法不同提示（`citedConflicts()`：兩段都被引用的並存組合）
 - `output.ts`：解析與驗證
 - `prompt.ts`：prompt
 - `run.ts`：在萃取後以上傳者的身分挑選段落、呼叫一次 `/api/ask`、解析與驗證

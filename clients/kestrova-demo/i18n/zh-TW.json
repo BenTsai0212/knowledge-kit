@@ -56,6 +56,7 @@
   "sessionQuestionsCount": "這次的問題（{count}）",
   "answerMentions": "回答提到",
   "answerBasis": "根據 {count} 段原文回答",
+  "answerConflict": "出處 {a} 與出處 {b} 的說法不同，回答中兩種說法並列。",
   "followUpTitle": "接著問",
   "followUpOutgoing": "{name}{relation}哪些{type}？",
   "followUpIncoming": "哪些{type}{relation}{name}？",
@@ -533,6 +534,9 @@
   "refusalNextRephraseWith": "用「{name}」換個問法：",
   "refusalNextRephraseName": "只問與「{name}」有關的一件事，再問一次。",
   "refusalGotoUpload": "到上傳頁",
+  "refusalKindGraph": "在圖譜看",
+  "refusalKindPerson": "問負責的人",
+  "refusalKindRephrase": "換個問法",
   "uncited": "未附出處",
   "incomplete": "回答不完整",
   "answerRetry": "重新提問",
@@ -544,7 +548,8 @@
     "limitBrowse": "圖譜、時間軸與原文仍可以瀏覽。",
     "adminTitle": "這個 demo 暫時無法回答問題",
     "adminDetails": "給管理者的細節",
-    "reload": "重新整理頁面"
+    "reload": "重新整理頁面",
+    "kept": "問題已保留；重新提問會成為新的一題。"
   },
   "errors": {
     "forbidden_origin": "這個網址無法使用問答功能。",

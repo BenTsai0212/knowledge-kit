@@ -84,7 +84,7 @@ export function QuestionPanel({ language, disabled, text, onText, onAsk, limit, 
   return (
     <section className={compact ? "card composer composer--compact" : line ? "card composer composer--line" : "card composer"}>
       {limit !== null && (
-        <Notice kind="info" icon="◷" title={errorMessage(language, limit)}>
+        <Notice kind="info" icon="◷" title={errorMessage(language, limit)} className="notice--limit">
           {s.qaProblems.limitBrowse}
         </Notice>
       )}

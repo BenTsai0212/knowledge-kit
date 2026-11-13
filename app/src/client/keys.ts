@@ -216,7 +216,7 @@ const uiStrings = {
   identityBadge: "required", identityAndLanguage: "required", userCardScope: "required", navMore: "required",
   presetQuestions: "required", scenarioRole: "required", questionLabel: "required",
   questionPlaceholder: "required", askButton: "required", answering: "required", emptyAnswer: "required", emptyAnswerReason: "required", emptyAnswerAction: "required",
-  qaIndependent: "required", qaHeaderNote: "required", sessionQuestions: "required", sessionQuestionsCount: "required", answerMentions: "required", answerBasis: "required", followUpTitle: "required",
+  qaIndependent: "required", qaHeaderNote: "required", sessionQuestions: "required", sessionQuestionsCount: "required", answerMentions: "required", answerBasis: "required", answerConflict: "required", followUpTitle: "required",
   followUpOutgoing: "required", followUpIncoming: "required", viewInGraph: "required",
   openSource: "required", sourceTitle: "required", sourceHeading: "required", closeSource: "required", sourceStep: "required", sourcePrev: "required", sourceNext: "required", sourceCitedList: "required", paragraphNumber: "required", views: "required", tabQa: "required", tabHome: "required",
   tabGraph: "required", legend: "required", graphEmpty: "required", graphEmptyReason: "required", switchIdentity: "required", selectEntity: "required",
@@ -286,7 +286,7 @@ const uiStrings = {
   colon: "required", progress: "required",
   parenthetical: "required", refusal: "required", refusalNextTitle: "required", refusalNextRephrase: "required",
   refusalNextAskPerson: "required", refusalNextUpload: "required", refusalNextGraph: "required",
-  refusalNextOwner: "required", refusalNextRephraseWith: "required", refusalNextRephraseName: "required", refusalGotoUpload: "required", uncited: "required", incomplete: "required", answerRetry: "required",
+  refusalNextOwner: "required", refusalNextRephraseWith: "required", refusalNextRephraseName: "required", refusalGotoUpload: "required", refusalKindGraph: "required", refusalKindPerson: "required", refusalKindRephrase: "required", uncited: "required", incomplete: "required", answerRetry: "required",
   qaProblems: "required", errors: "required", unknownError: "required", home: "required", myUploads: "required", presentation: "required", reportResult: "required",
 } satisfies KeyManifest<UiStrings>;
 
@@ -447,7 +447,7 @@ export const i18nManifests: ManifestEntry[] = [
     pointer: "/properties/qaProblems",
     keys: {
       offline: "required", notSent: "required", shorten: "required", charCount: "required", limitBrowse: "required",
-      adminTitle: "required", adminDetails: "required", reload: "required",
+      adminTitle: "required", adminDetails: "required", reload: "required", kept: "required",
     } satisfies KeyManifest<UiStrings["qaProblems"]>,
   },
   {

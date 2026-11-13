@@ -228,7 +228,13 @@ Rules:
     - 一題：右對齊的問題泡泡（`text` 底、`surface` 字、最寬 80%）＋回答卡片（`AnswerView` 的 `.answer__body`；其他版面沒有樣式，與直接放在 section 中相同）。卡片開頭是「根據 N 段原文回答」（N 是引用到的段落數 `cited`，與原文欄的清單、手機的「出處 N／M」相同，#322）；本文 17px；引用標號是不上標的小方塊（顏色與三個狀態不變）；「回答提到」上方有分隔線、膠囊 40px。
     - 輸入區：不是卡片；預設問題膠囊在上，下方是 1.5px `text` 框的單行輸入列（`input`，Enter 送出；「提問」在框內）。超過 500 字時邊線、說明與字數換 `danger`（畫板 `I-States`）。
     - 原文欄：貼齊右緣、整個高度，寬 `clamp(360px, 30vw, 440px)`，左邊 1px `border`、`surface` 底。段落前的 `¶N` 是這個身分**看得到的**段落的順序（不透露看不到的段落，#247）。「這次回答的出處」由 `readCitedSources()`（`app/src/sources/source.ts`，逐段經 `readSource()`，權限交給 RLS）讀取，一段一列（引用標號＋文件標題＋`¶N`，目前的出處 `markSoft` 底），點了切換出處；同一題換出處時沿用。✕ 關閉後焦點回到打開它的引用標號。Dark 的原文紙面是亮色，`¶N` 與其他段落改用 `readingText`（`primary`、`textMuted` 在紙面上對比不足）。
-    - 驗證：`app/tests/sources/source.test.ts`（每個身分只列出看得到的段落、`¶N` 與 `readSource()` 一致）、`e2e/qa-desktop.spec.ts`（1440×900）。
+    - 回答卡片的狀態（#335 PR 2，畫板 `QA`、`K-Answer`、`I-States`；文字與行為不變，只改樣式）：
+      - 說法不同：本文下方 `conflictSoft` 底、`conflictText` 字的提示列「出處 a 與出處 b 的說法不同，回答中兩種說法並列。」（照 system 第 5 條，不寫「以…為準」）。組合是 `citedConflicts()`（`app/src/conflicts/marks.ts`）：兩段都被這一題引用、且已處理為「並存」；標示以送出的身分經 `readPassageMarks()` 讀取，所以只有兩段都看得到時才有。只在桌機顯示。
+      - 拒答（含模型無法回答）：在回答卡片內、沒有虛線框；「可以試試」的下一步是並排的 `surfaceRaised` 卡片（小標「在圖譜看」「問負責的人」「換個問法」＋原本的文字，實體附類型色點），上傳那一項是卡片下方的一行。下一步的來源不變（#247：不同身分的拒答畫面相同）。
+      - 錯誤：回答卡片就是中性的卡片，左側 `warning` 的圖示（可以再試是箭頭、問題要改是線條）＋訊息；可以再試時下方是「問題已保留；重新提問會成為新的一題。」與「重新提問」。
+      - 回報結果：左邊 3px 狀態色線、狀態色淡底（處理中 `primary`、不是錯誤 `success`、已撤回 `warning`）；「回報有錯」是卡片內 36px、圓角 8px 的次要按鈕。
+      - 今天用完了：輸入列上方 `surfaceRaised` 底的說明條（離線提示相同）；需要管理者：對話區頂端 `conflictSoft` 底、`conflictText` 字。
+    - 驗證：`app/tests/sources/source.test.ts`（每個身分只列出看得到的段落、`¶N` 與 `readSource()` 一致）、`app/src/conflicts/marks.test.ts`（`citedConflicts()`）、`e2e/qa-desktop.spec.ts`、`e2e/qa-desktop-states.spec.ts`（1440×900）。
   - **手機寬度**（`max-width: 600px`；601–1024px 是平板，#255）：改成單欄、整頁捲動，順序是左導覽、對話、輸入區、右側面板；點引用時原文面板捲動到引用的段落。
   - **手機**（≤ 600px，`layout.ts` 的 `phone`，#256，[docs/design.md](design.md)「問答（手機）」）：原文與實體面板改用底部面板，不放在對話下方；選擇面板容器的地方集中在 `App.tsx`。
   - **平板**（601–1024px，`layout.ts` 的 `tablet`，#255，[docs/design.md](design.md)「平板」）：左側是 72px 的圖示導覽列（`NavRail.tsx`，所有頁籤都放得下，沒有「更多」；底部是身分的頭像，打開身分與語言面板），`main.qa` 不分右欄。原文、「回答提到」的實體與身分和語言面板都是右側的滑出面板（`BottomSheet` 的 `side="right"`：最寬 420px，實體 400px，從右側滑入、expand，Esc、關閉按鈕、點背景或往右拖關閉，關閉後焦點回到觸發的元件），內容與手機的底部面板相同。圖譜頁的實體面板也是滑出面板，開始的說明與多跳路徑在圖的下方。「這次的問題」不顯示（#255 決定 4）；展示模式沿用自己的頂端列與右欄。

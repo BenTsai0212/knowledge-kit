@@ -25,13 +25,14 @@ export function ReportResult({ language, report, onReportAgain, onAskAgain, askD
   const state = reportState(report);
   if (state === "pending")
     return (
-      <div className="report-result" role="status">
+      <div className="report-result report-result--pending" role="status">
         <p className="muted">{s.pending}</p>
       </div>
     );
   const date = new Intl.DateTimeFormat(language, { dateStyle: "medium" }).format(new Date(report.resolvedAt!));
   return (
-    <div className="report-result" role="status">
+    // 狀態的 class：桌機回答卡片中左邊線與底色依狀態（#335，畫板 K-Answer）
+    <div className={`report-result report-result--${state}`} role="status">
       <p className="report-result__head">
         <span className="badge">{state === "not_error" ? s.notError : s.retracted}</span>
         <span className="muted">{fill(s.meta, { role: roleLabel(report.resolvedBy!, language), date })}</span>
