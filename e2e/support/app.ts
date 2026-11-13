@@ -49,7 +49,7 @@ export function accountOption(id: RoleId): string {
 }
 
 // 手機（≤ 600px，#255）：頂端列的身分徽章，平板是導覽列底部的頭像，桌機是左側欄的使用者卡（#330）；都打開身分與語言面板。
-// 登入頁沒有（登入頁的語言在桌機是左側欄的下拉選單）
+// 登入頁沒有（登入頁的語言在桌機是頂端列的下拉選單，#334）
 export const identityBadge = (page: Page) => page.locator(":is(.mobile-topbar, .nav-rail, .sidebar) .identity-badge");
 // 桌機左側欄的使用者卡（#330）
 export const userCard = (page: Page) => page.locator(".sidebar .user-card");
@@ -91,7 +91,7 @@ export async function switchIdentity(page: Page, id: RoleId): Promise<void> {
   await inIdentitySheet(page, (sheet) => roleCard(sheet, id).check());
 }
 
-// 切換介面語言（code 是語言代碼）：身分與語言面板的分段切換；登入頁（沒有身分徽章）是左側欄的下拉選單
+// 切換介面語言（code 是語言代碼）：身分與語言面板的分段切換；登入頁（沒有身分徽章）是頂端列（桌機，#334）或導覽的下拉選單
 export async function switchLanguage(page: Page, code: string): Promise<void> {
   if (await identityBadge(page).isVisible()) await inIdentitySheet(page, (sheet) => languageOption(sheet, code).click());
   else await page.getByRole("banner").getByLabel(s.language).selectOption(code);

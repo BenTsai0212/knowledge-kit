@@ -1,7 +1,7 @@
 // 登入頁的兩條路（#287，docs/design.md「日常工具」的「登入」）：登入頁沒有身分選單；帳號登入（展示）身分固定、不能切換；使用邀請碼體驗與展示模式進入後可以切換。
 // 這個 build 沒有公開碼（線上 demo 的帳號登入見 demo.spec.ts），所以帳號登入也要輸入邀請碼。/api/ask 一律是假的回應。
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { ACCESS_CODE, accountOption, blockModelDownload, chooseAccount, identityBadge, identitySegments, identitySheet, language, openApp, presetQuestions, s, signInPanel, switchIdentity, userCard } from "./support/app";
+import { ACCESS_CODE, blockModelDownload, chooseAccount, identityBadge, identitySegments, identitySheet, language, openApp, presetQuestions, s, signInPanel, switchIdentity, userCard } from "./support/app";
 import { access, client } from "./support/client";
 import { routeFakeAsk } from "./support/fake-ask";
 import { demoAccount } from "../app/src/ui/sign-in";

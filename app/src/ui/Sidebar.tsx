@@ -1,7 +1,8 @@
 // 桌機（≥ 1025px）的左側欄（#330，畫板 docs/design/v1/boards/K-Home.dc.html 的 <nav>）：220px、surface 底、右邊 1px border。
 // 由上而下是 K 晶格 icon＋客戶名稱、頁面項目（44px，選中是 text 底、surface 字；待審的筆數是右側的 primary 圓形徽章）、
 // 底部的「虛構資料 · 展示用權限」虛線框與使用者卡。使用者卡按下打開左側欄旁的身分與語言選單（內容與手機的面板相同，#330 決定 1、2）；
-// 帳號登入時卡上另有「登出」，選單只有語言與「登出」。登入頁沒有使用者卡，語言是虛線框上方的下拉選單。
+// 帳號登入時卡上另有「登出」，選單只有語言與「登出」。登入頁沒有使用者卡，語言是虛線框上方的下拉選單
+// （桌機登入前 App 改用 EntryBar 的頂端列、不渲染左側欄，#334）。
 // 「這次的問題」不放在左側欄（#330 決定 3）
 import { useState, type ReactNode } from "react";
 import { clientConfig } from "../client/load";

@@ -2,7 +2,7 @@
 // 左邊是 icon＋「Knowledge Kit」／客戶名稱與「虛構資料」「展示用權限」標籤，右邊是語言選單。畫板上的 MOTION、LIGHT／DARK 按鈕是設計稿用，不實作
 import { clientConfig } from "../client/load";
 import { strings } from "../client/i18n";
-import { ownName } from "./IdentityControls";
+import { ownName } from "./IdentitySheet";
 import { ProductIcon } from "./ProductIcon";
 
 // 畫板的 icon 尺寸（32px 以下是簡化版）
