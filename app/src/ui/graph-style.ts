@@ -147,12 +147,17 @@ const onScreenPx =
 function presentationRules(v: (name: string) => string, size: PresentSizes): StylesheetJson {
   const width = (fontSize: number, base: number) => onScreenPx((base * fontSize) / NODE_LABEL_FONT_SIZE);
   const primary = { "line-color": v("--color-primary"), "target-arrow-color": v("--color-primary") };
-  const label = { "text-background-padding": onScreenPx(2), "text-outline-width": onScreen(2) };
+  const padding = { "text-background-padding": onScreenPx(2) };
   return [
-    { selector: "node", style: { "font-size": onScreen(size.label), "text-max-width": width(size.label, NODE_LABEL_MAX_WIDTH), "text-margin-y": onScreen(6), ...label } },
+    {
+      selector: "node",
+      style: { "font-size": onScreen(size.label), "text-max-width": width(size.label, NODE_LABEL_MAX_WIDTH), "text-margin-y": onScreen(6), ...padding, "text-outline-width": onScreen(2) },
+    },
     { selector: "node.bubble", style: { "font-size": onScreen(size.label), "text-max-width": width(size.label, 96), "text-margin-y": 0 } },
     { selector: "node.side", style: { "font-size": onScreen(size.small) } },
-    { selector: "edge", style: { "font-size": onScreen(size.small), ...label } },
+    // 關係名稱與一般模式相同：只有 surface 襯底、沒有外框（一般模式的 edge 沒有設 text-outline-color，
+    // 給了外框寬度就會畫成 cytoscape 預設的黑色粗框，#260 PR 3 第 2 次審查）
+    { selector: "edge", style: { "font-size": onScreen(size.small), ...padding } },
     { selector: "node.selected", style: { "font-size": onScreen(size.selected), "text-max-width": width(size.selected, NODE_LABEL_MAX_WIDTH) } },
     { selector: "node.others", style: { opacity: PRESENT_OTHERS_OPACITY } },
     { selector: "node.others.hover", style: { opacity: 1 } },

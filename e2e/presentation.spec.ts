@@ -181,9 +181,22 @@ test("圖譜：標籤放大、選取實體以外的節點 28%、實體卡片放�
         selected: selected.map((n) => [rendered(n), n.style("opacity")]),
         others: [...new Set(others.map((n) => `${rendered(n)} ${n.style("opacity")}`))],
         nearLabelled: near.length > 0 && near.every((e) => e.style("label") !== ""),
+        // 關係名稱與一般模式相同（#260 PR 3 第 2 次審查）：與節點標籤相同的 surface 襯底；外框在畫面上 ≤ 3px，
+        // 有外框時是背景色（與節點標籤的外框相同），不是 cytoscape 預設的黑色
+        nearLabelPlain: near.every((e) => {
+          const node = selected[0];
+          const outline = parseFloat(e.style("text-outline-width")) * cy.zoom();
+          return (
+            node !== undefined &&
+            e.style("text-background-color") === node.style("text-background-color") &&
+            e.style("text-background-opacity") === "1" &&
+            outline <= 3 &&
+            (outline === 0 || e.style("text-outline-color") === node.style("text-outline-color"))
+          );
+        }),
       };
     }, canvas);
-  await expect.poll(styles).toEqual({ selected: [[26, "1"]], others: ["18 0.28"], nearLabelled: true });
+  await expect.poll(styles).toEqual({ selected: [[26, "1"]], others: ["18 0.28"], nearLabelled: true, nearLabelPlain: true });
 
   // 畫面上（#260 PR 3 審查）：聚焦集合（選取的實體與相連的實體）的節點連同標籤彼此不重疊、都在畫布內，
   // 選取節點的標籤在畫面上約 26px（不因畫面放大而變得更大）

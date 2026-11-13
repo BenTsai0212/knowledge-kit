@@ -243,6 +243,26 @@ describe("展示模式的圖譜（#260，docs/design.md「展示模式」）", (
     expect(rule("edge.near", presentStyle)).toMatchObject({ label: "data(label)", width: 5, "line-color": colors.primary, "target-arrow-color": colors.primary });
   });
 
+  it("關係名稱與一般模式相同：surface 襯底、沒有深色外框，襯底在畫面上 2px（#260 PR 3 第 2 次審查）", () => {
+    // edge.near 實際套用的樣式：依序合併所有適用於關係（edge、edge.near）的規則，後面的為準
+    const applied = (rules: Rules) => Object.assign({}, ...rules.filter((r) => r.selector === "edge" || r.selector === "edge.near").map((r) => r.style));
+    const [normal, presenting] = [applied(style), applied(presentStyle)];
+    for (const label of [normal, presenting]) {
+      expect(label["text-background-color"]).toBe(colors.surface);
+      expect(label["text-background-opacity"]).toBe(1);
+      // 沒有外框；有外框時必須是背景色（cytoscape 預設是黑色）
+      if (label["text-outline-width"] !== undefined) expect(label["text-outline-color"]).toBe(colors.background);
+    }
+    for (const zoom of [0.5, 1, 2.5]) {
+      expect(onScreen(presenting["text-outline-width"] ?? 0, zoom)).toBeLessThanOrEqual(3);
+      expect(onScreen(presenting["text-background-padding"], zoom)).toBeCloseTo(2);
+    }
+    // 整份樣式中，給了外框寬度的規則都有背景色的外框（節點的基本規則）
+    const outlined = presentStyle.filter((r) => r.style["text-outline-width"] !== undefined).map((r) => r.selector);
+    expect(outlined.every((selector) => selector.startsWith("node"))).toBe(true);
+    expect(rule("node", presentStyle)["text-outline-color"]).toBe(colors.background);
+  });
+
   it("一般模式不變：讀不到 --present-* 時沒有展示模式的規則，字級 12px", () => {
     expect(presentSizes((name) => variables[name] ?? "")).toBeNull();
     expect(style.length).toBe(presentStyle.length - 8);
