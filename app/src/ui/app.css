@@ -1296,7 +1296,8 @@ main.qa > .source .source-text mark.entering {
   min-height: 0;
   overflow-y: auto;
   padding: 0.75rem 6px calc(0.75rem + env(safe-area-inset-bottom));
-  border-right: 1px solid var(--color-border);
+  /* 右側的分隔線用 inset 的 box-shadow，不佔寬度：border 會讓頁籤只剩 59px */
+  box-shadow: inset -1px 0 0 var(--color-border);
   background: var(--color-surface);
 }
 
@@ -1305,7 +1306,7 @@ main.qa > .source .source-text mark.entering {
   line-height: 0;
 }
 
-/* 頁籤：圖示＋11px 標籤，60×56px（72px 減去左右各 6px，不設固定寬度）；選中用 primary 的淡底與 primary 字 */
+/* 頁籤：圖示＋11px 標籤，60×56px（導覽列 72px 減去左右 padding 各 6px；分隔線是 box-shadow、不佔寬度，所以不設固定寬度）；選中用 primary 的淡底與 primary 字 */
 .nav-rail > button[data-view] {
   position: relative;
   flex: none;
