@@ -97,7 +97,8 @@ test.describe("桌機（1440×900）", () => {
 
   async function expectDesktopEntry(page: Page): Promise<void> {
     await expect(page.locator(":is(.sidebar, .nav-rail, .mobile-topbar)")).toHaveCount(0);
-    await expect(page.getByRole("banner").getByLabel(s.language)).toBeVisible();
+    // 切換語言後標籤也換了，所以以元素找頂端列的語言選單
+    await expect(page.getByRole("banner").locator("select")).toBeVisible();
     const panel = (await entryPanel(page).boundingBox())!;
     expect(panel.width).toBeGreaterThanOrEqual(380);
     expect(panel.width).toBeLessThanOrEqual(520);
