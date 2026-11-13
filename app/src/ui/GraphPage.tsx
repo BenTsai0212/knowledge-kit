@@ -98,7 +98,10 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
   const [cluster, setCluster] = useState<string | null>(null);
   const [showMembers, setShowMembers] = useState(false);
   // 手機（≤ 600px）：版面改變，門檻也用手機欄（docs/design.md「大量節點時的圖譜」）
-  const phone = useLayout() === "phone";
+  const layout = useLayout();
+  const phone = layout === "phone";
+  // 平板（#255）：實體面板是右側的滑出面板（寬 400px），開始的說明與多跳路徑在圖的下方（單欄）
+  const tablet = layout === "tablet";
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [entityOpen, setEntityOpen] = useState(false);
   const reads = useRef(createRequestGate());
@@ -220,8 +223,8 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
     return <EmptyState icon="graph" title={s.graphEmpty} reason={s.graphEmptyReason} actions={canSwitchIdentity ? [{ label: s.switchIdentity, onClick: focusIdentity }] : []} />;
 
   const onExpand = (id: string) => setExpansion((current) => expand(graph, current, id));
-  // 點節點、在清單選取：手機另外打開實體面板（再點同一個節點時重新打開）
-  const showEntity = () => phone && setEntityOpen(true);
+  // 點節點、在清單選取：手機與平板另外打開實體面板（再點同一個節點時重新打開）
+  const showEntity = () => (phone || tablet) && setEntityOpen(true);
   const onPick = (id: string) => (onExpand(id), showEntity());
   // 實體面板開著時，選取的節點平移到面板以上（上半部）的中央（#257）
   const sheetCover = phone && entityOpen && selected !== null ? SHEET_HALF : 0;
@@ -411,7 +414,7 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
   );
 
   return (
-    <div className={phone ? "graph-page graph-page--phone" : "graph-page"}>
+    <div className={phone ? "graph-page graph-page--phone" : tablet ? "graph-page graph-page--tablet" : "graph-page"}>
       <section className="card graph-main">
         <div className="graph-tools">
           <div
@@ -612,6 +615,23 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
             language={language}
             className="entity-sheet"
             expandable
+          >
+            {entityPanel}
+          </BottomSheet>
+        </>
+      ) : tablet ? (
+        <>
+          <div className="graph-side">
+            {selected === null && start}
+            {pathPanel}
+          </div>
+          <BottomSheet
+            open={entityOpen && selected !== null}
+            onClose={() => setEntityOpen(false)}
+            title={selected === null ? "" : nameOf(selected)}
+            language={language}
+            className="entity-sheet"
+            side="right"
           >
             {entityPanel}
           </BottomSheet>

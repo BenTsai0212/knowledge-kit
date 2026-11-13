@@ -883,8 +883,8 @@ main.qa > .source .source-text mark.entering {
   font-weight: 700;
 }
 
-/* 手機寬度（#195）：三欄改成上下堆疊、整頁捲動；順序是左導覽、對話、輸入區、右側面板。正式的手機設計之後另外處理 */
-@media (max-width: 640px) {
+/* 手機寬度（#195）：三欄改成上下堆疊、整頁捲動；順序是左導覽、對話、輸入區、右側面板。601px 起是平板的導覽列（#255），所以斷點對齊 600px */
+@media (max-width: 600px) {
   .app,
   main.qa,
   main.qa.with-panel {
@@ -1245,6 +1245,124 @@ main.qa > .source .source-text mark.entering {
 /* 身分與語言面板（IdentitySheet.tsx）：高 66% */
 .bottom-sheet.identity-sheet {
   height: 66dvh;
+}
+
+/* 平板的滑出面板（BottomSheet 的 side="right"，#255，docs/design.md「平板」）：從右側滑入（expand），全高、最寬 420px
+   （實體面板 400px），背後 overlay，不推擠主內容；減少動態效果時時間是 0ms、直接到位 */
+.bottom-sheet.slide-over {
+  inset: 0 0 0 auto;
+  width: min(420px, 100%);
+  height: 100dvh;
+  max-height: 100dvh;
+  border-radius: 24px 0 0 24px;
+}
+
+.bottom-sheet.slide-over[open] {
+  animation: kPanelIn var(--motion-expand) var(--ease-enter) backwards;
+}
+
+.bottom-sheet.slide-over.is-closing {
+  animation: kPanelOut var(--motion-expand) var(--ease-exit) forwards;
+}
+
+.bottom-sheet.slide-over.mention-sheet,
+.bottom-sheet.slide-over.entity-sheet {
+  width: min(400px, 100%);
+}
+
+.slide-over .bottom-sheet__body {
+  padding-top: calc(0.5rem + env(safe-area-inset-top));
+}
+
+@keyframes kPanelIn {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes kPanelOut {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* 平板（#255）：601–1024px 時 App 依 layout.ts 加上 app--tablet，左側 72px 的圖示導覽列＋主內容（原文與實體是滑出面板，不常駐右欄） */
+.app.app--tablet {
+  grid-template-columns: 72px minmax(0, 1fr);
+}
+
+.nav-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.75rem 6px calc(0.75rem + env(safe-area-inset-bottom));
+  /* 右側的分隔線用 inset 的 box-shadow，不佔寬度：border 會讓頁籤只剩 59px */
+  box-shadow: inset -1px 0 0 var(--color-border);
+  background: var(--color-surface);
+}
+
+.nav-rail__brand {
+  margin: 0 0 0.5rem;
+  line-height: 0;
+}
+
+/* 頁籤：圖示＋11px 標籤，60×56px（導覽列 72px 減去左右 padding 各 6px；分隔線是 box-shadow、不佔寬度，所以不設固定寬度）；選中用 primary 的淡底與 primary 字 */
+.nav-rail > button[data-view] {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  align-self: stretch;
+  height: 56px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-medium);
+  background: none;
+  color: var(--color-textMuted);
+}
+
+.nav-rail > button[aria-current="page"] {
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.nav-rail__label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.nav-rail .tab-count {
+  position: absolute;
+  top: 0.25rem;
+  left: calc(50% + 0.375rem);
+  margin: 0;
+  min-width: 1.25rem;
+  font-size: 0.7rem;
+}
+
+/* 身分的頭像：導覽列最下方，44px 的圓（樣式沿用身分徽章） */
+.identity-badge.nav-rail__avatar {
+  flex: none;
+  min-width: 44px;
+  max-width: none;
+  margin-top: auto;
+  padding: 0;
+}
+
+/* 平板的圖譜：單欄，開始的說明與多跳路徑在圖的下方 */
+.graph-page.graph-page--tablet {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 /* 身分的單選卡：名稱＋一句「看得到什麼」，整張卡可點，選中的卡用 primary 框 */

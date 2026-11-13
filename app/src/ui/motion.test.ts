@@ -121,15 +121,15 @@ describe("動態的刻度（#227，docs/design.md「刻度」）", () => {
 
   it("問答用到的 keyframes 都有定義", () => {
     const used = new Set([...cssText.matchAll(/animation:\s*(k[A-Z]\w*)/g)].map((m) => m[1]));
-    expect(used).toEqual(new Set(["kSend", "kRise", "kPopS", "kFade", "kSlideIn", "kSweep", "kGrow", "kUp", "kLift", "kUnder", "kFlyTo", "kBump", "kExpand", "kCollapse", "kOutLeft", "kOut", "kDim", "kToast", "kTimer", "kScale", "kFadeOut", "kDrop", "kGone", "kSheetUp", "kSheetDown"]));
+    expect(used).toEqual(new Set(["kSend", "kRise", "kPopS", "kFade", "kSlideIn", "kSweep", "kGrow", "kUp", "kLift", "kUnder", "kFlyTo", "kBump", "kExpand", "kCollapse", "kOutLeft", "kOut", "kDim", "kToast", "kTimer", "kScale", "kFadeOut", "kDrop", "kGone", "kSheetUp", "kSheetDown", "kPanelIn", "kPanelOut"]));
     for (const name of used) expect(cssText).toContain(`@keyframes ${name} {`);
   });
 
   // 結束狀態留在 keyframes 的 to 會蓋掉元素自己的樣式（#227：螢光在刷過後變透明）。
   // 退場（待審的列收合、往左淡出、往右離開、取代時舊說法變淡，#243；對話框遮罩的淡出、toast 倒數線走完、切換身分時看不到的文件消失，#246；
-  // 底部面板往下退場，#255）的結束狀態就是要留著，直到元素卸載
+  // 底部面板往下退場、平板的滑出面板往右退場，#255）的結束狀態就是要留著，直到元素卸載
   it("fill-mode 是 both／forwards 的問答 keyframes 只寫 from，結束時回到元素自己的樣式", () => {
-    const exits = ["kCollapse", "kOutLeft", "kOut", "kDim", "kFadeOut", "kTimer", "kGone", "kSheetDown"];
+    const exits = ["kCollapse", "kOutLeft", "kOut", "kDim", "kFadeOut", "kTimer", "kGone", "kSheetDown", "kPanelOut"];
     const keyframes = (name: string) => cssText.match(new RegExp(`@keyframes ${name} \\{([\\s\\S]*?)\\n\\}`))?.[1] ?? "";
     const filled = (css: string) =>
       [...css.matchAll(/animation:\s*(k[A-Z]\w*)[^;]*\b(both|forwards)\s*;/g)]

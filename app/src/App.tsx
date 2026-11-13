@@ -54,6 +54,7 @@ import { TimelinePage } from "./ui/TimelinePage";
 import { UploadPage } from "./ui/UploadPage";
 import { Sidebar } from "./ui/Sidebar";
 import { MobileNav } from "./ui/MobileNav";
+import { NavRail } from "./ui/NavRail";
 import { useLayout } from "./ui/layout";
 import { PresentationBar, type IdentityBump } from "./ui/PresentationBar";
 import { ScriptPanel } from "./ui/ScriptPanel";
@@ -392,14 +393,17 @@ export function App() {
     if (entity !== null) onViewed(entity.id);
   }, [entity?.id]);
 
-  const Nav = layout === "phone" ? MobileNav : Sidebar;
+  const Nav = layout === "phone" ? MobileNav : layout === "tablet" ? NavRail : Sidebar;
   // 展示模式登入後是頂端列（#260），不論寬度都取代 Nav（手機寬度的排列見 app.css），所以畫面上只有它的「問答｜圖譜」切換，
   // 不會與手機的分段切換（layout.ts 的 usesSegmented，只剩展示模式的登入頁）同時出現
   const presentationBar = presentationMode && accessCode !== null;
   const phone = layout === "phone" && !presentationBar;
+  // 平板（#255）：原文與實體從右側滑出覆蓋，不常駐右欄。展示模式沿用 1920×1080 的規格縮放（docs/design.md「平板」），不改用滑出面板
+  const tablet = layout === "tablet" && !presentationBar;
+  const overlay = phone || tablet;
 
-  // 原文與實體面板的容器依版面決定，集中在這裡（#256 決定 4）：手機是底部面板，其他是 main 中的右欄。
-  // 平板的滑出面板（#255）在這裡加 tablet 的分支
+  // 原文與實體面板的容器依版面決定，集中在這裡（#256 決定 4）：手機是底部面板，平板是右側的滑出面板（#255），桌機是 main 中的右欄
+  const side = tablet ? "right" : "bottom";
   const sourceSheet = () => {
     if (source === null) return null;
     const turn = turns.find((t) => t.id === sourceTurn);
@@ -422,6 +426,7 @@ export function App() {
             : () => (closeSource(), setReportRequest((last) => ({ turn: turn.id, count: (last?.count ?? 0) + 1 })))
         }
         onClose={closeSource}
+        side={side}
       />
     );
   };
@@ -433,26 +438,26 @@ export function App() {
         entityId={entity.id}
         language={language}
         onSelect={(id) => setEntity({ graph: entity.graph, id })}
-        // 底部面板蓋住輸入區，所以手機上填進輸入框或切到圖譜時一併關閉面板
+        // 底部面板與滑出面板蓋住輸入區，所以手機與平板上填進輸入框或切到圖譜時一併關閉面板
         onFollowUp={(question) => (setDraft(question), inSheet && setEntity(null))}
         onViewInGraph={(id) => (setGraphFocus(id), setView("graph"), inSheet && setEntity(null))}
         onClose={() => setEntity(null)}
         inSheet={inSheet}
       />
     );
-  // 手機的實體面板：高 56%（docs/design.md「實體面板」的停靠高度），名稱在面板的標題列
+  // 手機的實體面板：高 56%（docs/design.md「實體面板」的停靠高度），平板是寬 400px 的滑出面板；名稱在面板的標題列
   const mentionEntity = entity?.graph.entities.find((e) => e.id === entity.id);
   const mentionSheet = () =>
     entity !== null &&
     mentionEntity !== undefined && (
-      <BottomSheet open onClose={() => setEntity(null)} title={entityOptionLabel(entity.graph, mentionEntity, language)} language={language} className="mention-sheet">
+      <BottomSheet open onClose={() => setEntity(null)} title={entityOptionLabel(entity.graph, mentionEntity, language)} language={language} className="mention-sheet" side={side}>
         {mentionPanel(true)}
       </BottomSheet>
     );
   return (
-    <div className={phone ? "app app--phone" : "app"}>
+    <div className={phone ? "app app--phone" : tablet ? "app app--tablet" : "app"}>
       {/* 只渲染一種導覽結構：展示模式登入後是頂端列，沒有「更換邀請碼」與「這次的問題」（docs/design.md「隱藏與保留」）；
-          其他情況手機是頂端列＋底部分頁列、其他寬度是左側導覽（#255；平板的圖示導覽列之後加入）。展示模式的登入頁照常用 Nav */}
+          其他情況手機是頂端列＋底部分頁列、平板是左側的圖示導覽列、桌機是左側導覽（#255）。展示模式的登入頁照常用 Nav */}
       {presentationBar ? (
         <PresentationBar
           language={language}
@@ -601,7 +606,7 @@ export function App() {
               onOpenSource={onOpenSource}
             />
           )}
-          {!phone && sidePanel()}
+          {!overlay && sidePanel()}
         </main>
       ) : accessCode === null ? (
         // 登入頁（#228、#287）：左側主視覺、右側登入面板與語意模型的下載進度；窄螢幕時主視覺在上
@@ -644,7 +649,7 @@ export function App() {
         </main>
       ) : (
         // 中間是對話與固定在下方的輸入區，右側是原文或實體面板（關閉時中間欄變寬）
-        <main className={phone || (source === null && entity === null) ? "qa" : "qa with-panel"}>
+        <main className={overlay || (source === null && entity === null) ? "qa" : "qa with-panel"}>
           {presentationMode && (
             <ScriptPanel language={language} conversations={conversations} current={scriptCurrent} disabled={retriever === null || answering || limit !== null} onAsk={onScript} />
           )}
@@ -695,13 +700,13 @@ export function App() {
               presets={!presentationMode}
             />
           </div>
-          {!phone && sidePanel()}
-          {!phone && mentionPanel(false)}
+          {!overlay && sidePanel()}
+          {!overlay && mentionPanel(false)}
         </main>
       )}
-      {/* 手機的原文與實體面板是底部面板（#256）：原生 <dialog> 在 top layer，放在 main 之外 */}
-      {phone && sourceSheet()}
-      {phone && view === "qa" && mentionSheet()}
+      {/* 手機的原文與實體面板是底部面板（#256），平板是滑出面板（#255）：原生 <dialog> 在 top layer，放在 main 之外 */}
+      {overlay && sourceSheet()}
+      {overlay && view === "qa" && mentionSheet()}
     </div>
   );
 }
