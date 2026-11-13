@@ -46,8 +46,11 @@ export function accountOption(id: RoleId): string {
   return s.signInAccountOption.replace("{account}", demoAccount(id)).replace("{role}", role.label[language]);
 }
 
-// 手機（≤ 600px，#255）：頂端列的身分徽章，平板是導覽列底部的頭像；兩者都打開身分與語言面板
-export const identityBadge = (page: Page) => page.locator(":is(.mobile-topbar, .nav-rail) .identity-badge");
+// 手機（≤ 600px，#255）：頂端列的身分徽章，平板是導覽列底部的頭像，桌機是左側欄的使用者卡（#330）；都打開身分與語言面板。
+// 登入頁沒有（登入頁的語言在桌機是左側欄的下拉選單）
+export const identityBadge = (page: Page) => page.locator(":is(.mobile-topbar, .nav-rail, .sidebar) .identity-badge");
+// 桌機左側欄的使用者卡（#330）
+export const userCard = (page: Page) => page.locator(".sidebar .user-card");
 // 以 class 找面板：切換語言後面板的名稱也會換成新的語言
 export const identitySheet = (page: Page) => page.locator("dialog.identity-sheet");
 
@@ -64,7 +67,7 @@ async function inIdentitySheet(page: Page, act: (sheet: Locator) => Promise<unkn
 // 展示模式的頂端列（#260）：身分是分段切換（radiogroup），每個身分是一個 radio；不論寬度都取代手機的頂端列
 export const identitySegments = (page: Page) => page.getByRole("banner").getByRole("radiogroup", { name: s.identity });
 
-// 身分與語言面板（手機）裡的身分單選卡與語言的分段切換（#255 PR 2）。語言按鈕以 lang 屬性找，不看語言名稱的寫法
+// 身分與語言面板裡的身分單選卡與語言的分段切換（#255 PR 2）。語言按鈕以 lang 屬性找，不看語言名稱的寫法
 export const roleCard = (sheet: Locator, id: RoleId) =>
   sheet.getByRole("radio", { name: access.roles.find((r) => r.id === id)!.label[language], exact: true });
 // 單選卡的整張卡（label.role-card，觸控目標）。filter({ has }) 的內層 locator 是相對於外層元素查詢，
@@ -75,7 +78,7 @@ export const roleCardTarget = (sheet: Locator, id: RoleId) =>
   });
 export const languageOption = (sheet: Locator, code: string) => sheet.getByRole("group", { name: s.language }).locator(`button[lang="${code}"]`);
 
-// 以左側導覽的身分選單切換身分；展示模式改用頂端列的身分分段切換，手機上從身分徽章打開的面板選身分的單選卡
+// 切換身分：展示模式是頂端列的身分分段切換，其他是從身分徽章（桌機是使用者卡）打開的面板選身分的單選卡
 export async function switchIdentity(page: Page, id: RoleId): Promise<void> {
   const role = access.roles.find((r) => r.id === id)!;
   const segments = identitySegments(page);
@@ -83,17 +86,16 @@ export async function switchIdentity(page: Page, id: RoleId): Promise<void> {
     await segments.getByRole("radio", { name: role.label[language], exact: true }).check();
     return;
   }
-  if (await identityBadge(page).isVisible()) await inIdentitySheet(page, (sheet) => roleCard(sheet, id).check());
-  else await page.getByRole("banner").getByLabel(s.identity).selectOption({ label: role.label[language] });
+  await inIdentitySheet(page, (sheet) => roleCard(sheet, id).check());
 }
 
-// 切換介面語言（code 是語言代碼）；手機上從身分與語言面板的分段切換
+// 切換介面語言（code 是語言代碼）：身分與語言面板的分段切換；登入頁（沒有身分徽章）是左側欄的下拉選單
 export async function switchLanguage(page: Page, code: string): Promise<void> {
   if (await identityBadge(page).isVisible()) await inIdentitySheet(page, (sheet) => languageOption(sheet, code).click());
   else await page.getByRole("banner").getByLabel(s.language).selectOption(code);
 }
 
-// 切到某一頁（以 data-view 找，不看介面語言）：左側導覽、手機的分頁列，或手機上收在「更多」裡的頁面；這個身分沒有這一頁時回傳 false
+// 切到某一頁（以 data-view 找，不看介面語言）：左側欄、手機的分頁列，或手機上收在「更多」裡的頁面；這個身分沒有這一頁時回傳 false
 export async function gotoView(page: Page, view: string): Promise<boolean> {
   const button = page.locator(`:is(.primary-tabs, .mobile-tabbar, .nav-rail) [data-view="${view}"]`);
   if ((await button.count()) > 0) {
@@ -121,7 +123,7 @@ export function tab(page: Page, label: string): Locator {
 }
 
 // 包在 <label> 裡的欄位：無障礙名稱含有欄位目前的值（例如下拉選單選中的項目），所以以 label 文字的開頭找
-const field = (page: Page, label: string, tag: "input" | "select") => page.locator("label").filter({ hasText: startsWith(label) }).locator(tag);
+export const field = (page: Page, label: string, tag: "input" | "select") => page.locator("label").filter({ hasText: startsWith(label) }).locator(tag);
 
 // 切換頁籤
 export async function openTab(page: Page, label: string): Promise<void> {

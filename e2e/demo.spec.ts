@@ -1,7 +1,7 @@
 // 線上 demo 的設定（#100，docs/qa.md「線上 demo」）：只在 VITE_ONLINE_DEMO=1 的 build 執行（playwright.config.ts）。
 // 公開試用碼預先填入、問答與上傳頁的提醒、評測台隱藏，上傳與待審照常可用。/api/ask 一律是假的回應。
 import { expect, test, type Page } from "@playwright/test";
-import { accountOption, blockModelDownload, openTab, presetQuestions, s, switchIdentity, tab, signInPanel, uploadAndReview } from "./support/app";
+import { accountOption, blockModelDownload, identitySheet, openTab, presetQuestions, s, switchIdentity, tab, signInPanel, uploadAndReview } from "./support/app";
 import { NO_REVIEWER, NO_REVIEWING_UPLOADER, reviewer, reviewingUploader } from "./support/client";
 import { FAKE_ANSWER_LEAD, routeFakeAsk } from "./support/fake-ask";
 
@@ -82,7 +82,7 @@ test("帳號登入（#287）：不用輸入邀請碼，以公開碼送出；身�
   await panel.getByLabel(s.signInAccount).selectOption({ label: accountOption(question.role) });
   await panel.getByRole("button", { name: s.signInSubmit }).click();
   await expect(page.getByRole("button", { name: question.text, exact: true })).toBeEnabled();
-  await expect(page.getByRole("banner").getByLabel(s.identity)).toHaveCount(0);
+  await expect(identitySheet(page).getByRole("radio", { includeHidden: true })).toHaveCount(0);
 
   const request = page.waitForRequest("**/api/ask");
   await page.getByRole("button", { name: question.text, exact: true }).click();

@@ -3,6 +3,7 @@
 // 開關用 base：進場是 app.css 的 kSheetUp，退場由 closeDialog() 播放反向動畫後才 close()；減少動態效果時直接到位。
 // expandable（#257 的實體面板）：打開時停在 56% 高，往上拉到全高，從全高往下拉回 56%，從 56% 往下拉過門檻才關閉（layout.ts 的 sheetSnap()）。
 // side="right"（平板的滑出面板，#255，docs/design.md「平板」）：從右側滑入、往右拖過門檻關閉，其餘（焦點、Esc、點背景、退場）相同。
+// side="popover"（桌機左側欄的使用者卡選單，#330）：從左側欄旁淡入，不能拖曳、沒有把手，其餘相同。
 import { useEffect, useId, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import { strings } from "../client/i18n";
 import { CLOSING_CLASS, closeDialog } from "./dialog-motion";
@@ -20,8 +21,8 @@ interface Props {
   expandable?: boolean;
   // 標題列中、關閉按鈕前的按鈕（例如原文面板的上一個、下一個出處，#256）
   actions?: ReactNode;
-  // 從哪一側出現：bottom（手機的底部面板）或 right（平板的滑出面板）
-  side?: "bottom" | "right";
+  // 從哪一側出現：bottom（手機的底部面板）、right（平板的滑出面板）或 popover（桌機左側欄旁的選單）
+  side?: "bottom" | "right" | "popover";
   children: ReactNode;
 }
 
@@ -52,7 +53,7 @@ export function BottomSheet({ open, onClose, title, language, className, expanda
   // 拖曳把手與標題列：往下拖時面板跟著手指，放開時超過門檻就關閉，否則彈回；可展開時往上拖面板跟著變高
   const onPointerDown = (e: PointerEvent<HTMLElement>) => {
     const d = dialog.current;
-    if (d === null || d.classList.contains(CLOSING_CLASS) || (e.target as HTMLElement).closest("button") !== null) return;
+    if (d === null || side === "popover" || d.classList.contains(CLOSING_CLASS) || (e.target as HTMLElement).closest("button") !== null) return;
     // 進場動畫（kSheetUp）播放中時 CSS 動畫會蓋過行內的 transform，面板不會跟著手指；先讓動畫直接到位
     d.getAnimations?.().forEach((a) => a.finish());
     const box = d.getBoundingClientRect();
@@ -86,7 +87,7 @@ export function BottomSheet({ open, onClose, title, language, className, expanda
     d.style.removeProperty("transform");
     setStop(next);
   };
-  const classes = ["bottom-sheet", right && "slide-over", expandable && "is-expandable", expandable && stop === "full" && "is-full", className].filter(Boolean).join(" ");
+  const classes = ["bottom-sheet", right && "slide-over", side === "popover" && "popover-sheet", expandable && "is-expandable", expandable && stop === "full" && "is-full", className].filter(Boolean).join(" ");
 
   return (
     <dialog
@@ -105,7 +106,7 @@ export function BottomSheet({ open, onClose, title, language, className, expanda
     >
       <div className="bottom-sheet__body">
         <div className="bottom-sheet__header" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
-          {!right && <span className="bottom-sheet__handle" aria-hidden="true" />}
+          {side === "bottom" && <span className="bottom-sheet__handle" aria-hidden="true" />}
           <h2 id={titleId}>{title}</h2>
           <div className="bottom-sheet__actions">
             {actions}

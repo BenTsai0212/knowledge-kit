@@ -36,36 +36,202 @@ h3 {
   font-size: 0.95rem;
 }
 
-/* 左導覽、中間、右側面板（#195）：整個視窗高度，各欄自己捲動，整頁不捲動 */
+/* 左側欄、中間、右側面板（#195）：整個視窗高度，各欄自己捲動，整頁不捲動。左側欄 220px（#330，畫板 K-Home） */
 .app {
   display: grid;
-  grid-template-columns: 15rem minmax(0, 1fr);
+  grid-template-columns: 220px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   height: 100dvh;
 }
 
+/* 桌機的左側欄（Sidebar.tsx，#330）：surface 底、右邊 1px border；項目之間 4px，底部是標示與使用者卡 */
 .sidebar {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 4px;
   min-height: 0;
   overflow-y: auto;
-  padding: 1rem;
+  padding: 20px 14px;
   border-right: 1px solid var(--color-border);
   background: var(--color-surface);
 }
 
-.toolbar {
-  display: grid;
-  justify-items: start;
-  gap: 0.5rem;
-}
-
-.toolbar h1 {
+/* 頂部：28px 的 K 晶格 icon＋客戶名稱（16px／900） */
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
   margin: 0;
+  padding: 0 8px 16px;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.3;
 }
 
-/* 組合字標（#226）：側欄固定兩行，第一行 icon＋「Knowledge Kit」（display 字體），第二行客戶名稱；不加分隔線 */
+.sidebar__client {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 頁面項目：44px 高、圓角 10px、15px；選中是 text 底、surface 字、700 */
+.sidebar .primary-tabs {
+  gap: 4px;
+}
+
+.sidebar .primary-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--radius-medium);
+  background: none;
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 400;
+  text-align: start;
+}
+
+.sidebar .primary-tabs button:not([aria-current="page"]):hover {
+  background: var(--color-surfaceRaised);
+}
+
+.sidebar .primary-tabs button[aria-current="page"] {
+  background: var(--color-text);
+  color: var(--color-surface);
+  font-weight: 700;
+}
+
+.primary-tabs__label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* 待審的筆數：項目右側的 primary 圓形徽章（22px） */
+.sidebar .tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  min-width: 22px;
+  height: 22px;
+  margin-left: auto;
+  padding: 0 6px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  color: var(--color-onPrimary);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* 底部：「虛構資料 · 展示用權限」的虛線框，下方是使用者卡（登入頁是語言選單＋虛線框） */
+.sidebar__footer {
+  display: grid;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+.sidebar__labels {
+  margin: 0;
+  padding: 12px;
+  border: 1px dashed var(--color-textMuted);
+  border-radius: 12px;
+  color: var(--color-textMuted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.sidebar__language {
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.sidebar__language select {
+  max-width: 100%;
+}
+
+/* 使用者卡：surfaceRaised 底、圓角 12px；32px 縮寫頭像、名稱、角色、「看得到：…」，帳號登入時另有「登出」 */
+.user-card {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--color-surfaceRaised);
+}
+
+/* 按下打開身分與語言選單；不用身分徽章的膠囊樣式 */
+.identity-badge.user-card__button {
+  display: grid;
+  gap: 6px;
+  max-width: none;
+  min-height: 44px;
+  overflow: visible;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-small);
+  background: none;
+  color: var(--color-text);
+  font-weight: 400;
+  text-align: start;
+  white-space: normal;
+}
+
+.user-card__who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.user-card__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+  background: var(--color-text);
+  color: var(--color-surface);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.user-card__names {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.4;
+}
+
+.user-card__name {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.user-card__role,
+.user-card__scope {
+  color: var(--color-textMuted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.user-card button.user-card__sign-out {
+  justify-self: start;
+  color: var(--color-textMuted);
+  font-size: 12px;
+}
+
+/* 組合字標（#226）：展示模式的頂端列（PresentationBar.tsx）用 */
 .brand {
   display: flex;
   flex-direction: column;
@@ -77,14 +243,6 @@ h3 {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-}
-
-.brand__wordmark {
-  font-family: var(--font-display);
-  font-size: 1.125rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
 }
 
 /* 客戶名稱是客戶 demo 的主角：沿用 h1 的大小、字重與 text 色，不比產品名稱弱 */
@@ -123,11 +281,7 @@ h3 {
   stroke: var(--color-markText);
 }
 
-.toolbar select {
-  max-width: 100%;
-}
-
-/* 帳號登入（#287）：身分是唯讀的文字，排法與身分選單相同 */
+/* 帳號登入（#287）：身分是唯讀的文字（身分與語言面板） */
 .identity-account {
   display: inline-flex;
   flex-wrap: wrap;
@@ -269,24 +423,6 @@ button.chip[aria-pressed="true"] {
   flex: none;
   border-radius: 50%;
   background: var(--type-color);
-}
-
-.session-questions h2 {
-  font-size: 0.9rem;
-}
-
-.session-questions ol {
-  margin: 0;
-  padding-left: 1.25rem;
-  font-size: 0.875rem;
-}
-
-.session-questions li + li {
-  margin-top: 0.25rem;
-}
-
-.session-questions a {
-  color: var(--color-primary);
 }
 
 .qa-independent {
@@ -1352,6 +1488,33 @@ main.qa > .source .source-text mark.entering {
 /* 身分與語言面板（IdentitySheet.tsx）：高 66% */
 .bottom-sheet.identity-sheet {
   height: 66dvh;
+}
+
+/* 桌機左側欄的使用者卡選單（BottomSheet 的 side="popover"，#330 決定 2）：從左側欄（220px）旁、貼著底部淡入，
+   高度依內容；背景不變暗（選單，不是面板）。Esc、點外面或關閉按鈕關閉，焦點回到使用者卡 */
+.bottom-sheet.popover-sheet {
+  inset: auto auto 16px 228px;
+  width: min(360px, calc(100vw - 244px));
+  height: auto;
+  max-height: calc(100dvh - 32px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+}
+
+.bottom-sheet.popover-sheet[open] {
+  animation: kFade var(--motion-base) var(--ease-enter) backwards;
+}
+
+.bottom-sheet.popover-sheet.is-closing {
+  animation: kFadeOut var(--motion-base) var(--ease-exit) forwards;
+}
+
+.bottom-sheet.popover-sheet::backdrop {
+  background: transparent;
+}
+
+.popover-sheet .bottom-sheet__body {
+  padding-bottom: 1rem;
 }
 
 /* 平板的滑出面板（BottomSheet 的 side="right"，#255，docs/design.md「平板」）：從右側滑入（expand），全高、最寬 420px

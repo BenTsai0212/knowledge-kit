@@ -1,11 +1,13 @@
 // 登入頁的兩條路（#287，docs/design.md「日常工具」的「登入」）：登入頁沒有身分選單；帳號登入（展示）身分固定、不能切換；使用邀請碼體驗與展示模式進入後可以切換。
 // 這個 build 沒有公開碼（線上 demo 的帳號登入見 demo.spec.ts），所以帳號登入也要輸入邀請碼。/api/ask 一律是假的回應。
 import { expect, test, type Page } from "@playwright/test";
-import { ACCESS_CODE, accountOption, blockModelDownload, identitySegments, language, openApp, presetQuestions, s, signInPanel, switchIdentity } from "./support/app";
+import { ACCESS_CODE, accountOption, blockModelDownload, identityBadge, identitySegments, identitySheet, language, openApp, presetQuestions, s, signInPanel, switchIdentity, userCard } from "./support/app";
 import { access } from "./support/client";
 import { routeFakeAsk } from "./support/fake-ask";
+import { demoAccount } from "../app/src/ui/sign-in";
 
-const identityMenu = (page: Page) => page.getByRole("banner").getByLabel(s.identity);
+// 身分選單：桌機是左側欄的使用者卡（#330），登入頁沒有
+const identityMenu = (page: Page) => identityBadge(page);
 
 test("帳號登入：密碼欄停用、不是表單；登入後沒有身分選單，帳號與邀請碼不保存，/api/ask 仍帶邀請碼；登出回到登入頁", async ({ page }) => {
   const question = presetQuestions[0];
@@ -31,9 +33,17 @@ test("帳號登入：密碼欄停用、不是表單；登入後沒有身分選�
   await login.click();
   await expect(page.getByRole("button", { name: question.text, exact: true })).toBeEnabled();
 
-  // 身分是登入的帳號：沒有選單，顯示帳號與角色
-  await expect(identityMenu(page)).toHaveCount(0);
-  await expect(page.getByRole("banner")).toContainText(accountOption(question.role));
+  // 身分是登入的帳號：使用者卡顯示帳號與角色，選單只有語言與「登出」，不能切換身分（#330 決定 2）
+  const role = access.roles.find((r) => r.id === question.role)!;
+  await expect(userCard(page).locator(".user-card__name")).toHaveText(demoAccount(question.role));
+  await expect(userCard(page).locator(".user-card__role")).toHaveText(role.label[language]);
+  await identityMenu(page).click();
+  await expect(identitySheet(page)).toBeVisible();
+  await expect(identitySheet(page).getByRole("radio")).toHaveCount(0);
+  await expect(identitySheet(page).getByRole("group", { name: s.language })).toBeVisible();
+  await expect(identitySheet(page).getByRole("button", { name: s.signOut })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(identitySheet(page)).toBeHidden();
   // 帳號與邀請碼都不寫入瀏覽器的儲存：重新整理後回到登入頁
   const stored = await page.evaluate(() => JSON.stringify({ ...sessionStorage, ...localStorage }));
   expect(stored).not.toContain(ACCESS_CODE);
@@ -43,7 +53,7 @@ test("帳號登入：密碼欄停用、不是表單；登入後沒有身分選�
   await page.getByRole("button", { name: question.text, exact: true }).click();
   expect((await request).headers()["x-access-code"]).toBe(ACCESS_CODE);
 
-  await page.getByRole("button", { name: s.signOut }).click();
+  await userCard(page).getByRole("button", { name: s.signOut }).click();
   await expect(signInPanel(page)).toBeVisible();
   await expect(identityMenu(page)).toHaveCount(0);
 });
@@ -58,7 +68,7 @@ test("使用邀請碼體驗：進入後才出現身分選單，可以切換到�
   await openApp(page);
   for (const role of access.roles) {
     await switchIdentity(page, role.id);
-    await expect(identityMenu(page)).toHaveValue(role.id);
+    await expect(userCard(page).locator(".user-card__name")).toHaveText(role.label[language]);
   }
 });
 

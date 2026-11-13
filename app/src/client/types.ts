@@ -341,6 +341,8 @@ export interface UiStrings {
   // 手機頂端列的身分徽章（#255）：{role} 是目前身分的名稱；按下打開身分與語言面板
   identityBadge: string;
   identityAndLanguage: string;
+  // 桌機左側欄使用者卡的「看得到：…」（#330）：{scope} 是 access.json 的 roles[].scope
+  userCardScope: string;
   // 手機底部分頁列的「更多」（#255）
   navMore: string;
   presetQuestions: string;

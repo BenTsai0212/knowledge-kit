@@ -48,12 +48,9 @@ test.describe("1280×720", () => {
     expect(second).toBe(first);
     expect(await input.boundingBox()).toEqual(before);
     await expect(answers(page).getByRole("heading", { name: question.text })).toHaveCount(2);
-    const sessionQuestions = page.getByRole("navigation", { name: s.sessionQuestions }).getByRole("link");
-    await expect(sessionQuestions).toHaveText([question.text, question.text]);
 
     await switchIdentity(page, access.roles.find((r) => r.id !== question.role)!.id);
     await expect(answers(page)).toHaveCount(0);
-    await expect(sessionQuestions).toHaveCount(0);
     await expect(page.getByText(s.emptyAnswer)).toBeVisible();
   });
 

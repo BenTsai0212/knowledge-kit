@@ -3,7 +3,6 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { ThemeFile } from "../client/types";
-import { strings } from "../client/i18n";
 import { clientConfig } from "../client/load";
 import icon16 from "../../../docs/images/icon/knowledge-kit-16.svg?raw";
 import iconDark from "../../../docs/images/icon/knowledge-kit-dark.svg?raw";
@@ -12,7 +11,7 @@ import indexHtml from "../../index.html?raw";
 import favicon from "../../public/favicon.svg?raw";
 import css from "./app.css?raw";
 import { ICON_PATH, ProductIcon, SIMPLIFIED_MAX_SIZE } from "./ProductIcon";
-import { BRAND_ICON_SIZE, Sidebar } from "./Sidebar";
+import { BRAND_ICON_SIZE } from "./Sidebar";
 import { themeVariables } from "./theme";
 
 const cssText = css.replace(/\/\*[\s\S]*?\*\//g, "");
@@ -93,42 +92,14 @@ describe("換成 clients/ 的示範客戶", () => {
   });
 });
 
+// 展示模式頂端列的組合字標（PresentationBar.tsx）；桌機左側欄的頂部見 sidebar.test.ts
 describe("頁首的組合字標", () => {
-  const html = (language: string) =>
-    renderToStaticMarkup(
-      createElement(Sidebar, {
-        language,
-        identity: clientConfig.access.roles[0].id,
-        identityControl: "menu",
-        onIdentity: () => {},
-        onLanguage: () => {},
-        views: ["qa"],
-        view: "qa",
-        onView: () => {},
-        questions: [],
-        onQuestion: () => {},
-      }),
-    );
-
-  it("兩行：第一行 icon＋產品名稱，第二行客戶顯示名稱，文字來自 i18n 與 client.json", () => {
-    for (const language of clientConfig.client.languages) {
-      const h1 = html(language).match(/<h1 class="brand">([\s\S]*?)<\/h1>/)?.[1] ?? "";
-      const product = h1.match(/^<span class="brand__product">(<svg[\s\S]*?<\/svg><span class="brand__wordmark">[^<]*<\/span>)<\/span>/)?.[1];
-      expect(product, language).toBeDefined();
-      expect(product).toContain('class="product-icon"');
-      expect(product).toContain(`<span class="brand__wordmark">${strings(language).productName}</span>`);
-      expect(h1.endsWith(`</span> <span class="brand__client">${clientConfig.client.displayName[language]}</span>`)).toBe(true);
-    }
+  it("頂端列用完整版的 icon", () => {
     expect(BRAND_ICON_SIZE).toBeGreaterThan(SIMPLIFIED_MAX_SIZE);
   });
 
-  it("兩行排列：產品名稱一行、客戶名稱另一行", () => {
-    expect(rule(cssText, ".brand")).toMatchObject({ display: "flex", "flex-direction": "column" });
+  it("客戶名稱沒有分隔線、用 text 色與 h1 的字重", () => {
     expect(rule(cssText, ".brand__product")).toMatchObject({ display: "flex", "align-items": "center" });
-  });
-
-  it("字標用 fonts.display；客戶名稱沒有分隔線、用 text 色與 h1 的字重", () => {
-    expect(rule(cssText, ".brand__wordmark")).toMatchObject({ "font-family": "var(--font-display)" });
     const client = rule(cssText, ".brand__client");
     expect(client).toMatchObject({ color: "var(--color-text)" });
     expect(Object.keys(client).filter((k) => k.startsWith("border"))).toEqual([]);

@@ -35,6 +35,7 @@
   "signOut": "ログアウト",
   "identityBadge": "{role}（身分と言語を切り替える）",
   "identityAndLanguage": "身分と言語",
+  "userCardScope": "閲覧できる範囲：{scope}",
   "navMore": "その他",
   "presetQuestions": "質問の例",
   "scenarioRole": "シナリオのユーザー",

@@ -121,7 +121,7 @@ Light 來自提案 A「墨與螢光」，Dark 來自提案 B「晶格」。對�
 
 實作（#226）：
 
-- 頁首（`app/src/ui/Sidebar.tsx`）的組合字標用 `app/src/ui/ProductIcon.tsx` 繪製：磚塊讀 `surface`／`border`，線條與交點讀 `text`，下方節點讀 `primary`，證據節點讀 `mark`、描邊讀 `markText`（Light 是墨色；Dark 是淡琥珀，接近原始檔的不描邊）。icon 是裝飾（`aria-hidden`），產品名稱是 i18n 的 `productName`，客戶名稱取自 `client.json` 的 `displayName`。側欄用兩行版本；客戶名稱沿用 `h1` 的大小與字重、`text` 色（客戶 demo 中客戶名稱是主角，不比產品名稱弱）。
+- 展示模式頂端列（`app/src/ui/PresentationBar.tsx`）的字標與各處的 icon 用 `app/src/ui/ProductIcon.tsx` 繪製：磚塊讀 `surface`／`border`，線條與交點讀 `text`，下方節點讀 `primary`，證據節點讀 `mark`、描邊讀 `markText`（Light 是墨色；Dark 是淡琥珀，接近原始檔的不描邊）。icon 是裝飾（`aria-hidden`），產品名稱是 i18n 的 `productName`，客戶名稱取自 `client.json` 的 `displayName`。桌機左側欄（`Sidebar.tsx`）依畫板 `K-Home` 只放 28px 的 icon＋客戶名稱（16px／900），產品名稱只給報讀器（#330）。
 - 32px 以下（含）元件改畫簡化版；簡化版的證據節點也讀 `mark`（原始檔的 `#E8B800` 不是 token）。
 - favicon 是 `app/public/favicon.svg`：`knowledge-kit-16.svg` 的形狀與 Light 顏色，以 SVG 內的 `@media (prefers-color-scheme: dark)` 改用 Dark 的 `surface`、`border`、`text`、`mark`。不隨客戶換色（16px 版本沒有主色節點）。`app/src/ui/product-icon.test.ts` 檢查形狀與顏色和原始檔一致。
 
@@ -379,7 +379,7 @@ Light 與 Dark 共用同一套時間與曲線。
 
 ### 隱藏與保留
 
-- **隱藏**：時間軸、上傳、待審、評測台（現行）；「回報有錯」、左側「這次的問題」、「更換邀請碼」。語意模型的下載進度縮成頂端一個小點，完成後消失。
+- **隱藏**：時間軸、上傳、待審、評測台（現行）；「回報有錯」、「這次的問題」、「更換邀請碼」。語意模型的下載進度縮成頂端一個小點，完成後消失。
 - **保留**：「虛構資料」「展示用權限」標示（RFC 0001，字級不縮小）、身分與語言切換、出處。
 - **仍不是權限防線**：只改畫面；資料的可見範圍仍由 RLS 依身分決定。
 

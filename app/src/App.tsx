@@ -448,7 +448,7 @@ export function App() {
     if (entity !== null) onViewed(entity.id);
   }, [entity?.id]);
 
-  // 「這次的問題」點一題：捲到該題（桌機的左側導覽、手機的底部面板共用）
+  // 「這次的問題」點一題：捲到該題（手機的底部面板；桌機的左側欄不放，#330 決定 3）
   const scrollToTurn = (id: string) => void document.getElementById(id)?.scrollIntoView({ block: "start" });
 
   const Nav = layout === "phone" ? MobileNav : layout === "tablet" ? NavRail : Sidebar;
@@ -586,8 +586,6 @@ export function App() {
               </span>
             ),
           }}
-          questions={turns}
-          onQuestion={scrollToTurn}
         />
       )}
       {loadFailed ? (

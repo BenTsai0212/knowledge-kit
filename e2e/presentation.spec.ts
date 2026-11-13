@@ -1,6 +1,6 @@
 // 客戶展示模式（#129，docs/qa.md「展示模式」）：?mode=presentation 只顯示問答與圖譜兩個頁籤，能審查的身分也一樣。/api/ask 一律是假的回應。
 import { expect, test, type Page } from "@playwright/test";
-import { identitySegments, language, openApp, openTab, presetQuestions, s, sourcePanel, switchIdentity } from "./support/app";
+import { identityBadge, identitySegments, identitySheet, language, openApp, openTab, presetQuestions, s, sourcePanel, switchIdentity } from "./support/app";
 import { access, client, scenarios } from "./support/client";
 import { FAKE_ANSWER_LEAD } from "./support/fake-ask";
 import { waitForGraphIdle } from "./support/graph";
@@ -99,8 +99,9 @@ test("一般模式（不帶參數）：字級與隱藏的元素不變", async ({
   await expect(answer.locator("h2")).toHaveCSS("font-size", "16.8px");
   await expect(answer.locator(".answer-text")).toHaveCSS("font-size", "16px");
   await expect(answer.getByRole("button", { name: s.reportButton })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: s.sessionQuestions })).toBeVisible();
-  await expect(page.getByRole("button", { name: s.changeAccessCode })).toBeVisible();
+  // 桌機的「更換邀請碼」在使用者卡的選單裡（#330）
+  await identityBadge(page).click();
+  await expect(identitySheet(page).getByRole("button", { name: s.changeAccessCode })).toBeVisible();
 });
 
 // 頂端列與劇本（#260 PR 2，docs/design.md「展示模式」的「版面」）

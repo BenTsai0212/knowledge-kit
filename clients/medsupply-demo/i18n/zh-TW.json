@@ -35,6 +35,7 @@
   "signOut": "登出",
   "identityBadge": "身分：{role}，切換身分與語言",
   "identityAndLanguage": "身分與語言",
+  "userCardScope": "看得到：{scope}",
   "navMore": "更多",
   "presetQuestions": "預設問題",
   "scenarioRole": "情境角色",
