@@ -43,6 +43,8 @@ export interface HeroInput {
 // 三層的節點數（docs/design.md）；低階裝置減少遠景與中景
 export const HERO_COUNTS = { far: 26, mid: 16, front: 18 } as const;
 export const HERO_LITE_COUNTS = { far: 10, mid: 8, front: 18 } as const;
+// 手機（≤ 600px，docs/design.md「入口（手機）」）：前景節點數減半；遠景不模糊在 app.css 的 hero--phone
+export const HERO_PHONE_FRONT = HERO_COUNTS.front / 2;
 // 每隔 2.5 秒形成一條新連線，4 條輪流（app.css 的 kForm 週期是 4 × 2.5 秒）
 export const FORMING_COUNT = 4;
 const CORE_COUNT = 3;
@@ -161,8 +163,9 @@ function fit(points: Point[]): Point[] {
   return points.map((p) => ({ x: offsetX + (p.x - minX) * scale, y: offsetY + (p.y - minY) * scale }));
 }
 
-export function heroScene(input: HeroInput, lite = false): HeroScene {
-  const counts = lite ? HERO_LITE_COUNTS : HERO_COUNTS;
+export function heroScene(input: HeroInput, lite = false, phone = false): HeroScene {
+  const base = lite ? HERO_LITE_COUNTS : HERO_COUNTS;
+  const counts = { far: base.far, mid: base.mid, front: phone ? HERO_PHONE_FRONT : base.front };
   const random = seededRandom(SEED);
   const far = scatter(counts.far, random);
   const mid = scatter(counts.mid, random);

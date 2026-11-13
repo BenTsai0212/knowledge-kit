@@ -3561,8 +3561,9 @@ label.inline {
   justify-self: start;
 }
 
-/* 手機與平板（docs/design.md「手機」的「登入」）：主視覺縮成上方 330px，帳號、密碼、登入與模型下載進度在下方 */
-@media (max-width: 900px) {
+/* 手機與平板（≤ 1024px，layout.ts 的 TABLET_MAX；docs/design.md「入口（手機）」、平板的登入頁沿用手機版）：
+   主視覺縮成上方 330px，帳號、密碼、登入與模型下載進度在下方；輸入框與按鈕高 52px，文字連結的觸控範圍補到 44px */
+@media (max-width: 1024px) {
   .app > main.entry {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: 330px auto;
@@ -3574,6 +3575,14 @@ label.inline {
     overflow-y: visible;
     border-left: none;
     border-top: 1px solid var(--color-border);
+  }
+
+  .entry__panel :is(input:not([type="checkbox"], [type="radio"]), select, button:not(.link)) {
+    min-height: 52px;
+  }
+
+  .entry__panel button.link {
+    min-height: 44px;
   }
 }
 
@@ -3619,7 +3628,8 @@ label.inline {
   animation-delay: 300ms;
 }
 
-.hero--lite .hero__layer--far {
+.hero--lite .hero__layer--far,
+.hero--phone .hero__layer--far {
   filter: none;
 }
 
