@@ -99,7 +99,17 @@ export function QuestionPanel({ language, disabled, text, onText, onAsk, limit, 
         }}
       >
         {compact ? (
-          <input type="text" aria-label={s.questionLabel} {...field} onChange={(e) => onText(e.target.value)} />
+          <input
+            id={QUESTION_INPUT_ID}
+            type="text"
+            value={text}
+            disabled={limit !== null}
+            aria-label={s.questionLabel}
+            placeholder={s.questionPlaceholder}
+            aria-invalid={length.over || undefined}
+            aria-describedby={length.show ? HINT_ID : undefined}
+            onChange={(e) => onText(e.target.value)}
+          />
         ) : (
           <label>
             <span className={line ? "visually-hidden" : undefined}>{s.questionLabel}</span>
