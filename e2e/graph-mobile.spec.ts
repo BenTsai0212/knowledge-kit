@@ -241,3 +241,38 @@ test("實體面板：選取的節點平移到面板以上的中央，內容依�
   for (const offset of offsets) expect(offset).toBeLessThan(2);
   expect(await noHorizontalScroll(page)).toBe(true);
 });
+
+// 畫布目前的縮放
+const zoomOf = (page: Page) => page.evaluate((selector) => document.querySelector<HTMLElement & { _cyreg?: { cy?: Cy } }>(selector)!._cyreg!.cy!.zoom(), CANVAS);
+
+// #323 修正要求：面板以上的可見部分可能很矮（上方多了「已展開」一列），縮小到放得進聚焦集合時節點小到看不出是哪個實體，所以只平移、不縮小
+test("實體面板打開、節點平移後縮放不小於打開前（只平移、不縮小）", async ({ page }) => {
+  await openGraph(page);
+  const node = await uniqueNode(page);
+  test.skip(node === null, "圖中沒有名稱不重複的節點");
+  const { id, name } = node!;
+  const sheet = entitySheet(page);
+  const search = async () => {
+    await page.getByRole("combobox", { name: s.graphSearch, exact: true }).fill(name);
+    await page.getByRole("option", { name: new RegExp(`^${escape(name)} `) }).click();
+    await expect(sheet).toBeVisible();
+    await waitForSheetSettled(page);
+    await waitForGraphIdle(page, CANVAS);
+  };
+
+  // 門檻以下（全部節點）：搜尋選取並打開面板時縮放不變。門檻以上時換到細節層，縮放與沒有面板時相同（由細節層的視角決定）
+  const before = await zoomOf(page);
+  await search();
+  if (scaleMode(visibleGraph(access.roles[0].id).entities.length, true) === "all") expect(await zoomOf(page)).toBeGreaterThanOrEqual(before - 1e-6);
+
+  // 關閉後選取不變；從搜尋重新打開同一個實體時，只把節點平移到面板以上的中央，縮放不變
+  await sheet.getByRole("button", { name: s.dialogClose }).click();
+  await expect(sheet).toBeHidden();
+  await waitForGraphIdle(page, CANVAS);
+  const closed = await zoomOf(page);
+  await search();
+  expect(await zoomOf(page)).toBeGreaterThanOrEqual(closed - 1e-6);
+  const [target, at] = [await upperCenter(page), await nodeOnScreen(page, id)];
+  near(at.x, target.x);
+  near(at.y, target.y);
+});

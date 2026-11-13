@@ -9,7 +9,7 @@ import { relationCounts } from "../graph/search";
 import { clampLabel, nodeLabels, type MeasureText } from "./graph-labels";
 import { edgeWidth, graphStyle, NODE_LABEL_FONT_SIZE, NODE_LABEL_MAX_LINES, NODE_LABEL_MAX_WIDTH, nodeSize } from "./graph-style";
 import { visibleArea } from "./layout";
-import { centeredViewport, panToCenter } from "./graph-zoom";
+import { panToCenter } from "./graph-zoom";
 import { EXPAND_MS, MOTION, motionDuration, PAN_MS, watchReducedMotion } from "./motion";
 import { isDark, watchColorScheme } from "./theme";
 
@@ -211,7 +211,7 @@ function drawEdge(edge: EdgeSingular, ms: number) {
 const FOCUS_PADDING = 40;
 
 // 展開後的動態：新的線描出來；畫面平滑移動，讓選取的節點靠近中央（聚焦集合放不進畫面時改為聚焦集合整個放進畫面）；回到全部時顯示全貌。
-// 手機的實體面板開著時（cover > 0），選取的節點一律放在面板以上的中央，聚焦集合放不進去時縮小（#257）
+// 手機的實體面板開著時（cover > 0），只平移：選取的節點放在面板以上的中央，縮放不變；聚焦集合超出可見部分時由使用者自己拖曳或縮放（#257）
 function animateFocus(cy: Core, graph: Graph, previous: Expansion, next: Expansion, reduced: boolean, cover: number) {
   const [expandMs, panMs] = [motionDuration(reduced, EXPAND_MS), motionDuration(reduced, PAN_MS)];
   cy.stop(true, false);
@@ -234,12 +234,8 @@ function animateFocus(cy: Core, graph: Graph, previous: Expansion, next: Expansi
   const selected = cy.$id(selectedOf(next) ?? "");
   const eles = cy.nodes().filter((n) => focus.entities.has(n.id()));
   const [box, extent] = [eles.boundingBox(), cy.extent()];
-  if (cover > 0 && selected.nonempty()) {
-    // 選取的節點放在面板以上的中央，聚焦集合放不進去時縮小（不放大）
-    const view = centeredViewport(selected.position(), box, areaOf(cy, cover), cy.zoom(), FOCUS_PADDING);
-    if (panMs === 0) cy.viewport(view);
-    else cy.animate(view, { duration: panMs, easing: "ease-in-out" });
-  } else if (box.w <= extent.w && box.h <= extent.h) center(selected);
+  if (cover > 0 && selected.nonempty()) centerIn(cy, selected, areaOf(cy, cover), panMs);
+  else if (box.w <= extent.w && box.h <= extent.h) center(selected);
   else fit(eles, FOCUS_PADDING);
 }
 

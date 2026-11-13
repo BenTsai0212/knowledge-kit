@@ -8,7 +8,7 @@ import type { Graph } from "../graph/read";
 import { relationCounts } from "../graph/search";
 import { clampLabel, nodeLabels } from "./graph-labels";
 import { compositionDots, edgeWidth, NODE_LABEL_MAX_LINES, NODE_LABEL_MAX_WIDTH, nodeSize } from "./graph-style";
-import { arrange, bubbleId, CALM_LIMIT, centeredViewport, detailOf, MAX_VIEW_ZOOM, openEntities, SIDE_BUBBLE, viewOf, viewportFor, type ZoomLevel } from "./graph-zoom";
+import { arrange, bubbleId, CALM_LIMIT, detailOf, openEntities, panToCenter, SIDE_BUBBLE, viewOf, viewportFor, type ZoomLevel } from "./graph-zoom";
 import { areaOf, centerIn, currentStyle, fitAll, labelMeasure, markKeyboard, reveal, trackContainer, zoomTo, type GraphViewApi, type KeyboardMarks } from "./GraphView";
 import { EXPAND_MS, motionDuration, PAN_MS, watchReducedMotion } from "./motion";
 import { watchColorScheme } from "./theme";
@@ -125,15 +125,15 @@ export function GraphZoomView(props: Props) {
     if (saved !== undefined) instance.nodes().forEach((n) => void n.position(saved.get(n.id()) ?? n.position()));
     else cache.current.set(key, arrange(instance, p.level, origin));
     // 目標視角以最終位置計算（含外圍的群組泡泡與標籤），再把節點移回泡泡的位置播放 expand。
-    // 手機的實體面板開著時（#257），以面板以上的可見部分計算，選取的節點放在它的中央
+    // 手機的實體面板開著時（#257），縮放與沒有面板時相同（以整個畫布計算），只把選取的節點平移到面板以上的中央
     const cover = p.cover ?? 0;
     shownCover.current = cover;
-    const area = areaOf(instance, cover);
+    const whole = viewportFor(instance.elements().boundingBox(), { width: instance.width(), height: instance.height() });
     const chosen = instance.$id(p.selected ?? "");
     const target =
       cover > 0 && p.level === "detail" && chosen.nonempty()
-        ? centeredViewport(chosen.position(), instance.elements().boundingBox(), area, MAX_VIEW_ZOOM)
-        : viewportFor(instance.elements().boundingBox(), area);
+        ? { zoom: whole.zoom, pan: panToCenter(chosen.position(), whole.zoom, areaOf(instance, cover)) }
+        : whole;
     const still = reduced.current || calm;
     if (!still && previous === "overview" && p.level !== "overview")
       instance.nodes(".entity").forEach((n) => {

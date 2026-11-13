@@ -163,7 +163,7 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
   - 類型篩選、「只顯示關聯 ≥ N」、多跳路徑與「關聯最多的實體」（沒有選取時的起點）收進「篩選與找路徑」底部面板，不渲染右側欄。
   - 手勢交給 cytoscape：單指拖曳平移、雙指縮放只改相機，不切換語意縮放的層級（層級仍只由點泡泡、點節點、搜尋與麵包屑切換，#254）；鍵盤操作（#289）不變。門檻用手機欄（30／150），不強制切到清單。
   - **實體面板**：點節點、搜尋、在清單選取或鍵盤 `Enter` 時打開（`BottomSheet` 的 `expandable`：停在 56% 高，往上拉到全高，`ui/layout.ts` 的 `sheetSnap()`），內容是 `EntityPanel`；面板是 modal，關閉只收起面板，選取與展開路徑不變，再點節點重新打開（#257 決定 1、3）。
-  - **選取的節點平移到面板以上的中央**：面板開著時 `GraphPage` 傳入 `cover`（`SHEET_HALF`），`GraphView` 與 `GraphZoomView`（細節層）以 `layout.ts` 的 `visibleArea()`（畫布上緣到面板上緣）為可見部分，`graph-zoom.ts` 的 `centeredViewport()` 把選取的節點放在它的中央；聚焦集合放不進去時縮小（圖譜頁不放大，細節層不超過 `MAX_VIEW_ZOOM`）。面板打開但選取沒變（再點同一個節點）時同樣平移。往上拉到全高時圖不再移動。
+  - **選取的節點平移到面板以上的中央**：面板開著時 `GraphPage` 傳入 `cover`（`SHEET_HALF`），`GraphView` 與 `GraphZoomView`（細節層）以 `layout.ts` 的 `visibleArea()`（畫布上緣到面板上緣）為可見部分，以 `graph-zoom.ts` 的 `panToCenter()`（`GraphView.tsx` 的 `centerIn()`）把選取的節點平移到它的中央。**只平移、不縮小**：圖譜頁維持目前的縮放，細節層的縮放與沒有面板時相同（以整個畫布的 `viewportFor()` 計算）；聚焦集合超出可見部分時由使用者自己拖曳或縮放（可見部分可能很矮，例如上方多了「已展開」一列時，縮小到放得進會讓節點小到看不出是哪個實體，#323 修正要求）。面板打開但選取沒變（再點同一個節點）時同樣平移。往上拉到全高時圖不再移動。
   - E2E 見 `e2e/graph-mobile.spec.ts`（390×844）；雙指縮放、往上拉的手感與 safe area 由人在實機確認。
 - **鍵盤操作與報讀**（#289，規格見 [docs/design.md](design.md)「圖譜的鍵盤操作與螢幕報讀器」；分 3 個 PR 完成）：
   - 圖譜外框（`GraphPage.tsx` 的 `.graph-frame`）是 `tabIndex=0`、`role="application"`、`aria-roledescription`「知識圖譜」的元素，在 Tab 順序中只佔一個位置；canvas 不能取得 DOM 焦點，所以「目前的實體」與「游標」是 `GraphPage` 的 state，以 cytoscape 的 class 畫出（`kb-current`：`focus` 色 3px 實線圈；`kb-cursor`：虛線圈；`kb-near`：連到目前實體的線加粗成 `primary` 並標出關係名稱），只在外框有鍵盤焦點（`:focus-visible`）時畫。圖譜頁的畫布對報讀器隱藏（`aria-hidden`），問答頁的鄰近圖不變。
