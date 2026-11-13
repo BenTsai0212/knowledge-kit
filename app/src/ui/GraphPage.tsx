@@ -35,7 +35,7 @@ import {
 import { GraphView, type GraphViewApi } from "./GraphView";
 import { breadcrumb, detailOf, zoomLevel } from "./graph-zoom";
 import { GraphZoomView } from "./GraphZoomView";
-import { useLayout } from "./layout";
+import { SHEET_HALF, useLayout } from "./layout";
 import { prefersReducedMotion } from "./motion";
 import { PathPanel } from "./PathPanel";
 import { createRequestGate } from "./requests";
@@ -223,6 +223,8 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
   // 點節點、在清單選取：手機另外打開實體面板（再點同一個節點時重新打開）
   const showEntity = () => phone && setEntityOpen(true);
   const onPick = (id: string) => (onExpand(id), showEntity());
+  // 實體面板開著時，選取的節點平移到面板以上（上半部）的中央（#257）
+  const sheetCover = phone && entityOpen && selected !== null ? SHEET_HALF : 0;
   // 與搜尋結果、節點標籤相同：同名的實體加上第一個相關實體的名稱（#198）
   const nameOf = (id: string) => {
     const entity = graph.entities.find((e) => e.id === id);
@@ -532,6 +534,7 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
                   onOpenCluster={openCluster}
                   keyboard={focused ? { current, cursor } : null}
                   api={view}
+                  cover={sheetCover}
                 />
               ) : (
                 <GraphView
@@ -545,6 +548,7 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
                   onSelect={onPick}
                   keyboard={focused ? { current, cursor } : null}
                   api={view}
+                  cover={sheetCover}
                 />
               )}
             </div>

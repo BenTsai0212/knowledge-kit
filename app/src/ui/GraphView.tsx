@@ -8,6 +8,8 @@ import type { Graph } from "../graph/read";
 import { relationCounts } from "../graph/search";
 import { clampLabel, nodeLabels, type MeasureText } from "./graph-labels";
 import { edgeWidth, graphStyle, NODE_LABEL_FONT_SIZE, NODE_LABEL_MAX_LINES, NODE_LABEL_MAX_WIDTH, nodeSize } from "./graph-style";
+import { visibleArea } from "./layout";
+import { panToCenter } from "./graph-zoom";
 import { EXPAND_MS, MOTION, motionDuration, PAN_MS, watchReducedMotion } from "./motion";
 import { isDark, watchColorScheme } from "./theme";
 
@@ -32,6 +34,8 @@ interface Props {
   keyboard?: KeyboardMarks | null;
   // 鍵盤操作讀取節點位置（順時針排序用）
   api?: RefObject<GraphViewApi | null>;
+  // 手機的實體面板蓋住視窗下方的比例（#257，停在 56% 時是 SHEET_HALF；沒有面板時 0）：選取的節點平移到面板以上的中央
+  cover?: number;
 }
 
 export interface KeyboardMarks {
@@ -144,6 +148,20 @@ export function reveal(cy: Core, keyboard: KeyboardMarks | null, reduced: boolea
   else cy.animate({ center: { eles: node } }, { duration: ms, easing: "ease-in-out" });
 }
 
+// 畫布沒被底部面板蓋住的部分（rendered px）；cover 是 0 時是整個畫布
+export function areaOf(cy: Core, cover: number): { width: number; height: number } {
+  const top = cy.container()?.getBoundingClientRect().top ?? 0;
+  return visibleArea({ top, width: cy.width(), height: cy.height() }, globalThis.innerHeight, cover);
+}
+
+// 節點平移到可見部分的中央（縮放不變，#257）；減少動態效果時直接到位
+export function centerIn(cy: Core, node: CollectionReturnValue, area: { width: number; height: number }, ms: number) {
+  if (node.empty()) return;
+  const pan = panToCenter(node.position(), cy.zoom(), area);
+  if (ms === 0) cy.pan(pan);
+  else cy.animate({ pan }, { duration: ms, easing: "ease-in-out" });
+}
+
 // 縮放與全部顯示（鍵盤的 +／-／0）
 export function zoomTo(cy: Core, level: number, reduced: boolean) {
   const position = { x: cy.width() / 2, y: cy.height() / 2 };
@@ -189,8 +207,12 @@ function drawEdge(edge: EdgeSingular, ms: number) {
   edge.animate({ style: { "line-dash-offset": 0 } }, { duration: ms, easing: "ease-out", complete: reset });
 }
 
-// 展開後的動態：新的線描出來；畫面平滑移動，讓選取的節點靠近中央（聚焦集合放不進畫面時改為聚焦集合整個放進畫面）；回到全部時顯示全貌
-function animateFocus(cy: Core, graph: Graph, previous: Expansion, next: Expansion, reduced: boolean) {
+// 聚焦集合放不進畫面時，四邊留白（rendered px）
+const FOCUS_PADDING = 40;
+
+// 展開後的動態：新的線描出來；畫面平滑移動，讓選取的節點靠近中央（聚焦集合放不進畫面時改為聚焦集合整個放進畫面）；回到全部時顯示全貌。
+// 手機的實體面板開著時（cover > 0），只平移：選取的節點放在面板以上的中央，縮放不變；聚焦集合超出可見部分時由使用者自己拖曳或縮放（#257）
+function animateFocus(cy: Core, graph: Graph, previous: Expansion, next: Expansion, reduced: boolean, cover: number) {
   const [expandMs, panMs] = [motionDuration(reduced, EXPAND_MS), motionDuration(reduced, PAN_MS)];
   cy.stop(true, false);
   const center = (eles: CollectionReturnValue) => (panMs === 0 ? cy.center(eles) : cy.animate({ center: { eles } }, { duration: panMs, easing: "ease-in-out" }));
@@ -212,8 +234,9 @@ function animateFocus(cy: Core, graph: Graph, previous: Expansion, next: Expansi
   const selected = cy.$id(selectedOf(next) ?? "");
   const eles = cy.nodes().filter((n) => focus.entities.has(n.id()));
   const [box, extent] = [eles.boundingBox(), cy.extent()];
-  if (box.w <= extent.w && box.h <= extent.h) center(selected);
-  else fit(eles, 40);
+  if (cover > 0 && selected.nonempty()) centerIn(cy, selected, areaOf(cy, cover), panMs);
+  else if (box.w <= extent.w && box.h <= extent.h) center(selected);
+  else fit(eles, FOCUS_PADDING);
 }
 
 // cytoscape 快取容器在畫面上的位置，只在視窗大小改變、捲動與容器本身的大小改變時重新計算；
@@ -241,7 +264,7 @@ export function trackContainer(element: HTMLElement, cy: Core): () => void {
   };
 }
 
-export function GraphView({ graph, language, selected, path, onSelect, expansion, excluded = NONE, isolated = false, compact = false, labelGraph = graph, keyboard = null, api }: Props) {
+export function GraphView({ graph, language, selected, path, onSelect, expansion, excluded = NONE, isolated = false, compact = false, labelGraph = graph, keyboard = null, api, cover = 0 }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const cy = useRef<Core | null>(null);
   // tap 事件在 cytoscape 實例建立時註冊，以 ref 取得最新的 onSelect
@@ -250,6 +273,8 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
   const reduced = useRef(false);
   // 上一次套用的展開狀態：判斷哪些線是新展開的
   const applied = useRef<Expansion>(ALL);
+  // 上一次套用的 cover：面板打開（0 → 56%）但選取沒變時（再點同一個節點），也把選取的節點移到面板以上
+  const appliedCover = useRef(cover);
 
   useEffect(() => {
     let cancelled = false;
@@ -309,10 +334,19 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
     if (cy.current === null) return;
     markFocus(cy.current, graph, next, path, excluded, isolated);
     markPath(cy.current, path);
-    if (next === applied.current) return;
-    animateFocus(cy.current, graph, applied.current, next, reduced.current);
+    const opened = cover > 0 && appliedCover.current === 0;
+    appliedCover.current = cover;
+    if (next === applied.current) {
+      const id = selectedOf(next);
+      if (opened && id !== null) {
+        cy.current.stop(true, false);
+        centerIn(cy.current, cy.current.$id(id), areaOf(cy.current, cover), motionDuration(reduced.current, PAN_MS));
+      }
+      return;
+    }
+    animateFocus(cy.current, graph, applied.current, next, reduced.current, cover);
     applied.current = next;
-  }, [expansion, path, excluded, isolated]);
+  }, [expansion, path, excluded, isolated, cover]);
 
   useEffect(() => {
     if (cy.current === null) return;

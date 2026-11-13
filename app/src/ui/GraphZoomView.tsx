@@ -8,8 +8,8 @@ import type { Graph } from "../graph/read";
 import { relationCounts } from "../graph/search";
 import { clampLabel, nodeLabels } from "./graph-labels";
 import { compositionDots, edgeWidth, NODE_LABEL_MAX_LINES, NODE_LABEL_MAX_WIDTH, nodeSize } from "./graph-style";
-import { arrange, bubbleId, CALM_LIMIT, detailOf, openEntities, SIDE_BUBBLE, viewOf, viewportFor, type ZoomLevel } from "./graph-zoom";
-import { currentStyle, fitAll, labelMeasure, markKeyboard, reveal, trackContainer, zoomTo, type GraphViewApi, type KeyboardMarks } from "./GraphView";
+import { arrange, bubbleId, CALM_LIMIT, detailOf, openEntities, panToCenter, SIDE_BUBBLE, viewOf, viewportFor, type ZoomLevel } from "./graph-zoom";
+import { areaOf, centerIn, currentStyle, fitAll, labelMeasure, markKeyboard, reveal, trackContainer, zoomTo, type GraphViewApi, type KeyboardMarks } from "./GraphView";
 import { EXPAND_MS, motionDuration, PAN_MS, watchReducedMotion } from "./motion";
 import { watchColorScheme } from "./theme";
 
@@ -29,6 +29,8 @@ interface Props {
   onOpenCluster(clusterId: string): void;
   keyboard?: KeyboardMarks | null;
   api?: RefObject<GraphViewApi | null>;
+  // 手機的實體面板蓋住視窗下方的比例（#257，見 GraphView）：細節層選取的節點平移到面板以上的中央
+  cover?: number;
 }
 
 type Positions = Map<string, { x: number; y: number }>;
@@ -122,8 +124,16 @@ export function GraphZoomView(props: Props) {
     const saved = cache.current.get(key);
     if (saved !== undefined) instance.nodes().forEach((n) => void n.position(saved.get(n.id()) ?? n.position()));
     else cache.current.set(key, arrange(instance, p.level, origin));
-    // 目標視角以最終位置計算（含外圍的群組泡泡與標籤），再把節點移回泡泡的位置播放 expand
-    const target = viewportFor(instance.elements().boundingBox(), { width: instance.width(), height: instance.height() });
+    // 目標視角以最終位置計算（含外圍的群組泡泡與標籤），再把節點移回泡泡的位置播放 expand。
+    // 手機的實體面板開著時（#257），縮放與沒有面板時相同（以整個畫布計算），只把選取的節點平移到面板以上的中央
+    const cover = p.cover ?? 0;
+    shownCover.current = cover;
+    const whole = viewportFor(instance.elements().boundingBox(), { width: instance.width(), height: instance.height() });
+    const chosen = instance.$id(p.selected ?? "");
+    const target =
+      cover > 0 && p.level === "detail" && chosen.nonempty()
+        ? { zoom: whole.zoom, pan: panToCenter(chosen.position(), whole.zoom, areaOf(instance, cover)) }
+        : whole;
     const still = reduced.current || calm;
     if (!still && previous === "overview" && p.level !== "overview")
       instance.nodes(".entity").forEach((n) => {
@@ -136,6 +146,7 @@ export function GraphZoomView(props: Props) {
     else instance.animate(target, { duration: ms, easing: "ease-in-out" });
   };
   const shown = useRef<ZoomLevel | null>(null);
+  const shownCover = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -177,6 +188,16 @@ export function GraphZoomView(props: Props) {
     shown.current = props.level;
     markKeyboard(cy.current, keyboard);
   }, [props.level, props.cluster, props.selected, props.showMembers]);
+
+  // 面板打開（0 → 56%）但選取沒變時（再點同一個節點），把選取的節點移到面板以上
+  useEffect(() => {
+    const cover = props.cover ?? 0;
+    const opened = cover > 0 && shownCover.current === 0;
+    shownCover.current = cover;
+    if (cy.current === null || !opened || props.level !== "detail" || props.selected === null) return;
+    cy.current.stop(true, false);
+    centerIn(cy.current, cy.current.$id(props.selected), areaOf(cy.current, cover), motionDuration(reduced.current, PAN_MS));
+  }, [props.cover]);
 
   useEffect(() => {
     const restyle = () => cy.current?.style(currentStyle(reduced.current || calm));

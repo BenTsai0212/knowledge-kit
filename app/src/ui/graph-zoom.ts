@@ -163,6 +163,12 @@ export function viewportFor(
   return { zoom, pan: { x: canvas.width / 2 - zoom * cx, y: canvas.height / 2 - zoom * cy } };
 }
 
+// 把 position（model 座標）移到 area（rendered px，從畫布左上角起）中央時的平移量
+export const panToCenter = (position: Point, zoom: number, area: { width: number; height: number }): Point => ({
+  x: area.width / 2 - zoom * position.x,
+  y: area.height / 2 - zoom * position.y,
+});
+
 // 麵包屑「全部 › 群組 › 實體」：依層級列出要顯示的段
 export function breadcrumb(level: ZoomLevel, cluster: string | null, selected: string | null): { kind: "all" | "cluster" | "entity"; id: string | null }[] {
   return [

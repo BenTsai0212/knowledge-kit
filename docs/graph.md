@@ -71,7 +71,7 @@ const graph = await readGraph(db, "staff");
 
 ### 三層語意縮放（畫面）
 
-圖譜頁以類型篩選與「只顯示關聯 ≥ N」後的圖（`filterGraph()`）計算門檻：門檻以下用 `GraphView.tsx`（全部節點＋標籤、逐步展開，行為不變；篩掉的實體變灰），超過時用 `GraphZoomView.tsx`，以同一份圖的 `clusterGraph()` 畫出三層。手機的門檻以 `(max-width: 600px)` 判斷。層級、細節層的範圍與圖上的元素是 `ui/graph-zoom.ts` 的純函式（`ui/graph-zoom.test.ts`）。
+圖譜頁以類型篩選與「只顯示關聯 ≥ N」後的圖（`filterGraph()`）計算門檻：門檻以下用 `GraphView.tsx`（全部節點＋標籤、逐步展開，行為不變；篩掉的實體變灰），超過時用 `GraphZoomView.tsx`，以同一份圖的 `clusterGraph()` 畫出三層。手機的門檻以 `ui/layout.ts` 的 `useLayout()`（≤ 600px 為 `phone`）判斷。層級、細節層的範圍與圖上的元素是 `ui/graph-zoom.ts` 的純函式（`ui/graph-zoom.test.ts`）。
 
 | 層級 | 狀態 | 圖上的元素 |
 | --- | --- | --- |
@@ -158,7 +158,13 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
   - **出處數**：依「出處優先顯示介面語言」挑選的出處段落數。
   - **出現的文件**（#240）：出處依文件分組（`ui/graph-labels.ts` 的 `entityDocuments()`），每份文件列出提到實體的原文片段，片段中的主要名稱與各語言的顯示名稱以 `<mark>` 標出（不分大小寫，同一位置取最長的）。片段只來自 `readGraph()` 的出處，也就是目前身分看得到的段落；同一份文件中看不到的段落不出現，也不標示被省略（[docs/qa.md](qa.md)「不透露是否有看不到的文件」，#247）。`app/tests/graph/entity-documents.test.ts` 對每個身分以 `oracle.ts` 比對，並涵蓋文件有部分段落看不到的身分。
   - 全部在 `readGraph()` 的可見圖上計算，不新增查詢，所以搜尋、起點清單與面板只會有目前身分看得到的實體與關係。
-  - **手機寬度**：改為單欄（搜尋 → 圖 → 面板），圖的高度較低；正式的手機設計之後另外處理。
+- **手機**（#257，[docs/design.md](design.md)「圖譜（手機）」；`useLayout() === "phone"` 時，桌機與平板不變）：
+  - 圖譜佔滿頂端列與分頁列之間，頁面不捲動（畫布 `touch-action: none`）；上方一列是搜尋、「篩選與找路徑」與「圖譜｜清單」，觸控目標至少 44px。
+  - 類型篩選、「只顯示關聯 ≥ N」、多跳路徑與「關聯最多的實體」（沒有選取時的起點）收進「篩選與找路徑」底部面板，不渲染右側欄。
+  - 手勢交給 cytoscape：單指拖曳平移、雙指縮放只改相機，不切換語意縮放的層級（層級仍只由點泡泡、點節點、搜尋與麵包屑切換，#254）；鍵盤操作（#289）不變。門檻用手機欄（30／150），不強制切到清單。
+  - **實體面板**：點節點、搜尋、在清單選取或鍵盤 `Enter` 時打開（`BottomSheet` 的 `expandable`：停在 56% 高，往上拉到全高，`ui/layout.ts` 的 `sheetSnap()`），內容是 `EntityPanel`；面板是 modal，關閉只收起面板，選取與展開路徑不變，再點節點重新打開（#257 決定 1、3）。
+  - **選取的節點平移到面板以上的中央**：面板開著時 `GraphPage` 傳入 `cover`（`SHEET_HALF`），`GraphView` 與 `GraphZoomView`（細節層）以 `layout.ts` 的 `visibleArea()`（畫布上緣到面板上緣）為可見部分，以 `graph-zoom.ts` 的 `panToCenter()`（`GraphView.tsx` 的 `centerIn()`）把選取的節點平移到它的中央。**只平移、不縮小**：圖譜頁維持目前的縮放，細節層的縮放與沒有面板時相同（以整個畫布的 `viewportFor()` 計算）；聚焦集合超出可見部分時由使用者自己拖曳或縮放（可見部分可能很矮，例如上方多了「已展開」一列時，縮小到放得進會讓節點小到看不出是哪個實體，#323 修正要求）。面板打開但選取沒變（再點同一個節點）時同樣平移。往上拉到全高時圖不再移動。
+  - E2E 見 `e2e/graph-mobile.spec.ts`（390×844）；雙指縮放、往上拉的手感與 safe area 由人在實機確認。
 - **鍵盤操作與報讀**（#289，規格見 [docs/design.md](design.md)「圖譜的鍵盤操作與螢幕報讀器」；分 3 個 PR 完成）：
   - 圖譜外框（`GraphPage.tsx` 的 `.graph-frame`）是 `tabIndex=0`、`role="application"`、`aria-roledescription`「知識圖譜」的元素，在 Tab 順序中只佔一個位置；canvas 不能取得 DOM 焦點，所以「目前的實體」與「游標」是 `GraphPage` 的 state，以 cytoscape 的 class 畫出（`kb-current`：`focus` 色 3px 實線圈；`kb-cursor`：虛線圈；`kb-near`：連到目前實體的線加粗成 `primary` 並標出關係名稱），只在外框有鍵盤焦點（`:focus-visible`）時畫。圖譜頁的畫布對報讀器隱藏（`aria-hidden`），問答頁的鄰近圖不變。
   - 已實作的按鍵：`Tab` 進入（目前的實體＝選取的實體；沒有選取時是關聯最多的實體，只畫圈與報讀，按 `Enter` 前不展開、不改實體面板，#289 決定 2）、`←`／`→`（目前實體的相關實體，依版面位置從 12 點鐘方向順時針，兩端相接；類型篩選掉的不列入）、`Enter`（前往游標所在的實體，等同點節點）、`Backspace`（展開路徑的上一段，與麵包屑一致，#289 決定 3；只有一層時回到全部，等同「回到全部」；已是全部時報讀「已經是第一個實體」）、`Space`（只看目前的實體＋`isolated`；目前的實體已是「只看它」時回到按之前的展開）、`A`（在問答中問，與實體面板的按鈕相同）、`/`（焦點移到「搜尋名稱」，選了結果後回到外框並報讀進入）、`+`／`-`／`0`（以畫面中心縮放 1.25 倍、全部顯示）、`Esc`（回到全部；已是全部時焦點移到外框後的下一個可聚焦元素，#289 決定 4）、`?`（按鍵表，沿用置中的 `.dialog`，關閉後焦點回到外框，不重新報讀進入）。Backspace、Space 與按鍵表的內容是 `ui/graph-keyboard.ts` 的 `backStep()`、`toggleOnly()`、`KEY_HELP`（鍵帽是鍵盤上的符號與鍵名，不隨語言改變；說明在 `graphKeyboard` 的 `help*`）。
@@ -172,7 +178,7 @@ const entries = await readTimeline(db, "staff", { language: "zh-TW", entityId: "
 - **動態**（`ui/motion.ts`，約 0.3–0.4 秒）：
   - 新展開的節點與線以 cytoscape 樣式的 transition 從變灰的不透明度轉成 100%。
   - 新的線由關係的起點畫向終點：暫時改成虛線（線段與間隔都比線長），以 `animate()` 把 `line-dash-offset` 從線段長度動到 0，畫完後換回實線。從全部開始展開時，聚焦集合的線都算新的。
-  - 畫面平滑移動，讓選取的節點靠近中央（不改縮放）；聚焦集合放不進畫面時改為把聚焦集合整個放進畫面；回到全部時顯示全貌。
+  - 畫面平滑移動，讓選取的節點靠近中央（不改縮放）；聚焦集合放不進畫面時改為把聚焦集合整個放進畫面；回到全部時顯示全貌。手機的實體面板開著時改為面板以上的中央（見上方「手機」）。
   - 系統設定「減少動態效果」（`prefers-reduced-motion: reduce`）時，transition 為 0、不呼叫 `animate()`，直接套用最後的狀態；設定改變時即時更新。
 - **cytoscape**：以 `import("cytoscape")` 動態載入，build 時分成獨立的 chunk（約 435 KB，gzip 約 138 KB），只用問答的人不必下載。cytoscape 自帶型別，不安裝 `@types/cytoscape`（ADR 0001「修訂」）。
 - **版面**：內建的 `cose`（力導向）。節點先依順序排成一個圓作為起始位置，並設 `randomize: false`，所以同樣的資料每次的版面相同；不需要額外的版面套件。

@@ -82,6 +82,9 @@ test("點引用標號 → 原文從底部面板升起（74%）、引用段落有
   // 底部面板貼齊視窗底部
   const box = (await panel.boundingBox())!;
   expect(box.y + box.height).toBeCloseTo(844, 0);
+  // 「關閉」在標題列右側：右緣距面板右緣 24px 內（#257）
+  const closeBox = (await panel.getByRole("button", { name: s.dialogClose, exact: true }).boundingBox())!;
+  expect(box.x + box.width - (closeBox.x + closeBox.width)).toBeLessThanOrEqual(24);
 
   // 原文在 reading 紙面，引用段落用 markReading
   const mark = panel.locator(".highlight mark");

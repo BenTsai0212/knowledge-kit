@@ -5,7 +5,7 @@ import type { Graph } from "../graph/read";
 import { clientConfig } from "../client/load";
 import { strings } from "../client/i18n";
 import { graphStyle } from "./graph-style";
-import { breadcrumb, bubbleId, CALM_LIMIT, detailOf, openEntities, ringPositions, SECOND_OPACITY, SIDE_BUBBLE, SIDE_BUBBLE_OPACITY, MAX_VIEW_ZOOM, VIEW_PADDING, viewOf, viewportFor, zoomLevel } from "./graph-zoom";
+import { breadcrumb, bubbleId, CALM_LIMIT, detailOf, openEntities, ringPositions, SECOND_OPACITY, SIDE_BUBBLE, SIDE_BUBBLE_OPACITY, MAX_VIEW_ZOOM, VIEW_PADDING, panToCenter, viewOf, viewportFor, zoomLevel } from "./graph-zoom";
 import graphPage from "./GraphPage.tsx?raw";
 import zoomView from "./GraphZoomView.tsx?raw";
 
@@ -126,6 +126,11 @@ describe("換層級時的視角", () => {
     expect(viewportFor({ x1: 10, y1: 10, x2: 10, y2: 10 }, canvas).zoom).toBe(MAX_VIEW_ZOOM);
     expect(viewportFor({ x1: 0, y1: 0, x2: 60, y2: 60 }, canvas).zoom).toBe(MAX_VIEW_ZOOM);
     expect(MAX_VIEW_ZOOM).toBeLessThanOrEqual(2);
+  });
+
+  it("panToCenter：平移後節點落在 area 的中央（縮放不變）", () => {
+    const v = { zoom: 1.5, pan: panToCenter({ x: 40, y: -30 }, 1.5, { width: 390, height: 251 }) };
+    expect(rendered(v, 40, -30)).toEqual({ x: 195, y: 125.5 });
   });
 
   it("元件以最終位置與全部元素（含外圍的群組泡泡）計算目標視角，不以 fit 對還在泡泡位置的節點", () => {
