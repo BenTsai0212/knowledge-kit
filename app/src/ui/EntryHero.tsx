@@ -1,10 +1,11 @@
 // 入口頁主視覺（#228，docs/design.md「入口頁主視覺」）：客戶自己的圖譜（client/data/ 的實體與關係），沒有文字。
 // 版面是 entry-hero.ts 的純函式，動態全部是 app.css 的 CSS 動畫（不用 JS 計時器，不阻擋表單）；減少動態時是靜止的完整網路。
-// 裝飾用，對輔助技術隱藏。
+// 手機（≤ 600px）前景節點數減半、遠景不模糊（docs/design.md「入口（手機）」）。裝飾用，對輔助技術隱藏。
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { clientConfig } from "../client/load";
 import { dataset } from "../dataset/load";
 import { heroScene, isLowEnd, type HeroLink, type HeroNode, type Point } from "./entry-hero";
+import { useLayout } from "./layout";
 
 const { entityTypes } = clientConfig.knowledgeModel;
 const typeColor = new Map(entityTypes.map((t) => [t.id, t.color]));
@@ -52,19 +53,20 @@ function Layer({ name, children }: { name: string; children: ReactNode }) {
 export function EntryHero() {
   // 表單先畫出來，下一個畫格才畫主視覺；低階裝置在此時判斷
   const [lite, setLite] = useState<boolean | null>(null);
+  const phone = useLayout() === "phone";
   useEffect(() => {
     const frame = requestAnimationFrame(() => setLite(isLowEnd(navigator as Navigator & { deviceMemory?: number })));
     return () => cancelAnimationFrame(frame);
   }, []);
   const scene = useMemo(
-    () => (lite === null ? null : heroScene({ entities: dataset.entities.entities, relations: dataset.relations.relations, types: entityTypes }, lite)),
-    [lite],
+    () => (lite === null ? null : heroScene({ entities: dataset.entities.entities, relations: dataset.relations.relations, types: entityTypes }, lite, phone)),
+    [lite, phone],
   );
   if (scene === null) return <div className="hero" aria-hidden="true" />;
   const step = Math.max(1, Math.ceil(scene.links.length / TRAVEL_LIMIT));
   const travel = scene.links.filter((_, i) => i % step === 0).slice(0, TRAVEL_LIMIT);
   return (
-    <div className={lite ? "hero hero--lite" : "hero"} aria-hidden="true">
+    <div className={["hero", lite && "hero--lite", phone && "hero--phone"].filter(Boolean).join(" ")} aria-hidden="true">
       <div className="hero__scene">
         <Layer name="far">
           <Lines points={scene.far} links={scene.farLinks} className="hero__link" />

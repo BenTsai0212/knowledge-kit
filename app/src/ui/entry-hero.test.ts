@@ -3,7 +3,7 @@ import { clientConfig } from "../client/load";
 import { dataset } from "../dataset/load";
 import css from "./app.css?raw";
 import { sources } from "../client/source-scan";
-import { FORMING_COUNT, HERO_COUNTS, HERO_LITE_COUNTS, heroScene, heroShape, isLowEnd, nearestLinks, scatter, seededRandom } from "./entry-hero";
+import { FORMING_COUNT, HERO_COUNTS, HERO_LITE_COUNTS, HERO_PHONE_FRONT, heroScene, heroShape, isLowEnd, nearestLinks, scatter, seededRandom } from "./entry-hero";
 
 const input = { entities: dataset.entities.entities, relations: dataset.relations.relations, types: clientConfig.knowledgeModel.entityTypes };
 const hero = sources.find(([p]) => p === "../ui/EntryHero.tsx")?.[1] ?? "";
@@ -53,6 +53,20 @@ describe("入口頁主視覺的版面", () => {
     expect(heroScene(input)).toEqual(scene);
   });
 
+  it("手機：前景節點數減半（關係最多的優先），遠景與中景不變；低階裝置的手機也一樣", () => {
+    expect(HERO_PHONE_FRONT).toBe(HERO_COUNTS.front / 2);
+    const phone = heroScene(input, false, true);
+    expect(phone.front).toHaveLength(Math.min(HERO_PHONE_FRONT, input.entities.length));
+    expect([phone.far.length, phone.mid.length]).toEqual([HERO_COUNTS.far, HERO_COUNTS.mid]);
+    const ids = new Set(phone.front.map((n) => n.id));
+    expect(phone.links.every((l) => ids.has(phone.front[l.from].id) && ids.has(phone.front[l.to].id))).toBe(true);
+    const degree = (id: string) => input.relations.filter((r) => r.from === id || r.to === id).length;
+    const kept = Math.min(...phone.front.map((n) => degree(n.id)));
+    expect(input.entities.filter((e) => !ids.has(e.id)).every((e) => degree(e.id) <= kept)).toBe(true);
+    expect(heroScene(input, true, true).front).toHaveLength(phone.front.length);
+    expect([...phone.far, ...phone.mid, ...phone.front].every(inside)).toBe(true);
+  });
+
   it("新連線的兩端原本沒有關係，不重複", () => {
     expect(scene.forming).toHaveLength(FORMING_COUNT);
     const keys = (links: typeof scene.links) => links.map((l) => `${l.from}-${l.to}`);
@@ -89,6 +103,18 @@ describe("入口頁主視覺的畫法", () => {
     expect(cssText).toMatch(/animation: kOrbit 26s/);
     expect(cssText).toMatch(/kForm 10s/);
     expect(FORMING_COUNT * 2.5).toBe(10);
+  });
+
+  it("手機（hero--phone）與低階裝置的遠景不模糊", () => {
+    expect(hero).toContain('"hero--phone"');
+    expect(cssText).toMatch(/\.hero--lite \.hero__layer--far,\s*\.hero--phone \.hero__layer--far \{\s*filter: none;/);
+  });
+
+  it("入口在 1024px 以下主視覺在上、高 330px；輸入框與按鈕高 52px、文字連結 44px", () => {
+    const narrow = cssText.split("@media (max-width: 1024px)").slice(1).find((part) => part.includes(".entry__panel"));
+    expect(narrow).toMatch(/\.app > main\.entry \{[^}]*grid-template-rows: 330px auto/);
+    expect(narrow).toMatch(/\.entry__panel :is\(input:not\(\[type="checkbox"\], \[type="radio"\]\), select, button:not\(\.link\)\) \{\s*min-height: 52px;/);
+    expect(narrow).toMatch(/\.entry__panel button\.link \{\s*min-height: 44px;/);
   });
 
   it("減少動態時停止所有動畫，只留靜止的網路", () => {
