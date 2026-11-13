@@ -4019,7 +4019,7 @@ label.inline {
 
 /* 展示模式（#260，docs/design.md「展示模式」的「字級與主題」）：main.tsx 在 <html> 標上 data-mode="presentation"。
    只覆蓋字級與尺寸（--present-*），顏色 token 不變；一般模式的規則不讀這些變數，所以不受影響（presentation.test.ts 檢查）。
-   圖譜節點標籤（18px、選取 26px）畫在 cytoscape 上，由 graph-style.ts 處理（#260 PR 3） */
+   圖譜節點標籤（18px、選取 26px）畫在 cytoscape 上：graph-style.ts 的 presentSizes() 讀 --present-graph-* 與 --present-label */
 :root[data-mode="presentation"] {
   --present-body: 20px;
   --present-question: 36px;
@@ -4033,6 +4033,11 @@ label.inline {
   --present-source-width: 620px;
   --present-topbar: 96px;
   --present-script-width: 440px;
+  --present-graph-label: 18px;
+  --present-graph-selected: 26px;
+  --present-entity-name: 44px;
+  --present-entity-action: 64px;
+  --present-entity-width: 36rem;
 }
 
 :root[data-mode="presentation"] body {
@@ -4320,6 +4325,24 @@ label.inline {
     padding: 1rem;
     border-right: none;
     border-bottom: 1px solid var(--color-border);
+  }
+}
+
+/* 圖譜（#260 PR 3）：右側的實體卡片放大（名稱 44px、按鈕 64px 高、面板較寬）。
+   窄的寬度（≤ 640px）圖譜頁是單欄，只放大字級與按鈕，不改欄寬 */
+:root[data-mode="presentation"] section.entity > h2 {
+  font-size: var(--present-entity-name);
+  line-height: 1.2;
+}
+
+:root[data-mode="presentation"] .entity-actions button {
+  min-height: var(--present-entity-action);
+}
+
+@media (min-width: 641px) {
+  :root[data-mode="presentation"] .graph-page:not(.graph-page--phone) {
+    grid-template-columns: minmax(0, 1fr) minmax(24rem, var(--present-entity-width));
+    max-width: none;
   }
 }
 

@@ -65,7 +65,7 @@ function elements(p: Props): ElementDefinition[] {
       const label = labels.get(id) ?? "";
       return {
         data: { id, type: typeOf.get(id), label, shortLabel: clampLabel(label, measure, NODE_LABEL_MAX_WIDTH, NODE_LABEL_MAX_LINES), size: nodeSize(degree.get(id) ?? 0) },
-        classes: classNames({ entity: true, unlabelled: labelled !== null && !labelled.has(id), selected: id === selected, second: context(id) }),
+        classes: classNames({ entity: true, unlabelled: labelled !== null && !labelled.has(id), selected: id === selected, others: selected !== null && id !== selected, second: context(id) }),
       };
     }),
     ...view.bubbles.map((id) => {

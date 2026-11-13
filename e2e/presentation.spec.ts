@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { identitySegments, language, openApp, openTab, presetQuestions, s, sourcePanel, switchIdentity } from "./support/app";
 import { access, client, scenarios } from "./support/client";
 import { FAKE_ANSWER_LEAD } from "./support/fake-ask";
+import { waitForGraphIdle } from "./support/graph";
 
 test.beforeEach(async ({ page }) => {
   await openApp(page, "/?mode=presentation");
@@ -154,6 +155,39 @@ test("劇本：依情境分組；點另一個身分情境的題目時先切到�
   // 切回原本的身分：✓ 仍在（依各身分的對話判斷，#303）
   await switchIdentity(page, current);
   await expect(button).toContainText("✓");
+});
+
+// 圖譜（#260 PR 3，docs/design.md「展示模式」的「圖譜」）：節點標籤 18px、選取 26px，其他節點 28%，選取的關係加粗並標名稱；實體卡片放大
+test("圖譜：標籤放大、選取實體以外的節點 28%、實體卡片放大", async ({ page }) => {
+  await openTab(page, s.tabGraph);
+  const canvas = ".graph-page .graph-canvas";
+  await waitForGraphIdle(page, canvas);
+  const start = page.getByRole("region", { name: s.graphTopConnected });
+  await start.getByRole("listitem").first().getByRole("button").click();
+
+  // cytoscape 的樣式（transition 結束後）：選取的節點 26px、其他節點 18px 且 28% 不透明、選取的關係標上名稱
+  const styles = () =>
+    page.evaluate((selector) => {
+      type Element = { id(): string; hasClass(c: string): boolean; style(p: string): string };
+      type Cy = { nodes(): Element[] & { filter(f: (n: Element) => boolean): Element[] }; edges(): { filter(f: (e: Element) => boolean): Element[] } };
+      const cy = document.querySelector<HTMLElement & { _cyreg?: { cy?: Cy } }>(selector)?._cyreg?.cy;
+      if (cy === undefined) return null;
+      const selected = cy.nodes().filter((n) => n.hasClass("selected"));
+      const others = cy.nodes().filter((n) => !n.hasClass("selected") && !n.hasClass("hover"));
+      const near = cy.edges().filter((e) => e.hasClass("near"));
+      return {
+        selected: selected.map((n) => [n.style("font-size"), n.style("opacity")]),
+        others: [...new Set(others.map((n) => `${n.style("font-size")} ${n.style("opacity")}`))],
+        nearLabelled: near.length > 0 && near.every((e) => e.style("label") !== ""),
+      };
+    }, canvas);
+  await expect.poll(styles).toEqual({ selected: [["26px", "1"]], others: ["18px 0.28"], nearLabelled: true });
+
+  const panel = page.locator(".graph-side section.entity");
+  await expect(panel.getByRole("heading", { level: 2 })).toHaveCSS("font-size", "44px");
+  const ask = panel.getByRole("button", { name: s.graphAskAbout });
+  await expect(ask).toHaveCSS("min-height", "64px");
+  expect((await ask.boundingBox())!.height).toBeGreaterThanOrEqual(64);
 });
 
 // 手機寬度（#255）：展示模式登入後仍是頂端列，不會同時出現手機的頂端列、分段切換或分頁列（App 只渲染一種導覽）

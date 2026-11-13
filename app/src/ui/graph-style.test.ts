@@ -14,8 +14,12 @@ import {
   NODE_LABEL_MAX_WIDTH,
   NODE_SHAPES,
   nodeSize,
+  PRESENT_OTHERS_OPACITY,
+  presentSizes,
 } from "./graph-style";
+import css from "./app.css?raw";
 import graphView from "./GraphView.tsx?raw";
+import zoomView from "./GraphZoomView.tsx?raw";
 import { themeVariables } from "./theme";
 
 const variables = themeVariables(clientConfig.theme);
@@ -167,5 +171,53 @@ describe("鍵盤操作的標示（#289）", () => {
     expect(rule("node")).toMatchObject({ label: "data(shortLabel)" });
     expect(rule("node.selected, node.hover")).toMatchObject({ label: "data(label)", "z-index": 10 });
     expect(rule("node.kb-current, node.kb-cursor")).toEqual({ opacity: 1, label: "data(label)", "z-index": 10 });
+  });
+});
+
+describe("展示模式的圖譜（#260，docs/design.md「展示模式」）", () => {
+  // app.css 中展示模式的 --present-*（getComputedStyle 在展示模式讀得到的值）
+  const block = css.match(/:root\[data-mode="presentation"\]\s*\{([^}]*)\}/)?.[1] ?? "";
+  const present = Object.fromEntries([...block.matchAll(/(--present-[-\w]+)\s*:\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
+  const presentStyle = build({ ...variables, ...present }, false);
+  const order = (selector: string, rules: Rules = presentStyle) => rules.findIndex((r) => r.selector === selector);
+
+  it("字級表：節點標籤 18px、選取的實體 26px，關係名稱等小字 16px；截斷的寬度等比例放大", () => {
+    expect(presentSizes((name) => present[name] ?? "")).toEqual({ label: 18, selected: 26, small: 16 });
+    expect(rule("node", presentStyle)).toMatchObject({ "font-size": 18, "text-max-width": `${(NODE_LABEL_MAX_WIDTH * 18) / 12}px` });
+    expect(rule("node.selected", presentStyle)).toMatchObject({ "font-size": 26 });
+    expect(rule("edge", presentStyle)).toMatchObject({ "font-size": 16 });
+    // 展示模式不用小於 16px 的字（docs/design.md 原則 1）：展示模式的規則（變灰與「只看它」之間）都至少 16px；
+    // 它們排在所有設定字級的一般規則之後（cytoscape 以後面的規則為準），涵蓋節點、泡泡、側邊泡泡、關係名稱與聚合線
+    const [start, end] = [order(".dimmed") + 1, order(".dimmed.isolated")];
+    const sizes = presentStyle.slice(start, end).flatMap((r) => (r.style["font-size"] === undefined ? [] : [r.style["font-size"] as number]));
+    expect(sizes.length).toBeGreaterThan(0);
+    for (const size of sizes) expect(size).toBeGreaterThanOrEqual(16);
+    expect(presentStyle.slice(end).every((r) => r.style["font-size"] === undefined)).toBe(true);
+    expect(["node", "node.bubble", "node.side", "edge", "edge.aggregate"].every((sel) => presentStyle.slice(start, end).some((r) => sel.startsWith(r.selector)))).toBe(true);
+  });
+
+  it("選取實體以外的節點 28% 不透明：排在變灰（45%）之後、「只看它」（15%）與滑過、鍵盤的恢復之前", () => {
+    expect(PRESENT_OTHERS_OPACITY).toBe(0.28);
+    expect(rule("node.others", presentStyle)).toEqual({ opacity: 0.28 });
+    expect(rule("node.others.hover", presentStyle)).toEqual({ opacity: 1 });
+    expect(order("node.others")).toBeGreaterThan(order(".dimmed"));
+    expect(order("node.others")).toBeLessThan(order(".dimmed.isolated"));
+    expect(order("node.others")).toBeLessThan(order("node.kb-current, node.kb-cursor"));
+    // GraphView（鄰近圖除外）與 GraphZoomView 在有選取時把其他實體標上 others
+    expect(graphView).toContain('cy.nodes().filter((n) => n.id() !== selected).addClass("others")');
+    expect(graphView).toContain("markSelected(instance, graph, selected, !compact)");
+    expect(zoomView).toContain("others: selected !== null && id !== selected");
+  });
+
+  it("選取的關係用 primary 加粗並標上關係名稱", () => {
+    expect(rule("edge.near", presentStyle)).toMatchObject({ label: "data(label)", width: 5, "line-color": colors.primary, "target-arrow-color": colors.primary });
+  });
+
+  it("一般模式不變：讀不到 --present-* 時沒有展示模式的規則，字級 12px", () => {
+    expect(presentSizes((name) => variables[name] ?? "")).toBeNull();
+    expect(style.length).toBe(presentStyle.length - 8);
+    expect(rule("node")).toMatchObject({ "font-size": 12 });
+    expect(rule("node.others")).toBeUndefined();
+    expect(rule("edge.near")).toEqual({ label: "data(label)" });
   });
 });

@@ -111,12 +111,14 @@ function markPath(cy: Core, path: PathStep[] | null) {
   }
 }
 
-// 選取的節點，以及它的相連關係（顯示關係名稱）
-function markSelected(cy: Core, graph: Graph, selected: string | null) {
+// 選取的節點，以及它的相連關係（顯示關係名稱）。others 是選取實體以外的節點（圖譜頁有選取時）：
+// 只有展示模式的樣式會用到（28% 不透明，graph-style.ts 的 presentationRules()），一般模式沒有對應的樣式
+function markSelected(cy: Core, graph: Graph, selected: string | null, others = true) {
   const near = nearRelations(graph, selected);
   cy.batch(() => {
-    cy.nodes().removeClass("selected");
+    cy.nodes().removeClass("selected others");
     if (selected !== null) cy.$id(selected).addClass("selected");
+    if (selected !== null && others) cy.nodes().filter((n) => n.id() !== selected).addClass("others");
     cy.edges().removeClass("near");
     cy.edges().filter((e) => near.has(e.data("relation"))).addClass("near");
   });
@@ -295,7 +297,7 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
       cy.current = instance;
       untrack = trackContainer(container.current, instance);
       // 版面只在讀入圖時排一次；展開、變灰、回到全部都只改 class，節點位置不動
-      markSelected(instance, graph, selected);
+      markSelected(instance, graph, selected, !compact);
       markFocus(instance, graph, expansion ?? ALL, path, excluded, isolated);
       applied.current = expansion ?? ALL;
       markPath(instance, path);
@@ -325,7 +327,8 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
   }, []);
 
   useEffect(() => {
-    if (cy.current !== null) markSelected(cy.current, graph, selected);
+    // 鄰近圖（compact）的中心不算選取，其他節點不變淡
+    if (cy.current !== null) markSelected(cy.current, graph, selected, !compact);
   }, [selected]);
 
   // 展開狀態改變時才播放動態；路徑與類型篩選只改變灰與標示
