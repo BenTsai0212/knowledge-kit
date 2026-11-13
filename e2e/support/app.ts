@@ -46,8 +46,8 @@ export function accountOption(id: RoleId): string {
   return s.signInAccountOption.replace("{account}", demoAccount(id)).replace("{role}", role.label[language]);
 }
 
-// 手機（≤ 600px，#255）：頂端列的身分徽章與它打開的身分與語言面板
-export const identityBadge = (page: Page) => page.locator(".mobile-topbar .identity-badge");
+// 手機（≤ 600px，#255）：頂端列的身分徽章，平板是導覽列底部的頭像；兩者都打開身分與語言面板
+export const identityBadge = (page: Page) => page.locator(":is(.mobile-topbar, .nav-rail) .identity-badge");
 // 以 class 找面板：切換語言後面板的名稱也會換成新的語言
 export const identitySheet = (page: Page) => page.locator("dialog.identity-sheet");
 
@@ -95,7 +95,7 @@ export async function switchLanguage(page: Page, code: string): Promise<void> {
 
 // 切到某一頁（以 data-view 找，不看介面語言）：左側導覽、手機的分頁列，或手機上收在「更多」裡的頁面；這個身分沒有這一頁時回傳 false
 export async function gotoView(page: Page, view: string): Promise<boolean> {
-  const button = page.locator(`:is(.primary-tabs, .mobile-tabbar) [data-view="${view}"]`);
+  const button = page.locator(`:is(.primary-tabs, .mobile-tabbar, .nav-rail) [data-view="${view}"]`);
   if ((await button.count()) > 0) {
     await button.click();
     return true;

@@ -32,7 +32,7 @@ export interface NavProps {
 }
 
 // 導覽的頁籤：上傳頁的「已送審」標記以此找到「待審」的位置（#242 PR 3）；手機的分頁列也適用，主管的「待審」收在「更多」（#255）
-export const tabSelector = (view: View | "more") => `:is(.primary-tabs, .mobile-tabbar) [data-view="${view}"]`;
+export const tabSelector = (view: View | "more") => `:is(.primary-tabs, .mobile-tabbar, .nav-rail) [data-view="${view}"]`;
 
 // 頁籤的名稱（左側導覽、手機的分頁列與「更多」共用）
 export function tabLabels(language: string): Record<View, string> {

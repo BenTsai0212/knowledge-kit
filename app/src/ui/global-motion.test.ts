@@ -66,9 +66,19 @@ describe("底部面板（#255）", () => {
   it("圓角 24px、40×5px 把手；Esc 與關閉都經過 closeDialog()（減少動態效果時直接關閉），不直接 close()", () => {
     expect(rule(".bottom-sheet")).toMatch(/border-radius: 24px 24px 0 0;/);
     expect(rule(".bottom-sheet__handle")).toMatch(/width: 40px;\s*height: 5px;/);
-    expect(bottomSheet).toContain("closeDialog(d, prefersReducedMotion(), setTimeout, MOTION.base)");
+    expect(bottomSheet).toContain("closeDialog(d, prefersReducedMotion(), setTimeout, right ? MOTION.expand : MOTION.base)");
     expect(bottomSheet).toMatch(/onCancel=\{\(e\) => \(e\.preventDefault\(\), close\(e\.currentTarget\)\)\}/);
     expect(bottomSheet).not.toMatch(/\.close\(\)/);
+  });
+});
+
+describe("平板的滑出面板（#255）", () => {
+  it("從右側滑入（expand）、往右退場；全高、最寬 420px（實體面板 400px），左側圓角 24px", () => {
+    expect(rule(".bottom-sheet.slide-over")).toMatch(/inset: 0 0 0 auto;\s*width: min\(420px, 100%\);\s*height: 100dvh;[\s\S]*border-radius: 24px 0 0 24px;/);
+    expect(rule(".bottom-sheet.slide-over[open]")).toMatch(/animation: kPanelIn var\(--motion-expand\) var\(--ease-enter\) backwards;/);
+    expect(rule(".bottom-sheet.slide-over.is-closing")).toMatch(/animation: kPanelOut var\(--motion-expand\) var\(--ease-exit\) forwards;/);
+    expect(rule(".bottom-sheet.slide-over.entity-sheet")).toMatch(/width: min\(400px, 100%\);/);
+    expect(app).toContain('const side = tablet ? "right" : "bottom";');
   });
 });
 
@@ -77,8 +87,8 @@ describe("手機的原文面板（#256）", () => {
     expect(rule(".bottom-sheet.source-sheet")).toMatch(/height: 74dvh;/);
     expect(rule(".bottom-sheet.mention-sheet")).toMatch(/height: 56dvh;/);
     expect(sourceSheet).toContain("<BottomSheet");
-    expect(app).toContain("{phone && sourceSheet()}");
-    expect(app).toContain("{!phone && sidePanel()}");
+    expect(app).toContain("{overlay && sourceSheet()}");
+    expect(app).toContain("{!overlay && sidePanel()}");
   });
 
   it("螢光等面板升起（base）後才刷過；面板開著時換段落與桌機相同（不另外延後）；減少動態效果時 base 是 0ms", () => {

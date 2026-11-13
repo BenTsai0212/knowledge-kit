@@ -16,7 +16,7 @@ import { tabLabels, type NavProps } from "./Sidebar";
 // 頂端列的 icon：28px（簡化版）
 const TOPBAR_ICON_SIZE = 28;
 
-function NavIcon({ view }: { view: View | "more" }) {
+export function NavIcon({ view }: { view: View | "more" }) {
   return (
     <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <path d={NAV_ICONS[view]} />

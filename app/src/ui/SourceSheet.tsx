@@ -1,4 +1,4 @@
-// 手機的原文面板（#256，docs/design.md「問答（手機）」）：點引用標號時從底部升起（BottomSheet，高 74%）。
+// 手機的原文面板（#256；平板是右側的滑出面板，#255，docs/design.md「問答（手機）」）：點引用標號時從底部升起（BottomSheet，高 74%）。
 // 標題列是「出處 N／M」與上一個、下一個出處（44px）；原文在 reading 紙面、引用段落用 markReading（SourceText，與桌機相同）；
 // 下方是「在圖譜中查看」與「回報有錯」。不是從某一題的引用打開時（段落旁的標示、其他頁面）只顯示「原文」。
 import { fill, strings } from "../client/i18n";
@@ -22,9 +22,11 @@ interface Props {
   // 「回報有錯」：沒有時不顯示（展示模式與不能回報的題目）
   onReport?(): void;
   onClose(): void;
+  // 平板是右側的滑出面板（#255）
+  side?: "bottom" | "right";
 }
 
-export function SourceSheet({ language, source, steps, onStep, onOpenSource, onViewInGraph, onReport, onClose }: Props) {
+export function SourceSheet({ language, source, steps, onStep, onOpenSource, onViewInGraph, onReport, onClose, side }: Props) {
   const s = strings(language);
   const step = (label: string, target: string | null, glyph: string) => (
     <button type="button" className="secondary source-step" aria-label={label} disabled={target === null} onClick={() => target !== null && onStep(target)}>
@@ -38,6 +40,7 @@ export function SourceSheet({ language, source, steps, onStep, onOpenSource, onV
       title={steps === null ? s.sourceTitle : fill(s.sourceStep, { n: steps.index, total: steps.total })}
       language={language}
       className="source-sheet"
+      side={side}
       actions={
         steps !== null && (
           <>

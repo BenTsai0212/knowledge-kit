@@ -2,6 +2,7 @@
 // 圓角 24px、上方 40×5px 拖曳把手；往下拖、按關閉或 Esc 關閉，關閉後焦點回到打開它的元件。
 // 開關用 base：進場是 app.css 的 kSheetUp，退場由 closeDialog() 播放反向動畫後才 close()；減少動態效果時直接到位。
 // expandable（#257 的實體面板）：打開時停在 56% 高，往上拉到全高，從全高往下拉回 56%，從 56% 往下拉過門檻才關閉（layout.ts 的 sheetSnap()）。
+// side="right"（平板的滑出面板，#255，docs/design.md「平板」）：從右側滑入、往右拖過門檻關閉，其餘（焦點、Esc、點背景、退場）相同。
 import { useEffect, useId, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import { strings } from "../client/i18n";
 import { CLOSING_CLASS, closeDialog } from "./dialog-motion";
@@ -19,16 +20,20 @@ interface Props {
   expandable?: boolean;
   // 標題列中、關閉按鈕前的按鈕（例如原文面板的上一個、下一個出處，#256）
   actions?: ReactNode;
+  // 從哪一側出現：bottom（手機的底部面板）或 right（平板的滑出面板）
+  side?: "bottom" | "right";
   children: ReactNode;
 }
 
-const close = (d: HTMLDialogElement) => closeDialog(d, prefersReducedMotion(), setTimeout, MOTION.base);
-
-export function BottomSheet({ open, onClose, title, language, className, expandable = false, actions, children }: Props) {
+export function BottomSheet({ open, onClose, title, language, className, expandable = false, actions, side = "bottom", children }: Props) {
   const s = strings(language);
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLElement | null>(null);
   const drag = useRef<{ start: number; dy: number; height: number } | null>(null);
+  // 右側的面板看水平的距離與寬度（往右是正），底部面板看垂直的距離與高度（往下是正）
+  const right = side === "right";
+  // 開關的時間：底部面板是 base，右側的滑出面板是 expand（docs/design.md「平板」的滑出面板）
+  const close = (d: HTMLDialogElement) => closeDialog(d, prefersReducedMotion(), setTimeout, right ? MOTION.expand : MOTION.base);
   const titleId = useId();
   const [stop, setStop] = useState<SheetStop>("half");
 
@@ -50,7 +55,8 @@ export function BottomSheet({ open, onClose, title, language, className, expanda
     if (d === null || d.classList.contains(CLOSING_CLASS) || (e.target as HTMLElement).closest("button") !== null) return;
     // 進場動畫（kSheetUp）播放中時 CSS 動畫會蓋過行內的 transform，面板不會跟著手指；先讓動畫直接到位
     d.getAnimations?.().forEach((a) => a.finish());
-    drag.current = { start: e.clientY, dy: 0, height: d.getBoundingClientRect().height };
+    const box = d.getBoundingClientRect();
+    drag.current = { start: right ? e.clientX : e.clientY, dy: 0, height: right ? box.width : box.height };
     // 拖曳中面板直接跟著手指（不套用高度的 transition）
     d.style.transition = "none";
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -58,11 +64,11 @@ export function BottomSheet({ open, onClose, title, language, className, expanda
   const onPointerMove = (e: PointerEvent<HTMLElement>) => {
     const d = dialog.current;
     if (drag.current === null || d === null) return;
-    const dy = e.clientY - drag.current.start;
+    const dy = (right ? e.clientX : e.clientY) - drag.current.start;
     drag.current.dy = expandable ? dy : Math.max(0, dy);
     if (drag.current.dy >= 0) {
       d.style.removeProperty("height");
-      d.style.transform = `translateY(${drag.current.dy}px)`;
+      d.style.transform = `${right ? "translateX" : "translateY"}(${drag.current.dy}px)`;
     } else {
       d.style.removeProperty("transform");
       d.style.height = `${Math.min(drag.current.height - drag.current.dy, globalThis.innerHeight)}px`;
@@ -80,7 +86,7 @@ export function BottomSheet({ open, onClose, title, language, className, expanda
     d.style.removeProperty("transform");
     setStop(next);
   };
-  const classes = ["bottom-sheet", expandable && "is-expandable", expandable && stop === "full" && "is-full", className].filter(Boolean).join(" ");
+  const classes = ["bottom-sheet", right && "slide-over", expandable && "is-expandable", expandable && stop === "full" && "is-full", className].filter(Boolean).join(" ");
 
   return (
     <dialog
@@ -99,7 +105,7 @@ export function BottomSheet({ open, onClose, title, language, className, expanda
     >
       <div className="bottom-sheet__body">
         <div className="bottom-sheet__header" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
-          <span className="bottom-sheet__handle" aria-hidden="true" />
+          {!right && <span className="bottom-sheet__handle" aria-hidden="true" />}
           <h2 id={titleId}>{title}</h2>
           <div className="bottom-sheet__actions">
             {actions}

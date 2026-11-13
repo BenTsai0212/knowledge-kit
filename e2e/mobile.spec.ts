@@ -198,11 +198,16 @@ test("展示模式：沒有分頁列，頂端列只有一個問答與圖譜的�
   expect(await noHorizontalScroll(page)).toBe(true);
 });
 
-test("斷點：600px 是手機，601px 起是左側導覽", async ({ page }) => {
+test("斷點：600px 是手機，601–1024px 是平板的導覽列，1025px 起是左側導覽", async ({ page }) => {
   await openApp(page);
   await page.setViewportSize({ width: 600, height: 844 });
   await expect(tabBar(page)).toBeVisible();
   await page.setViewportSize({ width: 601, height: 844 });
   await expect(tabBar(page)).toHaveCount(0);
+  await expect(page.locator(".nav-rail")).toBeVisible();
+  await page.setViewportSize({ width: 1024, height: 844 });
+  await expect(page.locator(".nav-rail")).toBeVisible();
+  await page.setViewportSize({ width: 1025, height: 844 });
+  await expect(page.locator(".nav-rail")).toHaveCount(0);
   await expect(page.locator(".sidebar")).toBeVisible();
 });
