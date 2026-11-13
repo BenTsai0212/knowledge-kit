@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>手機版圖譜與入口</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;700&amp;family=Noto+Sans+TC:wght@400;500;700;900&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2340C8}a:hover{color:#14171A}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1080px; box-sizing: border-box; padding: 40px 64px; background: {{t.board}}; color: {{t.text}}; font-family: Inter, 'Noto Sans TC', sans-serif; display: flex; flex-direction: column; gap: 24px">
+
+  <header style="display: grid; grid-template-columns: minmax(0, 1fr) 560px auto; gap: 32px; align-items: end">
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <p style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 0.1em; color: {{t.primary}}">MOBILE · 390 × 844</p>
+      <h1 style="margin: 0; font-size: 32px; font-weight: 900; line-height: 1.2">圖譜佔滿畫面，細節從底部升起</h1>
+      <p style="margin: 0; font-size: 14px; line-height: 1.6; color: {{t.muted}}">單指拖曳平移、雙指縮放、點節點打開實體面板；面板可停在一半或全高。</p>
+    </div>
+    <div style="display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 6px 12px; padding: 14px 16px; border-radius: 14px; background: {{t.surface}}; border: 1px solid {{t.line}}; font-size: 12px; line-height: 1.55">
+      <b>入口</b><span>主視覺在上（高 18rem，前景節點減半、不模糊遠景），表單在下</span>
+      <b>圖譜</b><span>沿用大量節點的三層規則；手機上門檻減半（30／150）</span>
+      <b>清單</b><span>「圖譜｜清單」切換，清單是同一份資料的文字版</span>
+    </div>
+    <button type="button" onClick="{{toggleDark}}" aria-pressed="{{darkPressed}}" style="height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 600 13px 'JetBrains Mono', monospace">{{modeLabel}}</button>
+  </header>
+
+  <div style="display: flex; justify-content: space-between; gap: 32px">
+
+    <div style="display: flex; flex-direction: column; gap: 10px; align-items: center">
+      <div style="position: relative; width: 390px; height: 844px; border-radius: 40px; overflow: hidden; background: {{t.bg}}; box-shadow: 0 0 0 10px {{t.bezel}}, 0 24px 48px rgba(10,13,20,0.18); display: flex; flex-direction: column">
+        <div style="display: flex; align-items: center; gap: 8px; height: 60px; padding: 8px 16px 0; box-sizing: border-box">
+          <svg width="26" height="26" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="11" fill="{{t.surface}}" stroke="{{t.line}}"></rect><path d="M17 12v24M17 24 32 13.5M17 24l15 10.5" fill="none" stroke="{{t.text}}" stroke-width="4.5" stroke-linecap="round"></path><circle cx="32" cy="34.5" r="5" fill="{{t.primary}}"></circle><circle cx="32" cy="13.5" r="5" fill="{{t.mark}}"></circle></svg>
+          <span style="font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 700">Knowledge Kit</span>
+          <span style="margin-left: auto; display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px; border: 1px dashed {{t.dash}}; font-size: 11px; color: {{t.muted}}">虛構資料</span>
+        </div>
+        <div style="position: relative; height: 288px; overflow: hidden; background: radial-gradient(ellipse at 50% 45%, {{t.core}} 0%, {{t.bg}} 75%)">
+          <sc-for list="{{heroEdges}}" as="e" hint-placeholder-count="10">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%"><line x1="{{e.x1}}" y1="{{e.y1}}" x2="{{e.x2}}" y2="{{e.y2}}" stroke="{{e.c}}" stroke-width="{{e.w}}" vector-effect="non-scaling-stroke"></line></svg>
+          </sc-for>
+          <sc-for list="{{heroNodes}}" as="n" hint-placeholder-count="14">
+            <div style="position: absolute; left: {{n.x}}%; top: {{n.y}}%; width: {{n.s}}; height: {{n.s}}; margin: {{n.m}}; border-radius: {{n.r}}; background: {{n.c}}; opacity: {{n.o}}; box-shadow: 0 0 0 3px {{t.bg}}"></div>
+          </sc-for>
+        </div>
+        <form style="flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 20px 20px 28px; border-top: 1px solid {{t.line}}; background: {{t.panel}}">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.12em; color: {{t.primary}}">ACCESS</span>
+          <span style="font-size: 22px; font-weight: 700">輸入邀請碼</span>
+          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600">邀請碼
+            <input type="text" value="DEMO-OPEN" style="height: 52px; padding: 0 14px; border-radius: 10px; border: 1.5px solid {{t.inputLine}}; background: {{t.surface}}; color: {{t.text}}; font: 500 17px 'JetBrains Mono', monospace">
+          </label>
+          <span style="font-size: 12px; line-height: 1.6; color: {{t.muted}}">邀請碼只保存在這個分頁，關閉分頁後就會清除。</span>
+          <button type="submit" style="height: 52px; border: 0; border-radius: 10px; background: {{t.primary}}; color: {{t.onPrimary}}; font: 700 16px Inter, 'Noto Sans TC', sans-serif">開始使用</button>
+          <div style="margin-top: auto; display: flex; flex-direction: column; gap: 6px">
+            <div style="display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {{t.muted}}"><span>SEMANTIC MODEL</span><span>52／84 MB</span></div>
+            <div style="height: 4px; border-radius: 999px; background: {{t.line}}; overflow: hidden"><div style="width: 62%; height: 100%; background: {{t.primary}}"></div></div>
+          </div>
+        </form>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: {{t.muted}}">入口：主視覺縮成頁首，表單維持完整大小</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; align-items: center">
+      <div style="position: relative; width: 390px; height: 844px; border-radius: 40px; overflow: hidden; background: {{t.bg}}; box-shadow: 0 0 0 10px {{t.bezel}}, 0 24px 48px rgba(10,13,20,0.18); display: flex; flex-direction: column">
+        <div style="display: flex; flex-direction: column; gap: 8px; padding: 16px 16px 8px">
+          <div style="display: flex; gap: 8px">
+            <label style="flex: 1; display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.muted}}; font-size: 15px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>搜尋名稱</label>
+            <button type="button" aria-label="篩選與找路徑" style="width: 44px; height: 44px; border-radius: 12px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"></path></svg></button>
+          </div>
+          <div role="group" aria-label="檢視方式" style="align-self: flex-start; display: flex; padding: 3px; border-radius: 10px; background: {{t.raised}}">
+            <span style="display: flex; align-items: center; height: 36px; padding: 0 16px; border-radius: 8px; background: {{t.surface}}; font-size: 13px; font-weight: 700">圖譜</span>
+            <span style="display: flex; align-items: center; height: 36px; padding: 0 16px; border-radius: 8px; font-size: 13px; color: {{t.muted}}">清單</span>
+          </div>
+        </div>
+        <div style="position: relative; flex: 1; overflow: hidden; background-image: radial-gradient({{t.dot}} 1px, transparent 1px); background-size: 20px 20px">
+          <sc-for list="{{edges}}" as="e" hint-placeholder-count="15">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%"><line x1="{{e.x1}}" y1="{{e.y1}}" x2="{{e.x2}}" y2="{{e.y2}}" stroke="{{t.edge}}" stroke-width="1.4" vector-effect="non-scaling-stroke"></line></svg>
+          </sc-for>
+          <sc-for list="{{nodes}}" as="n" hint-placeholder-count="14">
+            <div style="position: absolute; left: {{n.x}}%; top: {{n.y}}%; width: 0; height: 0">
+              <div style="position: absolute; left: {{n.off}}; top: {{n.off}}; width: {{n.s}}; height: {{n.s}}; border-radius: {{n.r}}; background: {{n.c}}; box-shadow: 0 0 0 3px {{t.bg}}"></div>
+              <span style="position: absolute; left: 0; top: {{n.lt}}; transform: translateX(-50%); white-space: nowrap; font-size: 11px; color: {{n.lc}}">{{n.label}}</span>
+            </div>
+          </sc-for>
+          <span style="position: absolute; right: 12px; bottom: 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {{t.muted}}">14 實體 · 19 關係</span>
+        </div>
+        <nav aria-label="頁面" style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); height: 72px; padding-bottom: 12px; box-sizing: border-box; border-top: 1px solid {{t.line}}; background: {{t.surface}}">
+          <sc-for list="{{tabs}}" as="tb" hint-placeholder-count="5">
+            <a href="#" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: {{tb.color}}; text-decoration: none; font-size: 11px; font-weight: {{tb.weight}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{tb.icon}}"></path></svg>{{tb.label}}</a>
+          </sc-for>
+        </nav>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: {{t.muted}}">圖譜：14 個實體在手機上全部顯示；超過 30 個時改用群組泡泡</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; align-items: center">
+      <div style="position: relative; width: 390px; height: 844px; border-radius: 40px; overflow: hidden; background: {{t.bg}}; box-shadow: 0 0 0 10px {{t.bezel}}, 0 24px 48px rgba(10,13,20,0.18)">
+        <div style="position: absolute; left: 0; right: 0; top: 0; height: 48%; background-image: radial-gradient({{t.dot}} 1px, transparent 1px); background-size: 20px 20px">
+          <sc-for list="{{focusEdges}}" as="e" hint-placeholder-count="4">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%"><line x1="{{e.x1}}" y1="{{e.y1}}" x2="{{e.x2}}" y2="{{e.y2}}" stroke="{{e.c}}" stroke-width="{{e.w}}" vector-effect="non-scaling-stroke"></line></svg>
+          </sc-for>
+          <sc-for list="{{focusNodes}}" as="n" hint-placeholder-count="5">
+            <div style="position: absolute; left: {{n.x}}%; top: {{n.y}}%; width: 0; height: 0; opacity: {{n.o}}">
+              <div style="position: absolute; left: {{n.off}}; top: {{n.off}}; width: {{n.s}}; height: {{n.s}}; border-radius: {{n.r}}; background: {{n.c}}; box-shadow: {{n.ring}}"></div>
+              <span style="position: absolute; left: 0; top: {{n.lt}}; transform: translateX(-50%); white-space: nowrap; font-size: 12px; font-weight: {{n.fw}}">{{n.label}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <section aria-label="實體詳細資訊" style="position: absolute; left: 0; right: 0; bottom: 0; height: 56%; border-radius: 24px 24px 0 0; background: {{t.surface}}; box-shadow: 0 -8px 24px rgba(10,13,20,0.12); display: flex; flex-direction: column; gap: 12px; padding: 10px 16px 24px; box-sizing: border-box">
+          <span style="align-self: center; width: 40px; height: 5px; border-radius: 999px; background: {{t.dash}}"></span>
+          <div style="display: flex; align-items: center; gap: 10px">
+            <span style="display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: 999px; background: {{t.pSoft}}; font-size: 12px; font-weight: 700">人員</span>
+            <span style="font-size: 22px; font-weight: 700">王小明</span>
+            <span style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {{t.muted}}">關聯 3 · 文件 2</span>
+          </div>
+          <div style="display: flex; gap: 8px">
+            <span style="flex: 1; display: inline-flex; align-items: center; justify-content: center; height: 48px; border-radius: 12px; background: {{t.primary}}; color: {{t.onPrimary}}; font-size: 15px; font-weight: 700">在問答中問</span>
+            <span style="flex: 1; display: inline-flex; align-items: center; justify-content: center; height: 48px; border-radius: 12px; border: 1px solid {{t.line}}; font-size: 15px">只看它</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px">
+            <div style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 12px; border-radius: 10px; background: {{t.raised}}; font-size: 14px"><span style="width: 10px; height: 10px; border-radius: 3px; background: {{t.eT}}"></span>產品研發部<span style="margin-left: auto; font-size: 12px; color: {{t.muted}}">隸屬・負責</span></div>
+            <div style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 12px; border-radius: 10px; background: {{t.raised}}; font-size: 14px"><span style="width: 10px; height: 10px; border-radius: 2px; background: {{t.eJ}}"></span>青翼專案<span style="margin-left: auto; font-size: 12px; color: {{t.muted}}">負責</span></div>
+          </div>
+          <div style="padding: 12px 14px; border-radius: 12px; background: {{t.reading}}; color: {{t.readingText}}; font-size: 14px; line-height: 1.75">青翼專案由產品研發部經理<span style="background: {{t.markReading}}; padding: 1px 2px; border-radius: 2px">王小明</span>負責……</div>
+        </section>
+      </div>
+      <p style="margin: 0; font-size: 13px; color: {{t.muted}}">實體：選取的節點移到上半部中央，面板停在一半；往上拉看全部</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1080}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { dark: false }; }
+  renderVals() {
+    const L = { board: '#EDEFEA', bg: '#F5F6F3', core: '#FFFFFF', panel: '#FFFFFF', surface: '#FFFFFF', raised: '#EDEFF2', text: '#14171A', muted: '#5B6470', line: '#DDE1E4', dash: '#9AA3AE', dot: '#E3E6EA', edge: '#B9C0C8', bezel: '#14171A', primary: '#2340C8', onPrimary: '#FFFFFF', inputLine: '#14171A', mark: '#FFE066', markReading: '#FFE066', reading: '#FFFFFF', readingText: '#14171A', eP: '#3D7AB8', eT: '#2E7D5B', eJ: '#7A52C7', pSoft: 'rgba(61,122,184,0.14)', far: '#C9CED4' };
+    const D = { board: '#05070B', bg: '#070A10', core: '#121A2A', panel: '#0D111A', surface: '#111621', raised: '#182030', text: '#E7ECF5', muted: '#8B97AD', line: '#253044', dash: '#3B4A63', dot: '#1A2232', edge: '#2E3A50', bezel: '#2A3548', primary: '#3EE6D2', onPrimary: '#04201D', inputLine: '#3B4A63', mark: '#FFB547', markReading: '#FFE2B0', reading: '#F4F6FA', readingText: '#141A24', eP: '#7FB2EB', eT: '#5CC294', eJ: '#B89CF0', pSoft: 'rgba(127,178,235,0.16)', far: '#2A3650' };
+    const d = this.state.dark;
+    const t = d ? D : L;
+    const P = 'p', T = 't', J = 'j';
+    const col = (k) => (k === P ? t.eP : (k === T ? t.eT : t.eJ));
+    const rad = (k) => (k === P ? '999px' : (k === T ? '6px' : '4px'));
+    const N = [
+      ['產品研發部', 38, 30, T], ['青翼專案', 70, 16, J], ['王小明', 18, 14, P], ['周大衛', 66, 38, P], ['林志明', 20, 44, P],
+      ['營運部', 56, 66, T], ['長堤專案', 84, 56, J], ['張雅婷', 84, 80, P], ['黃建宏', 44, 84, P],
+      ['人資部', 84, 30, T], ['吳宜蓁', 90, 8, P], ['業務部', 18, 72, T], ['李佳穎', 10, 58, P], ['林志明', 20, 90, P]
+    ];
+    const pairs = [[2, 0], [3, 0], [4, 0], [13, 11], [10, 9], [7, 5], [8, 5], [12, 11], [2, 1], [7, 6], [3, 1], [4, 1], [8, 6], [0, 1], [5, 6]];
+    const nodes = N.map((n) => { const s = n[3] === P ? 16 : 22; return { label: n[0], x: n[1], y: n[2], s: s + 'px', off: (-s / 2) + 'px', lt: (s / 2 + 4) + 'px', r: rad(n[3]), c: col(n[3]), lc: n[3] === P ? t.muted : t.text }; });
+    const edges = pairs.map(([a, b]) => ({ x1: N[a][1], y1: N[a][2], x2: N[b][1], y2: N[b][2] }));
+    const heroNodes = N.map((n, i) => { const s = n[3] === P ? 10 : 14; return { x: 8 + n[1] * 0.84, y: 8 + n[2] * 0.84, s: s + 'px', m: (-s / 2) + 'px 0 0 ' + (-s / 2) + 'px', r: rad(n[3]), c: col(n[3]), o: i % 3 === 2 ? '0.5' : '1' }; });
+    const heroEdges = pairs.map(([a, b], i) => ({ x1: 8 + N[a][1] * 0.84, y1: 8 + N[a][2] * 0.84, x2: 8 + N[b][1] * 0.84, y2: 8 + N[b][2] * 0.84, c: i === 8 ? t.primary : t.edge, w: i === 8 ? 2 : 1.2 }));
+    const F = [['王小明', 50, 46, P, 30, true], ['產品研發部', 22, 30, T, 24], ['青翼專案', 78, 30, J, 24], ['周大衛', 82, 76, P, 14, false, true], ['林志明', 18, 78, P, 14, false, true]];
+    const focusNodes = F.map((n) => ({ label: n[0], x: n[1], y: n[2], s: n[4] + 'px', off: (-n[4] / 2) + 'px', lt: (n[4] / 2 + 5) + 'px', r: rad(n[3]), c: col(n[3]), ring: n[5] ? '0 0 0 4px ' + t.bg + ', 0 0 0 6px ' + t.text : 'none', fw: n[5] ? '700' : '500', o: n[6] ? '0.45' : '1' }));
+    const focusEdges = [[0, 1, true], [0, 2, true], [1, 4, false], [2, 3, false]].map(([a, b, on]) => ({ x1: F[a][1], y1: F[a][2], x2: F[b][1], y2: F[b][2], c: on ? t.primary : t.edge, w: on ? 2.2 : 1 }));
+    const I = {
+      chat: 'M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z',
+      graph: 'M6 8a2 2 0 1 0 0-.01M18 9a2 2 0 1 0 0-.01M10 19a2 2 0 1 0 0-.01M8 7l8 1.5M7 9l2 8M16.5 10.5l-5 7',
+      time: 'M4 12h16M8 8v8M16 6v12',
+      upload: 'M12 16V4M7 9l5-5 5 5M5 20h14',
+      more: 'M5 12h.01M12 12h.01M19 12h.01'
+    };
+    const tabs = [['問答', I.chat], ['圖譜', I.graph, true], ['時間軸', I.time], ['上傳', I.upload], ['更多', I.more]]
+      .map((x) => ({ label: x[0], icon: x[1], color: x[2] ? t.primary : t.muted, weight: x[2] ? '700' : '500' }));
+    return {
+      t, nodes, edges, heroNodes, heroEdges, focusNodes, focusEdges, tabs,
+      modeLabel: d ? 'DARK' : 'LIGHT',
+      darkPressed: d ? 'true' : 'false',
+      toggleDark: () => this.setState({ dark: !d })
+    };
+  }
+}
+</script>
+</body>
+</html>

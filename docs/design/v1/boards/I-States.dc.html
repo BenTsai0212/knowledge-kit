@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>錯誤與額度狀態</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;700&amp;family=Noto+Sans+TC:wght@400;500;700;900&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2340C8}a:hover{color:#14171A}
+@keyframes kRise{from{opacity:0;transform:translateY(8px)}}
+@keyframes kDrop{from{opacity:0;transform:translateY(-8px)}}
+.e-rise{animation:kRise 220ms cubic-bezier(.2,0,0,1) backwards}
+.e-drop{animation:kDrop 220ms cubic-bezier(.2,0,0,1) backwards}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1000px; box-sizing: border-box; padding: 40px 56px; background: {{t.board}}; color: {{t.text}}; font-family: Inter, 'Noto Sans TC', sans-serif; display: flex; flex-direction: column; gap: 20px">
+
+  <header style="display: flex; justify-content: space-between; align-items: flex-start; gap: 24px">
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <p style="margin: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 0.1em; color: {{t.primary}}">ERRORS · 問答</p>
+      <h1 style="margin: 0; font-size: 30px; font-weight: 900">選一種狀態看畫面</h1>
+    </div>
+    <button type="button" onClick="{{toggleDark}}" aria-pressed="{{darkPressed}}" style="height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 600 13px 'JetBrains Mono', monospace">{{modeLabel}}</button>
+  </header>
+
+  <div role="group" aria-label="狀態" style="display: flex; flex-wrap: wrap; gap: 8px">
+    <sc-for list="{{chips}}" as="c" hint-placeholder-count="9">
+      <button type="button" onClick="{{c.go}}" aria-pressed="{{c.pressed}}" style="display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 999px; border: {{c.border}}; background: {{c.bg}}; color: {{t.text}}; font: {{c.weight}} 14px Inter, 'Noto Sans TC', sans-serif; cursor: pointer"><span style="width: 8px; height: 8px; border-radius: 999px; background: {{c.dot}}"></span>{{c.label}}</button>
+    </sc-for>
+  </div>
+
+  <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: 200px minmax(0, 1fr) 320px; border-radius: 20px; overflow: hidden; border: 1px solid {{t.line}}; background: {{t.bg}}">
+    <nav aria-label="頁面" style="display: flex; flex-direction: column; gap: 4px; padding: 18px 12px; border-right: 1px solid {{t.line}}; background: {{t.surface}}">
+      <span style="padding: 0 10px 12px; font-size: 15px; font-weight: 900">範例公司</span>
+      <span style="display: flex; align-items: center; height: 40px; padding: 0 12px; border-radius: 10px; background: {{t.inkBg}}; color: {{t.inkFg}}; font-size: 14px; font-weight: 700">問答</span>
+      <span style="display: flex; align-items: center; height: 40px; padding: 0 12px; font-size: 14px; color: {{t.muted}}">圖譜</span>
+      <span style="display: flex; align-items: center; height: 40px; padding: 0 12px; font-size: 14px; color: {{t.muted}}">時間軸</span>
+    </nav>
+
+    <main style="display: flex; flex-direction: column; min-width: 0">
+      <sc-if value="{{s.offline}}" hint-placeholder-val="{{ false }}">
+        <div class="e-drop" role="status" style="display: flex; align-items: center; gap: 10px; padding: 10px 20px; background: {{t.raised}}; border-bottom: 1px solid {{t.line}}; font-size: 14px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{t.muted}}" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 8.8a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M12 20h.01M3 3l18 18"></path></svg>
+          目前沒有網路連線，恢復後就可以繼續提問。<span style="font-size: 12px; color: {{t.muted}}">（新）</span>
+        </div>
+      </sc-if>
+
+      <div style="flex: 1; display: flex; flex-direction: column; gap: 14px; padding: 24px 28px; overflow: hidden">
+        <sc-if value="{{s.admin}}" hint-placeholder-val="{{ false }}">
+          <div class="e-drop" role="alert" style="display: flex; flex-direction: column; gap: 8px; padding: 16px 18px; border-radius: 14px; background: {{t.conflictSoft}}; color: {{t.conflictText}}">
+            <b style="font-size: 16px">這個 demo 暫時無法回答問題 <span style="font-weight: 400; font-size: 12px">（新）</span></b>
+            <span style="font-size: 14px">模型服務的額度已用完，請聯絡管理者。</span>
+            <details open="{{ true }}" style="font-size: 13px"><summary style="cursor: pointer">給管理者的細節（新）</summary><span style="font-family: 'JetBrains Mono', monospace">錯誤代碼：upstream_quota · 2026-11-11 15:42</span></details>
+          </div>
+        </sc-if>
+
+        <div style="align-self: flex-end; max-width: 80%; padding: 10px 16px; border-radius: 16px 16px 4px 16px; background: {{t.inkBg}}; color: {{t.inkFg}}; font-size: 15px">{{question}}</div>
+
+        <sc-if value="{{s.retryCard}}" hint-placeholder-val="{{ true }}">
+          <article class="e-rise" role="alert" style="display: flex; align-items: flex-start; gap: 14px; padding: 18px 20px; border-radius: 14px; background: {{t.surface}}; border: 1px solid {{t.line}}">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{t.warning}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; margin-top: 1px"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5"></path></svg>
+            <div style="display: flex; flex-direction: column; gap: 10px">
+              <span style="font-size: 15px; font-weight: 600">{{retryMsg}}</span>
+              <span style="font-size: 13px; color: {{t.muted}}">問題已保留；重新提問會成為新的一題。</span>
+              <button type="button" style="align-self: flex-start; height: 40px; padding: 0 16px; border-radius: 10px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 600 14px Inter, 'Noto Sans TC', sans-serif">{{retryBtn}}</button>
+            </div>
+          </article>
+        </sc-if>
+
+        <sc-if value="{{s.interrupted}}" hint-placeholder-val="{{ false }}">
+          <article class="e-rise" style="display: flex; flex-direction: column; gap: 12px; padding: 18px 20px; border-radius: 14px; background: {{t.surface}}; border: 1px solid {{t.line}}">
+            <p style="margin: 0; font-size: 16px; line-height: 1.85; opacity: 0.55">原訂 2026 年第二季上市<span style="display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 20px; margin-left: 4px; padding: 0 5px; border-radius: 6px; background: {{t.markSoft}}; color: {{t.markText}}; font-family: 'JetBrains Mono', monospace; font-size: 12px; vertical-align: 2px">1</span>，但因為……</p>
+            <span style="align-self: flex-start; height: 26px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: 999px; border: 1px dashed {{t.dash}}; font-size: 12px; color: {{t.muted}}">回答不完整</span>
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; background: {{t.raised}}; font-size: 14px">回答在傳送途中中斷，請再試一次。<button type="button" style="height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 600 14px Inter, 'Noto Sans TC', sans-serif">重新提問</button></div>
+          </article>
+        </sc-if>
+
+        <sc-if value="{{s.prompt}}" hint-placeholder-val="{{ false }}">
+          <article class="e-rise" role="alert" style="display: flex; align-items: flex-start; gap: 14px; padding: 18px 20px; border-radius: 14px; background: {{t.surface}}; border: 1px solid {{t.line}}">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{t.warning}}" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="flex: none"><path d="M4 7h16M4 12h10M4 17h6"></path></svg>
+            <div style="display: flex; flex-direction: column; gap: 10px">
+              <span style="font-size: 15px; font-weight: 600">問題與參考資料太長，請縮短問題後再試。</span>
+              <button type="button" style="align-self: flex-start; height: 40px; padding: 0 16px; border-radius: 10px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 600 14px Inter, 'Noto Sans TC', sans-serif">縮短問題（回到輸入框）</button>
+            </div>
+          </article>
+        </sc-if>
+
+        <sc-if value="{{s.quotaLine}}" hint-placeholder-val="{{ false }}">
+          <p class="e-rise" style="margin: 0; padding-left: 4px; font-size: 13px; color: {{t.muted}}">這一題沒有送出（新）</p>
+        </sc-if>
+
+        <sc-if value="{{s.model}}" hint-placeholder-val="{{ false }}">
+          <article class="e-rise" style="display: flex; flex-direction: column; gap: 10px; padding: 18px 20px; border-radius: 14px; border: 1.5px dashed {{t.dash}}">
+            <span style="font-size: 16px; font-weight: 700">模型無法回答這個問題。</span>
+            <span style="font-size: 12px; font-weight: 700; color: {{t.muted}}">可以試試</span>
+            <span style="font-size: 14px">換個說法，或改用文件中可能出現的用詞再問一次</span>
+            <span style="font-size: 14px">改問負責這件事的人或部門</span>
+          </article>
+        </sc-if>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px 24px 18px; border-top: 1px solid {{t.line}}; background: {{t.bg}}">
+        <sc-if value="{{s.quota}}" hint-placeholder-val="{{ false }}">
+          <div class="e-drop" role="status" style="display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: 12px; background: {{t.raised}}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{t.text}}" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="flex: none; margin-top: 2px"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+            <div style="display: flex; flex-direction: column; gap: 4px">
+              <b style="font-size: 15px">{{quotaTitle}}</b>
+              <span style="font-size: 13px; color: {{t.muted}}">圖譜、時間軸與原文仍可以瀏覽。（新）</span>
+            </div>
+          </div>
+        </sc-if>
+        <div style="display: flex; gap: 6px; opacity: {{presetOpacity}}">
+          <span style="display: inline-flex; align-items: center; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid {{t.line}}; background: {{t.surface}}; font-size: 13px">人資部的經理是誰？</span>
+          <span style="display: inline-flex; align-items: center; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid {{t.line}}; background: {{t.surface}}; font-size: 13px">到職滿一年有幾天年假？</span>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: stretch">
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 6px">
+            <label for="q" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">自由提問</label>
+            <div id="q" style="min-height: 48px; padding: 12px 14px; box-sizing: border-box; border-radius: 12px; border: {{inputBorder}}; background: {{t.surface}}; color: {{inputColor}}; font-size: 15px; line-height: 1.5; opacity: {{inputOpacity}}">{{inputText}}</div>
+            <sc-if value="{{s.tooLong}}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; justify-content: space-between; font-size: 13px; color: {{t.danger}}"><span>問題太長，請縮短後再試。</span><span style="font-family: 'JetBrains Mono', monospace">523／500（新）</span></div>
+            </sc-if>
+          </div>
+          <span style="display: inline-flex; align-items: center; height: 48px; padding: 0 20px; border-radius: 12px; background: {{t.primary}}; color: {{t.onPrimary}}; font-size: 15px; font-weight: 700; opacity: {{sendOpacity}}">提問</span>
+        </div>
+      </div>
+    </main>
+
+    <aside style="display: flex; flex-direction: column; gap: 12px; padding: 22px 20px; border-left: 1px solid {{t.line}}; background: {{t.surface}}; font-size: 13px; line-height: 1.7">
+      <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.08em; color: {{t.muted}}">這個狀態</span>
+      <span style="font-size: 16px; font-weight: 700">{{noteTitle}}</span>
+      <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: {{t.muted}}">{{noteTypes}}</span>
+      <span>{{noteBody}}</span>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { k: 'timeout', dark: false }; }
+  renderVals() {
+    const L = { board: '#EDEFEA', bg: '#F5F6F3', surface: '#FFFFFF', raised: '#EDEFF2', text: '#14171A', muted: '#5B6470', line: '#DDE1E4', dash: '#9AA3AE', primary: '#2340C8', onPrimary: '#FFFFFF', inkBg: '#14171A', inkFg: '#FFFFFF', markSoft: '#FFF3BF', markText: '#14171A', conflictSoft: '#FCE8F1', conflictText: '#7A1D50', warning: '#9A3D00', danger: '#B42318' };
+    const D = { board: '#05070B', bg: '#0A0D14', surface: '#111621', raised: '#182030', text: '#E7ECF5', muted: '#8B97AD', line: '#253044', dash: '#3B4A63', primary: '#3EE6D2', onPrimary: '#04201D', inkBg: '#E7ECF5', inkFg: '#0A0D14', markSoft: '#3A2A0E', markText: '#FFD9A0', conflictSoft: '#2A1420', conflictText: '#FFD3E2', warning: '#FF9466', danger: '#FF8A80' };
+    const st = this.state;
+    const t = st.dark ? D : L;
+    const defs = [
+      ['timeout', '逾時', '可以再試', t.primary],
+      ['interrupted', '回答中斷', '可以再試', t.primary],
+      ['network', '網路斷線', '可以再試', t.primary],
+      ['tooLong', '問題太長', '改一下問題', t.warning],
+      ['prompt', '參考資料太長', '改一下問題', t.warning],
+      ['daily', '今日次數用完', '明天再來', t.muted],
+      ['global', '線上額度用完', '明天再來', t.muted],
+      ['admin', '需要管理者', '找管理者', t.conflictText],
+      ['model', '模型無法回答', '換個問法', t.muted]
+    ];
+    const k = st.k;
+    const notes = {
+      timeout: ['暫時的問題', 'upstream_timeout（同類：overloaded、error、limit_unavailable、unexpected_response）', '在回答的位置出現中性的卡片，附「重新提問」。不用紅色、不搖晃。'],
+      interrupted: ['暫時的問題 · 串流中斷', 'upstream_interrupted', '保留已收到的文字並變淡，標「回答不完整」，重試在原地。'],
+      network: ['暫時的問題 · 離線', 'network', '頁面頂端多一條離線提示，連線恢復（online 事件）後自動消失；這一題的卡片照常附「重新提問」。'],
+      tooLong: ['問題要改', 'question_too_long（同類：empty_question）', '送出前就在輸入框發現：邊線換 danger、下方說明與字數；超過時停用提問。不送出，所以不計次。'],
+      prompt: ['問題要改 · 伺服器判斷', 'prompt_too_long', '問題加上檢索到的段落超過上限，只能由伺服器判斷；卡片附「縮短問題」，按下回到輸入框並保留文字。'],
+      daily: ['今天用完了', 'daily_limit', '收到 429 後，輸入框上方出現常駐說明條，輸入框與預設問題停用；這一題只標「沒有送出」。其他功能照常。不顯示剩餘次數（前端拿不到）。'],
+      global: ['今天用完了 · 線上 demo', 'global_daily_limit', '和 daily_limit 相同，文字說明「所有使用者共用」與恢復時間。'],
+      admin: ['需要管理者', 'upstream_quota（同類：unknown_model、misconfigured、forbidden_origin、invalid_request、method_not_allowed）', '使用者無能為力：對話區頂端的說明＋可展開的錯誤代碼與時間，方便回報。輸入框保持可用。'],
+      model: ['模型無法回答', 'upstream_refusal', '比照拒答的虛線框與「可以試試」，不是錯誤樣式。']
+    };
+    const quota = k === 'daily' || k === 'global';
+    const s = {
+      offline: k === 'network', admin: k === 'admin',
+      retryCard: k === 'timeout' || k === 'network', interrupted: k === 'interrupted', prompt: k === 'prompt',
+      quota, quotaLine: quota, model: k === 'model', tooLong: k === 'tooLong'
+    };
+    const longQ = '請整理青翼專案從啟動會議到最新進度的所有變化，包含負責人、成員、預計上市時間的調整與原因、成本估算、建議售價、首年銷售目標，以及每一項資訊分別出自哪一份文件、哪一段，並說明不同文件之間的說法是否一致，如果不一致請並列……';
+    return {
+      t, s,
+      chips: defs.map((d) => ({ label: d[1], dot: d[3], go: () => this.setState({ k: d[0] }), pressed: k === d[0] ? 'true' : 'false', border: k === d[0] ? '1.5px solid ' + t.primary : '1px solid ' + t.line, bg: k === d[0] ? t.surface : 'transparent', weight: k === d[0] ? '700' : '500' })),
+      question: k === 'tooLong' ? '（尚未送出）' : '青翼桌預計什麼時候上市？',
+      retryMsg: k === 'network' ? '無法連線到伺服器，請確認網路後再試。' : '模型服務回應逾時，請稍後再試。',
+      retryBtn: '重新提問',
+      quotaTitle: k === 'global' ? '今天的線上試用額度已用完（所有使用者共用），請明天（台灣時間早上 8 點後）再試，或在本機執行。' : '今天的提問次數已用完，請明天再試。',
+      presetOpacity: quota ? '0.45' : '1',
+      inputText: k === 'tooLong' ? longQ : (quota ? '今天的提問次數已用完' : (k === 'prompt' ? '請整理青翼專案所有文件中提到的每一項時程、成本與人員變動……' : '輸入問題（500 字以內）')),
+      inputColor: (k === 'tooLong' || k === 'prompt') ? t.text : t.muted,
+      inputBorder: k === 'tooLong' ? '2px solid ' + t.danger : '1.5px solid ' + t.line,
+      inputOpacity: quota ? '0.6' : '1',
+      sendOpacity: (quota || k === 'tooLong') ? '0.4' : '1',
+      noteTitle: notes[k][0], noteTypes: notes[k][1], noteBody: notes[k][2],
+      modeLabel: st.dark ? 'DARK' : 'LIGHT', darkPressed: st.dark ? 'true' : 'false',
+      toggleDark: () => this.setState({ dark: !st.dark })
+    };
+  }
+}
+</script>
+</body>
+</html>

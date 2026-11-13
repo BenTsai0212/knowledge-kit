@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>首頁</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Sans+TC:wght@400;500;700;900&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.kh-card{display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:16px}
+.kh-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;min-height:52px;padding:8px 14px;border-radius:12px;box-sizing:border-box}
+</style>
+</helmet>
+<div style="width: 100%; min-height: 1000px; box-sizing: border-box; background: {{t.bg}}; color: {{t.text}}; font-family: Inter, 'Noto Sans TC', sans-serif; display: flex; flex-wrap: wrap; align-items: stretch">
+
+  <nav aria-label="頁面" style="flex: 1 1 200px; max-width: 220px; box-sizing: border-box; padding: 20px 14px; display: flex; flex-direction: column; gap: 4px; background: {{t.surface}}; border-right: 1px solid {{t.line}}">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 8px 16px">
+      <svg width="28" height="28" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="11" fill="{{t.raised}}"></rect><path d="M17 12v24M17 24 32 13.5M17 24l15 10.5" fill="none" stroke="{{t.text}}" stroke-width="4.5" stroke-linecap="round"></path><circle cx="32" cy="34.5" r="5" fill="{{t.primary}}"></circle><circle cx="32" cy="13.5" r="5" fill="{{t.evid}}"></circle></svg>
+      <span style="font-size: 16px; font-weight: 900">範例公司</span>
+    </div>
+    <a href="#" aria-current="page" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; background: {{t.inkBg}}; color: {{t.inkFg}}; text-decoration: none; font-size: 15px; font-weight: 700">首頁</a>
+    <sc-for list="{{nav}}" as="n" hint-placeholder-count="5">
+      <a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; color: {{t.text}}; text-decoration: none; font-size: 15px">{{n.label}}<sc-if value="{{n.badge}}"><span style="margin-left: auto; min-width: 22px; height: 22px; padding: 0 6px; box-sizing: border-box; border-radius: 999px; background: {{t.primary}}; color: {{t.onPrimary}}; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">{{n.badge}}</span></sc-if></a>
+    </sc-for>
+    <div style="margin-top: auto; display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 12px; background: {{t.raised}}">
+      <span style="display: flex; align-items: center; gap: 10px"><span style="width: 32px; height: 32px; border-radius: 999px; background: {{t.inkBg}}; color: {{t.inkFg}}; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">{{u.initial}}</span><span style="display: flex; flex-direction: column"><b style="font-size: 14px">{{u.name}}</b><span style="font-size: 12px; color: {{t.muted}}">{{u.role}}</span></span></span>
+      <span style="font-size: 12px; line-height: 1.5; color: {{t.muted}}">看得到：{{u.scope}}</span>
+      <a href="#" style="font-size: 12px; color: {{t.muted}}">登出</a>
+    </div>
+  </nav>
+
+  <main style="flex: 999 1 640px; min-width: 0; box-sizing: border-box; padding: 32px clamp(16px, 3vw, 48px); display: flex; flex-direction: column; gap: 24px">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px">
+      <h1 style="margin: 0; font-size: 28px; font-weight: 700">{{greet}}</h1><span style="font-size: 12px; color: {{t.muted}}">依本地時間：早安 5–11 時、午安 12–17 時、晚安 18–4 時；不顯示名字或角色</span>
+      <div role="group" aria-label="預覽身分（設計稿用）" style="margin-left: auto; display: flex; gap: 4px; padding: 4px; border-radius: 10px; border: 1px dashed {{t.dash}}">
+        <button type="button" onClick="{{setStaff}}" aria-pressed="{{staffPressed}}" style="height: 32px; padding: 0 12px; border: 0; border-radius: 7px; background: {{staffBg}}; color: {{staffFg}}; font: 600 13px Inter, 'Noto Sans TC', sans-serif">一般員工</button>
+        <button type="button" onClick="{{setManager}}" aria-pressed="{{managerPressed}}" style="height: 32px; padding: 0 12px; border: 0; border-radius: 7px; background: {{managerBg}}; color: {{managerFg}}; font: 600 13px Inter, 'Noto Sans TC', sans-serif">主管</button>
+      </div>
+      <button type="button" onClick="{{toggleDark}}" aria-pressed="{{darkPressed}}" style="height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 600 13px Inter, 'Noto Sans TC', sans-serif">{{modeLabel}}</button>
+    </div>
+
+    <form style="display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: 16px; background: {{t.surface}}; border: 1px solid {{t.line}}">
+      <div style="display: flex; gap: 10px">
+        <input type="text" aria-label="問題" placeholder="想知道什麼？例如：{{u.example}}" style="flex: 1; min-width: 0; height: 52px; padding: 0 16px; border-radius: 12px; border: 1.5px solid {{t.line}}; background: {{t.bg}}; color: {{t.text}}; font: 16px Inter, 'Noto Sans TC', sans-serif">
+        <button type="button" style="height: 52px; padding: 0 22px; border: 0; border-radius: 12px; background: {{t.primary}}; color: {{t.onPrimary}}; font: 700 15px Inter, 'Noto Sans TC', sans-serif">提問</button>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+        <span style="font-size: 13px; color: {{t.muted}}">常見問題</span>
+        <sc-for list="{{u.faq}}" as="q" hint-placeholder-count="3">
+          <button type="button" style="height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid {{t.line}}; background: transparent; color: {{t.text}}; font: 13px Inter, 'Noto Sans TC', sans-serif">{{q}}</button>
+        </sc-for>
+      </div>
+    </form>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; align-items: start">
+      <section class="kh-card" style="background: {{t.surface}}; border: 1px solid {{t.line}}">
+        <h2 style="margin: 0; font-size: 17px; font-weight: 700">{{u.todoTitle}}</h2>
+        <sc-for list="{{u.todo}}" as="r" hint-placeholder-count="3">
+          <div class="kh-row" style="background: {{t.raised}}">
+            <span style="width: 8px; height: 8px; border-radius: 999px; background: {{r.dot}}"></span>
+            <span style="display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1"><span style="font-size: 14px; font-weight: 600">{{r.title}}</span><span style="font-size: 12px; color: {{t.muted}}">{{r.sub}}</span></span>
+            <button type="button" style="height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 600 13px Inter, 'Noto Sans TC', sans-serif">{{r.action}}</button>
+          </div>
+        </sc-for>
+      </section>
+
+      <section class="kh-card" style="background: {{t.surface}}; border: 1px solid {{t.line}}">
+        <h2 style="margin: 0; font-size: 17px; font-weight: 700">問過的問題</h2>
+        <sc-for list="{{u.history}}" as="h" hint-placeholder-count="4">
+          <div class="kh-row" style="border: 1px solid {{t.line}}">
+            <span style="flex: 1; min-width: 0; font-size: 14px">{{h.q}}</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: {{t.muted}}">{{h.when}}</span>
+            <button type="button" style="height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; color: {{t.primary}}; font: 600 13px Inter, 'Noto Sans TC', sans-serif">再問一次</button>
+          </div>
+        </sc-for>
+        <p style="margin: 0; font-size: 12px; line-height: 1.6; color: {{t.muted}}">只保存問題文字。再問一次會用你現在看得到的資料重新回答。</p>
+      </section>
+
+      <section class="kh-card" style="background: {{t.surface}}; border: 1px solid {{t.line}}">
+        <h2 style="margin: 0; font-size: 17px; font-weight: 700">最近新增的文件</h2>
+        <sc-for list="{{u.docs}}" as="d" hint-placeholder-count="4">
+          <div class="kh-row" style="border: 1px solid {{t.line}}">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: {{t.muted}}">{{d.date}}</span>
+            <span style="flex: 1; min-width: 0; font-size: 14px">{{d.title}}</span>
+            <span style="font-size: 12px; padding: 2px 8px; border-radius: 6px; background: {{t.raised}}; color: {{t.muted}}">{{d.tag}}</span>
+          </div>
+        </sc-for>
+      </section>
+
+      <section class="kh-card" style="background: {{t.surface}}; border: 1px solid {{t.line}}">
+        <h2 style="margin: 0; font-size: 17px; font-weight: 700">最近看過</h2>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <sc-for list="{{u.recent}}" as="e" hint-placeholder-count="5">
+            <button type="button" style="display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid {{t.line}}; background: transparent; color: {{t.text}}; font: 14px Inter, 'Noto Sans TC', sans-serif"><span style="width: 10px; height: 10px; border-radius: {{e.radius}}; background: {{e.color}}"></span>{{e.name}}</button>
+          </sc-for>
+        </div>
+        <p style="margin: 0; font-size: 12px; color: {{t.muted}}">點了直接在圖譜中打開。</p>
+      </section>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { dark: false, role: 'staff' }; }
+  renderVals() {
+    const L = { bg: '#F5F6F3', surface: '#FFFFFF', raised: '#EDEFF2', text: '#14171A', muted: '#5B6470', line: '#DDE1E4', primary: '#2340C8', onPrimary: '#FFFFFF', evid: '#E8B800', dash: '#9AA3AE', inkBg: '#14171A', inkFg: '#FFFFFF', conflict: '#A3266A', warning: '#9A3D00', success: '#1A6E33', ePerson: '#3D7AB8', eTeam: '#2E7D5B', eProject: '#7A52C7' };
+    const D = { bg: '#0A0D14', surface: '#111621', raised: '#182030', text: '#E7ECF5', muted: '#8B97AD', line: '#253044', primary: '#3EE6D2', onPrimary: '#04201D', evid: '#FFB547', dash: '#3B4A63', inkBg: '#E7ECF5', inkFg: '#0A0D14', conflict: '#FF7AA8', warning: '#FF9466', success: '#6CC489', ePerson: '#7FB2EB', eTeam: '#5CC294', eProject: '#B89CF0' };
+    const d = this.state.dark, t = d ? D : L, m = this.state.role === 'manager';
+    const P = { color: t.ePerson, radius: '999px' }, T = { color: t.eTeam, radius: '3px' }, J = { color: t.eProject, radius: '2px' };
+    const staff = {
+      name: 'staff@example.test', initial: 'S', role: '一般員工', scope: '公開、內部、青翼專案', example: '青翼專案現在的進度？',
+      faq: ['到職滿一年有幾天年假？', '人資部的經理是誰？', '青翼專案由誰負責？'],
+      todoTitle: '有更新',
+      todo: [
+        { dot: t.success, title: '你上傳的「青翼桌供應商會議筆記」已核准', sub: '新增 2 個實體 · 王小明 核准 · 昨天', action: '在圖譜查看' },
+        { dot: t.primary, title: '「青翼專案啟動會議紀錄」審核中', sub: '上傳於 3 天前 · 主管核准後才會出現在問答與圖譜', action: '查看進度' },
+        { dot: t.success, title: '你回報的回答已處理', sub: '「人資部的經理是誰？」· 已更正出處', action: '看處理結果' }
+      ],
+      history: [{ q: '青翼專案現在的進度？', when: '昨天' }, { q: '資訊安全規定對筆電有什麼要求？', when: '3 天前' }, { q: '人資部的經理是誰？', when: '上週' }, { q: '產品研發部有哪些人？', when: '上週' }],
+      docs: [{ date: '05-15', title: '青翼專案進度更新', tag: '內部 · 青翼' }, { date: '02-10', title: '青翼專案啟動會議紀錄', tag: '內部 · 青翼' }, { date: '02-02', title: '資訊安全規定', tag: '內部' }, { date: '01-12', title: '組織與主管名單', tag: '內部' }],
+      recent: [Object.assign({ name: '青翼專案' }, J), Object.assign({ name: '王小明' }, P), Object.assign({ name: '產品研發部' }, T), Object.assign({ name: '林志明' }, P)]
+    };
+    const manager = {
+      name: 'manager@example.test', initial: 'M', role: '主管 · 可審核', scope: '公開、內部、機密、青翼專案、長堤專案', example: '長堤專案的風險有哪些？',
+      faq: ['青翼桌的建議售價是多少？', '長堤專案由誰負責？', '2026 年組織調整有哪些？'],
+      todoTitle: '等你處理',
+      todo: [
+        { dot: t.conflict, title: '待審文件 3 份', sub: '11 個項目 · 其中 2 組說法不同需要你決定', action: '開始審核' },
+        { dot: t.warning, title: '回報有錯 2 則', sub: '最早一則在 2 天前 · 處理結果會回到回報的人', action: '處理回報' }
+      ],
+      history: [{ q: '青翼桌的建議售價是多少？', when: '今天' }, { q: '長堤專案進度落後的原因？', when: '昨天' }, { q: '營運部有哪些人？', when: '4 天前' }, { q: '青翼專案由誰負責？', when: '上週' }],
+      docs: [{ date: '05-15', title: '青翼專案進度更新', tag: '內部 · 青翼' }, { date: '04-20', title: '長堤專案進度報告', tag: '內部 · 長堤' }, { date: '03-20', title: '2026 年組織調整與調薪方案', tag: '機密' }, { date: '03-15', title: '青翼桌成本估算', tag: '機密 · 青翼' }],
+      recent: [Object.assign({ name: '長堤專案' }, J), Object.assign({ name: '張雅婷' }, P), Object.assign({ name: '營運部' }, T), Object.assign({ name: '青翼專案' }, J), Object.assign({ name: '黃建宏' }, P)]
+    };
+    const u = m ? manager : staff;
+    const nav = [{ label: '問答' }, { label: '圖譜' }, { label: '時間軸' }, { label: '上傳' }].concat(m ? [{ label: '待審', badge: '5' }] : []);
+    const hr = new Date().getHours();
+    return {
+      t, u, nav,
+      greet: hr >= 5 && hr <= 11 ? '早安' : (hr >= 12 && hr <= 17 ? '午安' : '晚安'),
+      modeLabel: d ? 'Dark' : 'Light', darkPressed: d ? 'true' : 'false',
+      toggleDark: () => this.setState({ dark: !d }),
+      setStaff: () => this.setState({ role: 'staff' }), setManager: () => this.setState({ role: 'manager' }),
+      staffPressed: m ? 'false' : 'true', managerPressed: m ? 'true' : 'false',
+      staffBg: m ? 'transparent' : t.inkBg, staffFg: m ? t.text : t.inkFg,
+      managerBg: m ? t.inkBg : 'transparent', managerFg: m ? t.inkFg : t.text
+    };
+  }
+}
+</script>
+</body>
+</html>

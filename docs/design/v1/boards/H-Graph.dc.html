@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>展示模式圖譜</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;700&amp;family=Noto+Sans+TC:wght@400;500;700;900&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2340C8}a:hover{color:#14171A}
+</style>
+</helmet>
+<div style="width: 1920px; height: 1080px; box-sizing: border-box; background: {{t.bg}}; color: {{t.text}}; font-family: Inter, 'Noto Sans TC', sans-serif; display: flex; flex-direction: column">
+
+  <header style="display: flex; align-items: center; gap: 24px; height: 96px; padding: 0 40px; box-sizing: border-box; border-bottom: 1px solid {{t.line}}; background: {{t.surface}}">
+    <div style="display: flex; align-items: center; gap: 14px">
+      <svg width="44" height="44" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="11" fill="{{t.surface}}" stroke="{{t.line}}"></rect><path d="M17 12v24M17 24 32 13.5M17 24l15 10.5" fill="none" stroke="{{t.text}}" stroke-width="3.75" stroke-linecap="round"></path><circle cx="17" cy="24" r="3.5" fill="{{t.text}}"></circle><circle cx="32" cy="34.5" r="4.5" fill="{{t.primary}}"></circle><circle cx="32" cy="13.5" r="4.5" fill="{{t.mark}}" stroke="{{t.markText}}" stroke-width="1.5"></circle></svg>
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 26px; font-weight: 900; line-height: 1.1">範例公司</span>
+        <span style="display: flex; gap: 8px; font-size: 16px; color: {{t.muted}}"><span>虛構資料</span><span>·</span><span>展示用權限</span></span>
+      </div>
+    </div>
+    <div role="tablist" aria-label="頁面" style="margin-left: 40px; display: flex; padding: 5px; border-radius: 14px; background: {{t.raised}}">
+      <button type="button" role="tab" aria-selected="false" style="height: 56px; padding: 0 28px; border: 0; border-radius: 10px; background: transparent; color: {{t.muted}}; font: 500 22px Inter, 'Noto Sans TC', sans-serif">問答</button>
+      <button type="button" role="tab" aria-selected="true" style="height: 56px; padding: 0 28px; border: 0; border-radius: 10px; background: {{t.surface}}; color: {{t.text}}; font: 700 22px Inter, 'Noto Sans TC', sans-serif">圖譜</button>
+    </div>
+    <div role="radiogroup" aria-label="身分" style="margin-left: auto; display: flex; align-items: center; gap: 6px; padding: 5px; border-radius: 14px; background: {{t.raised}}">
+      <span style="padding: 0 10px 0 12px; font-size: 18px; color: {{t.muted}}">身分</span>
+      <button type="button" role="radio" aria-checked="false" style="height: 56px; padding: 0 22px; border: 0; border-radius: 10px; background: transparent; color: {{t.text}}; font: 500 22px Inter, 'Noto Sans TC', sans-serif">訪客</button>
+      <button type="button" role="radio" aria-checked="false" style="height: 56px; padding: 0 22px; border: 0; border-radius: 10px; background: transparent; color: {{t.text}}; font: 500 22px Inter, 'Noto Sans TC', sans-serif">一般員工</button>
+      <button type="button" role="radio" aria-checked="true" style="height: 56px; padding: 0 22px; border: 0; border-radius: 10px; background: {{t.inkBg}}; color: {{t.inkFg}}; font: 700 22px Inter, 'Noto Sans TC', sans-serif">主管</button>
+    </div>
+    <button type="button" onClick="{{toggleDark}}" aria-pressed="{{darkPressed}}" style="height: 66px; padding: 0 16px; border-radius: 14px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 600 15px 'JetBrains Mono', monospace">{{modeLabel}}</button>
+  </header>
+
+  <main style="position: relative; flex: 1; overflow: hidden; background-image: radial-gradient({{t.dot}} 1.5px, transparent 1.5px); background-size: 32px 32px">
+    <div style="position: absolute; left: 40px; top: 32px; display: flex; align-items: center; gap: 10px; font-size: 22px">
+      <button type="button" style="height: 48px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: {{t.primary}}; font: 500 22px Inter, 'Noto Sans TC', sans-serif">全部</button>
+      <span style="color: {{t.dash}}">›</span>
+      <span style="height: 48px; display: inline-flex; align-items: center; padding: 0 14px; border-radius: 10px; background: {{t.raised}}; font-weight: 700">王小明</span>
+    </div>
+
+    <div style="position: absolute; left: 0; top: 0; bottom: 0; right: 640px">
+      <sc-for list="{{edges}}" as="e" hint-placeholder-count="12">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%"><line x1="{{e.x1}}" y1="{{e.y1}}" x2="{{e.x2}}" y2="{{e.y2}}" stroke="{{e.c}}" stroke-width="{{e.w}}" opacity="{{e.o}}" vector-effect="non-scaling-stroke"></line></svg>
+        <sc-if value="{{e.labelOn}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; left: {{e.mx}}%; top: {{e.my}}%; transform: translate(-50%, -50%); padding: 4px 12px; border-radius: 8px; background: {{t.surface}}; border: 1px solid {{t.line}}; font: 500 18px 'JetBrains Mono', monospace; color: {{t.text}}">{{e.label}}</span></sc-if>
+      </sc-for>
+      <sc-for list="{{nodes}}" as="n" hint-placeholder-count="14">
+        <div style="position: absolute; left: {{n.x}}%; top: {{n.y}}%; width: 0; height: 0; opacity: {{n.o}}">
+          <div style="position: absolute; left: {{n.off}}; top: {{n.off}}; width: {{n.s}}; height: {{n.s}}; border-radius: {{n.r}}; background: {{n.c}}; box-shadow: {{n.ring}}"></div>
+          <span style="position: absolute; left: 0; top: {{n.lt}}; transform: translateX(-50%); white-space: nowrap; padding: 2px 8px; border-radius: 6px; background: {{n.lbg}}; font-size: {{n.fs}}; font-weight: {{n.fw}}">{{n.label}}</span>
+          <sc-if value="{{n.focus}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; left: 0; top: {{n.ht}}; transform: translateX(-50%); white-space: nowrap; font: 500 15px 'JetBrains Mono', monospace; color: {{t.primary}}">鍵盤焦點 · Enter 選取</span></sc-if>
+        </div>
+      </sc-for>
+    </div>
+
+    <aside aria-label="實體詳細資訊" style="position: absolute; top: 32px; right: 40px; bottom: 32px; width: 580px; box-sizing: border-box; display: flex; flex-direction: column; gap: 22px; padding: 32px; border-radius: 24px; background: {{t.surface}}; border: 1px solid {{t.line}}">
+      <span style="align-self: flex-start; height: 36px; display: inline-flex; align-items: center; padding: 0 14px; border-radius: 999px; background: {{t.pSoft}}; font-size: 18px; font-weight: 700">人員</span>
+      <span style="font-size: 44px; font-weight: 900; line-height: 1.1">王小明</span>
+      <span style="font-size: 20px; color: {{t.muted}}">關聯 3 · 出現在 2 份文件</span>
+      <div style="display: flex; gap: 12px">
+        <span style="flex: 1; display: inline-flex; align-items: center; justify-content: center; height: 64px; border-radius: 14px; background: {{t.primary}}; color: {{t.onPrimary}}; font-size: 22px; font-weight: 700">在問答中問</span>
+        <span style="flex: 1; display: inline-flex; align-items: center; justify-content: center; height: 64px; border-radius: 14px; border: 1px solid {{t.line}}; font-size: 22px">只看它</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 0 18px; border-radius: 14px; background: {{t.raised}}; font-size: 22px"><span style="width: 16px; height: 16px; border-radius: 4px; background: {{t.eT}}"></span>產品研發部<span style="margin-left: auto; font-size: 18px; color: {{t.muted}}">隸屬・負責</span></div>
+        <div style="display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 0 18px; border-radius: 14px; background: {{t.raised}}; font-size: 22px; box-shadow: inset 0 0 0 2px {{t.focus}}"><span style="width: 16px; height: 16px; border-radius: 3px; background: {{t.eJ}}"></span>青翼專案<span style="margin-left: auto; font-size: 18px; color: {{t.muted}}">負責</span></div>
+      </div>
+      <div style="margin-top: auto; padding: 22px 24px; border-radius: 18px; background: {{t.reading}}; color: {{t.readingText}}; font-size: 21px; line-height: 1.8">青翼專案由產品研發部經理<span style="background: {{t.markReading}}; padding: 1px 3px; border-radius: 3px">王小明</span>負責，成員包括周大衛與林志明。</div>
+    </aside>
+  </main>
+
+  <footer style="display: flex; align-items: center; gap: 28px; height: 52px; padding: 0 40px; border-top: 1px solid {{t.line}}; background: {{t.surface}}; font-size: 16px; color: {{t.muted}}">
+    <span><kbd style="font-family: 'JetBrains Mono', monospace">← →</kbd> 在相鄰節點間移動</span>
+    <span><kbd style="font-family: 'JetBrains Mono', monospace">Enter</kbd> 選取</span>
+    <span><kbd style="font-family: 'JetBrains Mono', monospace">Esc</kbd> 回到全部</span>
+    <span><kbd style="font-family: 'JetBrains Mono', monospace">A</kbd> 在問答中問</span>
+    <span><kbd style="font-family: 'JetBrains Mono', monospace">Q</kbd> 回問答</span>
+    <span style="margin-left: auto"><kbd style="font-family: 'JetBrains Mono', monospace">?</kbd> 全部快捷鍵</span>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1920,"height":1080}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { dark: false }; }
+  renderVals() {
+    const L = { bg: '#F5F6F3', surface: '#FFFFFF', raised: '#EDEFF2', text: '#14171A', muted: '#5B6470', line: '#DDE1E4', dash: '#9AA3AE', dot: '#E3E6EA', edge: '#B9C0C8', primary: '#2340C8', onPrimary: '#FFFFFF', focus: '#2340C8', inkBg: '#14171A', inkFg: '#FFFFFF', mark: '#FFE066', markText: '#14171A', markReading: '#FFE066', reading: '#FFFFFF', readingText: '#14171A', eP: '#3D7AB8', eT: '#2E7D5B', eJ: '#7A52C7', pSoft: 'rgba(61,122,184,0.14)' };
+    const D = { bg: '#0A0D14', surface: '#111621', raised: '#182030', text: '#E7ECF5', muted: '#8B97AD', line: '#253044', dash: '#3B4A63', dot: '#1A2232', edge: '#3B4A63', primary: '#3EE6D2', onPrimary: '#04201D', focus: '#3EE6D2', inkBg: '#E7ECF5', inkFg: '#0A0D14', mark: '#FFB547', markText: '#FFD9A0', markReading: '#FFE2B0', reading: '#F4F6FA', readingText: '#141A24', eP: '#7FB2EB', eT: '#5CC294', eJ: '#B89CF0', pSoft: 'rgba(127,178,235,0.16)' };
+    const d = this.state.dark;
+    const t = d ? D : L;
+    const P = 'p', T = 't', J = 'j';
+    const col = (k) => (k === P ? t.eP : (k === T ? t.eT : t.eJ));
+    const rad = (k) => (k === P ? '999px' : (k === T ? '12px' : '8px'));
+    const N = [
+      ['產品研發部', 36, 46, T], ['青翼專案', 66, 28, J], ['王小明', 34, 22, P], ['周大衛', 62, 58, P], ['林志明', 18, 62, P],
+      ['營運部', 74, 80, T], ['長堤專案', 90, 62, J], ['張雅婷', 92, 86, P], ['黃建宏', 56, 90, P],
+      ['人資部', 86, 22, T], ['吳宜蓁', 94, 8, P], ['業務部', 12, 84, T], ['李佳穎', 8, 40, P], ['林志明', 28, 92, P]
+    ];
+    const sel = 2, focus = 1, near = { 0: 1, 1: 1, 2: 1 };
+    const nodes = N.map((n, i) => {
+      const s = i === sel ? 64 : (n[3] === P ? 34 : 46);
+      const on = near[i];
+      return {
+        label: n[0], x: n[1], y: n[2], s: s + 'px', off: (-s / 2) + 'px', lt: (s / 2 + 8) + 'px', ht: (s / 2 + 44) + 'px',
+        r: rad(n[3]), c: col(n[3]), o: on ? '1' : '0.28',
+        ring: i === sel ? '0 0 0 5px ' + t.bg + ', 0 0 0 9px ' + t.text : (i === focus ? '0 0 0 4px ' + t.bg + ', 0 0 0 7px ' + t.focus : 'none'),
+        fs: i === sel ? '26px' : '20px', fw: i === sel ? '900' : (on ? '700' : '500'), lbg: on ? t.surface : 'transparent', focus: i === focus
+      };
+    });
+    const pairs = [[2, 0, '隸屬・負責'], [2, 1, '負責'], [3, 0], [4, 0], [13, 11], [10, 9], [7, 5], [8, 5], [12, 11], [7, 6], [3, 1], [4, 1], [8, 6], [0, 1], [5, 6]];
+    const edges = pairs.map(([a, b, label]) => {
+      const sel2 = a === sel || b === sel;
+      return { x1: N[a][1], y1: N[a][2], x2: N[b][1], y2: N[b][2], mx: (N[a][1] + N[b][1]) / 2, my: (N[a][2] + N[b][2]) / 2, c: sel2 ? t.primary : t.edge, w: sel2 ? 4 : 2, o: sel2 ? '1' : (near[a] && near[b] ? '0.8' : '0.3'), labelOn: !!label, label: label || '' };
+    });
+    return {
+      t, nodes, edges,
+      modeLabel: d ? 'DARK' : 'LIGHT', darkPressed: d ? 'true' : 'false',
+      toggleDark: () => this.setState({ dark: !d })
+    };
+  }
+}
+</script>
+</body>
+</html>

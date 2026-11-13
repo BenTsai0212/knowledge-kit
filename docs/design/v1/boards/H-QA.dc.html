@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>展示模式問答</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;700&amp;family=Noto+Sans+TC:wght@400;500;700;900&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2340C8}a:hover{color:#14171A}
+@keyframes kRise{from{opacity:0;transform:translateY(12px)}}
+@keyframes kSlide{from{opacity:0;transform:translateX(32px)}}
+@keyframes kBadge{0%{transform:scale(1)}40%{transform:scale(1.08)}100%{transform:none}}
+.p-rise{animation:kRise 220ms cubic-bezier(.2,0,0,1) backwards}
+.p-slide{animation:kSlide 220ms cubic-bezier(.2,0,0,1) backwards}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</helmet>
+<div style="width: 1920px; height: 1080px; box-sizing: border-box; background: {{t.bg}}; color: {{t.text}}; font-family: Inter, 'Noto Sans TC', sans-serif; display: flex; flex-direction: column">
+
+  <header style="display: flex; align-items: center; gap: 24px; height: 96px; padding: 0 40px; box-sizing: border-box; border-bottom: 1px solid {{t.line}}; background: {{t.surface}}">
+    <div style="display: flex; align-items: center; gap: 14px">
+      <svg width="44" height="44" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="11" fill="{{t.surface}}" stroke="{{t.line}}"></rect><path d="M17 12v24M17 24 32 13.5M17 24l15 10.5" fill="none" stroke="{{t.text}}" stroke-width="3.75" stroke-linecap="round"></path><circle cx="17" cy="24" r="3.5" fill="{{t.text}}"></circle><circle cx="32" cy="34.5" r="4.5" fill="{{t.primary}}"></circle><circle cx="32" cy="13.5" r="4.5" fill="{{t.mark}}" stroke="{{t.markText}}" stroke-width="1.5"></circle></svg>
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 26px; font-weight: 900; line-height: 1.1">範例公司</span>
+        <span style="display: flex; gap: 8px; font-size: 16px; color: {{t.muted}}"><span>虛構資料</span><span>·</span><span>展示用權限</span></span>
+      </div>
+    </div>
+
+    <div role="tablist" aria-label="頁面" style="margin-left: 40px; display: flex; padding: 5px; border-radius: 14px; background: {{t.raised}}">
+      <button type="button" role="tab" aria-selected="true" style="height: 56px; padding: 0 28px; border: 0; border-radius: 10px; background: {{t.surface}}; color: {{t.text}}; font: 700 22px Inter, 'Noto Sans TC', sans-serif">問答</button>
+      <button type="button" role="tab" aria-selected="false" style="height: 56px; padding: 0 28px; border: 0; border-radius: 10px; background: transparent; color: {{t.muted}}; font: 500 22px Inter, 'Noto Sans TC', sans-serif">圖譜</button>
+    </div>
+
+    <div role="radiogroup" aria-label="身分" style="margin-left: auto; display: flex; align-items: center; gap: 6px; padding: 5px; border-radius: 14px; background: {{t.raised}}">
+      <span style="padding: 0 10px 0 12px; font-size: 18px; color: {{t.muted}}">身分</span>
+      <sc-for list="{{roleTabs}}" as="r" hint-placeholder-count="3">
+        <button type="button" role="radio" aria-checked="{{r.checked}}" onClick="{{r.go}}" style="display: inline-flex; align-items: center; gap: 10px; height: 56px; padding: 0 22px; border: 0; border-radius: 10px; background: {{r.bg}}; color: {{r.fg}}; font: {{r.weight}} 22px Inter, 'Noto Sans TC', sans-serif; cursor: pointer"><kbd style="font: 500 14px 'JetBrains Mono', monospace; opacity: 0.6">{{r.key}}</kbd>{{r.label}}</button>
+      </sc-for>
+    </div>
+    <button type="button" onClick="{{toggleCompare}}" aria-pressed="{{comparePressed}}" style="height: 66px; padding: 0 22px; border-radius: 14px; border: 2px solid {{compareBorder}}; background: {{compareBg}}; color: {{t.text}}; font: 700 20px Inter, 'Noto Sans TC', sans-serif; cursor: pointer">身分對照 <kbd style="font: 500 14px 'JetBrains Mono', monospace; opacity: 0.6">C</kbd></button>
+    <button type="button" onClick="{{toggleDark}}" aria-pressed="{{darkPressed}}" style="height: 66px; padding: 0 16px; border-radius: 14px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 600 15px 'JetBrains Mono', monospace">{{modeLabel}}</button>
+  </header>
+
+  <div style="flex: 1; min-height: 0; display: grid; grid-template-columns: 440px minmax(0, 1fr); ">
+    <nav aria-label="劇本" style="display: flex; flex-direction: column; gap: 18px; padding: 32px 28px; border-right: 1px solid {{t.line}}; background: {{t.surface}}; overflow: hidden">
+      <div style="display: flex; justify-content: space-between; align-items: baseline">
+        <span style="font-size: 22px; font-weight: 900">劇本</span>
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 18px; color: {{t.muted}}">第 {{pos}}／7 題</span>
+      </div>
+      <sc-for list="{{scenarios}}" as="s" hint-placeholder-count="3">
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; align-items: center; gap: 10px"><span style="font-size: 19px; font-weight: 700">{{s.title}}</span><span style="height: 28px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: 999px; background: {{t.inkBg}}; color: {{t.inkFg}}; font-size: 15px; font-weight: 700">{{s.role}}</span></div>
+          <sc-for list="{{s.qs}}" as="q" hint-placeholder-count="3">
+            <button type="button" onClick="{{q.go}}" aria-current="{{q.current}}" style="display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 14px; border-radius: 12px; border: {{q.border}}; background: {{q.bg}}; color: {{t.text}}; text-align: left; font: {{q.weight}} 19px Inter, 'Noto Sans TC', sans-serif; cursor: pointer"><span style="flex: none; width: 28px; font-family: 'JetBrains Mono', monospace; font-size: 15px; color: {{q.numColor}}">{{q.mark}}</span>{{q.text}}</button>
+          </sc-for>
+        </div>
+      </sc-for>
+    </nav>
+
+    <main style="position: relative; min-width: 0; display: flex; flex-direction: column; gap: 28px; padding: 40px 56px; overflow: hidden">
+      <div class="p-rise" style="align-self: flex-start; max-width: 1100px; padding: 18px 28px; border-radius: 20px 20px 20px 6px; background: {{t.inkBg}}; color: {{t.inkFg}}; font-size: 36px; font-weight: 700; line-height: 1.35">{{qText}}</div>
+
+      <sc-if value="{{single}}" hint-placeholder-val="{{ true }}">
+        <article class="p-rise" style="max-width: {{answerMax}}; display: flex; flex-direction: column; gap: 22px; padding: 32px 36px; border-radius: 24px; background: {{t.surface}}; border: 1px solid {{t.line}}; animation-delay: 120ms">
+          <sc-if value="{{cur.ok}}" hint-placeholder-val="{{ true }}">
+            <p style="margin: 0; font-size: 30px; line-height: 1.75">
+              <sc-for list="{{cur.parts}}" as="p" hint-placeholder-count="3"><span>{{p.t}}</span><sc-if value="{{p.chip}}" hint-placeholder-val="{{ true }}"><button type="button" onClick="{{toggleSrc}}" aria-label="出處 {{p.n}}" style="display: inline-flex; align-items: center; justify-content: center; min-width: 40px; height: 36px; margin: 0 4px; padding: 0 10px; border: 0; border-radius: 9px; background: {{p.bg}}; color: {{p.fg}}; box-shadow: inset 0 0 0 1.5px {{t.markLine}}; font: 500 20px 'JetBrains Mono', monospace; vertical-align: 3px; cursor: pointer">{{p.n}}</button></sc-if></sc-for>
+            </p>
+            <sc-if value="{{cur.conflict}}" hint-placeholder-val="{{ false }}">
+              <p style="margin: 0; padding: 14px 18px; border-radius: 14px; background: {{t.conflictSoft}}; color: {{t.conflictText}}; font-size: 20px">出處 1 與 2 的上市時間不同，兩種說法並列</p>
+            </sc-if>
+          </sc-if>
+          <sc-if value="{{cur.refused}}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 10px; padding: 22px 26px; border-radius: 18px; border: 2px dashed {{t.dash}}">
+              <p style="margin: 0; font-size: 28px; font-weight: 700">找不到可以回答這個問題的資料。</p>
+              <p style="margin: 0; font-size: 20px; color: {{t.muted}}">換個說法，或改問負責這件事的人或部門。</p>
+            </div>
+          </sc-if>
+        </article>
+      </sc-if>
+
+      <sc-if value="{{compare}}" hint-placeholder-val="{{ false }}">
+        <div style="flex: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px">
+          <sc-for list="{{cols}}" as="c" hint-placeholder-count="3">
+            <article class="p-rise" style="display: flex; flex-direction: column; gap: 18px; padding: 26px 28px; border-radius: 22px; background: {{t.surface}}; border: {{c.border}}; animation-delay: {{c.delay}}">
+              <span style="align-self: flex-start; height: 40px; display: inline-flex; align-items: center; padding: 0 16px; border-radius: 999px; background: {{t.inkBg}}; color: {{t.inkFg}}; font-size: 20px; font-weight: 700">{{c.role}}</span>
+              <sc-if value="{{c.ok}}" hint-placeholder-val="{{ true }}">
+                <p style="margin: 0; font-size: 26px; line-height: 1.7"><sc-for list="{{c.parts}}" as="p" hint-placeholder-count="2"><span>{{p.t}}</span><sc-if value="{{p.chip}}" hint-placeholder-val="{{ true }}"><span style="display: inline-flex; align-items: center; justify-content: center; min-width: 36px; height: 32px; margin: 0 4px; padding: 0 8px; border-radius: 8px; background: {{t.markSoft}}; color: {{t.markText}}; box-shadow: inset 0 0 0 1.5px {{t.markLine}}; font: 500 18px 'JetBrains Mono', monospace; vertical-align: 3px">{{p.n}}</span></sc-if></sc-for></p>
+              </sc-if>
+              <sc-if value="{{c.refused}}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; border-radius: 16px; border: 2px dashed {{t.dash}}">
+                  <p style="margin: 0; font-size: 24px; font-weight: 700">找不到可以回答這個問題的資料。</p>
+                  <p style="margin: 0; font-size: 18px; color: {{t.muted}}">換個說法，或改問負責這件事的人或部門。</p>
+                </div>
+              </sc-if>
+            </article>
+          </sc-for>
+        </div>
+        <p style="margin: 0; font-size: 18px; color: {{t.muted}}">三欄各自以該身分送出同一題、各自依權限回答；拒答與一般拒答完全相同，不提示看不到什麼。</p>
+      </sc-if>
+
+      <sc-if value="{{srcOpen}}" hint-placeholder-val="{{ false }}">
+        <aside class="p-slide" aria-label="原文" style="position: absolute; top: 32px; right: 40px; bottom: 32px; width: 620px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px; padding: 28px 30px; border-radius: 24px; background: {{t.surface}}; border: 1px solid {{t.line}}; box-shadow: -16px 0 48px rgba(10,13,20,0.14)">
+          <div style="display: flex; align-items: center; gap: 12px"><span style="font-size: 18px; color: {{t.muted}}">原文 · 出處 1</span><button type="button" onClick="{{toggleSrc}}" style="margin-left: auto; height: 48px; padding: 0 16px; border-radius: 10px; border: 1px solid {{t.line}}; background: transparent; color: {{t.text}}; font: 500 17px Inter, 'Noto Sans TC', sans-serif; cursor: pointer">關閉 <kbd style="font: 500 13px 'JetBrains Mono', monospace; opacity: 0.6">Esc</kbd></button></div>
+          <span style="font-size: 28px; font-weight: 700">{{cur.doc}}</span>
+          <div style="flex: 1; padding: 24px 26px; border-radius: 18px; background: {{t.reading}}; color: {{t.readingText}}; font-size: 22px; line-height: 1.9">
+            <span style="background: {{t.markReading}}; box-shadow: 0 0 0 3px {{t.markReading}}; border-radius: 3px">{{cur.passage}}</span>
+          </div>
+        </aside>
+      </sc-if>
+    </main>
+  </div>
+
+  <footer style="display: flex; align-items: center; gap: 28px; height: 52px; padding: 0 40px; border-top: 1px solid {{t.line}}; background: {{t.surface}}; font-size: 16px; color: {{t.muted}}">
+    <span><kbd style="font-family: 'JetBrains Mono', monospace">← →</kbd> 上一題／下一題</span>
+    <span><kbd style="font-family: 'JetBrains Mono', monospace">1 2 3</kbd> 切換身分</span>
+    <span><kbd style="font-family: 'JetBrains Mono', monospace">S</kbd> 原文</span>
+    <span><kbd style="font-family: 'JetBrains Mono', monospace">C</kbd> 身分對照</span>
+    <span><kbd style="font-family: 'JetBrains Mono', monospace">G</kbd> 圖譜</span>
+    <span style="margin-left: auto"><kbd style="font-family: 'JetBrains Mono', monospace">?</kbd> 全部快捷鍵</span>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1920,"height":1080}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { qi: 3, role: 1, compare: false, src: true, dark: false }; }
+  renderVals() {
+    const s = this.state;
+    const L = { bg: '#F5F6F3', surface: '#FFFFFF', raised: '#EDEFF2', text: '#14171A', muted: '#5B6470', line: '#DDE1E4', dash: '#9AA3AE', primary: '#2340C8', primarySoft: '#E6EAFB', inkBg: '#14171A', inkFg: '#FFFFFF', mark: '#FFE066', markSoft: '#FFF3BF', markText: '#14171A', markLine: '#E8B800', markReading: '#FFE066', reading: '#FFFFFF', readingText: '#14171A', conflictSoft: '#FCE8F1', conflictText: '#7A1D50' };
+    const D = { bg: '#0A0D14', surface: '#111621', raised: '#182030', text: '#E7ECF5', muted: '#8B97AD', line: '#253044', dash: '#3B4A63', primary: '#3EE6D2', primarySoft: '#16302E', inkBg: '#E7ECF5', inkFg: '#0A0D14', mark: '#FFB547', markSoft: '#3A2A0E', markText: '#FFD9A0', markLine: '#7A5A20', markReading: '#FFE2B0', reading: '#F4F6FA', readingText: '#141A24', conflictSoft: '#2A1420', conflictText: '#FFD3E2' };
+    const t = s.dark ? D : L;
+    const roles = ['訪客', '一般員工', '主管'];
+    const Q = [
+      { sc: 0, text: '範例公司有哪些部門？', min: 0, parts: [['範例公司設有產品研發部、營運部、人資部與業務部四個部門', 1], ['。']], doc: '員工手冊', passage: '範例公司是一家約 150 人的辦公家具製造商，設有產品研發部、營運部、人資部與業務部四個部門。' },
+      { sc: 1, text: '人資部的經理是誰？', min: 0, parts: [['人資部由吳宜蓁擔任經理，負責招募、教育訓練與員工關係', 1], ['。']], doc: '員工手冊', passage: '人資部由吳宜蓁擔任經理，負責招募、教育訓練與員工關係。對本手冊有疑問，請洽人資部。' },
+      { sc: 1, text: '到職滿一年有幾天年假？', min: 0, parts: [['到職滿一年有 7 天年假，滿半年為 3 天', 1], ['；請假須在系統中提出，由直屬主管核准。']], doc: '員工手冊', passage: '年假依年資計算：到職滿半年有 3 天，滿一年有 7 天。請假須在系統中提出，由直屬主管核准。' },
+      { sc: 1, text: '青翼專案的負責人是誰？', min: 1, parts: [['青翼專案由產品研發部經理王小明負責，成員包括周大衛與林志明', 1], ['。']], doc: '青翼專案啟動會議紀錄', passage: '青翼專案由產品研發部經理王小明負責，成員包括周大衛與林志明。' },
+      { sc: 1, text: '青翼桌預計什麼時候上市？', min: 1, conflict: true, parts: [['原訂 2026 年第二季上市', 1], ['，因馬達供應商交期延遲，已延後至第三季', 2], ['。']], doc: '青翼專案啟動會議紀錄', passage: '專案目標是開發一款可調式辦公桌「青翼桌」，預計 2026 年第二季上市。' },
+      { sc: 2, text: '長堤專案目前的進度如何？', min: 2, parts: [['長堤專案由營運部經理張雅婷負責，目標是汰換倉儲管理系統，目前完成約 60%', 1], ['。']], doc: '長堤專案進度報告', passage: '長堤專案由營運部經理張雅婷負責，目標是汰換倉儲管理系統，目前完成約 60%。' },
+      { sc: 2, text: '2026 年平均調薪幅度是多少？', min: 2, parts: [['2026 年全公司平均調薪 3%，績效評等為優的同仁另加 2%', 1], ['。']], doc: '2026 年組織調整與調薪方案', passage: '2026 年全公司平均調薪 3%，績效評等為優的同仁另加 2%。' }
+    ];
+    const scRole = [0, 1, 2];
+    const scTitle = ['訪客', '新進員工查詢', '主管總覽'];
+    const q = Q[s.qi];
+    const mkParts = (parts, srcOn) => parts.map(([tx, n]) => ({ t: tx, chip: !!n, n: n || '', bg: srcOn && n === 1 ? t.text : t.markSoft, fg: srcOn && n === 1 ? t.mark : t.markText }));
+    const ok = s.role >= q.min;
+    const cur = { ok, refused: !ok, parts: mkParts(q.parts, s.src), conflict: !!q.conflict, doc: q.doc, passage: q.passage };
+    const scenarios = [0, 1, 2].map((si) => ({
+      title: scTitle[si], role: roles[scRole[si]],
+      qs: Q.map((x, i) => ({ x, i })).filter((o) => o.x.sc === si).map(({ x, i }) => {
+        const curQ = i === s.qi, done = i < s.qi;
+        return { text: x.text, mark: done ? '✓' : String(i + 1).padStart(2, '0'), numColor: done ? t.primary : t.muted, current: curQ ? 'step' : 'false', border: curQ ? '2px solid ' + t.primary : '1px solid ' + t.line, bg: curQ ? t.primarySoft : 'transparent', weight: curQ ? '700' : '500', go: () => this.setState({ qi: i, role: scRole[x.sc], src: false }) };
+      })
+    }));
+    const roleTabs = roles.map((r, i) => ({ label: r, key: String(i + 1), checked: s.role === i ? 'true' : 'false', bg: s.role === i ? t.inkBg : 'transparent', fg: s.role === i ? t.inkFg : t.text, weight: s.role === i ? '700' : '500', go: () => this.setState({ role: i }) }));
+    const cols = roles.map((r, i) => { const okR = i >= q.min; return { role: r, ok: okR, refused: !okR, parts: mkParts(q.parts, false), border: i === s.role ? '2px solid ' + t.primary : '1px solid ' + t.line, delay: (i * 80) + 'ms' }; });
+    return {
+      t, cur, scenarios, roleTabs, cols,
+      qText: q.text, pos: s.qi + 1,
+      single: !s.compare, compare: s.compare,
+      srcOpen: s.src && !s.compare && ok,
+      answerMax: s.src && ok ? '760px' : '1180px',
+      compareBorder: s.compare ? t.primary : t.line, compareBg: s.compare ? t.primarySoft : t.surface, comparePressed: s.compare ? 'true' : 'false',
+      toggleCompare: () => this.setState({ compare: !s.compare, src: false }),
+      toggleSrc: () => this.setState({ src: !s.src }),
+      modeLabel: s.dark ? 'DARK' : 'LIGHT', darkPressed: s.dark ? 'true' : 'false',
+      toggleDark: () => this.setState({ dark: !s.dark })
+    };
+  }
+}
+</script>
+</body>
+</html>

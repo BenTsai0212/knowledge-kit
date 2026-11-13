@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>拒答的出路與回報結果</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Sans+TC:wght@400;500;700;900&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width: 100%; min-height: 1000px; box-sizing: border-box; background: {{t.bg}}; color: {{t.text}}; font-family: Inter, 'Noto Sans TC', sans-serif; display: flex; flex-wrap: wrap; align-items: stretch">
+
+  <nav aria-label="頁面" style="flex: 1 1 200px; max-width: 220px; box-sizing: border-box; padding: 20px 14px; display: flex; flex-direction: column; gap: 4px; background: {{t.surface}}; border-right: 1px solid {{t.line}}">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 8px 16px">
+      <svg width="28" height="28" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="11" fill="{{t.raised}}"></rect><path d="M17 12v24M17 24 32 13.5M17 24l15 10.5" fill="none" stroke="{{t.text}}" stroke-width="4.5" stroke-linecap="round"></path><circle cx="32" cy="34.5" r="5" fill="{{t.primary}}"></circle><circle cx="32" cy="13.5" r="5" fill="{{t.evid}}"></circle></svg>
+      <span style="font-size: 16px; font-weight: 900">範例公司</span>
+    </div>
+    <a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; color: {{t.text}}; text-decoration: none; font-size: 15px">首頁</a>
+    <a href="#" aria-current="page" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; background: {{t.inkBg}}; color: {{t.inkFg}}; text-decoration: none; font-size: 15px; font-weight: 700">問答</a>
+    <a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; color: {{t.text}}; text-decoration: none; font-size: 15px">圖譜</a>
+    <a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; color: {{t.text}}; text-decoration: none; font-size: 15px">時間軸</a>
+    <a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; color: {{t.text}}; text-decoration: none; font-size: 15px">上傳</a>
+    <div style="margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; background: {{t.raised}}">
+      <span style="width: 32px; height: 32px; border-radius: 999px; background: {{t.inkBg}}; color: {{t.inkFg}}; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">周</span><span style="display: flex; flex-direction: column"><b style="font-size: 14px">周大衛</b><span style="font-size: 12px; color: {{t.muted}}">一般員工</span></span>
+    </div>
+  </nav>
+
+  <main style="flex: 999 1 600px; min-width: 0; box-sizing: border-box; padding: 32px clamp(16px, 3vw, 48px); display: flex; flex-direction: column; gap: 22px">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+      <h1 style="margin: 0; font-size: 28px; font-weight: 700">問答</h1>
+      <button type="button" onClick="{{toggleDark}}" aria-pressed="{{darkPressed}}" style="margin-left: auto; height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 600 13px Inter, 'Noto Sans TC', sans-serif">{{modeLabel}}</button>
+    </div>
+
+    <p style="margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: {{t.muted}}">① 拒答時給下一步</p>
+    <div style="align-self: flex-end; max-width: 70%; padding: 12px 16px; border-radius: 14px 14px 4px 14px; background: {{t.inkBg}}; color: {{t.inkFg}}; font-size: 15px">青翼專案的成本和售價是多少？</div>
+    <article style="display: flex; flex-direction: column; gap: 14px; padding: 20px; border-radius: 16px; background: {{t.surface}}; border: 1px solid {{t.line}}">
+      <p style="margin: 0; font-size: 16px; line-height: 1.7">找不到可以回答這個問題的資料。</p>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <b style="font-size: 14px">可以試試</b>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px">
+          <sc-for list="{{next}}" as="n" hint-placeholder-count="3">
+            <button type="button" style="display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 14px; border-radius: 12px; border: 1px solid {{t.line}}; background: {{t.raised}}; color: {{t.text}}; text-align: left; font: 14px Inter, 'Noto Sans TC', sans-serif; cursor: pointer">
+              <span style="font-size: 12px; color: {{t.muted}}">{{n.kind}}</span>
+              <span style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600"><sc-if value="{{n.dot}}"><span style="width: 10px; height: 10px; border-radius: {{n.radius}}; background: {{n.dot}}"></span></sc-if>{{n.label}}</span>
+            </button>
+          </sc-for>
+        </div>
+        <span style="font-size: 13px; color: {{t.muted}}">有相關文件時，<a href="#" style="color: {{t.primary}}">上傳</a>後再問一次。</span>
+      </div>
+    </article>
+
+    <p style="margin: 8px 0 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: {{t.muted}}">② 回報的結果回到原本的回答</p>
+    <div style="align-self: flex-end; max-width: 70%; padding: 12px 16px; border-radius: 14px 14px 4px 14px; background: {{t.inkBg}}; color: {{t.inkFg}}; font-size: 15px">人資部的經理是誰？</div>
+    <article style="display: flex; flex-direction: column; gap: 14px; padding: 20px; border-radius: 16px; background: {{t.surface}}; border: 1px solid {{t.line}}">
+      <p style="margin: 0; font-size: 16px; line-height: 1.8">人資部的經理是 <span style="background: {{t.markSoft}}; color: {{t.markText}}; padding: 0 3px; border-radius: 3px">吳宜蓁</span><sup style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: {{t.primary}}">[1]</sup>。</p>
+      <div role="status" style="display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 12px; background: {{o.bg}}; border-left: 4px solid {{o.edge}}">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px">
+          <b style="font-size: 14px">你在 5/20 回報了這個回答：出處不對</b>
+          <span style="height: 26px; padding: 0 10px; border-radius: 999px; background: {{t.surface}}; color: {{o.edge}}; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center">{{o.chip}}</span>
+        </div>
+        <span style="font-size: 14px; line-height: 1.7">{{o.body}}</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <sc-for list="{{o.actions}}" as="a" hint-placeholder-count="2">
+            <button type="button" style="height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 600 13px Inter, 'Noto Sans TC', sans-serif">{{a}}</button>
+          </sc-for>
+        </div>
+      </div>
+    </article>
+  </main>
+
+  <aside aria-label="設計說明" style="flex: 1 1 320px; max-width: 380px; box-sizing: border-box; padding: 32px 24px; display: flex; flex-direction: column; gap: 18px; border-left: 1px dashed {{t.dash}}">
+    <p style="margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: {{t.muted}}">設計說明（不在產品中）</p>
+    <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.7">
+      <b>① 下一步從哪來</b>
+      <span>只從問題裡<b>這個身分看得到的</b>實體產生：在圖譜看它、問它的負責人、用它換個問法。問題裡沒有看得到的實體時，退回現在的通用建議。</span>
+      <span>不論資料是否存在，畫面都一樣，不透露看不到的內容（#247）。</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.7">
+      <b>② 回報的三種狀態</b>
+      <div role="group" aria-label="回報狀態" style="display: flex; flex-wrap: wrap; gap: 6px">
+        <sc-for list="{{tabs}}" as="b" hint-placeholder-count="3">
+          <button type="button" onClick="{{b.pick}}" aria-pressed="{{b.pressed}}" style="height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid {{t.line}}; background: {{b.bg}}; color: {{b.fg}}; font: 600 13px Inter, 'Noto Sans TC', sans-serif">{{b.label}}</button>
+        </sc-for>
+      </div>
+      <span>對應現有的處理結果：<code style="font-family: 'JetBrains Mono', monospace; font-size: 12px">not_error</code>、<code style="font-family: 'JetBrains Mono', monospace; font-size: 12px">retracted</code>，未處理則是處理中。</span>
+      <span>出現的地方：原本的回答下方、首頁「有更新」。回報的人看得到回報時存下的問題與回答，不需要另外保存歷史。</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 12px; background: {{t.surface}}; border: 1px solid {{t.line}}; font-size: 13px; line-height: 1.6">
+      <b style="font-size: 14px">主管處理時（待審 › 回報）</b>
+      <label style="display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: {{t.muted}}">給回報的人的說明（選填，500 字內）
+        <textarea rows="3" style="padding: 10px; border-radius: 8px; border: 1px solid {{t.line}}; background: {{t.bg}}; color: {{t.text}}; font: 13px/1.6 Inter, 'Noto Sans TC', sans-serif; resize: none">員工手冊 ¶4 就是人資部經理的出處，2026 年組織調整後仍是吳宜蓁。</textarea>
+      </label>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px">
+        <button type="button" style="height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid {{t.line}}; background: transparent; color: {{t.text}}; font: 600 13px Inter, 'Noto Sans TC', sans-serif">標示為不是錯誤</button>
+        <button type="button" style="height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid {{t.line}}; background: transparent; color: {{t.text}}; font: 600 13px Inter, 'Noto Sans TC', sans-serif">標示為已撤回</button>
+      </div>
+      <span style="font-size: 12px; color: {{t.muted}}">說明會原樣顯示給回報的人；回報的人只看到處理者的角色，不顯示名字。需要新增 migration，見提案。</span>
+    </div>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { dark: false, outcome: 'not_error' }; }
+  renderVals() {
+    const L = { bg: '#F5F6F3', surface: '#FFFFFF', raised: '#EDEFF2', text: '#14171A', muted: '#5B6470', line: '#DDE1E4', primary: '#2340C8', primarySoft: '#E6EAFB', evid: '#E8B800', dash: '#9AA3AE', inkBg: '#14171A', inkFg: '#FFFFFF', markSoft: '#FFF3BF', markText: '#14171A', warning: '#9A3D00', warningSoft: '#FCEBDD', success: '#1A6E33', successSoft: '#E3F1E6', ePerson: '#3D7AB8', eProject: '#7A52C7' };
+    const D = { bg: '#0A0D14', surface: '#111621', raised: '#182030', text: '#E7ECF5', muted: '#8B97AD', line: '#253044', primary: '#3EE6D2', primarySoft: '#16302E', evid: '#FFB547', dash: '#3B4A63', inkBg: '#E7ECF5', inkFg: '#0A0D14', markSoft: '#3A2A0E', markText: '#FFD9A0', warning: '#FF9466', warningSoft: '#2E1B12', success: '#6CC489', successSoft: '#13261A', ePerson: '#7FB2EB', eProject: '#B89CF0' };
+    const d = this.state.dark, t = d ? D : L, oc = this.state.outcome;
+    const outcomes = {
+      pending: { chip: '處理中', bg: t.primarySoft, edge: t.primary, body: '主管還沒處理。處理後會顯示在這裡，首頁的「有更新」也會告訴你。', actions: ['看我回報的內容'] },
+      not_error: { chip: '確認不是錯誤', bg: t.successSoft, edge: t.success, body: '主管在 5/21 確認這不是錯誤：「員工手冊 ¶4 就是人資部經理的出處，2026 年組織調整後仍是吳宜蓁。」', actions: ['看引用的原文', '仍有疑問，再回報一次'] },
+      retracted: { chip: '已撤回相關內容', bg: t.warningSoft, edge: t.warning, body: '主管在 5/21 撤回了這個回答所依據的部分內容：「人資部經理已改由他人擔任，舊的核准已撤回。」現在再問，答案可能不同。', actions: ['再問一次'] }
+    };
+    const tabsDef = [['pending', '處理中'], ['not_error', '不是錯誤'], ['retracted', '已撤回']];
+    return {
+      t, o: outcomes[oc],
+      next: [
+        { kind: '在圖譜看', label: '青翼專案', dot: t.eProject, radius: '2px' },
+        { kind: '問負責的人', label: '王小明（青翼專案負責人）', dot: t.ePerson, radius: '999px' },
+        { kind: '換個問法', label: '青翼專案現在的進度？' }
+      ],
+      tabs: tabsDef.map(([k, label]) => ({ label, pick: () => this.setState({ outcome: k }), pressed: k === oc ? 'true' : 'false', bg: k === oc ? t.inkBg : 'transparent', fg: k === oc ? t.inkFg : t.text })),
+      modeLabel: d ? 'Dark' : 'Light', darkPressed: d ? 'true' : 'false', toggleDark: () => this.setState({ dark: !d })
+    };
+  }
+}
+</script>
+</body>
+</html>

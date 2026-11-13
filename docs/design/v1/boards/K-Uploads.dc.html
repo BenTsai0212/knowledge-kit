@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>我的上傳</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Sans+TC:wght@400;500;700;900&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width: 100%; min-height: 1000px; box-sizing: border-box; background: {{t.bg}}; color: {{t.text}}; font-family: Inter, 'Noto Sans TC', sans-serif; display: flex; flex-wrap: wrap; align-items: stretch">
+
+  <nav aria-label="頁面" style="flex: 1 1 200px; max-width: 220px; box-sizing: border-box; padding: 20px 14px; display: flex; flex-direction: column; gap: 4px; background: {{t.surface}}; border-right: 1px solid {{t.line}}">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 8px 16px">
+      <svg width="28" height="28" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="11" fill="{{t.raised}}"></rect><path d="M17 12v24M17 24 32 13.5M17 24l15 10.5" fill="none" stroke="{{t.text}}" stroke-width="4.5" stroke-linecap="round"></path><circle cx="32" cy="34.5" r="5" fill="{{t.primary}}"></circle><circle cx="32" cy="13.5" r="5" fill="{{t.evid}}"></circle></svg>
+      <span style="font-size: 16px; font-weight: 900">範例公司</span>
+    </div>
+    <a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; color: {{t.text}}; text-decoration: none; font-size: 15px">首頁</a>
+    <a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; color: {{t.text}}; text-decoration: none; font-size: 15px">問答</a>
+    <a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; color: {{t.text}}; text-decoration: none; font-size: 15px">圖譜</a>
+    <a href="#" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; color: {{t.text}}; text-decoration: none; font-size: 15px">時間軸</a>
+    <a href="#" aria-current="page" style="display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 10px; background: {{t.inkBg}}; color: {{t.inkFg}}; text-decoration: none; font-size: 15px; font-weight: 700">上傳</a>
+    <div style="margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; background: {{t.raised}}">
+      <span style="width: 32px; height: 32px; border-radius: 999px; background: {{t.inkBg}}; color: {{t.inkFg}}; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">周</span><span style="display: flex; flex-direction: column"><b style="font-size: 14px">周大衛</b><span style="font-size: 12px; color: {{t.muted}}">一般員工</span></span>
+    </div>
+  </nav>
+
+  <main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 32px clamp(16px, 3vw, 40px); display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px">
+      <h1 style="margin: 0; font-size: 28px; font-weight: 700">上傳</h1>
+      <div role="tablist" aria-label="上傳" style="display: flex; gap: 4px; margin-left: 12px">
+        <button type="button" role="tab" aria-selected="false" style="height: 40px; padding: 0 14px; border: 0; border-radius: 8px; background: transparent; color: {{t.muted}}; font: 14px Inter, 'Noto Sans TC', sans-serif">新增文件</button>
+        <button type="button" role="tab" aria-selected="true" style="height: 40px; padding: 0 14px; border: 0; border-radius: 8px; background: {{t.raised}}; color: {{t.text}}; font: 700 14px Inter, 'Noto Sans TC', sans-serif">我的上傳 3</button>
+      </div>
+      <button type="button" onClick="{{toggleDark}}" aria-pressed="{{darkPressed}}" style="margin-left: auto; height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid {{t.line}}; background: {{t.surface}}; color: {{t.text}}; font: 600 13px Inter, 'Noto Sans TC', sans-serif">{{modeLabel}}</button>
+    </div>
+
+    <section role="status" style="display: flex; flex-direction: column; gap: 16px; padding: 20px; border-radius: 16px; background: {{t.surface}}; border: 1.5px solid {{t.primary}}">
+      <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px">
+        <b style="font-size: 18px">已送出「青翼專案啟動會議紀錄」</b>
+        <span style="font-size: 14px; color: {{t.muted}}">主管核准後，內容才會出現在問答與圖譜。</span>
+      </div>
+      <ol style="margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+        <sc-for list="{{steps}}" as="s" hint-placeholder-count="4">
+          <li style="display: flex; flex-direction: column; gap: 6px">
+            <span style="height: 6px; border-radius: 999px; background: {{s.bar}}"></span>
+            <span style="font-size: 14px; font-weight: {{s.weight}}; color: {{s.fg}}">{{s.label}}</span>
+            <span style="font-size: 12px; color: {{t.muted}}">{{s.sub}}</span>
+          </li>
+        </sc-for>
+      </ol>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px">
+        <button type="button" style="height: 40px; padding: 0 14px; border: 0; border-radius: 10px; background: {{t.primary}}; color: {{t.onPrimary}}; font: 700 14px Inter, 'Noto Sans TC', sans-serif">再上傳一份</button>
+        <button type="button" style="height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid {{t.line}}; background: transparent; color: {{t.text}}; font: 600 14px Inter, 'Noto Sans TC', sans-serif">回首頁</button>
+        <span style="align-self: center; font-size: 13px; color: {{t.muted}}">核准或退回時，首頁的「有更新」會告訴你。</span>
+      </div>
+    </section>
+
+    <section style="display: flex; flex-direction: column; gap: 8px">
+      <sc-for list="{{rows}}" as="r" hint-placeholder-count="3">
+        <button type="button" onClick="{{r.pick}}" aria-pressed="{{r.pressed}}" style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; min-height: 64px; padding: 10px 16px; border-radius: 12px; border: {{r.border}}; background: {{t.surface}}; color: {{t.text}}; text-align: left; font: 14px Inter, 'Noto Sans TC', sans-serif; cursor: pointer">
+          <span style="display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 200px"><b style="font-size: 15px">{{r.title}}</b><span style="font-size: 12px; color: {{t.muted}}">{{r.meta}}</span></span>
+          <span style="height: 28px; padding: 0 10px; border-radius: 999px; background: {{r.chipBg}}; color: {{r.chipFg}}; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center">{{r.status}}</span>
+        </button>
+      </sc-for>
+    </section>
+  </main>
+
+  <aside aria-label="上傳詳情" style="flex: 1 1 340px; max-width: 420px; box-sizing: border-box; padding: 32px 24px; display: flex; flex-direction: column; gap: 16px; background: {{t.surface}}; border-left: 1px solid {{t.line}}">
+    <p style="margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: {{t.muted}}">上傳詳情</p>
+    <h2 style="margin: 0; font-size: 20px; font-weight: 700; line-height: 1.4">{{sel.title}}</h2>
+    <p style="margin: 0; font-size: 14px; line-height: 1.7; color: {{t.text}}">{{sel.summary}}</p>
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <sc-for list="{{sel.items}}" as="i" hint-placeholder-count="4">
+        <div style="display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border-radius: 10px; background: {{t.raised}}; font-size: 14px">
+          <span style="width: 10px; height: 10px; border-radius: 999px; background: {{i.color}}"></span><span style="flex: 1">{{i.name}}</span><span style="font-size: 12px; font-weight: 700; color: {{i.stateFg}}">{{i.state}}</span>
+        </div>
+      </sc-for>
+    </div>
+    <p style="margin: 0; font-size: 12px; line-height: 1.6; color: {{t.muted}}">{{sel.note}}</p>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px">
+      <sc-for list="{{sel.actions}}" as="a" hint-placeholder-count="2">
+        <button type="button" style="height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid {{t.line}}; background: transparent; color: {{t.text}}; font: 600 13px Inter, 'Noto Sans TC', sans-serif">{{a}}</button>
+      </sc-for>
+    </div>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { dark: false, sel: 2 }; }
+  renderVals() {
+    const L = { bg: '#F5F6F3', surface: '#FFFFFF', raised: '#EDEFF2', text: '#14171A', muted: '#5B6470', line: '#DDE1E4', primary: '#2340C8', onPrimary: '#FFFFFF', primarySoft: '#E6EAFB', evid: '#E8B800', inkBg: '#14171A', inkFg: '#FFFFFF', warning: '#9A3D00', warningSoft: '#FCEBDD', success: '#1A6E33', successSoft: '#E3F1E6', ePerson: '#3D7AB8', eTeam: '#2E7D5B', eProject: '#7A52C7' };
+    const D = { bg: '#0A0D14', surface: '#111621', raised: '#182030', text: '#E7ECF5', muted: '#8B97AD', line: '#253044', primary: '#3EE6D2', onPrimary: '#04201D', primarySoft: '#16302E', evid: '#FFB547', inkBg: '#E7ECF5', inkFg: '#0A0D14', warning: '#FF9466', warningSoft: '#2E1B12', success: '#6CC489', successSoft: '#13261A', ePerson: '#7FB2EB', eTeam: '#5CC294', eProject: '#B89CF0' };
+    const d = this.state.dark, t = d ? D : L;
+    const done = (label, sub) => ({ label, sub, bar: t.primary, fg: t.text, weight: '600' });
+    const now = (label, sub) => ({ label, sub, bar: t.evid, fg: t.text, weight: '700' });
+    const todo = (label, sub) => ({ label, sub, bar: t.line, fg: t.muted, weight: '400' });
+    const ok = { state: '已核准', stateFg: t.success }, no = { state: '退回', stateFg: t.warning }, wait = { state: '等待審核', stateFg: t.muted };
+    const uploads = [
+      { title: '青翼桌供應商會議筆記', meta: '內部 · 青翼專案 · 上傳於 5 天前', status: '已核准', chipBg: t.successSoft, chipFg: t.success,
+        summary: '王小明 在昨天核准了全部項目，內容已出現在問答與圖譜。',
+        items: [Object.assign({ name: '青翼桌', color: t.eProject }, ok), Object.assign({ name: '供應商：合興五金', color: t.eTeam }, ok), Object.assign({ name: '合興五金 —供應→ 青翼桌', color: t.muted }, ok)],
+        note: '核准之後，看得到這份文件的人都能在問答中引用它。', actions: ['在圖譜查看', '在問答中問'] },
+      { title: '青翼桌測試回饋', meta: '內部 · 青翼專案 · 上傳於 1 週前', status: '部分退回', chipBg: t.warningSoft, chipFg: t.warning,
+        summary: '王小明 核准了 3 項、退回 2 項。退回的實體與關係不會進入圖譜。',
+        items: [Object.assign({ name: '青翼桌', color: t.eProject }, ok), Object.assign({ name: '周大衛', color: t.ePerson }, ok), Object.assign({ name: '測試小組', color: t.eTeam }, no), Object.assign({ name: '周大衛 —參與→ 測試小組', color: t.muted }, no), Object.assign({ name: '周大衛 —參與→ 青翼專案', color: t.muted }, ok)],
+        note: '要補充或更正時，修改原文後再上傳一次，會重新送審。', actions: ['重新上傳修正版', '在圖譜查看'] },
+      { title: '青翼專案啟動會議紀錄', meta: '內部 · 青翼專案 · 剛剛上傳', status: '審核中', chipBg: t.primarySoft, chipFg: t.primary,
+        summary: '萃取出 4 個實體、3 段關係，正在等主管審核。審核前只有你和能審核的人看得到這些項目。',
+        items: [Object.assign({ name: '王小明', color: t.ePerson }, wait), Object.assign({ name: '林志明', color: t.ePerson }, wait), Object.assign({ name: '周大衛', color: t.ePerson }, wait), Object.assign({ name: '產品研發部', color: t.eTeam }, wait)],
+        note: '審核需要多久由主管決定；有結果時，首頁的「有更新」會告訴你。', actions: ['看原文', '取消上傳'] }
+    ];
+    const s = this.state.sel;
+    return {
+      t, sel: uploads[s],
+      steps: [done('已上傳', '剛剛'), done('萃取完成', '4 個實體 · 3 段關係'), now('等主管審核', '目前在這一步'), todo('出現在問答與圖譜', '核准後')],
+      rows: uploads.slice().reverse().map((u, ri) => { const i = 2 - ri; return Object.assign({}, u, { pick: () => this.setState({ sel: i }), pressed: i === s ? 'true' : 'false', border: i === s ? '1.5px solid ' + t.primary : '1px solid ' + t.line }); }),
+      modeLabel: d ? 'Dark' : 'Light', darkPressed: d ? 'true' : 'false', toggleDark: () => this.setState({ dark: !d })
+    };
+  }
+}
+</script>
+</body>
+</html>
