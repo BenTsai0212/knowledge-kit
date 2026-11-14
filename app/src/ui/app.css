@@ -7438,7 +7438,7 @@ main.page:has(> .upload-page) {
 }
 
 /* 問答的中間欄（#349，畫板 H-QA）：左右 56px；問題是靠左的 text 底、surface 字的大字泡泡（最寬 1100px），
-   回答是下方獨立的卡片（surface、1px border、圓角 24px，最寬 1180px；原文打開時 760px，不被原文卡片蓋住）；輸入列在回答下方 */
+   回答是下方獨立的卡片（surface、1px border、圓角 24px，最寬 1180px）；輸入列在回答下方。原文打開時回答卡片與輸入列都縮到 760px，不被原文卡片蓋住 */
 :root[data-mode="presentation"] .qa-center {
   gap: 28px;
   padding: 40px 56px 32px;
@@ -7483,7 +7483,7 @@ main.page:has(> .upload-page) {
   background: var(--color-surface);
 }
 
-:root[data-mode="presentation"] main.qa:has(> .source) .conversation > .answer > .answer__body {
+:root[data-mode="presentation"] main.qa:has(> .source) :is(.conversation > .answer > .answer__body, .composer--line) {
   max-width: 760px;
 }
 
@@ -7837,7 +7837,8 @@ main.page:has(> .upload-page) {
   font-size: 18px;
 }
 
-.graph-stage-card .entity-documents--cards {
+/* 出現的文件在卡片底部：自動的上邊距放在標題上，標題下方直接接引用段落（畫板 H-Graph） */
+.graph-stage-card .entity h3:has(+ .entity-documents--cards) {
   margin-top: auto;
 }
 

@@ -33,7 +33,7 @@ export function wasAsked(conversations: Readonly<Record<string, readonly { quest
 // 點劇本的題目：情境身分不是目前身分時先切換（沿用切換身分的行為，捨棄進行中的提問），身分徽章以 settle 跳一下
 export const switchesIdentity = (item: Pick<ScriptItem, "role">, identity: string): boolean => item.role !== identity;
 
-// 題目列的編號（#349，畫板 H-QA）：劇本中的位置（從 1 起），補成兩位數（01、02…）；已問過的題目改標 ✓
+// 題目列的編號（#349，畫板 H-QA）：劇本中的位置（從 1 起），補成兩位數（01、02…）；目前題目以外已問過的改標 ✓（ScriptPanel）
 export function scriptNumber(items: readonly ScriptItem[], key: string): string {
   return String(items.findIndex((item) => item.key === key) + 1).padStart(2, "0");
 }

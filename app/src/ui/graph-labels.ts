@@ -32,6 +32,32 @@ export function relatedEntities(graph: Graph, entityId: string, language: string
     });
 }
 
+export interface RelatedEntityGroup {
+  entity: GraphEntity;
+  // 兩者之間的每一則關係（依關係 id 排序）
+  relations: Omit<RelatedEntity, "entity">[];
+}
+
+// 展示模式的實體卡片（#349，畫板 H-Graph）：相關實體每個一列，同一個實體的多則關係合併（依第一次出現的順序）
+export function relatedEntityGroups(graph: Graph, entityId: string, language: string): RelatedEntityGroup[] {
+  const groups = new Map<string, RelatedEntityGroup>();
+  for (const { entity, ...relation } of relatedEntities(graph, entityId, language)) {
+    const group = groups.get(entity.id) ?? { entity, relations: [] };
+    group.relations.push(relation);
+    groups.set(entity.id, group);
+  }
+  return [...groups.values()];
+}
+
+// 合併後的關係名稱（「隸屬 · 負責」）：方向都相同時箭頭只標一次（「← 隸屬 · 負責」），不同時每則各自標示
+export function relationGroupLabel(relations: readonly Pick<RelatedEntity, "label" | "outgoing">[]): string {
+  const arrow = (r: Pick<RelatedEntity, "label" | "outgoing">) => (r.outgoing ? `${r.label} →` : `← ${r.label}`);
+  if (relations.length > 0 && relations.every((r) => r.outgoing === relations[0].outgoing)) {
+    return arrow({ label: relations.map((r) => r.label).join(" · "), outgoing: relations[0].outgoing });
+  }
+  return relations.map(arrow).join(" · ");
+}
+
 // 下拉選單用的名稱：顯示名稱相同的實體（例如同名的兩個人）加上第一個相關實體的名稱以便區分
 export function entityOptionLabel(graph: Graph, entity: GraphEntity, language: string): string {
   const name = entityName(entity, language);

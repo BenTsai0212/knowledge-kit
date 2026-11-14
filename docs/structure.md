@@ -86,7 +86,7 @@
 - `cross-fade.ts`：切換語言、Light／Dark 的交叉淡換
 - `entity-icons.ts`：實體類型的圖示集
 - `EntityIcon.tsx`：圖例的圖示
-- `EntityPanel.tsx`：圖譜頁的實體面板；桌機（`wide`）是右側整高欄的列與卡片（#336），展示模式的桌機也用（#349）
+- `EntityPanel.tsx`：圖譜頁的實體面板；桌機（`wide`）是右側整高欄的列與卡片（#336），展示模式的桌機也用（#349，相關實體依實體合併成一列）
 - `EntitySearch.tsx`：以名稱搜尋實體；`field` 是桌機圖譜頁首的搜尋框（#336）
 - `entry-hero.ts`：入口頁主視覺版面的純函式
 - `EntryBar.tsx`：桌機登入頁的頂端列（登入前沒有左側導覽，#334）

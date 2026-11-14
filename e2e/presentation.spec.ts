@@ -263,6 +263,8 @@ test.describe("1920×1080", () => {
     await expect(script.locator(".script__mark").first()).toHaveText("01");
 
     const answer = await askFirst(page);
+    // 目前的題目即使問過也顯示編號（✓ 只標目前以外問過的題目）
+    await expect(script.locator('button[aria-current="step"] .script__mark')).toHaveText("01");
     const question = answer.locator("h2");
     await expect(question).toHaveCSS("background-color", rgb(theme.colors.text));
     await expect(question).toHaveCSS("color", rgb(theme.colors.surface));
@@ -287,6 +289,14 @@ test.describe("1920×1080", () => {
     const box = (await panel.boundingBox())!;
     await expect.poll(async () => { const b = (await body.boundingBox())!; return b.x + b.width <= box.x; }).toBe(true);
     await expect(panel.getByRole("button", { name: s.closeSource })).toContainText("Esc");
+    // 輸入列也讓到原文卡片左邊：「提問」按鈕看得到、沒有被原文卡片蓋住
+    const submit = page.locator(".composer--line button[type=submit]");
+    await expect(submit).toBeInViewport();
+    await expect.poll(async () => { const b = (await submit.boundingBox())!; return b.x + b.width <= box.x; }).toBe(true);
+    const submitBox = (await submit.boundingBox())!;
+    expect(
+      await submit.evaluate((el, { x, y }) => el.contains(document.elementFromPoint(x, y)), { x: submitBox.x + submitBox.width / 2, y: submitBox.y + submitBox.height / 2 }),
+    ).toBe(true);
     expect(await noHorizontalScroll(page)).toBe(true);
     await testInfo.attach("presentation-qa-1920.png", { body: await page.screenshot(), contentType: "image/png" });
 
@@ -318,6 +328,13 @@ test.describe("1920×1080", () => {
     const rows = card.locator(".entity-row");
     await expect(rows.first()).toBeVisible();
     await expect(rows.first()).toHaveCSS("background-color", rgb(theme.colors.surfaceRaised));
+    // 每個實體一列（同一個實體的多則關係合併成「隸屬 · 負責」）
+    const rowNames = await rows.locator("button.link").allInnerTexts();
+    expect(new Set(rowNames).size).toBe(rowNames.length);
+    // 「出現的文件」標題下方直接接引用段落（不留大段空白）
+    const sourcesHeading = (await card.getByRole("heading", { level: 3, name: s.entitySources }).boundingBox())!;
+    const documents = (await card.locator(".entity-documents").boundingBox())!;
+    expect(documents.y - (sourcesHeading.y + sourcesHeading.height)).toBeLessThanOrEqual(24);
     const cardBox = (await page.locator(".graph-stage-card").boundingBox())!;
     expect(await rightGap(page, cardBox)).toBe(40);
     expect((await page.locator(canvas).boundingBox())!.x + (await page.locator(canvas).boundingBox())!.width).toBeLessThanOrEqual(cardBox.x);
