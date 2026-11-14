@@ -98,6 +98,20 @@ export function sameNameEntities(role: RoleId, language: string): { name: string
   return [...groups].filter(([, ids]) => ids.length > 1).map(([name, ids]) => ({ name, ids }));
 }
 
+// 待審的「選擇合併對象」用（#282）：萃取結果的名稱，文件語言取自一個看得到的實體、其他語言取自同類型的另一個，
+// 合併比對（suggestMerge() 比對所有語言的名稱）因而有兩個候選，需要逐筆決定。沒有兩個同類型、看得到的實體時是 undefined
+export function twoCandidateNames(role: RoleId, languages: readonly string[], documentLanguage: string): { type: string; names: Record<string, string> } | undefined {
+  const seen = new Set(expectedVisible(access, sample, role).entities);
+  const shown = entities.filter((e) => seen.has(e.id));
+  for (const first of shown) {
+    const second = shown.find((e) => e.id !== first.id && e.type === first.type);
+    if (second === undefined) continue;
+    const names = Object.fromEntries(languages.map((l) => [l, l === documentLanguage ? displayName(first, l) : displayName(second, l)]));
+    return { type: first.type, names };
+  }
+  return undefined;
+}
+
 // viewer 看得到 role 看得到的所有段落（role 的回報送出的段落都在其中，viewer 才看得到該回報，ADR 0007 決定 7）
 export function seesAllOf(viewer: RoleId, role: RoleId): boolean {
   const shown = visible(viewer);

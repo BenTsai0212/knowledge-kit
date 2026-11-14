@@ -2,10 +2,9 @@
 // 每一頁都檢查 375px 沒有橫向捲動、該頁新增的可點元件至少 44px（觸控目標）。橫向滑動的手感與 iOS 安全區由人在實機確認。
 // /api/ask 一律是假的回應（openApp）。
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { EVALS_PATH, gotoView, language, openApp, s, switchIdentity } from "./support/app";
+import { EVALS_PATH, field, gotoView, language, openApp, s, switchIdentity } from "./support/app";
 import {
   client,
-  knowledgeModel,
   NO_NON_REVIEWER,
   NO_REVIEWER,
   NO_REVIEWING_UPLOADER,
@@ -15,7 +14,8 @@ import {
   reviewingUploader,
   uploader,
 } from "./support/client";
-import { FAKE_ENTITY_NAME, sseBody } from "./support/fake-ask";
+import { twoCandidateNames } from "./support/dataset";
+import { sseBody } from "./support/fake-ask";
 
 test.use({ viewport: { width: 375, height: 812 } });
 
@@ -119,20 +119,28 @@ test.describe("上傳", () => {
 
 test.describe("待審", () => {
   test.skip(reviewingUploader === undefined, NO_REVIEWING_UPLOADER);
-  test.skip(client.languages.length < 2, "名稱缺少語言的實體需要兩種以上的語言");
+  // 需要逐筆決定的實體：名稱的文件語言取自一個既有實體、其他語言取自同類型的另一個，合併時有兩個候選。
+  // 萃取的寫入會捨棄缺少任一語言名稱的實體（extraction/output.ts 的 bad_names），所以「補上名稱」的摘要列無法經萃取產生，
+  // 這裡用「選擇合併對象」走同一條摘要列與底部面板的路徑（sheetReason() 兩種原因的判斷在 review-helpers.test.ts）
+  const candidate = reviewingUploader === undefined ? undefined : twoCandidateNames(reviewingUploader.id, client.languages, language);
+  test.skip(candidate === undefined, "需要兩個看得到、類型相同的實體");
 
-  test("分段切換一行、橫向捲動；缺少語言名稱的實體只顯示摘要與「›」，點了以底部面板處理；「核准這份文件的全部」固定在下方", async ({ page }) => {
+  test("分段切換一行、橫向捲動；需要選擇合併對象的實體只顯示摘要與「›」，點了以底部面板處理；「核准這份文件的全部」固定在下方", async ({ page }) => {
+    const { type, names } = candidate!;
+    const name = names[language];
     await openApp(page);
     await switchIdentity(page, reviewingUploader!.id);
-    // 萃取的實體只有介面語言的名稱：需要補上其他語言，在手機上以底部面板處理（其他請求交給 openApp 的假回應）
+    // 萃取結果是上面的實體（其他請求交給 openApp 的假回應）
     await page.route("**/api/ask", async (route) => {
       const body = route.request().postDataJSON() as { system?: string };
       if (!(body.system ?? "").startsWith("You extract entities")) return route.fallback();
-      const entity = { key: "e1", type: knowledgeModel.entityTypes[0].id, names: { [language]: FAKE_ENTITY_NAME }, sources: [1] };
+      const entity = { key: "e1", type, names, sources: [1] };
       await route.fulfill({ status: 200, headers: { "Content-Type": "text/event-stream" }, body: sseBody(JSON.stringify({ entities: [entity], relations: [] })) });
     });
     expect(await gotoView(page, "upload")).toBe(true);
-    await page.getByLabel(s.uploadFile).setInputFiles("e2e/fixtures/upload-note.md");
+    // 貼上內文含有實體名稱的文字
+    await page.getByPlaceholder(s.uploadPastePlaceholder).fill(`${name} 負責檢查手機的待審頁。`);
+    await field(page, s.uploadDocTitle, "input").fill("E2E mobile review note");
     await page.getByRole("button", { name: s.uploadPreview }).click();
     const upload = page.getByRole("dialog", { name: s.uploadConfirmTitle });
     await upload.getByRole("button", { name: s.uploadSubmit, exact: true }).click();
@@ -142,15 +150,15 @@ test.describe("待審", () => {
 
     // 萃取在背景執行：到待審頁按重新整理，直到摘要列出現
     expect(await gotoView(page, "review")).toBe(true);
-    const row = page.locator(".review-page--phone button.review-sheet-row").filter({ hasText: FAKE_ENTITY_NAME });
+    const row = page.locator(".review-page--phone button.review-sheet-row").filter({ hasText: name });
     await expect(async () => {
       await page.getByRole("button", { name: s.reviewRefresh }).first().click();
       await expect(row).toBeVisible({ timeout: 2_000 });
     }).toPass();
     const card = page.locator("section.review-doc").filter({ has: row });
-    await expect(row).toContainText(s.reviewSheetNames);
+    await expect(row).toContainText(s.reviewSheetChoose);
     await expect(row).toContainText("›");
-    // 列表上沒有名稱欄位與核准按鈕：在底部面板中處理
+    // 列表上沒有合併選擇與核准按鈕：在底部面板中處理
     await expect(card.locator(".review-entity")).toHaveCount(0);
 
     // 分段切換：一行、在列內橫向捲動
@@ -167,19 +175,19 @@ test.describe("待審", () => {
     await expectTouchTargets(page.locator(".review-tabs [role=tab], .review-toolbar .icon-button, button.review-sheet-row, .review-doc__approve-all > button"));
     expect(await noHorizontalScroll(page)).toBe(true);
 
-    // 點摘要列打開底部面板：補上缺少的名稱後確認，面板關閉、這份文件沒有遺留
+    // 點摘要列打開底部面板：兩個候選與「建立新實體」，還沒選擇時不能確認；選「建立新實體」後確認，面板關閉、這份文件沒有遺留
     await row.click();
     const sheet = page.locator("dialog.review-sheet");
     await expect(sheet).toBeVisible();
-    await expect(sheet.getByRole("heading", { name: FAKE_ENTITY_NAME })).toBeVisible();
-    const missing = sheet.locator('input[aria-invalid="true"]');
-    await expect(missing).toHaveCount(client.languages.length - 1);
-    // 填好一種語言後欄位不再標示缺少：每次填第一個，直到沒有缺少的語言
-    while ((await missing.count()) > 0) await missing.first().fill(FAKE_ENTITY_NAME);
+    await expect(sheet.getByRole("heading", { name })).toBeVisible();
+    expect(await sheet.getByRole("radio").count()).toBeGreaterThanOrEqual(3);
+    const confirm = sheet.getByRole("button", { name: new RegExp(`^${s.reviewConfirm}`) });
+    await expect(confirm).toBeDisabled();
+    await sheet.getByRole("radio", { name: s.reviewCreateNew, exact: true }).check();
     expect(await noHorizontalScroll(page)).toBe(true);
-    await sheet.getByRole("button", { name: new RegExp(`^${s.reviewConfirm}`) }).click();
+    await confirm.click();
     await expect(sheet).toBeHidden();
-    await expect(page.locator(".toast-region")).toContainText(FAKE_ENTITY_NAME);
+    await expect(page.locator(".toast-region")).toContainText(name);
     await expect(card).toHaveCount(0);
   });
 });
