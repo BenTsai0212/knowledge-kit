@@ -241,6 +241,21 @@ test.describe("評測台", () => {
     expect(boxes[0][1]).toBe(boxes[1][1]);
     await expect(metrics.first().locator(".eval-verdict").first()).toContainText(/^[✓✗] /);
 
+    // 390px 寬時四張指標卡在半個畫面內（約 420px），每個判定膠囊只有一行（文字的行框只有一個）
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(evals).toBeVisible();
+    expect((await evals.locator(".eval-metrics").boundingBox())!.height).toBeLessThanOrEqual(420);
+    const verdictLines = await evals.locator(".eval-metrics .eval-verdict").evaluateAll((els) =>
+      els.map((el) => {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        return new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size;
+      }),
+    );
+    expect(verdictLines.length).toBe(8);
+    expect(verdictLines.every((lines) => lines === 1)).toBe(true);
+    await page.setViewportSize({ width: 375, height: 812 });
+
     // 預設只列兩組不同的題目；取消勾選後列出全部
     const onlyDiff = evals.getByLabel(s.evalOnlyDiff);
     await expect(onlyDiff).toBeChecked();

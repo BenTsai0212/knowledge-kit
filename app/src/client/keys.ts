@@ -277,7 +277,7 @@ const uiStrings = {
   evalAborted: "required", evalConfirmTitle: "required", evalConfirmCalls: "required", evalConfirmLimit: "required",
   evalConfirmStart: "required", evalCancel: "required", evalDownload: "required", evalSummary: "required",
   evalMetric: "required", evalThreshold: "required", evalSettingsValue: "required", evalSettingsBrief: "required", evalAtLeast: "required",
-  evalAtMost: "required", evalRate: "required", evalLeakCount: "required", evalUngradable: "required",
+  evalAtMost: "required", evalRate: "required", evalPercent: "required", evalLeakCount: "required", evalUngradable: "required",
   evalPass: "required", evalFail: "required", evalIncomplete: "required", evalNotApplicable: "required",
   evalResults: "required", evalOnlyDiff: "required", evalNoDiff: "required", evalDiffers: "required", evalQuestion: "required",
   evalNotRun: "required", evalBankSummary: "required", evalNumber: "required", evalRole: "required", evalCategory: "required",

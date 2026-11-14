@@ -404,6 +404,7 @@
   "evalAtLeast": "≥ {percent}%",
   "evalAtMost": "≤ {count} questions",
   "evalRate": "{passed}/{total} ({percent}%)",
+  "evalPercent": "{percent}%",
   "evalLeakCount": "{count} questions",
   "evalUngradable": "{count} ungradable (counted as incorrect)",
   "evalPass": "Pass",

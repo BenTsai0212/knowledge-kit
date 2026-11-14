@@ -404,6 +404,7 @@
   "evalAtLeast": "{percent}% 以上",
   "evalAtMost": "{count} 問以下",
   "evalRate": "{passed}/{total}（{percent}%）",
+  "evalPercent": "{percent}%",
   "evalLeakCount": "{count} 問",
   "evalUngradable": "採点不能 {count} 問（不正解として計上）",
   "evalPass": "合格",

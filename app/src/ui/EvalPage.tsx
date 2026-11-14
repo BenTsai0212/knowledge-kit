@@ -249,15 +249,31 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
     const value = key === "leakage" ? fill(s.evalLeakCount, { count: m.passed }) : m.rate === null ? s.evalNotApplicable : fill(s.evalRate, { passed: m.passed, total: m.total, percent: percent(m.rate) });
     const status = m.meets === null ? (summary.complete ? s.evalNotApplicable : s.evalIncomplete) : m.meets ? s.evalPass : s.evalFail;
     const tone = m.meets === null ? "" : m.meets ? " pass" : " fail";
-    // 手機的指標卡片沒有門檻欄：「✓ 通過（≥ 門檻）」（#282）
-    const label = phone && m.meets !== null ? fill(s.parenthetical, { text: `${m.meets ? "✓" : "✗"} ${status}`, note: thresholdText(key) }) : status;
+    const badge = (label: string) => (
+      <span className={`badge eval-verdict${tone}`} style={{ "--i": METRICS.indexOf(key) } as CSSProperties}>
+        {label}
+      </span>
+    );
+    const ungradable = key === "answer" && summary.answer.ungradable > 0 && <div className="muted">{fill(s.evalUngradable, { count: summary.answer.ungradable })}</div>;
+    if (phone) {
+      // 手機的指標卡片（#282）：大字的百分比與小字的「通過／總數」在同一行，下面是不換行的「✓ 通過」膠囊；門檻在卡片標籤旁
+      const big = key === "leakage" ? value : m.rate === null ? s.evalNotApplicable : fill(s.evalPercent, { percent: percent(m.rate) });
+      const small = key === "leakage" || m.rate === null ? null : fill(s.progress, { done: m.passed, total: m.total });
+      return (
+        <>
+          <span className="eval-metric__line">
+            <span className="eval-metric__value">{big}</span>
+            {small !== null && <span className="eval-metric__fraction">{small}</span>}
+          </span>
+          {badge(m.meets === null ? status : `${m.meets ? "✓" : "✗"} ${status}`)}
+          {ungradable}
+        </>
+      );
+    }
     return (
       <>
-        <span className="eval-value">{value}</span>{" "}
-        <span className={`badge eval-verdict${tone}`} style={{ "--i": METRICS.indexOf(key) } as CSSProperties}>
-          {label}
-        </span>
-        {key === "answer" && summary.answer.ungradable > 0 && <div className="muted">{fill(s.evalUngradable, { count: summary.answer.ungradable })}</div>}
+        <span className="eval-value">{value}</span> {badge(status)}
+        {ungradable}
       </>
     );
   }
@@ -568,11 +584,13 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
             <ul className="eval-metrics">
               {METRICS.map((key) => (
                 <li key={key} className="eval-metric">
-                  <span className="eval-metric__name">{s.evalMetrics[key]}</span>
+                  <span className="eval-metric__name">
+                    {s.evalMetrics[key]} <span className="eval-metric__threshold">{thresholdText(key)}</span>
+                  </span>
                   {summaries.map((summary, i) => (
-                    <div key={i}>
-                      {twoSets && <span className="muted">{SET_NAMES[i]} </span>}
-                      {metricCell(summary, key)}
+                    <div key={i} className="eval-metric__set">
+                      {twoSets && <span className="eval-metric__set-name">{SET_NAMES[i]}</span>}
+                      <div className="eval-metric__body">{metricCell(summary, key)}</div>
                     </div>
                   ))}
                 </li>

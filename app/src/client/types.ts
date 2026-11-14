@@ -737,6 +737,7 @@ export interface UiStrings {
   evalAtLeast: string;
   evalAtMost: string;
   evalRate: string;
+  evalPercent: string;
   evalLeakCount: string;
   evalUngradable: string;
   evalPass: string;
