@@ -900,7 +900,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                                 : sheetRow(
                                     <>
                                       {typeBadge(group.entity)}
-                                      <span className="review-sheet-row__text">{pendingName(group.entity, language)}</span>
+                                      <span className="review-sheet-row__name">{pendingName(group.entity, language)}</span>
                                     </>,
                                     reason === "choose" ? s.reviewSheetChoose : s.reviewSheetNames,
                                     () => setSheet({ docId: doc.id, kind: "group", id: group.entity.id }),

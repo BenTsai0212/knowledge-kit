@@ -155,9 +155,15 @@ test.describe("待審", () => {
       await page.getByRole("button", { name: s.reviewRefresh }).first().click();
       await expect(row).toBeVisible({ timeout: 2_000 });
     }).toPass();
-    const card = page.locator("section.review-doc").filter({ has: row });
+    // has 在 section 之內找：不能用含外層 .review-page--phone 的 row
+    const card = page.locator("section.review-doc").filter({ has: page.locator("button.review-sheet-row", { hasText: name }) });
+    await expect(card).toHaveCount(1);
     await expect(row).toContainText(s.reviewSheetChoose);
     await expect(row).toContainText("›");
+    // 名稱完整顯示，不以省略號截斷（空間不夠時是要做的決定換到下一行）
+    const rowName = row.locator(".review-sheet-row__name");
+    await expect(rowName).toHaveText(name);
+    expect(await rowName.evaluate((el) => el.scrollWidth <= el.clientWidth && getComputedStyle(el).textOverflow !== "ellipsis")).toBe(true);
     // 列表上沒有合併選擇與核准按鈕：在底部面板中處理
     await expect(card.locator(".review-entity")).toHaveCount(0);
 
