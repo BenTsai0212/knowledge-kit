@@ -109,10 +109,15 @@ describe("時間軸的樣式（docs/design.md）", () => {
   // 手機（#282，docs/design.md「時間軸、上傳、待審、評測台與更多（手機）」）
   const phone = (selector: string) => rule(`.app--phone ${selector}`);
 
-  it("手機：日期欄 46px，年與月日分兩行", () => {
+  it("手機：日期欄 46px（只放 MM-DD，年份是分組標題，#358）", () => {
     expect(phone(".timeline-entry")).toMatch(/grid-template-columns:\s*46px /);
-    expect(phone(".timeline-date__year")).toMatch(/display:\s*block/);
-    expect(phone(".timeline-date__sep")).toMatch(/display:\s*none/);
+    expect(rule(".timeline-year h2,\n.timeline-page--desktop .timeline-undated h2")).toMatch(/font-size:\s*13px/);
+  });
+
+  it("手機（#358）：精簡卡片照畫板 G-Mobile-Pages，展開段落的按鈕至少 44px", () => {
+    expect(rule(".timeline-page--phone .timeline-head h1")).toMatch(/font-size:\s*22px/);
+    expect(rule(".timeline-page--phone .timeline-card")).toMatch(/padding:\s*12px 14px/);
+    expect(rule(".timeline-page--phone .timeline-toggle")).toMatch(/min-height:\s*44px/);
   });
 
   it("桌機（#346）：72px 日期欄、24px 時間軸線，填滿內容區；未註明日期不畫日期欄與時間軸線", () => {
@@ -122,7 +127,7 @@ describe("時間軸的樣式（docs/design.md）", () => {
   });
 
   it("桌機（#346）：時間軸的樣式都在 timeline-page--desktop 之下，手機與平板不受影響", () => {
-    // 這些 class 只有桌機的 TimelinePage 會輸出；手機與平板共用的 class 改樣式時一律加上 timeline-page--desktop
+    // 這些 class 只有桌機與手機（#358）的精簡卡片會輸出；與平板共用的 class 改樣式時一律加上 timeline-page--desktop
     const desktopOnly = /timeline-page--desktop|\.timeline-(card__head|lang|note|mentions-line|toggle|filter__label|head|year)\b/;
     const start = css.indexOf("桌機的時間軸（#346");
     expect(start).toBeGreaterThan(-1);

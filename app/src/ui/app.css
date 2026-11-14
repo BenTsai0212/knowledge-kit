@@ -3008,14 +3008,6 @@ button.chip.graph-chip[aria-pressed="true"] {
   line-height: 1.3;
 }
 
-.app--phone .timeline-date__year {
-  display: block;
-}
-
-.app--phone .timeline-date__sep {
-  display: none;
-}
-
 .app--phone .timeline-filter {
   flex-wrap: nowrap;
   overflow-x: auto;
@@ -3029,6 +3021,63 @@ button.chip.graph-chip[aria-pressed="true"] {
   white-space: nowrap;
   min-width: 44px;
   min-height: 44px;
+}
+
+/* 手機的時間軸（#358，畫板 G-Mobile-Pages；TimelinePage 的 timeline-page--phone，展示模式不套用）：頁首是 h1「時間軸」＋文件數，
+   日期欄只放 MM-DD（年份是分組標題，沿用桌機的 .timeline-year h2），精簡卡片（標題、可見範圍、說法不同的小膠囊），段落在展開後才列出 */
+.timeline-page--phone .timeline-head {
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.timeline-page--phone .timeline-head h1 {
+  font-size: 22px;
+}
+
+.timeline-page--phone .timeline-head p {
+  font-size: 13px;
+}
+
+.timeline-page--phone .timeline-year,
+.timeline-page--phone .timeline-undated {
+  margin-top: 12px;
+}
+
+.timeline-page--phone .timeline {
+  margin: 0;
+}
+
+.timeline-page--phone .timeline-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 6px 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+}
+
+.timeline-page--phone .timeline-card__head h3 {
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.timeline-page--phone .timeline-note {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+/* 展開段落的按鈕：觸控目標至少 44px */
+.timeline-page--phone .timeline-toggle {
+  min-height: 44px;
+}
+
+.timeline-page--phone .timeline-passages {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 14px;
 }
 
 /* 手機的待審頁（#282，docs/design.md「時間軸、上傳、待審、評測台與更多（手機）」；ReviewPage 的 review-page--phone）：
@@ -7429,7 +7478,7 @@ main.page:has(> .upload-page) {
 
 /* 提示：surfaceRaised 底的說明列（不用橘色外框）；重新上傳修正版的提示也是 */
 .upload-hint,
-.upload-page .notice-info {
+:is(.upload-page, .upload-page--phone) .notice-info {
   margin: 0;
   padding: 12px 16px;
   border: 0;
@@ -7440,17 +7489,17 @@ main.page:has(> .upload-page) {
   color: var(--color-textMuted);
 }
 
-.upload-page .notice-info .notice-icon {
+:is(.upload-page, .upload-page--phone) .notice-info .notice-icon {
   display: none;
 }
 
-.upload-page .notice-info .notice-body strong {
+:is(.upload-page, .upload-page--phone) .notice-info .notice-body strong {
   color: var(--color-text);
 }
 
 /* 錯誤（萃取失敗、讀取或寫入失敗；畫板 I-States）：surface 底、1px border 的卡片，warning 的圖示，
    訊息 15px／600，說明 13px textMuted，按鈕 40px 的中性按鈕。訊息沿用原本的文字 */
-.upload-page .notice-error {
+:is(.upload-page, .upload-page--phone) .notice-error {
   gap: 14px;
   padding: 18px 20px;
   border: 1px solid var(--color-border);
@@ -7458,7 +7507,7 @@ main.page:has(> .upload-page) {
   background: var(--color-surface);
 }
 
-.upload-page .notice-error .notice-icon {
+:is(.upload-page, .upload-page--phone) .notice-error .notice-icon {
   width: 22px;
   height: 22px;
   line-height: 18px;
@@ -7468,19 +7517,19 @@ main.page:has(> .upload-page) {
   font-size: 13px;
 }
 
-.upload-page .notice-error .notice-body {
+:is(.upload-page, .upload-page--phone) .notice-error .notice-body {
   gap: 10px;
   font-size: 13px;
   color: var(--color-textMuted);
 }
 
-.upload-page .notice-error .notice-body strong {
+:is(.upload-page, .upload-page--phone) .notice-error .notice-body strong {
   font-size: 15px;
   font-weight: 600;
   color: var(--color-text);
 }
 
-.upload-page .notice-error button {
+:is(.upload-page, .upload-page--phone) .notice-error button {
   min-height: 40px;
   padding: 0 16px;
   border: 1px solid var(--color-border);
@@ -7547,11 +7596,11 @@ main.page:has(> .upload-page) {
 }
 
 /* 我的上傳：每份一列（surfaceRaised 底、圓角 12px、最矮 64px）：標題 15px 粗體，下方是文件日期（mono 12px）與項目數；選中的列 primary 外框 */
-.upload-page .my-uploads__list {
+:is(.upload-page, .upload-page--phone) .my-uploads__list {
   gap: 8px;
 }
 
-.upload-page .my-upload {
+:is(.upload-page, .upload-page--phone) .my-upload {
   gap: 8px 14px;
   min-height: 64px;
   padding: 10px 16px;
@@ -7561,7 +7610,7 @@ main.page:has(> .upload-page) {
   font-size: 14px;
 }
 
-.upload-page .my-upload[aria-pressed="true"] {
+:is(.upload-page, .upload-page--phone) .my-upload[aria-pressed="true"] {
   border-color: var(--color-primary);
 }
 
@@ -7573,7 +7622,7 @@ main.page:has(> .upload-page) {
   min-width: 0;
 }
 
-.upload-page .my-upload__title {
+:is(.upload-page, .upload-page--phone) .my-upload__title {
   flex: none;
   font-size: 15px;
 }
@@ -7589,7 +7638,7 @@ main.page:has(> .upload-page) {
 }
 
 /* 狀態膠囊：28px 高、粗體 13px；審核中 primarySoft、部分退回與退回 warningSoft、已核准 successSoft、已上傳 surface 底 */
-.upload-page .badge[data-status] {
+:is(.upload-page, .upload-page--phone) .badge[data-status] {
   display: inline-flex;
   align-items: center;
   min-height: 28px;
@@ -7601,17 +7650,17 @@ main.page:has(> .upload-page) {
   color: var(--color-textMuted);
 }
 
-.upload-page .badge:is([data-status="in_review"], [data-status="pending"]) {
+:is(.upload-page, .upload-page--phone) .badge:is([data-status="in_review"], [data-status="pending"]) {
   background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
   color: var(--color-primary);
 }
 
-.upload-page .badge:is([data-status="partly_rejected"], [data-status="rejected"]) {
+:is(.upload-page, .upload-page--phone) .badge:is([data-status="partly_rejected"], [data-status="rejected"]) {
   background: color-mix(in srgb, var(--color-warning) 14%, var(--color-surface));
   color: var(--color-warning);
 }
 
-.upload-page .badge[data-status="approved"] {
+:is(.upload-page, .upload-page--phone) .badge[data-status="approved"] {
   background: color-mix(in srgb, var(--color-success) 14%, var(--color-surface));
   color: var(--color-success);
 }
@@ -7755,6 +7804,76 @@ main.page:has(> .upload-page) {
 .upload-entity {
   padding-bottom: 1px;
   border-bottom: 3px solid var(--type-color);
+}
+
+/* 手機的上傳頁（#358，畫板 G-Mobile-Pages、K-Mobile；UploadPage 的 upload-page--phone，展示模式不套用）：頁面不包卡片，
+   頁首是 h1「上傳」（22px）與下一行的分段切換（44px），提示、錯誤、我的上傳的列與狀態膠囊沿用上方桌機的樣式；
+   上傳詳情放在底部面板（upload-sheet），標題列是文件名與狀態膠囊，內容與桌機相同 */
+.upload-page--phone {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.upload-page--phone .upload-header {
+  gap: 6px;
+}
+
+.upload-page--phone .upload-header h1 {
+  flex: 1 0 100%;
+  font-size: 22px;
+}
+
+.upload-page--phone .upload-segments {
+  margin-left: 0;
+}
+
+.upload-page--phone .upload-segments [role="tab"] {
+  min-height: 44px;
+  padding: 0 12px;
+}
+
+.upload-page--phone .my-upload {
+  padding: 8px 12px;
+}
+
+/* 詳情的底部面板停在畫面的一半以上（畫板 K-Mobile 第 5 張，與可展開面板的 56% 相同），內容多時最高到 90%、在面板內捲動；
+   下緣貼齊畫面底部，safe area 由 .bottom-sheet__body 的下方留白處理（PR #368 審查） */
+.bottom-sheet.upload-sheet {
+  min-height: 56dvh;
+}
+
+.upload-sheet .bottom-sheet__header h2 {
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+
+.upload-sheet .bottom-sheet__actions {
+  gap: 8px;
+}
+
+.upload-detail.upload-detail--sheet {
+  flex: none;
+  overflow: visible;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  animation: none;
+}
+
+.upload-detail--sheet .upload-detail__items li {
+  min-height: 40px;
+}
+
+/* 看原文與重新上傳修正版：滿寬、48px（畫板 K-Mobile） */
+.upload-detail--sheet .upload-detail__actions button,
+.upload-detail.upload-detail--sheet > button {
+  flex: 1;
+  align-self: stretch;
+  min-height: 48px;
+  border-radius: 12px;
+  font-size: 15px;
 }
 
 /* 展示模式（#260，docs/design.md「展示模式」的「字級與主題」）：main.tsx 在 <html> 標上 data-mode="presentation"。

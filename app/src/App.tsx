@@ -655,7 +655,8 @@ export function App() {
                 <span className="visually-hidden">{s.uploadTabDone}</span>
               </span>
             ),
-            review: pending?.identity === identity && (
+            // 手機（#358）：待審與回報都沒有（0）時「更多」與清單上不顯示數字；桌機與平板照舊顯示 0
+            review: pending?.identity === identity && (!phone || pending.count > 0) && (
               <span key={bump} className={bump > 0 ? "tab-count is-bump" : "tab-count"}>
                 {pending.count}
               </span>

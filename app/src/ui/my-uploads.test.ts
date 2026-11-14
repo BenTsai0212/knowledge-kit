@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import css from "./app.css?raw";
 import { canReupload, countsFromBatches, endedExtractions, extractionPhase, inProgressCount, myUploadStatus, reuploadOf, reviewCounts, reviewSteps, seenUploads, showsUploadDot, uploadTerms, type ReviewCounts } from "./my-uploads";
 
 const counts = (c: Partial<ReviewCounts>): ReviewCounts => ({ extracting: false, total: 0, pending: 0, approved: 0, ...c });
@@ -145,5 +146,26 @@ describe("手機「上傳」分頁的小點（#282）", () => {
 
   it("打開上傳頁只清除目前身分的，其他身分的保留", () => {
     expect([...seenUploads(new Set(["a", "c"]), uploaders, "staff")]).toEqual(["c"]);
+  });
+});
+
+// 手機的上傳頁（#358，畫板 G-Mobile-Pages、K-Mobile）：提示、錯誤、我的上傳的列與狀態膠囊沿用桌機的樣式，分段切換至少 44px
+describe("手機的上傳頁的樣式（#358）", () => {
+  const rule = (selector: string) => css.match(new RegExp(`(?:^|\\n)${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\{([^}]*)\\}`))?.[1] ?? "";
+
+  it("桌機的上傳頁樣式也套用到 upload-page--phone", () => {
+    const shared = [".notice-info", ".notice-error", ".my-upload", ".badge[data-status]"];
+    for (const s of shared) expect(css).toContain(`:is(.upload-page, .upload-page--phone) ${s}`);
+    expect(css).not.toMatch(/\n\.upload-page \./);
+  });
+
+  it("分段切換的觸控目標至少 44px，詳情的按鈕滿寬 48px", () => {
+    expect(rule('.upload-page--phone .upload-segments [role="tab"]')).toMatch(/min-height:\s*44px/);
+    expect(rule(".upload-page--phone .upload-header h1")).toMatch(/font-size:\s*22px/);
+    expect(css).toMatch(/\.upload-detail\.upload-detail--sheet > button \{[^}]*min-height:\s*48px/);
+  });
+
+  it("詳情的底部面板停在畫面的一半以上（畫板 K-Mobile 第 5 張，PR #368 審查）", () => {
+    expect(rule(".bottom-sheet.upload-sheet")).toMatch(/min-height:\s*56dvh/);
   });
 });

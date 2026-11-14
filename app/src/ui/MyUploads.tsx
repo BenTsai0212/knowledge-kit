@@ -2,6 +2,7 @@
 // 點一份在右側（手機為底部面板）顯示每一項實體與關係的結果，退回時提供「重新上傳修正版」。
 // 桌機（#344，畫板 K-Uploads）：每份一列（surfaceRaised 底、文件日期、狀態膠囊），上傳詳情是頁面右側的整高欄，
 // 「看原文」在詳情中打開原文，萃取出的實體以類型色底線標出（畫板 B-Ingest）。
+// 手機（#358，畫板 K-Mobile）：列與桌機相同，詳情的內容也與桌機相同，放在從底部升起的面板（UploadPage 的 BottomSheet）。
 // 資料由 UploadPage 經 readMyUploads() 讀取（RLS：migration 0011、ADR 0009）；名稱與標題以文字節點顯示。
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { clientConfig } from "../client/load";
@@ -113,10 +114,11 @@ interface ListProps {
   onSelect(id: string | null): void;
   extracting: ReadonlySet<string>;
   language: string;
-  desktop: boolean;
+  // 桌機與手機（#358）：標題與「日期 · 項目數」在左、狀態膠囊在右的列
+  rows: boolean;
 }
 
-export function MyUploadList({ docs, selected, onSelect, extracting, language, desktop }: ListProps) {
+export function MyUploadList({ docs, selected, onSelect, extracting, language, rows }: ListProps) {
   const s = strings(language);
   const m = s.myUploads;
   if (docs.length === 0) return <p className="muted">{m.empty}</p>;
@@ -128,8 +130,8 @@ export function MyUploadList({ docs, selected, onSelect, extracting, language, d
         return (
           <li key={d.id}>
             <button type="button" className="my-upload" aria-pressed={d.id === selected} onClick={() => onSelect(d.id === selected ? null : d.id)}>
-              {desktop ? (
-                // 桌機：標題與「日期 · 項目數」在左，狀態膠囊在右
+              {rows ? (
+                // 桌機與手機：標題與「日期 · 項目數」在左，狀態膠囊在右
                 <>
                   <span className="my-upload__text">
                     <strong className="my-upload__title" title={d.title}>
@@ -171,10 +173,11 @@ interface DetailProps {
   phase: ExtractionPhase | null;
   onReupload(reupload: Reupload): void;
   onClose(): void;
-  desktop: boolean;
+  // card：平板與展示模式的卡片；column：桌機右側的整高欄；sheet：手機的底部面板（標題、狀態膠囊與關閉在面板的標題列，#358）
+  variant: "card" | "column" | "sheet";
 }
 
-export function UploadDetail({ db, identity, doc, language, extracting, jobStatus, phase, onReupload, onClose, desktop }: DetailProps) {
+export function UploadDetail({ db, identity, doc, language, extracting, jobStatus, phase, onReupload, onClose, variant }: DetailProps) {
   const s = strings(language);
   const m = s.myUploads;
   const counts = reviewCounts(doc, extracting);
@@ -189,7 +192,7 @@ export function UploadDetail({ db, identity, doc, language, extracting, jobStatu
     </button>
   );
 
-  if (!desktop)
+  if (variant === "card")
     return (
       <aside className="my-upload-detail" aria-label={doc.title}>
         <header className="dialog-header">
@@ -236,7 +239,7 @@ export function UploadDetail({ db, identity, doc, language, extracting, jobStatu
       </aside>
     );
 
-  // 桌機的上傳詳情：每組萃取結果一列（類型色點、名稱、結果），下方是「看原文」與重新上傳修正版
+  // 桌機與手機的上傳詳情：每組萃取結果一列（類型色點、名稱、結果），下方是「看原文」與重新上傳修正版
   type Item = { id: string; name: string; color: string | null; status: ReviewStatus; type: string };
   const items: Item[] = [
     ...doc.entities.map((e) => ({
@@ -254,19 +257,24 @@ export function UploadDetail({ db, identity, doc, language, extracting, jobStatu
       type: m.relations,
     })),
   ];
+  const column = variant === "column";
   return (
-    <aside className="upload-detail" aria-labelledby={`upload-detail-${doc.id}`}>
-      <div className="upload-detail__head">
-        <p className="upload-detail__eyebrow">{m.detail}</p>
-        <button type="button" className="icon-button" aria-label={s.dialogClose} title={s.dialogClose} onClick={onClose}>
-          ✕
-        </button>
-      </div>
-      <h2 id={`upload-detail-${doc.id}`}>{doc.title}</h2>
+    <aside className={column ? "upload-detail" : "upload-detail upload-detail--sheet"} aria-labelledby={column ? `upload-detail-${doc.id}` : undefined} aria-label={column ? undefined : doc.title}>
+      {column && (
+        <>
+          <div className="upload-detail__head">
+            <p className="upload-detail__eyebrow">{m.detail}</p>
+            <button type="button" className="icon-button" aria-label={s.dialogClose} title={s.dialogClose} onClick={onClose}>
+              ✕
+            </button>
+          </div>
+          <h2 id={`upload-detail-${doc.id}`}>{doc.title}</h2>
+        </>
+      )}
       <p className="my-upload__meta">
         <span className="my-upload__date">{doc.date ?? s.undated}</span>
       </p>
-      <StatusBadge status={status} language={language} />
+      {column && <StatusBadge status={status} language={language} />}
       {jobStatus}
       {/* 萃取完成後（或不是本工作階段上傳的文件）：一句摘要與目前狀態的說明（畫板 K-Uploads），不顯示萃取的處理紀錄 */}
       {(phase === null || phase === "done") &&

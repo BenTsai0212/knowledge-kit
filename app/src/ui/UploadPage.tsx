@@ -5,7 +5,9 @@
 // 可選的等級與專案只列出目前身分看得到的；實際能否寫入由 RLS 決定。上傳內容一律以文字節點顯示。
 // 分成「新增文件」與「我的上傳」（#284）：送出後顯示四步進度；退回的文件可「重新上傳修正版」，帶入原本的設定後回到新增文件。
 // 桌機（≥ 1025px，展示模式除外；#344，畫板 K-Uploads）：頁首是 h1 與分段切換（「我的上傳 N」的 N 是還在處理中的上傳數），內容填滿寬度，
-// 送出後是一張四步進度卡，我的上傳的詳情是頁面右側的整高欄。手機與平板維持原本的卡片與分頁。
+// 送出後是一張四步進度卡，我的上傳的詳情是頁面右側的整高欄。平板與展示模式維持原本的卡片與分頁。
+// 手機（≤ 600px，展示模式除外；#358，畫板 G-Mobile-Pages、K-Mobile）：頁面不包卡片，頁首是 h1 與分段切換、提示是說明列，
+// 我的上傳的列與桌機相同，點一份從底部面板升起詳情（內容與桌機相同）；確認視窗只留五段進度列，送出後的四步進度與萃取的進度條不顯示
 // 切換身分或語言時由 App 以 key 重建本元件，清除表單、預覽與結果。
 import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { clientConfig } from "../client/load";
@@ -19,12 +21,13 @@ import { LevelBadge, ProjectBadge } from "./AccessBadges";
 import { ConflictFailure, ConflictStatus } from "./ConflictStatus";
 import { EMPTY_ICONS, focusIdentity } from "./empty-state";
 import { EmptyState } from "./EmptyState";
+import { BottomSheet } from "./BottomSheet";
 import { ExtractionFailure, ExtractionStatus } from "./ExtractionStatus";
 import { FilePicker } from "./FilePicker";
 import { readMyUploads, type MyUploadDocument } from "../extraction/store";
 import { useLayout } from "./layout";
-import { countsFromBatches, extractionPhase, inProgressCount, type Reupload } from "./my-uploads";
-import { MyUploadList, ReviewProgress, UploadDetail } from "./MyUploads";
+import { countsFromBatches, extractionPhase, inProgressCount, myUploadStatus, reviewCounts, type Reupload } from "./my-uploads";
+import { MyUploadList, ReviewProgress, StatusBadge, UploadDetail } from "./MyUploads";
 import { Notice } from "./Notice";
 import { onlineDemo, presentationMode } from "./online-demo";
 import { REDUCED_MOTION, staggerIndex } from "./motion";
@@ -165,6 +168,8 @@ export function UploadPage({
   const desktop = layout === "desktop" && !presentationMode;
   // 手機的五步縮成一條進度列（#282）
   const phone = layout === "phone";
+  // 手機的頁首、我的上傳的列與底部面板（#358）；展示模式的手機寬度沒有分頁列，維持原本的卡片
+  const phonePage = phone && !presentationMode;
   // 我的上傳：目前身分上傳、看得到的文件（readMyUploads()，RLS）。桌機的分段切換要顯示處理中的數量，所以不論在哪一段都讀取；
   // 本工作階段的萃取有進展時重新讀取
   const [docs, setDocs] = useState<MyUploadDocument[] | null>(null);
@@ -390,7 +395,7 @@ export function UploadPage({
       )}
       <UploadSteps steps={steps} language={language} compact={phone} />
       {/* 線上 demo：另外說明上傳內容會傳給模型供應商（#100 決定 4）；桌機是 surfaceRaised 底的說明列（#344） */}
-      <p className={desktop ? "upload-hint" : "badge warning"}>{onlineDemo.enabled ? s.demoUploadNotice : s.uploadEphemeral}</p>
+      <p className={desktop || phonePage ? "upload-hint" : "badge warning"}>{onlineDemo.enabled ? s.demoUploadNotice : s.uploadEphemeral}</p>
       <div
         className={`drop-zone${dragOver ? " is-over" : ""}`}
         onDragEnter={(e) => {
@@ -513,7 +518,7 @@ export function UploadPage({
   );
 
   const tabs = (
-    <div className={desktop ? "upload-segments" : "review-tabs upload-sections"} role="tablist" aria-label={s.myUploads.sections} onKeyDown={sectionKey}>
+    <div className={desktop || phonePage ? "upload-segments" : "review-tabs upload-sections"} role="tablist" aria-label={s.myUploads.sections} onKeyDown={sectionKey}>
       {SECTIONS.map((x) => (
         <button
           key={x}
@@ -526,7 +531,7 @@ export function UploadPage({
           onClick={() => setSection(x)}
         >
           {sectionLabels[x]}
-          {desktop && x === "mine" && inProgress > 0 && <span className="upload-segments__count"> {inProgress}</span>}
+          {(desktop || phonePage) && x === "mine" && inProgress > 0 && <span className="upload-segments__count"> {inProgress}</span>}
         </button>
       ))}
     </div>
@@ -541,22 +546,22 @@ export function UploadPage({
       doc={doc}
       language={language}
       extracting={extractingIds.has(doc.id)}
-      jobStatus={job === undefined || jobDetail === undefined ? null : desktop ? jobDetail.node : jobStatus(job)}
+      jobStatus={job === undefined || jobDetail === undefined ? null : desktop || phonePage ? jobDetail.node : jobStatus(job)}
       phase={jobDetail?.phase ?? null}
       onReupload={startReupload}
       onClose={() => setSelected(null)}
-      desktop={desktop}
+      variant={desktop ? "column" : phonePage ? "sheet" : "card"}
     />
   );
   const list = docs !== null && (
-    <MyUploadList docs={docs} selected={selected} onSelect={setSelected} extracting={extractingIds} language={language} desktop={desktop} />
+    <MyUploadList docs={docs} selected={selected} onSelect={setSelected} extracting={extractingIds} language={language} rows={desktop || phonePage} />
   );
   const panel =
     section === "new" ? (
       newPanel
     ) : (
       <div role="tabpanel" id={`${ids}-panel`} aria-labelledby={`${ids}-tab-mine`}>
-        {desktop ? (
+        {desktop || phonePage ? (
           list
         ) : (
           <div className={`my-uploads${doc !== undefined ? " with-detail" : ""}`}>
@@ -643,14 +648,15 @@ export function UploadPage({
               </p>
               {/* 送出後的四步進度（#284）：主管核准後才會出現在問答與圖譜 */}
               {/* 桌機是一張卡片：「已送出〈標題〉」與四段進度條（#344） */}
-              {writtenJob && (
+              {writtenJob && !phonePage && (
                 <ReviewProgress
                   counts={countsFromBatches(writtenJob.state.batches, writtenJob.running)}
                   language={language}
                   title={desktop ? writtenJob.title : undefined}
                 />
               )}
-              {writtenJob && jobStatus(writtenJob)}
+              {/* 手機（#358）：進度只看上方的五段進度列；萃取中不顯示萃取的進度條，失敗時仍顯示錯誤（萃取或比對） */}
+              {writtenJob && (phonePage ? detailStatus(writtenJob).node : jobStatus(writtenJob))}
               <div className="dialog-actions">
                 <button type="button" onClick={() => onGoto("qa")}>
                   {s.uploadGotoQa}
@@ -700,6 +706,30 @@ export function UploadPage({
         {section === "mine" && detail}
       </div>
     );
+  if (phonePage) {
+    // selected 在面板關閉（退場動畫播完）後才清除，退場中仍顯示這一份；回到新增文件時面板關閉
+    const sheetStatus = doc === undefined ? null : myUploadStatus(reviewCounts(doc, extractingIds.has(doc.id)));
+    return (
+      <section className="upload-page--phone" aria-labelledby={`${ids}-title`}>
+        <header className="upload-header">
+          <h1 id={`${ids}-title`}>{s.tabUpload}</h1>
+          {tabs}
+        </header>
+        {panel}
+        {dialogElement}
+        <BottomSheet
+          open={section === "mine" && doc !== undefined}
+          onClose={() => setSelected(null)}
+          title={doc?.title ?? ""}
+          language={language}
+          className="upload-sheet"
+          actions={sheetStatus !== null && <StatusBadge status={sheetStatus} language={language} />}
+        >
+          {detail}
+        </BottomSheet>
+      </section>
+    );
+  }
   return (
     <section className="card upload">
       {tabs}
