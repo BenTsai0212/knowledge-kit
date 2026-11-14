@@ -217,3 +217,28 @@ VITE_ONLINE_DEMO=1 VITE_PUBLIC_ACCESS_CODE=e2e-public-code VITE_DEMO_COMPARE=1 n
 1. 在 Actions 的該次執行頁面最下方的 Artifacts 下載 `playwright-<客戶>`，解壓縮。
 2. trace：`npx playwright show-trace test-results/<測試>/trace.zip`（逐步的畫面、網路與主控台紀錄）。
 3. 報告：`npx playwright show-report playwright-report`；失敗的截圖也在 `test-results/<測試>/` 中。
+
+### README 的截圖
+
+`README.md` 與 `README.zh-TW.md` 的截圖（`docs/images/<名稱>-<語言>.png`）由 `e2e/readme-shots.spec.ts` 產生（#369）。它不是測試，預設不執行：`KK_README_SHOTS=1` 時 `playwright.config.ts` 只執行這個檔案，其他時候（含 CI 的一般執行）排除它。
+
+- 內容：參考情境（`client/`）、主管身分，介面語言（`client.json` 的 `languages`）各一套。桌機 1440×900 是首頁、問答（打開原文）、圖譜（選取關聯最多的實體）、時間軸、我的上傳（打開詳情）、待審、評測台（`?tools=evals`，跑完題庫後展開一題）、品質報告與展示模式（`?mode=presentation`）；手機 390×844 是首頁、問答與圖譜。
+- 不需要 API 金鑰、不呼叫模型：`/api/ask` 是 `routeFakeAsk` 的假回應，問答的回答改為引用 prompt 中與介面同語言的前兩段原文，讓回答與出處對得上。
+- 只出現虛構資料：以邀請碼登入，截圖中沒有登入頁、邀請碼與帳號；Light 模式（`colorScheme: "light"`）、減少動態效果。
+
+重新產生：
+
+- **CI**（建議）：手動執行 E2E（`gh workflow run e2e.yml --ref <分支>`，或 Actions → E2E → Run workflow）時，參考情境那一格在一般的測試之後產生截圖，上傳為 `readme-shots` artifact（保留 7 天）。下載後覆蓋 `docs/images/`，確認畫面再 commit：
+
+  ```bash
+  gh run download <run-id> --name readme-shots --dir docs/images
+  ```
+
+- **本機**：
+
+  ```bash
+  npm run build
+  KK_README_SHOTS=1 npx playwright test
+  ```
+
+畫面改版、或 README 的段落改變時重新產生；新增或刪除截圖時，兩份 README 一起改。
