@@ -61,6 +61,7 @@ import { Sidebar } from "./ui/Sidebar";
 import { MobileNav } from "./ui/MobileNav";
 import { NavRail } from "./ui/NavRail";
 import { useLayout } from "./ui/layout";
+import { endedExtractions, seenUploads, showsUploadDot } from "./ui/my-uploads";
 import { PresentationBar, type IdentityBump } from "./ui/PresentationBar";
 import { ScriptPanel } from "./ui/ScriptPanel";
 import { IdentityCompare, type CompareRun } from "./ui/IdentityCompare";
@@ -144,6 +145,21 @@ export function App() {
   // 實際執行中的萃取（文件 id）；「萃取中」以此判斷，不看批次狀態（#47 審查）
   const [activeExtractions, setActiveExtractions] = useState<ReadonlySet<string>>(new Set());
   const extractionRunner = useRef(createExtractionRunner(setActiveExtractions));
+  // 手機「上傳」分頁的小點（#282）：不在上傳頁時結束的萃取（文件 id），打開上傳頁時清除目前身分的
+  const [unseenUploads, setUnseenUploads] = useState<ReadonlySet<string>>(new Set());
+  const lastActive = useRef(activeExtractions);
+  const latestView = useRef(view);
+  latestView.current = view;
+  useEffect(() => {
+    const ended = endedExtractions(lastActive.current, activeExtractions);
+    lastActive.current = activeExtractions;
+    if (ended.length > 0 && latestView.current !== "upload") setUnseenUploads((ids) => new Set([...ids, ...ended]));
+  }, [activeExtractions]);
+  const uploaders = Object.fromEntries(Object.values(extractions).map((x) => [x.state.documentId, x.state.uploader]));
+  useEffect(() => {
+    if (view === "upload") setUnseenUploads((ids) => seenUploads(ids, uploaders, identity));
+    // 只在打開上傳頁或切換身分時清除（uploaders 每次 render 重建，不放進依賴）
+  }, [view, identity]);
   // 萃取後的比對（#51）：與萃取相同，在背景執行、同一份文件同時只執行一個
   const [conflictJobs, setConflictJobs] = useState<Record<string, ConflictState>>({});
   const latestConflicts = useRef(conflictJobs);
@@ -627,6 +643,11 @@ export function App() {
           view={view}
           onView={(next) => (setGraphFocus(null), setView(next))}
           tabExtra={{
+            upload: phone && showsUploadDot(unseenUploads, uploaders, identity) && (
+              <span className="tab-dot">
+                <span className="visually-hidden">{s.uploadTabDone}</span>
+              </span>
+            ),
             review: pending?.identity === identity && (
               <span key={bump} className={bump > 0 ? "tab-count is-bump" : "tab-count"}>
                 {pending.count}

@@ -205,6 +205,8 @@
   "uploadStepPassages": "{count} 段落",
   "uploadStepBatch": "バッチ {done}／{total}",
   "uploadStepSent": "{count} 件をレビューへ",
+  "uploadStepCurrent": "{step} · {detail}",
+  "uploadTabDone": "抽出が終わりました",
   "uploadRecentTitle": "このセッションでアップロードした文書",
   "uploadClearFile": "ファイルを解除",
   "uploadAudience": "閲覧できるユーザー",

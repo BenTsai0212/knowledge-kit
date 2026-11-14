@@ -205,6 +205,8 @@
   "uploadStepPassages": "{count} passages",
   "uploadStepBatch": "Batch {done}/{total}",
   "uploadStepSent": "{count} sent for review",
+  "uploadStepCurrent": "{step} · {detail}",
+  "uploadTabDone": "Extraction finished",
   "uploadRecentTitle": "Uploaded this session",
   "uploadClearFile": "Clear file",
   "uploadAudience": "Visible to",

@@ -161,7 +161,10 @@ export function UploadPage({
   const writeStarted = useRef(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
-  const desktop = useLayout() === "desktop" && !presentationMode;
+  const layout = useLayout();
+  const desktop = layout === "desktop" && !presentationMode;
+  // 手機的五步縮成一條進度列（#282）
+  const phone = layout === "phone";
   // 我的上傳：目前身分上傳、看得到的文件（readMyUploads()，RLS）。桌機的分段切換要顯示處理中的數量，所以不論在哪一段都讀取；
   // 本工作階段的萃取有進展時重新讀取
   const [docs, setDocs] = useState<MyUploadDocument[] | null>(null);
@@ -385,7 +388,7 @@ export function UploadPage({
           {s.myUploads.reuploadNotice}
         </Notice>
       )}
-      <UploadSteps steps={steps} language={language} />
+      <UploadSteps steps={steps} language={language} compact={phone} />
       {/* 線上 demo：另外說明上傳內容會傳給模型供應商（#100 決定 4）；桌機是 surfaceRaised 底的說明列（#344） */}
       <p className={desktop ? "upload-hint" : "badge warning"}>{onlineDemo.enabled ? s.demoUploadNotice : s.uploadEphemeral}</p>
       <div
@@ -590,7 +593,7 @@ export function UploadPage({
             </button>
           </header>
           {/* 頁首的步驟在確認面板後方會被遮住：面板內也顯示一份（#242 審查） */}
-          <UploadSteps steps={steps} language={language} />
+          <UploadSteps steps={steps} language={language} compact={phone} />
           {/* 檔案卡片：檔名、段落數、字數；預覽段落放在 reading 紙面上逐條升起 */}
           <div className="upload-file-card">
             <strong className="upload-file-card__name">{file?.name ?? s.uploadPastedText}</strong>

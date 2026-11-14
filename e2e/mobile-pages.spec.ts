@@ -2,8 +2,8 @@
 // 每一頁都檢查 375px 沒有橫向捲動、該頁新增的可點元件至少 44px（觸控目標）。橫向滑動的手感與 iOS 安全區由人在實機確認。
 // /api/ask 一律是假的回應（openApp）。
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { EVALS_PATH, gotoView, openApp, switchIdentity } from "./support/app";
-import { NO_NON_REVIEWER, NO_REVIEWER, nonReviewer, reviewer } from "./support/client";
+import { EVALS_PATH, gotoView, openApp, s, switchIdentity } from "./support/app";
+import { NO_NON_REVIEWER, NO_REVIEWER, NO_UPLOADER, nonReviewer, reviewer, uploader } from "./support/client";
 
 test.use({ viewport: { width: 375, height: 812 } });
 
@@ -59,6 +59,49 @@ test.describe("時間軸", () => {
     await expect(rows).toHaveCount(total);
     await expect.poll(() => dimmed.first().locator(".timeline-card").evaluate((el) => getComputedStyle(el).opacity)).toBe("0.45");
     expect(await noHorizontalScroll(page)).toBe(true);
+  });
+});
+
+test.describe("上傳", () => {
+  test.skip(uploader === undefined, NO_UPLOADER);
+
+  test("五步縮成一條進度列，下方一行寫目前步驟；不在上傳頁時萃取結束，「上傳」分頁的小點亮起，回到上傳頁後消失", async ({ page }) => {
+    await openApp(page);
+    await switchIdentity(page, uploader!.id);
+    expect(await gotoView(page, "upload")).toBe(true);
+    const bar = page.locator(".upload-bar").first();
+    await expect(bar.locator(".upload-bar__segment")).toHaveCount(5);
+    await expect(page.locator(".upload-steps")).toHaveCount(0);
+    await expect(bar.locator(".upload-bar__current")).toHaveText(s.uploadStepUpload);
+    expect(await noHorizontalScroll(page)).toBe(true);
+
+    // 萃取的回應先擋住，切到其他頁後才放行（route.fallback() 交給 openApp 的假回應）
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    await page.route("**/api/ask", async (route) => {
+      await held;
+      await route.fallback();
+    });
+    await page.getByLabel(s.uploadFile).setInputFiles("e2e/fixtures/upload-note.md");
+    await page.getByRole("button", { name: s.uploadPreview }).click();
+    const dialog = page.getByRole("dialog", { name: s.uploadConfirmTitle });
+    await dialog.getByRole("button", { name: s.uploadSubmit, exact: true }).click();
+    await expect(dialog.getByText(s.uploadDone)).toBeVisible();
+    // 萃取中：上傳與切段的段填滿，目前步驟是模型萃取與批次
+    await expect(dialog.locator('.upload-bar__segment[data-step="chunk"]')).toHaveClass(/is-done/);
+    await expect(dialog.locator('.upload-bar__segment[data-step="extract"]')).toHaveClass(/is-active/);
+    await expect(dialog.locator(".upload-bar__current")).toContainText(s.uploadStepExtract);
+    expect(await noHorizontalScroll(page)).toBe(true);
+    await dialog.getByRole("button", { name: s.uploadAnother }).click();
+    await expect(dialog).toBeHidden();
+
+    const dot = page.locator('.mobile-tabbar [data-view="upload"] .tab-dot');
+    await expect(dot).toHaveCount(0);
+    expect(await gotoView(page, "qa")).toBe(true);
+    release();
+    await expect(dot).toBeVisible();
+    expect(await gotoView(page, "upload")).toBe(true);
+    await expect(dot).toHaveCount(0);
   });
 });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { flyPath, foundTerms, sentForReview, underlineRanges, uploadSteps, passagesWordCount, type UploadProgress } from "./upload-helpers";
+import { flyPath, foundTerms, sentForReview, stepBar, underlineRanges, uploadSteps, passagesWordCount, type UploadProgress } from "./upload-helpers";
 
 // 頁首的五個步驟與檔案卡片的字數（#242）
 const idle: UploadProgress = { hasInput: false, parsing: false, passages: null, written: false, batches: null };
@@ -29,7 +29,7 @@ describe("uploadSteps()", () => {
   it("萃取中：顯示真實的批次（第 2 批執行中是 2／3）", () => {
     const steps = uploadSteps({ ...idle, hasInput: true, passages: 7, written: true, batches: [batch("done", 2, 1), batch("running"), batch("waiting")] });
     expect(steps.map((step) => step.status)).toEqual(["done", "done", "active", "todo", "todo"]);
-    expect(steps[2].detail).toEqual({ kind: "batch", done: 2, total: 3 });
+    expect(steps[2].detail).toEqual({ kind: "batch", done: 2, finished: 1, total: 3 });
   });
 
   it("寫入後、萃取狀態還沒出現：萃取進行中，不顯示批次", () => {
@@ -40,13 +40,13 @@ describe("uploadSteps()", () => {
   it("有批次失敗：萃取停在進行中，批次是已完成的數量", () => {
     const steps = uploadSteps({ ...idle, hasInput: true, passages: 7, written: true, batches: [batch("done", 1), batch("failed"), batch("waiting")] });
     expect(steps.map((step) => step.status)).toEqual(["done", "done", "active", "todo", "todo"]);
-    expect(steps[2].detail).toEqual({ kind: "batch", done: 1, total: 3 });
+    expect(steps[2].detail).toEqual({ kind: "batch", done: 1, finished: 1, total: 3 });
   });
 
   it("萃取完成：人工審核進行中並顯示送審筆數，併入圖譜保持未完成（#242 決定 3）", () => {
     const steps = uploadSteps({ ...idle, hasInput: true, passages: 7, written: true, batches: [batch("done", 2, 1), batch("done", 3, 0)] });
     expect(steps.map((step) => step.status)).toEqual(["done", "done", "done", "active", "todo"]);
-    expect(steps[2].detail).toEqual({ kind: "batch", done: 2, total: 2 });
+    expect(steps[2].detail).toEqual({ kind: "batch", done: 2, finished: 2, total: 2 });
     expect(steps[3].detail).toEqual({ kind: "sent", count: 6 });
   });
 });
@@ -120,5 +120,31 @@ describe("已送審的標記（#242 PR 3）", () => {
     const from = { left: 400, top: 500, width: 100, height: 40 };
     const to = { left: 100, top: 200, width: 20, height: 10 };
     expect(flyPath(from, to, 12)).toEqual({ left: 104, top: 199, x: 340, y: 315 });
+  });
+});
+
+describe("手機的進度列（#282）", () => {
+  it("還沒選檔：沒有填滿，目前步驟是上傳", () => {
+    const bar = stepBar(uploadSteps(idle));
+    expect(bar.fills).toEqual([0, 0, 0, 0, 0]);
+    expect(bar.current.name).toBe("upload");
+  });
+
+  it("已切段、還沒送出：前兩段填滿，目前步驟是最後一個完成的切段", () => {
+    const bar = stepBar(uploadSteps({ ...idle, hasInput: true, passages: 7 }));
+    expect(bar.fills).toEqual([1, 1, 0, 0, 0]);
+    expect(bar.current).toMatchObject({ name: "chunk", detail: { kind: "passages", count: 7 } });
+  });
+
+  it("萃取中：萃取的一段依完成的批數填滿，目前步驟寫執行中的那一批", () => {
+    const bar = stepBar(uploadSteps({ ...idle, hasInput: true, passages: 7, written: true, batches: [batch("done", 2, 1), batch("running"), batch("waiting")] }));
+    expect(bar.fills).toEqual([1, 1, 1 / 3, 0, 0]);
+    expect(bar.current).toMatchObject({ name: "extract", detail: { kind: "batch", done: 2, total: 3 } });
+  });
+
+  it("萃取完成：前三段填滿，目前步驟是人工審核與送審筆數", () => {
+    const bar = stepBar(uploadSteps({ ...idle, hasInput: true, passages: 7, written: true, batches: [batch("done", 2, 1), batch("done", 1)] }));
+    expect(bar.fills).toEqual([1, 1, 1, 0, 0]);
+    expect(bar.current).toMatchObject({ name: "review", detail: { kind: "sent", count: 4 } });
   });
 });
