@@ -5142,6 +5142,15 @@ main.page:has(> .eval-page--desktop) {
   background: none;
 }
 
+/* 密碼欄與邀請碼欄滿寬，與「登入」「開始使用」同寬（標籤只給輔助技術，label 本身是 grid） */
+.app--phone-entry .entry__panel .access-code label:not(.account-card) {
+  display: grid;
+}
+
+.app--phone-entry .entry__panel .access-code label:not(.account-card) > input {
+  width: 100%;
+}
+
 .app--phone-entry .entry__panel h2 {
   margin: 0;
   font-size: 22px;

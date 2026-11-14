@@ -93,6 +93,8 @@ test("帳號登入：沒有頂端列與分頁列；主視覺 330px，左上是�
   const submit = form.getByRole("button", { name: s.signInSubmit, exact: true });
   const alt = form.getByRole("button", { name: s.signInWithCode });
   expect((await box(alt)).y).toBeGreaterThan((await box(submit)).y);
+  // 密碼欄滿寬，與「登入」同寬（± 1px）
+  expect(Math.abs((await box(password)).width - (await box(submit)).width)).toBeLessThanOrEqual(1);
   await expectControlHeights(page);
   expect(await noHorizontalScroll(page)).toBe(true);
   await screenshot(page, testInfo, "entry-mobile-account");
@@ -121,6 +123,9 @@ test("使用邀請碼體驗：沒有主視覺與導覽；ACCESS、標題 24px、
   const submitBox = await box(submit);
   const backBox = await box(back);
   expect(submitBox.y).toBeGreaterThan(inputBox.y + inputBox.height);
+  // 邀請碼欄滿寬，與「開始使用」同寬（± 1px）
+  expect(Math.abs(inputBox.width - submitBox.width)).toBeLessThanOrEqual(1);
+  expect(Math.abs(inputBox.x - submitBox.x)).toBeLessThanOrEqual(1);
   expect(backBox.y).toBeGreaterThanOrEqual(submitBox.y + submitBox.height);
   expect(backBox.y + backBox.height).toBeLessThanOrEqual(844);
   expect(backBox.width).toBeGreaterThanOrEqual(44);
