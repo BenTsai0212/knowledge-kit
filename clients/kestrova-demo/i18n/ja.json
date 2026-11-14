@@ -4,6 +4,7 @@
   "modelLoadingTitle": "意味検索モデルを読み込んでいます",
   "modelDownloadingTitle": "意味検索モデルをダウンロードしています",
   "modelDownloadProgress": "{total} MB 中 {loaded} MB をダウンロードしました。モデルは初回のみダウンロードされ、以降はブラウザのキャッシュから読み込まれます。",
+  "modelDownloadBar": "{loaded}／{total} MB",
   "modelPreparing": "いま入力した質問には、モデルの準備ができしだい回答します。",
   "retrievalFallbackTitle": "意味検索を利用できないため、キーワード検索を使用しています",
   "retrievalFallback": {

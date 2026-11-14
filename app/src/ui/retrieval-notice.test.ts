@@ -99,3 +99,31 @@ describe("megabytes 與 sameDisplay", () => {
     expect(sameDisplay(downloading(0, 10 * MB), READY)).toBe(false);
   });
 });
+
+// 手機的登入頁（#355，畫板 K-Mobile）：「登入」上方的一條進度列，不是提示框
+describe("RetrievalNotice 的進度列（bar）", () => {
+  const renderBar = (preparesModel: boolean, status: ProviderStatus, language = "zh-TW") =>
+    renderToStaticMarkup(createElement(RetrievalNotice, { language, preparesModel, status, bar: true }));
+
+  it("下載中：標題、已下載／總共的 MB 與進度條，沒有提示框", () => {
+    const s = strings("zh-TW");
+    const html = renderBar(SEMANTIC, downloading(52 * MB, 84 * MB));
+    expect(html).toContain('class="model-bar"');
+    expect(html).toContain(s.modelDownloadingTitle);
+    expect(html).toContain(fill(s.modelDownloadBar, { loaded: "52.0", total: "84.0" }));
+    expect(html).toMatch(/<progress value="54525952" max="88080384" aria-label="[^"]+"/);
+    expect(html).not.toContain("notice");
+  });
+
+  it("載入中：只有標題，沒有進度條", () => {
+    const html = renderBar(SEMANTIC, PREPARING);
+    expect(html).toContain(strings("zh-TW").modelLoadingTitle);
+    expect(html).not.toContain("<progress");
+  });
+
+  it("降級時照常顯示降級提示；準備好與 keyword-hash 不顯示", () => {
+    expect(renderBar(SEMANTIC, { state: "ready", fallback: FALLBACK })).toContain("retrieval-fallback");
+    expect(renderBar(SEMANTIC, READY)).toBe("");
+    expect(renderBar(KEYWORD, PREPARING)).toBe("");
+  });
+});

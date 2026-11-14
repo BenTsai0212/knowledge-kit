@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { layoutFor, NAV_ICONS, phoneTabs, SHEET_HALF, sheetDragCloses, sheetSnap, usesSegmented, visibleArea } from "./layout";
+import { layoutFor, NAV_ICONS, phoneTabs, SHEET_HALF, sheetDragCloses, sheetSnap, visibleArea } from "./layout";
 import { visibleViews } from "./online-demo";
 
 const off = { enabled: false };
@@ -25,15 +25,6 @@ describe("phoneTabs（docs/design.md「日常工具 › 手機」）", () => {
 
   it("線上 demo 的主管：評測台不出現在「更多」", () => {
     expect(phoneTabs(visibleViews(true, { enabled: true }, false, true)).more).toEqual(["timeline", "review"]);
-  });
-
-  it("展示模式：只有問答與圖譜，改用分段切換", () => {
-    for (const canReview of [false, true]) {
-      const views = visibleViews(canReview, off, true, true);
-      expect(phoneTabs(views)).toEqual({ tabs: ["qa", "graph"], more: [] });
-      expect(usesSegmented(views)).toBe(true);
-    }
-    expect(usesSegmented(visibleViews(false, off, false, false))).toBe(false);
   });
 
   it("每個頁籤與「更多」都有圖示", () => {

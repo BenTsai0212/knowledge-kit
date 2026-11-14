@@ -1,4 +1,4 @@
-import { useId, useState, type Ref } from "react";
+import { useId, useState, type ReactNode, type Ref } from "react";
 import { errorMessage, strings } from "../client/i18n";
 import { onlineDemo } from "./online-demo";
 
@@ -9,9 +9,11 @@ interface Props {
   onSubmit(code: string): void;
   // 登入面板從帳號登入切換過來時，焦點移到標題（#334）
   titleRef?: Ref<HTMLHeadingElement>;
+  // 手機的語意模型下載進度列（#355），放在「開始使用」上方
+  progress?: ReactNode;
 }
 
-export function AccessCodeForm({ language, rejected, onSubmit, titleRef }: Props) {
+export function AccessCodeForm({ language, rejected, onSubmit, titleRef, progress }: Props) {
   const s = strings(language);
   const errorId = useId();
   // 線上 demo 預先填入公開試用碼，訪客只要按送出（#100 決定 2）；碼被拒時保留已輸入的內容，不清空（#246）
@@ -32,7 +34,7 @@ export function AccessCodeForm({ language, rejected, onSubmit, titleRef }: Props
         {s.accessCodeTitle}
       </h2>
       <label>
-        {s.accessCodeLabel}
+        <span className="access-code__label">{s.accessCodeLabel}</span>
         <input
           type="password"
           className="entry-code"
@@ -53,6 +55,7 @@ export function AccessCodeForm({ language, rejected, onSubmit, titleRef }: Props
       )}
       {!invalid && onlineDemo.publicAccessCode !== "" && <p className="muted">{s.demoAccessCodeHint}</p>}
       <p className="muted">{s.accessCodeHint}</p>
+      {progress}
       <button type="submit" className="entry-primary" disabled={code.trim() === ""}>
         {s.accessCodeSubmit}
       </button>

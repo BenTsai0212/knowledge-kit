@@ -9,7 +9,7 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "loading", "loadFailed", "modelLoadingTitle", "modelDownloadingTitle", "modelDownloadProgress", "modelPreparing",
+    "loading", "loadFailed", "modelLoadingTitle", "modelDownloadingTitle", "modelDownloadProgress", "modelDownloadBar", "modelPreparing",
     "retrievalFallbackTitle", "retrievalFallback", "productName", "fictionalData", "demoPermissions", "identity", "language", "accessCodeTitle",
     "accessCodeLabel", "accessCodeHint", "demoAccessCodeHint", "demoQaNotice", "demoUploadNotice", "accessCodeSubmit", "changeAccessCode", "signInTitle", "signInAccount", "signInAccountOption", "signInPassword", "signInNoPassword", "signInSubmit", "signInWithCode", "signInBack", "signInEyebrow", "accessCodeEyebrow", "signInOr", "signInAccountHint", "signOut", "identityBadge", "identityAndLanguage", "userCardScope", "navMore", "presetQuestions", "scenarioRole",
     "questionLabel", "questionPlaceholder", "askButton", "answering", "emptyAnswer", "emptyAnswerReason", "emptyAnswerAction", "qaIndependent", "qaHeaderNote", "sessionQuestions", "sessionQuestionsCount", "answerMentions", "answerBasis", "answerConflict", "followUpTitle", "followUpOutgoing", "followUpIncoming", "viewInGraph", "openSource", "sourceTitle", "sourceHeading",
@@ -59,6 +59,7 @@
     "modelLoadingTitle": { "$ref": "#/definitions/Text" },
     "modelDownloadingTitle": { "$ref": "#/definitions/Text" },
     "modelDownloadProgress": { "$ref": "#/definitions/Text" },
+    "modelDownloadBar": { "$ref": "#/definitions/Text" },
     "modelPreparing": { "$ref": "#/definitions/Text" },
     "retrievalFallbackTitle": { "$ref": "#/definitions/Text" },
     "retrievalFallback": {

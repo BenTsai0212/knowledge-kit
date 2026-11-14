@@ -28,10 +28,6 @@ export function phoneTabs(views: readonly View[]): PhoneTabs {
   return { tabs: kept, more: views.filter((v) => !kept.includes(v)) };
 }
 
-// 只有兩個頁籤時（展示模式）改用頂端的分段切換，不顯示底部分頁列。展示模式登入後由 PresentationBar 取代 MobileNav（#260），
-// 所以 MobileNav 的分段切換只出現在展示模式的登入頁
-export const usesSegmented = (views: readonly View[]): boolean => views.length <= 2;
-
 // 底部面板往下拖曳超過面板高度的 1/4（最多 96px）就關閉，否則彈回原位
 export const SHEET_DRAG_CLOSE_PX = 96;
 export const sheetDragCloses = (dy: number, sheetHeight: number): boolean => dy > 0 && dy >= Math.min(SHEET_DRAG_CLOSE_PX, sheetHeight / 4);
