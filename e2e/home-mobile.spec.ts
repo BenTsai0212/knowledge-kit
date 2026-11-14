@@ -2,7 +2,7 @@
 // 常見問題在下方一行；主管的數字卡與「開始審核」在最上；不顯示「看得到的範圍」（在身分與語言面板，#255）；
 // 觸控目標至少 44px、沒有橫向捲動，英文介面不破版。截圖附在測試報告（CI 的 E2E artifact）。/api/ask 一律是假的回應。
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { openApp, s, switchIdentity, switchLanguage, tab } from "./support/app";
+import { gotoView, openApp, s, switchIdentity, switchLanguage, tab } from "./support/app";
 import { client, NO_NON_REVIEWER, NO_REVIEWER, nonReviewer, reviewer } from "./support/client";
 import { routeFakeAsk } from "./support/fake-ask";
 
@@ -30,6 +30,8 @@ for (const who of ["一般員工", "主管"] as const) {
     const role = who === "主管" ? reviewer : nonReviewer;
     test.skip(role === undefined, who === "主管" ? NO_REVIEWER : NO_NON_REVIEWER);
     await switchIdentity(page, role!.id);
+    // openApp() 登入後停在問答頁：切到首頁再檢查
+    expect(await gotoView(page, "home")).toBe(true);
     await expect(tab(page, s.tabHome)).toHaveAttribute("aria-current", "page");
     await expect(home(page)).toBeVisible();
     await expect(home(page).getByText(s.loading)).toHaveCount(0);
@@ -45,7 +47,17 @@ for (const who of ["一般員工", "主管"] as const) {
     expect(askBox.x + askBox.width).toBeLessThanOrEqual(formBox.x + formBox.width);
     expect(askBox.y).toBeGreaterThanOrEqual(formBox.y);
     const presets = page.getByRole("group", { name: s.home.commonQuestions });
-    if ((await presets.count()) > 0) expect((await presets.boundingBox())!.y).toBeGreaterThan(formBox.y);
+    if ((await presets.count()) > 0) {
+      const presetsBox = (await presets.boundingBox())!;
+      expect(presetsBox.y).toBeGreaterThan(formBox.y);
+      expect(presetsBox.x).toBeCloseTo(formBox.x, 0);
+    }
+    // 提問框和其他區塊同寬：左緣和「最近新增的文件」的標題相同（左右留白 16px），不貼齊畫面
+    const documentsTitle = page.locator("#home-documents");
+    await expect(documentsTitle).toBeVisible();
+    expect(formBox.x).toBeCloseTo((await documentsTitle.boundingBox())!.x, 0);
+    expect(formBox.x).toBeGreaterThanOrEqual(16);
+    expect(formBox.x + formBox.width).toBeLessThanOrEqual(390 - 16);
 
     if (who === "主管") {
       const waiting = page.getByRole("region", { name: s.home.waitingTitle });
@@ -71,7 +83,7 @@ for (const who of ["一般員工", "主管"] as const) {
     await expect(ask).toBeEnabled();
     await input.press("Enter");
     await expect(tab(page, s.tabQa)).toHaveAttribute("aria-current", "page");
-    await tab(page, s.tabHome).click();
+    await gotoView(page, "home");
     const again = page.getByRole("button", { name: `${s.home.askAgain}${s.colon}${question}` });
     await expect(again).toBeVisible();
     expect((await again.boundingBox())!.height).toBeGreaterThanOrEqual(44);
@@ -85,6 +97,7 @@ for (const who of ["一般員工", "主管"] as const) {
     test.skip(!client.languages.includes("en"), "client.json 的 languages 沒有 en");
     test.skip(role === undefined, who === "主管" ? NO_REVIEWER : NO_NON_REVIEWER);
     await switchIdentity(page, role!.id);
+    expect(await gotoView(page, "home")).toBe(true);
     await switchLanguage(page, "en");
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await expect(home(page)).toBeVisible();

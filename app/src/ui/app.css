@@ -6089,8 +6089,11 @@ main.page:has(> .eval-page--desktop) {
   color: var(--color-textMuted);
 }
 
+/* 首頁的提問框和其他區塊同寬（左右留白 16px）：不沿用問答頁貼齊畫面、sticky 在分頁列上方的整寬列（.app--phone .composer） */
 .home--phone .composer--compact {
+  position: static;
   gap: 8px;
+  margin: 0;
   padding: 0;
   border: none;
   background: none;
@@ -6131,9 +6134,12 @@ main.page:has(> .eval-page--desktop) {
   color: var(--color-text);
 }
 
+/* 常見問題從提問框的左緣開始，往右可以滑出畫面（右側延伸到 main 的留白） */
 .home--phone .composer--compact .presets {
   overflow-x: auto;
   scroll-snap-type: x proximity;
+  margin-right: -1rem;
+  padding-right: 1rem;
 }
 
 .home--phone .composer--compact .scenario {

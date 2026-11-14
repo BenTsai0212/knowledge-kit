@@ -165,11 +165,16 @@ describe("手機（#356，畫板 K-Mobile 的首頁）", () => {
     expect(rule(".home--phone .free-question--compact input")).toMatchObject({ height: "44px", border: "none" });
     expect(rule(".home--phone .free-question--compact button")).toMatchObject({ height: "44px" });
     expect(rule(".home--phone .composer--compact .presets button")).toMatchObject({ height: "44px" });
-    expect(rule(".home--phone .composer--compact .presets")).toMatchObject({ "overflow-x": "auto" });
+    expect(rule(".home--phone .composer--compact .presets")).toMatchObject({ "overflow-x": "auto", "margin-right": "-1rem", "padding-right": "1rem" });
     expect(rule(".home__stats")).toMatchObject({ "grid-template-columns": "repeat(2, minmax(0, 1fr))" });
     expect(rule(".home__stat-count")).toMatchObject({ "font-family": "var(--font-display)", "font-size": "34px" });
     expect(rule(".home__stat--conflict")).toMatchObject({ border: "1.5px solid var(--color-conflict)" });
     expect(rule(".home__start")).toMatchObject({ height: "50px" });
+  });
+
+  it("提問框和其他區塊同寬：不沿用問答頁的整寬、sticky 輸入列（左右 -1rem）", () => {
+    expect(rule(".app--phone .composer")).toMatchObject({ position: "sticky", margin: "0 -1rem" });
+    expect(rule(".home--phone .composer--compact")).toMatchObject({ position: "static", margin: "0" });
   });
 
   it("列：有更新至少 60px、surface 底；問過的問題與文件是下方 1px 的線、至少 44px", () => {
