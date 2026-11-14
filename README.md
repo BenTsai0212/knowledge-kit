@@ -30,7 +30,7 @@ Type a question or pick a common question. Answers cite the passages they are ba
 
 Entities and relations extracted from the documents. Search for an entity or click a node to select it; the entity panel on the right lists its relations and the documents it appears in, and lets you ask about it in Q&A. Expand step by step from the selected entity while everything outside the focus is grayed out, filter by type, or use "Find path" for the shortest path between two entities ([docs/graph.md](docs/graph.md)).
 
-![Knowledge graph as a manager, with the most connected entity selected and its entity panel on the right](docs/images/graph-en.png)
+![Knowledge graph as a manager: the canvas takes most of the width, with the most connected entity in focus and its entity panel on the right](docs/images/graph-en.png)
 
 ### Timeline
 
@@ -42,7 +42,7 @@ Visible documents by date, grouped by year. Cards are compact; expand one to see
 
 Upload a file or paste text; the document is split into passages, and its visibility level defaults to the most restrictive level your role can choose. Entities and relations are extracted in the background and added only after review. "My uploads" lists each upload with its status (in review, approved, partly rejected, or rejected); click one to see what was extracted and the result of each item ([docs/upload.md](docs/upload.md), [docs/design.md](docs/design.md#我的上傳)).
 
-![My uploads as a manager, with the details of an uploaded notice on the right](docs/images/uploads-en.png)
+![My uploads as a manager: the list of uploads, with the details of an uploaded notice next to it](docs/images/uploads-en.png)
 
 ### Review
 
@@ -62,7 +62,7 @@ A tool for the people delivering the demo, shown only when you add `?tools=evals
 
 Add `?mode=presentation` to the URL for presenting the demo to others: only Q&A and the graph, larger text, and the identity as a segmented switch in the top bar, so you can show how the same question is answered for each role. The source opens as a floating card ([docs/qa.md](docs/qa.md#展示模式), section "展示模式").
 
-![Presentation mode: an answer with the source card open](docs/images/presentation-en.png)
+![Presentation mode: a full answer with citations, the identity switch in the top bar, and the question list](docs/images/presentation-en.png)
 
 ### Phone and tablet
 

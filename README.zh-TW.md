@@ -30,7 +30,7 @@ Video tour: (coming soon)
 
 文件中萃取出的實體與關係。以搜尋框或點節點選取實體，右側的實體面板列出它的關係與出現的文件，也能在問答中問它。從選取的實體逐步展開，聚焦以外的部分變灰；可依類型篩選，或以「找路徑」找兩個實體之間的最短路徑（[docs/graph.md](docs/graph.md)）。
 
-![主管身分的知識圖譜，選取關聯最多的實體，右側是它的實體面板](docs/images/graph-zh-TW.png)
+![主管身分的知識圖譜：畫布佔大部分寬度，焦點是關聯最多的實體，右側是它的實體面板](docs/images/graph-zh-TW.png)
 
 ### 時間軸
 
@@ -42,7 +42,7 @@ Video tour: (coming soon)
 
 上傳檔案或貼上文字；文件切成段落，可見等級預設為目前身分能選的最嚴格等級。實體與關係在背景萃取，經過審核才寫入。「我的上傳」每份一列，附狀態（審核中、已核准、部分退回、已退回），點一份看萃取出的內容與每一項的結果（[docs/upload.md](docs/upload.md)、[docs/design.md](docs/design.md#我的上傳)）。
 
-![主管身分的我的上傳，右側是一份上傳的通知的詳情](docs/images/uploads-zh-TW.png)
+![主管身分的我的上傳：上傳列表，旁邊是一份上傳的通知的詳情](docs/images/uploads-zh-TW.png)
 
 ### 待審
 
@@ -62,7 +62,7 @@ Video tour: (coming soon)
 
 網址加上 `?mode=presentation` 時是對外展示用的畫面：只有問答與圖譜、字級放大，身分是頂端列的分段切換，方便展示同一個問題在不同身分下的回答；原文以浮動卡片打開（[docs/qa.md](docs/qa.md#展示模式)「展示模式」）。
 
-![展示模式：附引用的回答，原文卡片打開](docs/images/presentation-zh-TW.png)
+![展示模式：完整的附引用回答，頂端列的身分對照與題目清單](docs/images/presentation-zh-TW.png)
 
 ### 手機與平板
 

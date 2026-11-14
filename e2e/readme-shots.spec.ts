@@ -83,6 +83,12 @@ async function selectHub(page: Page): Promise<void> {
   await waitForGraphIdle(page, CANVAS);
 }
 
+async function closeSource(page: Page, t: Strings): Promise<void> {
+  const source = page.getByRole("complementary", { name: t.sourceTitle });
+  await source.getByRole("button", { name: t.closeSource, exact: true }).click();
+  await expect(source).toHaveCount(0);
+}
+
 const shoot = (page: Page, name: string, lang: string) => page.screenshot({ path: shotPath(name, lang) });
 
 for (const lang of client.languages) {
@@ -109,6 +115,8 @@ for (const lang of client.languages) {
         await page.locator("section.answer button.citation").first().click();
         await expect(page.getByRole("complementary", { name: t.sourceTitle })).toBeVisible();
         await shoot(page, "qa", lang);
+        // 原文欄換頁後仍開著：關閉，圖譜的畫布與我的上傳才不會被擠窄（#372 修正要求）
+        await closeSource(page, t);
 
         await selectHub(page);
         await shoot(page, "graph", lang);
@@ -121,6 +129,7 @@ for (const lang of client.languages) {
         await page.getByRole("tab", { name: new RegExp(`^${t.myUploads.tabMine}`) }).click();
         await page.locator(".my-upload").first().click();
         await expect(page.locator(".upload-detail__summary")).toBeVisible();
+        await expect(page.locator(".upload-source")).toHaveCount(0);
         await shoot(page, "uploads", lang);
 
         await gotoView(page, "review");
@@ -153,9 +162,9 @@ for (const lang of client.languages) {
         await useLanguage(page, lang);
         // 展示模式以劇本的題目提問
         await page.getByRole("button", { name: question.text[lang], exact: true }).click();
+        // 不打開原文：浮在右側的原文卡片會蓋住回答（#372 修正要求），截圖留回答、身分對照與題目清單
         await waitForAnswer(page, t);
-        await page.locator("section.answer button.citation").first().click();
-        await expect(page.getByRole("complementary", { name: t.sourceTitle })).toBeVisible();
+        await expect(page.getByRole("complementary", { name: t.sourceTitle })).toHaveCount(0);
         await shoot(page, "presentation", lang);
       });
     });
