@@ -7837,6 +7837,12 @@ main.page:has(> .upload-page) {
   padding: 8px 12px;
 }
 
+/* 詳情的底部面板停在畫面的一半以上（畫板 K-Mobile 第 5 張，與可展開面板的 56% 相同），內容多時最高到 90%、在面板內捲動；
+   下緣貼齊畫面底部，safe area 由 .bottom-sheet__body 的下方留白處理（PR #368 審查） */
+.bottom-sheet.upload-sheet {
+  min-height: 56dvh;
+}
+
 .upload-sheet .bottom-sheet__header h2 {
   font-size: 18px;
   overflow-wrap: anywhere;

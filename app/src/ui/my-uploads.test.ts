@@ -164,4 +164,8 @@ describe("手機的上傳頁的樣式（#358）", () => {
     expect(rule(".upload-page--phone .upload-header h1")).toMatch(/font-size:\s*22px/);
     expect(css).toMatch(/\.upload-detail\.upload-detail--sheet > button \{[^}]*min-height:\s*48px/);
   });
+
+  it("詳情的底部面板停在畫面的一半以上（畫板 K-Mobile 第 5 張，PR #368 審查）", () => {
+    expect(rule(".bottom-sheet.upload-sheet")).toMatch(/min-height:\s*56dvh/);
+  });
 });

@@ -120,8 +120,14 @@ test("上傳：h1 與分段切換、提示是說明列、確認視窗只有一�
   await expect(sheet.locator(".upload-detail__items li").filter({ hasText: FAKE_ENTITY_NAME })).toContainText(s.myUploads.statusInReview);
   await expect(sheet.locator(".upload-detail__summary")).toContainText(s.myUploads.noteInReview);
   await expect(sheet.locator(".extraction")).toHaveCount(0);
+  // 升起（kSheetUp，base）播完後才量：播放中的 translateY 會讓下緣落在畫面外（PR #368 審查）
+  await sheet.evaluate((d) => Promise.all(d.getAnimations().map((a) => a.finished)));
   const sheetBox = (await sheet.boundingBox())!;
+  // 下緣貼齊畫面底部，停在畫面的一半以上（畫板 K-Mobile 第 5 張），摘要與每組結果在畫面內
   expect(sheetBox.y + sheetBox.height).toBeCloseTo(844, 0);
+  expect(sheetBox.height).toBeGreaterThanOrEqual(844 * 0.5);
+  await expect(sheet.locator(".upload-detail__summary")).toBeInViewport();
+  await expect(sheet.locator(".upload-detail__items li").first()).toBeInViewport();
   expect(await noHorizontalScroll(page)).toBe(true);
   await screenshot(page, testInfo, "upload-detail-390px.png");
 
