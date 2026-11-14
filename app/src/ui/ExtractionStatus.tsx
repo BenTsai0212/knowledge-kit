@@ -19,12 +19,7 @@ export function ExtractionStatus({ state, running: active, language, onRetry }: 
   const total = state.batches.length;
   const done = state.batches.filter((b) => b.status === "done").length;
   const running = state.batches.findIndex((b) => b.status === "running");
-  const failed = state.batches.filter((b) => b.status === "failed");
-  const notRun = active ? 0 : state.batches.filter((b) => b.status === "waiting").length;
   const sum = (key: "entities" | "relations" | "dropped") => state.batches.reduce((n, b) => n + b[key], 0);
-  const message = (error: string) => taskErrorMessage(language, error);
-  // 失敗的原因不重複列出
-  const reasons = [...new Set(failed.map((b) => b.error ?? "failed"))];
   // 顯示時已完成的批次與已有的數字不重播動畫
   const shown = useRef({ batches: new Set(state.batches.flatMap((b, i) => (b.status === "done" ? [i] : []))), entities: sum("entities"), relations: sum("relations") });
   const count = (key: "entities" | "relations", i: number) => {
@@ -72,24 +67,37 @@ export function ExtractionStatus({ state, running: active, language, onRetry }: 
           {state.skipped.length}
         </p>
       )}
-      {/* 重試會一併送出失敗與未執行的批次；已成功的批次不重送 */}
-      {!active && failed.length > 0 && (
-        <Notice kind="error" title={s.extractFailed} action={{ label: s.extractRetry, onClick: onRetry }}>
-          {reasons.map(message).join(" ")}
-          {notRun > 0 && (
-            <div>
-              {s.extractNotRun}
-              {s.colon}
-              {notRun}
-            </div>
-          )}
-        </Notice>
-      )}
-      {!active && failed.length === 0 && notRun > 0 && (
-        <Notice kind="info" title={s.extractNotRun} action={{ label: s.extractRetry, onClick: onRetry }}>
-          {notRun}
-        </Notice>
-      )}
+      {!active && <ExtractionFailure state={state} language={language} onRetry={onRetry} />}
     </div>
   );
+}
+
+// 萃取停止後的失敗與未執行的批次（桌機的上傳詳情只顯示這一段，#344 審查）。
+// 重試會一併送出失敗與未執行的批次；已成功的批次不重送
+export function ExtractionFailure({ state, language, onRetry }: { state: ExtractionState; language: string; onRetry(): void }) {
+  const s = strings(language);
+  const failed = state.batches.filter((b) => b.status === "failed");
+  const notRun = state.batches.filter((b) => b.status === "waiting").length;
+  // 失敗的原因不重複列出
+  const reasons = [...new Set(failed.map((b) => taskErrorMessage(language, b.error ?? "failed")))];
+  if (failed.length > 0)
+    return (
+      <Notice kind="error" title={s.extractFailed} action={{ label: s.extractRetry, onClick: onRetry }}>
+        {reasons.join(" ")}
+        {notRun > 0 && (
+          <div>
+            {s.extractNotRun}
+            {s.colon}
+            {notRun}
+          </div>
+        )}
+      </Notice>
+    );
+  if (notRun > 0)
+    return (
+      <Notice kind="info" title={s.extractNotRun} action={{ label: s.extractRetry, onClick: onRetry }}>
+        {notRun}
+      </Notice>
+    );
+  return null;
 }

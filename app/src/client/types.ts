@@ -886,5 +886,14 @@ export interface UiStrings {
     noItems: string;
     reupload: string;
     reuploadNotice: string;
+    submitted: string;
+    detail: string;
+    viewSource: string;
+    hideSource: string;
+    extractSummary: string;
+    noteInReview: string;
+    noteApproved: string;
+    notePartlyRejected: string;
+    noteRejected: string;
   };
 }

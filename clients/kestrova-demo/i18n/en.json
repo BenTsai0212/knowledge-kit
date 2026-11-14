@@ -639,7 +639,16 @@
     "relations": "Relations",
     "noItems": "No entities or relations were extracted from this document.",
     "reupload": "Upload a corrected version",
-    "reuploadNotice": "The original title, language, visibility level and project are filled in. Choose the corrected file and submit it; it becomes a new document and goes through review again."
+    "reuploadNotice": "The original title, language, visibility level and project are filled in. Choose the corrected file and submit it; it becomes a new document and goes through review again.",
+    "submitted": "Submitted “{title}”",
+    "detail": "Upload details",
+    "viewSource": "View source",
+    "hideSource": "Hide source",
+    "extractSummary": "Extracted {entities, plural, one {# entity} other {# entities}} and {relations, plural, one {# relation} other {# relations}}.",
+    "noteInReview": "Waiting for a reviewer. Content appears in Q&A and the graph after a reviewer approves it.",
+    "noteApproved": "Approved. The content now appears in Q&A and the graph.",
+    "notePartlyRejected": "Some items were rejected; the approved items appear in Q&A and the graph.",
+    "noteRejected": "All items were rejected and will not appear in Q&A or the graph."
   },
   "presentation": {
     "script": "Script",

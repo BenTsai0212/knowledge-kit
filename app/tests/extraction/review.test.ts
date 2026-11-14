@@ -754,7 +754,9 @@ describe("上傳者讀得到自己上傳的文件（ADR 0009，#284）", { timeo
       ["pe-s2", "approved", "project-bluewing"],
     ]);
     expect(staff[0].relations.map((r) => [r.id, r.status, r.rejectedWithEntity])).toEqual([["pr-s1", "rejected", true]]);
-    expect(staff[1]).toMatchObject({ entities: [], relations: [] });
+    expect(staff[1]).toMatchObject({ entities: [], relations: [], date: "2026-09-01", firstPassage: empty.passageIds[0] });
+    // 文件日期與第一個段落（#344：桌機我的上傳的日期與「看原文」）
+    expect(staff[0]).toMatchObject({ date: "2026-10-02", firstPassage: w.ds.passageIds[0] });
     // 有 canReview 的主管也只列自己上傳的
     expect((await readMyUploads(w.db, "manager")).map((d) => d.id)).toEqual([w.dm.documentId]);
     for (const id of ["guest", null, "nobody"]) expect(await readMyUploads(w.db, id), String(id)).toEqual([]);

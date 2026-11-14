@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canReupload, countsFromBatches, myUploadStatus, reuploadOf, reviewCounts, reviewSteps, type ReviewCounts } from "./my-uploads";
+import { canReupload, countsFromBatches, extractionPhase, inProgressCount, myUploadStatus, reuploadOf, reviewCounts, reviewSteps, uploadTerms, type ReviewCounts } from "./my-uploads";
 
 const counts = (c: Partial<ReviewCounts>): ReviewCounts => ({ extracting: false, total: 0, pending: 0, approved: 0, ...c });
 const steps = (c: Partial<ReviewCounts>) => reviewSteps(counts(c)).map((s) => s.status);
@@ -89,5 +89,42 @@ describe("reuploadOf", () => {
       visibility: "internal",
       project: null,
     });
+  });
+});
+
+describe("inProgressCount（#344）：我的上傳 N", () => {
+  const doc = (id: string, statuses: string[]) => ({ id, entities: statuses.map((status) => ({ status })), relations: [] }) as never;
+  it("審核中與本工作階段還在萃取的才算；已核准、退回、沒有項目的不算", () => {
+    const docs = [doc("a", ["pending", "approved"]), doc("b", ["approved"]), doc("c", ["rejected"]), doc("d", []), doc("e", [])];
+    expect(inProgressCount(docs, new Set())).toBe(1);
+    expect(inProgressCount(docs, new Set(["e"]))).toBe(2);
+    expect(inProgressCount([], new Set())).toBe(0);
+  });
+});
+
+describe("uploadTerms（#344）：原文中標出的實體", () => {
+  it("各語言的名稱、類型與順序；同名只列一次，退回的實體不標", () => {
+    const entities = [
+      { type: "person", names: { "zh-TW": "林志明", en: "Zhiming Lin" }, status: "pending" },
+      { type: "team", names: { "zh-TW": "營運部" }, status: "rejected" },
+      { type: "project", names: { "zh-TW": "青翼專案", en: "Zhiming Lin" }, status: "approved" },
+    ] as never;
+    expect(uploadTerms({ entities })).toEqual([
+      { name: "林志明", type: "person", order: 0 },
+      { name: "Zhiming Lin", type: "person", order: 1 },
+      { name: "青翼專案", type: "project", order: 2 },
+    ]);
+  });
+});
+
+describe("extractionPhase（#344 審查）：桌機上傳詳情顯示進度、錯誤或摘要", () => {
+  const batch = (status: string) => ({ status });
+  it("執行中是 extracting；停止後有失敗或未執行的批次是 failed；全部完成是 done", () => {
+    expect(extractionPhase([batch("done"), batch("running")], true)).toBe("extracting");
+    expect(extractionPhase([batch("waiting")], true)).toBe("extracting");
+    expect(extractionPhase([batch("done"), batch("failed")], false)).toBe("failed");
+    expect(extractionPhase([batch("done"), batch("waiting")], false)).toBe("failed");
+    expect(extractionPhase([batch("done"), batch("done")], false)).toBe("done");
+    expect(extractionPhase([], false)).toBe("done");
   });
 });

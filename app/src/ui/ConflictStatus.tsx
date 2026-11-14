@@ -51,13 +51,20 @@ export function ConflictStatus({ state, running, language, onRetry }: Props) {
           {state.selection.unchecked.length > 0 && count(s.conflictUnchecked, state.selection.unchecked.length)}
           {state.selection.unrelated.length > 0 && count(s.conflictUnrelated, state.selection.unrelated.length)}
           {/* 重試只重送比對這一次呼叫，送出相同的內容 */}
-          {!running && state.status === "failed" && (
-            <Notice kind="error" title={s.conflictFailed} action={{ label: s.conflictRetry, onClick: onRetry }}>
-              {taskErrorMessage(language, state.error ?? "failed")}
-            </Notice>
-          )}
+          {!running && <ConflictFailure state={state} language={language} onRetry={onRetry} />}
         </>
       )}
     </div>
+  );
+}
+
+// 比對失敗的說明與重試（桌機的上傳詳情只顯示這一段，#344 審查）
+export function ConflictFailure({ state, language, onRetry }: { state: ConflictState; language: string; onRetry(): void }) {
+  const s = strings(language);
+  if (state.status !== "failed") return null;
+  return (
+    <Notice kind="error" title={s.conflictFailed} action={{ label: s.conflictRetry, onClick: onRetry }}>
+      {taskErrorMessage(language, state.error ?? "failed")}
+    </Notice>
   );
 }

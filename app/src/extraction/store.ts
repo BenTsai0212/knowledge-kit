@@ -180,17 +180,25 @@ export function readReview(db: Database, identityId: string | null): Promise<Rev
 
 // 我的上傳（#284）：目前身分上傳、看得到的文件，每份附上待審項目與目前有效的決定（0011，ADR 0009）。
 // 還沒有萃取出項目的文件也列出（項目為空）。文件沒有上傳時間，依文件日期由新到舊、再依 id 排列
-export function readMyUploads(db: Database, identityId: string | null): Promise<ReviewDocument[]> {
+export interface MyUploadDocument extends ReviewDocument {
+  // 文件日期（YYYY-MM-DD；沒有日期時為 null）
+  date: string | null;
+  // 第一個看得到的段落（桌機上傳詳情的「看原文」以 readSource() 讀取，#344）；沒有時為 null
+  firstPassage: string | null;
+}
+
+export function readMyUploads(db: Database, identityId: string | null): Promise<MyUploadDocument[]> {
   return db.withIdentity(identityId, async (tx) => {
     const docs = (
-      await tx.query<{ id: string; title: string; language: string; visibility: string; project: string | null }>(
-        `SELECT d.id, d.title, d.language, d.visibility_level_id AS visibility, d.project_id AS project
+      await tx.query<{ id: string; title: string; language: string; visibility: string; project: string | null; date: string | null; first_passage: string | null }>(
+        `SELECT d.id, d.title, d.language, d.visibility_level_id AS visibility, d.project_id AS project, d.document_date::text AS date,
+                (SELECT p.id FROM kk.passages p WHERE p.document_id = d.id ORDER BY p.ordinal LIMIT 1) AS first_passage
            FROM kk.documents d WHERE d.uploaded_by = kk.current_identity_id()
           ORDER BY d.document_date DESC NULLS LAST, d.id`,
       )
     ).rows;
     const pending = new Map((await pendingDocuments(tx, true)).map((d) => [d.id, d]));
-    return docs.map((d) => pending.get(d.id) ?? { ...d, entities: [], relations: [] });
+    return docs.map(({ date, first_passage, ...d }) => ({ ...(pending.get(d.id) ?? { ...d, entities: [], relations: [] }), date, firstPassage: first_passage }));
   });
 }
 
