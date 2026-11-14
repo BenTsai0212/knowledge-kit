@@ -11,6 +11,7 @@
 | `workflows/pr-body.yml` | `pr-body` | PR 描述要連到 Issue（`tools/workflow/check-pr-body.mjs`，見 [tools/workflow/README.md](../tools/workflow/README.md)） | PR 開啟、編輯、更新與標籤變更 |
 | `workflows/sensitive.yml` | `sensitive-names`、`gitleaks` | 見下方[敏感資料檢查](#敏感資料檢查) | 每個 PR 與 push 到 `main`；手動觸發時掃描整段歷史 |
 | `workflows/e2e.yml` | `list`、`playwright`、`demo` | 見下方 [Playwright](#playwright) 的「CI」 | 每個 PR（目標 `main`）與 push 到 `main`，另可手動執行；不是必要檢查 |
+| `workflows/e2e.yml` | `video-tour` | 功能介紹影片（見下方[功能介紹影片](#功能介紹影片)） | 只在手動執行時；不是必要檢查 |
 
 `ci.yml` 與 `e2e.yml` 設定 `ONNXRUNTIME_NODE_INSTALL=skip`：`@huggingface/transformers` 帶進的 `onnxruntime-node` 在 linux/x64 安裝時會從 NuGet 下載 CUDA，app 用不到它（#163）。
 
@@ -242,3 +243,30 @@ VITE_ONLINE_DEMO=1 VITE_PUBLIC_ACCESS_CODE=e2e-public-code VITE_DEMO_COMPARE=1 n
   ```
 
 畫面改版、或 README 的段落改變時重新產生；新增或刪除截圖時，兩份 README 一起改。
+
+### 功能介紹影片
+
+README 開頭的功能介紹影片（英文與繁中各一支，#370）由 `e2e/video-tour.spec.ts` 錄製。它不是測試，預設不執行：`KK_VIDEO_TOUR=1` 時 `playwright.config.ts` 只執行這個檔案，其他時候（含 CI 的一般執行）排除它。
+
+- 內容：參考情境（`client/`），依分鏡走過登入（一般員工）、首頁、問答（出處、回答提到）、拒答、改以主管登入問同一題、圖譜（搜尋、實體面板、找路徑）、時間軸、上傳與我的上傳、待審（說法不同的並列比較、核准全部）、評測台與品質報告（`?tools=evals`）、展示模式的身分對照（`?mode=presentation`），最後是 390×844 的手機。桌機 1440×900 錄影，輸出縮到 1280×800；介面語言與字幕一致。
+- 字幕（頁面名稱＋一句操作說明）與點擊位置的圓圈由腳本注入頁面，只在錄影時出現，不改產品程式；字幕文字在 `e2e/video-tour.captions.json`（`en`、`zh-TW` 兩組）。
+- 不需要 API 金鑰、不呼叫模型：`/api/ask` 是 `routeFakeAsk` 的假回應；問答的回答引用與介面同語言的前兩段原文，只有主管看得到答案段落的題目在看不到的身分下拒答（與 `compare.spec.ts` 相同），上傳走查用的通知時回一組說法不同的段落。只出現虛構資料；邀請碼欄是密碼欄，畫面上只有圓點。
+- 轉檔：`scripts/video-tour.mjs` 以 ffmpeg 剪掉資料庫載入、萃取與評測執行的等待時間，把桌機與手機兩段接成 H.264 的 mp4。每支要在 2～3 分鐘、10MB 以內，有段落失敗時一樣產生影片，但測試失敗並列出失敗的段落。
+- 產出：`test-results/video-tour/video-tour-en.mp4`、`video-tour-zh-TW.mp4`（`test-results/` 不進版本控制）。
+
+重新產生：
+
+- **CI**（建議）：手動執行 E2E（`gh workflow run e2e.yml --ref <分支>`，或 Actions → E2E → Run workflow）時，`video tour` job 錄製兩支影片，上傳為 `video-tour` artifact（保留 7 天）。下載後確認畫面：
+
+  ```bash
+  gh run download <run-id> --name video-tour --dir video-tour
+  ```
+
+- **本機**（需要 ffmpeg，一個指令產生兩支）：
+
+  ```bash
+  npm run build
+  KK_VIDEO_TOUR=1 npx playwright test
+  ```
+
+影片不 commit：由人上傳到 GitHub（例如貼到 Issue 或 PR 的留言），再把 `user-attachments` 的網址填進兩份 README。畫面改版後重新錄製。

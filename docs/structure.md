@@ -286,6 +286,8 @@ Playwright 的端對端測試（`*.spec.ts`）；設定在根目錄的 `playwrig
 - `support/fake-ask.ts`：假的 `/api/ask`（含串流到一半的假回應）
 - `support/skip-reporter.ts`：列出略過的測試與原因（參考情境有略過時失敗）
 - `timeline-desktop.spec.ts`：桌機的時間軸（1440×900，#346）與平板不變
+- `video-tour.captions.json`：功能介紹影片的字幕（`en`、`zh-TW`）
+- `video-tour.spec.ts`：功能介紹影片的錄影（`KK_VIDEO_TOUR=1` 時才執行，#370；見 `docs/testing.md`「功能介紹影片」）
 
 ### `scripts/`
 
@@ -300,6 +302,7 @@ Playwright 的端對端測試（`*.spec.ts`）；設定在根目錄的 `playwrig
 - `ort-wasm.mjs`：語意向量 provider 的 ONNX Runtime WASM：build 時依客戶設定複製到 `dist/ort/` 並檢查單檔上限（`vite.config.ts` 使用）
 - `playbook.test.mjs`：`docs/playbook/` 繁中與英文的檔名、`##` 標題數量與相對連結
 - `structure-doc.test.mjs`：本文件的寫法（清單每行不超過 300 字、每個小節的清單依檔名排序）
+- `video-tour.mjs`：功能介紹影片的轉檔（以 ffmpeg 剪掉等待時間、接成 mp4；`e2e/video-tour.spec.ts` 使用）
 
 ### 根目錄
 
