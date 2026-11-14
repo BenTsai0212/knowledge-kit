@@ -152,11 +152,29 @@ test("劇本：依情境分組；點另一個身分情境的題目時先切到�
   await expect(answer.locator("h2")).toHaveText(target.text);
   await expect(answer).toContainText(FAKE_ANSWER_LEAD);
 
+  // 目前的題目一律顯示編號、不是 ✓（畫板 H-QA，#349）；「已問過」的說明仍給報讀器
+  const number = (i: number) => String(i + 1).padStart(2, "0");
   await expect(button).toHaveAttribute("aria-current", "step");
-  await expect(button).toContainText("✓");
+  await expect(button.locator(".script__mark")).toHaveText(number(index));
+  await expect(button).not.toContainText("✓");
   await expect(button).toHaveAccessibleDescription(s.presentation.scriptAsked);
   const progress = s.presentation.scriptProgress.replace("{index}", String(index + 1)).replace("{total}", String(presetQuestions.length));
   await expect(script.getByText(progress, { exact: true })).toBeVisible();
+
+  // 再問另一題：剛才的題目不再是目前的題目，改標 ✓
+  const otherIndex = presetQuestions.findIndex((q, i) => i !== index && q.role === current);
+  const fallback = presetQuestions.findIndex((_, i) => i !== index);
+  const next = otherIndex === -1 ? fallback : otherIndex;
+  test.skip(next === -1, "scenarios.json 只有一題，沒有「問過的其他題目」");
+  const nextButton = script.getByRole("button", { name: presetQuestions[next].text, exact: true });
+  await nextButton.click();
+  await expect(answer.locator("h2")).toHaveText(presetQuestions[next].text);
+  await expect(answer).toContainText(FAKE_ANSWER_LEAD);
+  await expect(nextButton).toHaveAttribute("aria-current", "step");
+  await expect(nextButton.locator(".script__mark")).toHaveText(number(next));
+  await expect(button).not.toHaveAttribute("aria-current", "step");
+  await expect(button.locator(".script__mark")).toHaveText("✓");
+  await expect(button).toHaveAccessibleDescription(s.presentation.scriptAsked);
 
   // 切回原本的身分：✓ 仍在（依各身分的對話判斷，#303）
   await switchIdentity(page, current);
