@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canReupload, countsFromBatches, extractionPhase, inProgressCount, myUploadStatus, reuploadOf, reviewCounts, reviewSteps, uploadTerms, type ReviewCounts } from "./my-uploads";
+import { canReupload, countsFromBatches, endedExtractions, extractionPhase, inProgressCount, myUploadStatus, reuploadOf, reviewCounts, reviewSteps, seenUploads, showsUploadDot, uploadTerms, type ReviewCounts } from "./my-uploads";
 
 const counts = (c: Partial<ReviewCounts>): ReviewCounts => ({ extracting: false, total: 0, pending: 0, approved: 0, ...c });
 const steps = (c: Partial<ReviewCounts>) => reviewSteps(counts(c)).map((s) => s.status);
@@ -126,5 +126,24 @@ describe("extractionPhase（#344 審查）：桌機上傳詳情顯示進度、�
     expect(extractionPhase([batch("done"), batch("waiting")], false)).toBe("failed");
     expect(extractionPhase([batch("done"), batch("done")], false)).toBe("done");
     expect(extractionPhase([], false)).toBe("done");
+  });
+});
+
+describe("手機「上傳」分頁的小點（#282）", () => {
+  const uploaders = { a: "staff", b: "staff", c: "lead" };
+
+  it("前後兩次之間不再執行的萃取算是結束；新開始的不算", () => {
+    expect(endedExtractions(new Set(["a", "b"]), new Set(["b", "c"]))).toEqual(["a"]);
+    expect(endedExtractions(new Set(), new Set(["a"]))).toEqual([]);
+  });
+
+  it("只顯示目前身分自己上傳的文件", () => {
+    expect(showsUploadDot(new Set(["c"]), uploaders, "staff")).toBe(false);
+    expect(showsUploadDot(new Set(["c"]), uploaders, "lead")).toBe(true);
+    expect(showsUploadDot(new Set(), uploaders, "lead")).toBe(false);
+  });
+
+  it("打開上傳頁只清除目前身分的，其他身分的保留", () => {
+    expect([...seenUploads(new Set(["a", "c"]), uploaders, "staff")]).toEqual(["c"]);
   });
 });

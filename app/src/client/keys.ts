@@ -237,6 +237,7 @@ const uiStrings = {
   uploadDropHint: "required", uploadPastedText: "required", uploadFileStats: "required", uploadStepsLabel: "required",
   uploadStepUpload: "required", uploadStepChunk: "required", uploadStepExtract: "required", uploadStepReview: "required",
   uploadStepMerge: "required", uploadStepPassages: "required", uploadStepBatch: "required", uploadStepSent: "required",
+  uploadStepCurrent: "required", uploadTabDone: "required",
   uploadRecentTitle: "required",
   uploadClearFile: "required",
   uploadAudience: "required", listSeparator: "required", uploadConfirmTitle: "required", uploadBack: "required",

@@ -43,7 +43,11 @@ export function passagesWordCount(passages: readonly string[]): number {
 // 上傳頁不知道審核進度：萃取完成後「人工審核」為進行中並顯示送審筆數，「併入圖譜」保持未完成（#242 決定 3）
 export type UploadStepName = "upload" | "chunk" | "extract" | "review" | "merge";
 export type UploadStepStatus = "done" | "active" | "todo";
-export type UploadStepDetail = { kind: "passages"; count: number } | { kind: "batch"; done: number; total: number } | { kind: "sent"; count: number };
+// batch 的 done 是顯示的批次（執行中的那一批，沒有執行中時是完成的批數）；finished 是已完成的批數（手機進度列的填滿比例）
+export type UploadStepDetail =
+  | { kind: "passages"; count: number }
+  | { kind: "batch"; done: number; finished: number; total: number }
+  | { kind: "sent"; count: number };
 export interface UploadStep {
   name: UploadStepName;
   status: UploadStepStatus;
@@ -79,7 +83,7 @@ export function uploadSteps(p: UploadProgress): UploadStep[] {
     {
       name: "extract",
       status: extracted ? "done" : p.written ? "active" : "todo",
-      ...(p.batches !== null && batches.length > 0 && { detail: { kind: "batch", done: running >= 0 ? running + 1 : finished, total: batches.length } }),
+      ...(p.batches !== null && batches.length > 0 && { detail: { kind: "batch", done: running >= 0 ? running + 1 : finished, finished, total: batches.length } }),
     },
     { name: "review", status: extracted ? "active" : "todo", ...(extracted && { detail: { kind: "sent", count: sent } }) },
     { name: "merge", status: "todo" },
@@ -159,3 +163,19 @@ export function flyPath(from: Box, to: Box, size: number): FlyPath {
 // 萃取完成、有送審的實體或關係時才算「已送審」（「人工審核」步驟為進行中且送審筆數大於 0）
 export const sentForReview = (steps: readonly UploadStep[]): boolean =>
   steps.some((s) => s.name === "review" && s.status === "active" && s.detail?.kind === "sent" && s.detail.count > 0);
+
+// 手機的進度列（#282，docs/design.md「時間軸、上傳、待審、評測台與更多（手機）」）：五步各一段，完成的段填滿；
+// 進行中的段依真實進度填滿（模型萃取是完成的批數／總批數，其他步驟沒有可量的進度，為 0）。
+// current 是下方一行寫的目前步驟：進行中的步驟；沒有時（已切段、還沒送出）是最後一個完成的步驟
+export interface StepBar {
+  fills: number[];
+  current: UploadStep;
+}
+
+export function stepBar(steps: readonly UploadStep[]): StepBar {
+  const fills = steps.map((step) =>
+    step.status === "done" ? 1 : step.status === "active" && step.detail?.kind === "batch" && step.detail.total > 0 ? step.detail.finished / step.detail.total : 0,
+  );
+  const current = steps.find((s) => s.status === "active") ?? [...steps].reverse().find((s) => s.status === "done") ?? steps[0];
+  return { fills, current };
+}

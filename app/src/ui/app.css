@@ -3295,6 +3295,55 @@ main.page:has(> .timeline-page--desktop) {
   font-weight: 400;
 }
 
+/* 手機的進度列（#282）：五步各一段，--fill 是該段的填滿比例（進行中的萃取依完成的批數）；下方一行寫目前步驟與批數 */
+.upload-bar {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.upload-bar__segments {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.upload-bar__segment {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.upload-bar__segment::before {
+  content: "";
+  display: block;
+  height: 100%;
+  background: var(--color-primary);
+  transform: scaleX(var(--fill, 0));
+  transform-origin: left;
+  transition: transform var(--motion-base) var(--ease-enter);
+}
+
+.upload-bar__current {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* 手機「上傳」分頁的小點（#282）：不在上傳頁時萃取結束，疊在圖示右上 */
+.tab-dot {
+  position: absolute;
+  top: 0.6rem;
+  left: calc(50% + 0.55rem);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-primary);
+}
+
 /* 拖放區：虛線框；拖進範圍時框線變實線 primary、底色變淺、圖示上浮 6px（fast） */
 .drop-zone {
   display: grid;

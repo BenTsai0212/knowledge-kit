@@ -205,6 +205,8 @@
   "uploadStepPassages": "{count} 段",
   "uploadStepBatch": "批次 {done}／{total}",
   "uploadStepSent": "送審 {count} 筆",
+  "uploadStepCurrent": "{step} · {detail}",
+  "uploadTabDone": "萃取已結束",
   "uploadRecentTitle": "這次上傳的文件",
   "uploadClearFile": "清除檔案",
   "uploadAudience": "誰看得到",

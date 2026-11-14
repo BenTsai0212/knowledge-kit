@@ -531,6 +531,10 @@ export interface UiStrings {
   uploadStepPassages: string;
   uploadStepBatch: string;
   uploadStepSent: string;
+  // 手機進度列下方的目前步驟（#282）：步驟名稱與數字，例如「模型萃取 · 批次 2／3」
+  uploadStepCurrent: string;
+  // 手機「上傳」分頁小點的讀屏文字（#282）
+  uploadTabDone: string;
   uploadRecentTitle: string;
   uploadClearFile: string;
   // 依可見等級與專案算出看得到的角色（#42）

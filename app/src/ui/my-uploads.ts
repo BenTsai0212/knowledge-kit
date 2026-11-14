@@ -106,3 +106,16 @@ export function uploadTerms(doc: Pick<ReviewDocument, "entities">): FoundTerm[] 
   }
   return terms;
 }
+
+// 手機「上傳」分頁的小點（#282）：萃取在背景執行，不在上傳頁時結束的萃取記為「還沒看過」，回到上傳頁後清除。
+// endedExtractions() 是前後兩次「執行中的萃取」之間結束的文件；小點只顯示目前身分自己上傳的文件
+export const endedExtractions = (before: ReadonlySet<string>, after: ReadonlySet<string>): string[] => [...before].filter((id) => !after.has(id));
+
+export function showsUploadDot(unseen: ReadonlySet<string>, uploaders: Readonly<Record<string, string>>, identity: string): boolean {
+  return [...unseen].some((id) => uploaders[id] === identity);
+}
+
+// 打開上傳頁時清除目前身分的小點；其他身分的保留，切回該身分時仍亮著
+export function seenUploads(unseen: ReadonlySet<string>, uploaders: Readonly<Record<string, string>>, identity: string): ReadonlySet<string> {
+  return new Set([...unseen].filter((id) => uploaders[id] !== identity));
+}
