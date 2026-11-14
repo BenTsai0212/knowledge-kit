@@ -2738,9 +2738,12 @@ button.chip.graph-chip[aria-pressed="true"] {
   padding: 0;
 }
 
+/* 畫布左右滿版（#357 修正）：.graph-page 的 align-items: start 是桌機 grid 用的，沿用到 flex column 時 .graph-main 只有內容寬度，
+   所以手機改回 stretch，畫布寬度等於畫面寬度；搜尋列與分段切換由 .graph-tools 自己留 16px */
 .graph-page.graph-page--phone {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   flex: 1 1 auto;
   min-height: 0;
   gap: 0;

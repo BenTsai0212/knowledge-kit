@@ -140,6 +140,14 @@ describe("畫布與工具列", () => {
     expect(rule(".graph-stage:has(> .graph-frame:focus-visible) + .graph-keys")).toEqual({ display: "flex" });
   });
 
+  it("手機（#357）：畫布左右滿版：頁面的 flex column 撐滿寬度、外層 main 與畫布容器沒有左右 padding，16px 只留給上方的搜尋列與分段切換", () => {
+    expect(rule(".graph-page.graph-page--phone")).toMatchObject({ display: "flex", "flex-direction": "column", "align-items": "stretch" });
+    expect(rule(".app.app--phone:has(.graph-page--phone) > main")).toMatchObject({ padding: "0" });
+    expect(rule(".graph-page--phone .graph-main")).not.toHaveProperty("padding");
+    expect(rule(".graph-phone-stage")).not.toHaveProperty("padding");
+    expect(rule(".graph-page--phone .graph-tools")).toMatchObject({ padding: "16px 16px 8px" });
+  });
+
   it("展示模式維持原本的版面", () => {
     expect(graphPage).toContain('const desktop = layout === "desktop" && !presentationMode;');
   });
