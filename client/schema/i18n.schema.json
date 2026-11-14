@@ -841,7 +841,7 @@
       "description": "我的上傳（#284，docs/design.md「日常工具」的「我的上傳」）：上傳頁的「新增文件」與「我的上傳」、每份的狀態、送出後的四步進度與重新上傳修正版",
       "type": "object",
       "additionalProperties": false,
-      "required": ["tabNew", "tabMine", "sections", "empty", "statusUploaded", "statusInReview", "statusApproved", "statusPartlyRejected", "statusRejected", "stepsLabel", "stepUploaded", "stepExtracted", "stepReview", "stepPublished", "approvalNote", "itemCounts", "entities", "relations", "noItems", "reupload", "reuploadNotice"],
+      "required": ["tabNew", "tabMine", "sections", "empty", "statusUploaded", "statusInReview", "statusApproved", "statusPartlyRejected", "statusRejected", "stepsLabel", "stepUploaded", "stepExtracted", "stepReview", "stepPublished", "approvalNote", "itemCounts", "entities", "relations", "noItems", "reupload", "reuploadNotice", "submitted", "detail", "viewSource", "hideSource"],
       "properties": {
         "tabNew": { "$ref": "#/definitions/Text" },
         "tabMine": { "$ref": "#/definitions/Text" },
@@ -863,7 +863,11 @@
         "relations": { "$ref": "#/definitions/Text" },
         "noItems": { "$ref": "#/definitions/Text" },
         "reupload": { "$ref": "#/definitions/Text" },
-        "reuploadNotice": { "$ref": "#/definitions/Text" }
+        "reuploadNotice": { "$ref": "#/definitions/Text" },
+        "submitted": { "$ref": "#/definitions/Text" },
+        "detail": { "$ref": "#/definitions/Text" },
+        "viewSource": { "$ref": "#/definitions/Text" },
+        "hideSource": { "$ref": "#/definitions/Text" }
       }
     }
   }

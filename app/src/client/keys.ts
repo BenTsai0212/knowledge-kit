@@ -433,6 +433,10 @@ export const i18nManifests: ManifestEntry[] = [
       noItems: "required",
       reupload: "required",
       reuploadNotice: "required",
+      submitted: "required",
+      detail: "required",
+      viewSource: "required",
+      hideSource: "required",
     } satisfies KeyManifest<UiStrings["myUploads"]>,
   },
   {

@@ -4,6 +4,8 @@
 // 萃取完成、已送審時，一顆標記從面板飛向導覽的「待審」（#242 PR 3）。
 // 可選的等級與專案只列出目前身分看得到的；實際能否寫入由 RLS 決定。上傳內容一律以文字節點顯示。
 // 分成「新增文件」與「我的上傳」（#284）：送出後顯示四步進度；退回的文件可「重新上傳修正版」，帶入原本的設定後回到新增文件。
+// 桌機（≥ 1025px，展示模式除外；#344，畫板 K-Uploads）：頁首是 h1 與分段切換（「我的上傳 N」的 N 是還在處理中的上傳數），內容填滿寬度，
+// 送出後是一張四步進度卡，我的上傳的詳情是頁面右側的整高欄。手機與平板維持原本的卡片與分頁。
 // 切換身分或語言時由 App 以 key 重建本元件，清除表單、預覽與結果。
 import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { clientConfig } from "../client/load";
@@ -19,10 +21,12 @@ import { EMPTY_ICONS, focusIdentity } from "./empty-state";
 import { EmptyState } from "./EmptyState";
 import { ExtractionStatus } from "./ExtractionStatus";
 import { FilePicker } from "./FilePicker";
-import { countsFromBatches, type Reupload } from "./my-uploads";
-import { MyUploads, ReviewProgress } from "./MyUploads";
+import { readMyUploads, type MyUploadDocument } from "../extraction/store";
+import { useLayout } from "./layout";
+import { countsFromBatches, inProgressCount, type Reupload } from "./my-uploads";
+import { MyUploadList, ReviewProgress, UploadDetail } from "./MyUploads";
 import { Notice } from "./Notice";
-import { onlineDemo } from "./online-demo";
+import { onlineDemo, presentationMode } from "./online-demo";
 import { REDUCED_MOTION, staggerIndex } from "./motion";
 import { createRequestGate } from "./requests";
 import { nextTab } from "./review-helpers";
@@ -85,7 +89,19 @@ type Confirm = {
   error?: UploadFailure;
 };
 
-export function UploadPage({ db, identity, language, onUploaded, extractions, onRetryExtraction, onRetryConflicts, onGoto, canSwitchIdentity, focus = null, onFocused }: Props) {
+export function UploadPage({
+  db,
+  identity,
+  language,
+  onUploaded,
+  extractions,
+  onRetryExtraction,
+  onRetryConflicts,
+  onGoto,
+  canSwitchIdentity,
+  focus = null,
+  onFocused,
+}: Props) {
   const s = strings(language);
   // 萃取的狀態，以及（開啟比對時）比對的狀態
   const jobStatus = (job: Job) => (
@@ -130,6 +146,19 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
   const writeStarted = useRef(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const desktop = useLayout() === "desktop" && !presentationMode;
+  // 我的上傳：目前身分上傳、看得到的文件（readMyUploads()，RLS）。桌機的分段切換要顯示處理中的數量，所以不論在哪一段都讀取；
+  // 本工作階段的萃取有進展時重新讀取
+  const [docs, setDocs] = useState<MyUploadDocument[] | null>(null);
+  const [selected, setSelected] = useState<string | null>(initialMine);
+  const reads = useRef(createRequestGate());
+  const extractingIds = new Set(extractions.filter((x) => countsFromBatches(x.state.batches, x.running).extracting).map((x) => x.state.documentId));
+  const refreshKey = extractions.map((x) => `${x.state.documentId}:${x.running}:${x.state.batches.map((b) => b.status).join(",")}`).join("|");
+  useEffect(() => {
+    const ticket = reads.current.begin();
+    void readMyUploads(db, identity).then((found) => ticket.isCurrent() && setDocs(found));
+    return () => reads.current.cancel();
+  }, [db, identity, refreshKey]);
 
   const written = confirm?.result?.documentId;
   const writtenJob = written === undefined ? undefined : extractions.find((x) => x.state.documentId === written);
@@ -166,19 +195,28 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
   }, [confirm]);
 
   if (!role?.canUpload)
-    return <EmptyState icon="upload" title={s.uploadNotAllowed} reason={s.uploadNotAllowedReason} actions={canSwitchIdentity ? [{ label: s.switchIdentity, onClick: focusIdentity }] : []} />;
+    return (
+      <EmptyState
+        icon="upload"
+        title={s.uploadNotAllowed}
+        reason={s.uploadNotAllowedReason}
+        actions={canSwitchIdentity ? [{ label: s.switchIdentity, onClick: focusIdentity }] : []}
+      />
+    );
 
   const audience = audienceRoles(access, visibility, project === "" ? null : project)
     .map((r) => r.label[language])
     .join(s.listSeparator);
 
   // 改了內容或設定就要重新預覽
-  const edit = <T,>(set: (v: T) => void) => (v: T) => {
-    set(v);
-    parses.current.cancel();
-    setParsing(false);
-    setParseError(null);
-  };
+  const edit =
+    <T,>(set: (v: T) => void) =>
+    (v: T) => {
+      set(v);
+      parses.current.cancel();
+      setParsing(false);
+      setParseError(null);
+    };
 
   function chooseFile(chosen: File | null) {
     edit(setFile)(chosen);
@@ -222,9 +260,7 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
     document.getElementById(`${ids}-tab-${next}`)?.focus();
   };
   const sectionLabels: Record<Section, string> = { new: s.myUploads.tabNew, mine: s.myUploads.tabMine };
-  // 我的上傳：本工作階段還在萃取的文件；萃取有進展時重新讀取
-  const extractingIds = new Set(extractions.filter((x) => countsFromBatches(x.state.batches, x.running).extracting).map((x) => x.state.documentId));
-  const refreshKey = extractions.map((x) => `${x.state.documentId}:${x.running}:${x.state.batches.map((b) => b.status).join(",")}`).join("|");
+  const inProgress = docs === null ? 0 : inProgressCount(docs, extractingIds);
 
   async function preview() {
     const ticket = parses.current.begin();
@@ -317,7 +353,11 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
     passages.map((p, i) => {
       const id = confirm?.result?.passageIds[start + i];
       return (
-        <li key={start + i} className={id !== undefined && conflicted.has(id) ? "is-conflict" : undefined} style={{ "--i": staggerIndex(start + i) } as CSSProperties}>
+        <li
+          key={start + i}
+          className={id !== undefined && conflicted.has(id) ? "is-conflict" : undefined}
+          style={{ "--i": staggerIndex(start + i) } as CSSProperties}
+        >
           {underlined(p, terms)}
         </li>
       );
@@ -331,8 +371,8 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
         </Notice>
       )}
       <UploadSteps steps={steps} language={language} />
-      {/* 線上 demo：另外說明上傳內容會傳給模型供應商（#100 決定 4） */}
-      <p className="badge warning">{onlineDemo.enabled ? s.demoUploadNotice : s.uploadEphemeral}</p>
+      {/* 線上 demo：另外說明上傳內容會傳給模型供應商（#100 決定 4）；桌機是 surfaceRaised 底的說明列（#344） */}
+      <p className={desktop ? "upload-hint" : "badge warning"}>{onlineDemo.enabled ? s.demoUploadNotice : s.uploadEphemeral}</p>
       <div
         className={`drop-zone${dragOver ? " is-over" : ""}`}
         onDragEnter={(e) => {
@@ -356,7 +396,9 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
           <Notice
             kind="error"
             title={s.noticeParseTitle}
-            action={file !== null ? { label: s.uploadClearFile, onClick: clearFile } : { label: s.uploadChooseAgain, onClick: () => fileInput.current?.click() }}
+            action={
+              file !== null ? { label: s.uploadClearFile, onClick: clearFile } : { label: s.uploadChooseAgain, onClick: () => fileInput.current?.click() }
+            }
           >
             {s.uploadErrors[parseError]}
           </Notice>
@@ -452,150 +494,197 @@ export function UploadPage({ db, identity, language, onUploaded, extractions, on
     </div>
   );
 
-  return (
-    <section className="card upload">
-      <div className="review-tabs upload-sections" role="tablist" aria-label={s.myUploads.sections} onKeyDown={sectionKey}>
-        {SECTIONS.map((x) => (
-          <button
-            key={x}
-            type="button"
-            role="tab"
-            id={`${ids}-tab-${x}`}
-            aria-selected={section === x}
-            aria-controls={`${ids}-panel`}
-            tabIndex={section === x ? 0 : -1}
-            onClick={() => setSection(x)}
-          >
-            {sectionLabels[x]}
-          </button>
-        ))}
+  const tabs = (
+    <div className={desktop ? "upload-segments" : "review-tabs upload-sections"} role="tablist" aria-label={s.myUploads.sections} onKeyDown={sectionKey}>
+      {SECTIONS.map((x) => (
+        <button
+          key={x}
+          type="button"
+          role="tab"
+          id={`${ids}-tab-${x}`}
+          aria-selected={section === x}
+          aria-controls={`${ids}-panel`}
+          tabIndex={section === x ? 0 : -1}
+          onClick={() => setSection(x)}
+        >
+          {sectionLabels[x]}
+          {desktop && x === "mine" && inProgress > 0 && <span className="upload-segments__count"> {inProgress}</span>}
+        </button>
+      ))}
+    </div>
+  );
+  const doc = docs?.find((d) => d.id === selected);
+  const job = doc === undefined ? undefined : extractions.find((x) => x.state.documentId === doc.id);
+  const detail = doc !== undefined && (
+    <UploadDetail
+      db={db}
+      identity={identity}
+      doc={doc}
+      language={language}
+      extracting={extractingIds.has(doc.id)}
+      jobStatus={job === undefined ? null : jobStatus(job)}
+      onReupload={startReupload}
+      onClose={() => setSelected(null)}
+      desktop={desktop}
+    />
+  );
+  const list = docs !== null && (
+    <MyUploadList docs={docs} selected={selected} onSelect={setSelected} extracting={extractingIds} language={language} desktop={desktop} />
+  );
+  const panel =
+    section === "new" ? (
+      newPanel
+    ) : (
+      <div role="tabpanel" id={`${ids}-panel`} aria-labelledby={`${ids}-tab-mine`}>
+        {desktop ? (
+          list
+        ) : (
+          <div className={`my-uploads${doc !== undefined ? " with-detail" : ""}`}>
+            {list}
+            {detail}
+          </div>
+        )}
       </div>
-      {section === "new" ? (
-        newPanel
-      ) : (
-        <div role="tabpanel" id={`${ids}-panel`} aria-labelledby={`${ids}-tab-mine`}>
-          <MyUploads
-            db={db}
-            identity={identity}
-            language={language}
-            extracting={extractingIds}
-            refreshKey={refreshKey}
-            jobStatus={(id) => {
-              const job = extractions.find((x) => x.state.documentId === id);
-              return job === undefined ? null : jobStatus(job);
-            }}
-            onReupload={startReupload}
-            initialSelected={initialMine}
-          />
-        </div>
-      )}
+    );
 
-      <dialog
-        ref={dialog}
-        className="upload-dialog"
-        aria-label={s.uploadConfirmTitle}
-        // Esc：寫入中不關閉；其他時候關閉並保留表單
-        onCancel={(e) => confirm?.writing && e.preventDefault()}
-        onClose={() => setConfirm(null)}
-      >
-        {confirm !== null && (
-          <>
-            <header className="dialog-header">
-              <h2>{s.uploadConfirmTitle}</h2>
-              {/* 與 Esc、「返回修改」相同：保留表單內容；寫入中停用 */}
-              <button type="button" className="icon-button" aria-label={s.dialogClose} title={s.dialogClose} disabled={confirm.writing} onClick={() => setConfirm(null)}>
-                ✕
+  const dialogElement = (
+    <dialog
+      ref={dialog}
+      className="upload-dialog"
+      aria-label={s.uploadConfirmTitle}
+      // Esc：寫入中不關閉；其他時候關閉並保留表單
+      onCancel={(e) => confirm?.writing && e.preventDefault()}
+      onClose={() => setConfirm(null)}
+    >
+      {confirm !== null && (
+        <>
+          <header className="dialog-header">
+            <h2>{s.uploadConfirmTitle}</h2>
+            {/* 與 Esc、「返回修改」相同：保留表單內容；寫入中停用 */}
+            <button
+              type="button"
+              className="icon-button"
+              aria-label={s.dialogClose}
+              title={s.dialogClose}
+              disabled={confirm.writing}
+              onClick={() => setConfirm(null)}
+            >
+              ✕
+            </button>
+          </header>
+          {/* 頁首的步驟在確認面板後方會被遮住：面板內也顯示一份（#242 審查） */}
+          <UploadSteps steps={steps} language={language} />
+          {/* 檔案卡片：檔名、段落數、字數；預覽段落放在 reading 紙面上逐條升起 */}
+          <div className="upload-file-card">
+            <strong className="upload-file-card__name">{file?.name ?? s.uploadPastedText}</strong>
+            <span className="upload-file-card__stats muted">
+              {fill(s.uploadFileStats, { passages: confirm.passages.length, words: passagesWordCount(confirm.passages) })}
+            </span>
+          </div>
+          <ol className="upload-preview" lang={docLanguage}>
+            {passageList(confirm.passages.slice(0, PREVIEW_COUNT), 0)}
+          </ol>
+          {confirm.passages.length > PREVIEW_COUNT && (
+            <details>
+              <summary>{s.uploadShowAll}</summary>
+              <ol className="upload-preview" start={PREVIEW_COUNT + 1} lang={docLanguage}>
+                {passageList(confirm.passages.slice(PREVIEW_COUNT), PREVIEW_COUNT)}
+              </ol>
+            </details>
+          )}
+          <dl>
+            {summary.map(([label, value]) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                <dd>{value}</dd>
+              </div>
+            ))}
+          </dl>
+          {confirm.error !== undefined && (
+            <Notice kind="error" title={s.noticeWriteTitle} action={{ label: s.uploadBack, onClick: () => setConfirm(null) }}>
+              {s.uploadErrors[confirm.error]}
+            </Notice>
+          )}
+          {confirm.result === undefined ? (
+            <div className="dialog-actions">
+              <button type="button" disabled={confirm.writing || confirm.error !== undefined} onClick={() => void submit(confirm.passages)}>
+                {confirm.writing ? s.uploadWriting : s.uploadSubmit}
               </button>
-            </header>
-            {/* 頁首的步驟在確認面板後方會被遮住：面板內也顯示一份（#242 審查） */}
-            <UploadSteps steps={steps} language={language} />
-            {/* 檔案卡片：檔名、段落數、字數；預覽段落放在 reading 紙面上逐條升起 */}
-            <div className="upload-file-card">
-              <strong className="upload-file-card__name">{file?.name ?? s.uploadPastedText}</strong>
-              <span className="upload-file-card__stats muted">
-                {fill(s.uploadFileStats, { passages: confirm.passages.length, words: passagesWordCount(confirm.passages) })}
-              </span>
+              <button type="button" className="secondary" disabled={confirm.writing} onClick={() => setConfirm(null)}>
+                {s.uploadBack}
+              </button>
             </div>
-            <ol className="upload-preview" lang={docLanguage}>
-              {passageList(confirm.passages.slice(0, PREVIEW_COUNT), 0)}
-            </ol>
-            {confirm.passages.length > PREVIEW_COUNT && (
-              <details>
-                <summary>{s.uploadShowAll}</summary>
-                <ol className="upload-preview" start={PREVIEW_COUNT + 1} lang={docLanguage}>
-                  {passageList(confirm.passages.slice(PREVIEW_COUNT), PREVIEW_COUNT)}
-                </ol>
-              </details>
-            )}
-            <dl>
-              {summary.map(([label, value]) => (
-                <div key={label}>
-                  <dt>{label}</dt>
-                  <dd>{value}</dd>
-                </div>
-              ))}
-            </dl>
-            {confirm.error !== undefined && (
-              <Notice kind="error" title={s.noticeWriteTitle} action={{ label: s.uploadBack, onClick: () => setConfirm(null) }}>
-                {s.uploadErrors[confirm.error]}
-              </Notice>
-            )}
-            {confirm.result === undefined ? (
+          ) : (
+            <>
+              <p>
+                {s.uploadDone} {s.uploadPassageCount}
+                {s.colon}
+                {confirm.result.passageIds.length}
+              </p>
+              {/* 送出後的四步進度（#284）：主管核准後才會出現在問答與圖譜 */}
+              {/* 桌機是一張卡片：「已送出〈標題〉」與四段進度條（#344） */}
+              {writtenJob && (
+                <ReviewProgress
+                  counts={countsFromBatches(writtenJob.state.batches, writtenJob.running)}
+                  language={language}
+                  title={desktop ? writtenJob.title : undefined}
+                />
+              )}
+              {writtenJob && jobStatus(writtenJob)}
               <div className="dialog-actions">
+                <button type="button" onClick={() => onGoto("qa")}>
+                  {s.uploadGotoQa}
+                </button>
+                <button type="button" onClick={() => onGoto("timeline", { id: confirm.result!.documentId, language: docLanguage })}>
+                  {s.uploadGotoTimeline}
+                </button>
                 <button
                   type="button"
-                  disabled={confirm.writing || confirm.error !== undefined}
-                  onClick={() => void submit(confirm.passages)}
+                  className="secondary"
+                  onClick={() => {
+                    resetForm();
+                    setConfirm(null);
+                  }}
                 >
-                  {confirm.writing ? s.uploadWriting : s.uploadSubmit}
-                </button>
-                <button type="button" className="secondary" disabled={confirm.writing} onClick={() => setConfirm(null)}>
-                  {s.uploadBack}
+                  {s.uploadAnother}
                 </button>
               </div>
-            ) : (
-              <>
-                <p>
-                  {s.uploadDone} {s.uploadPassageCount}
-                  {s.colon}
-                  {confirm.result.passageIds.length}
-                </p>
-                {/* 送出後的四步進度（#284）：主管核准後才會出現在問答與圖譜 */}
-                {writtenJob && <ReviewProgress counts={countsFromBatches(writtenJob.state.batches, writtenJob.running)} language={language} />}
-                {writtenJob && jobStatus(writtenJob)}
-                <div className="dialog-actions">
-                  <button type="button" onClick={() => onGoto("qa")}>
-                    {s.uploadGotoQa}
-                  </button>
-                  <button type="button" onClick={() => onGoto("timeline", { id: confirm.result!.documentId, language: docLanguage })}>
-                    {s.uploadGotoTimeline}
-                  </button>
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => {
-                      resetForm();
-                      setConfirm(null);
-                    }}
-                  >
-                    {s.uploadAnother}
-                  </button>
-                </div>
-              </>
-            )}
-          </>
-        )}
-        {/* 在 dialog 內才會在面板的 backdrop 之上；位置固定在終點，結束後移除。關閉面板或再上傳一份時一併移除 */}
-        {fly !== null && fly.key === written && (
-          <span
-            key={fly.key}
-            className="upload-fly"
-            aria-hidden="true"
-            style={{ left: fly.left, top: fly.top, "--fly-x": `${fly.x}px`, "--fly-y": `${fly.y}px` } as CSSProperties}
-            onAnimationEnd={() => setFly(null)}
-          />
-        )}
-      </dialog>
+            </>
+          )}
+        </>
+      )}
+      {/* 在 dialog 內才會在面板的 backdrop 之上；位置固定在終點，結束後移除。關閉面板或再上傳一份時一併移除 */}
+      {fly !== null && fly.key === written && (
+        <span
+          key={fly.key}
+          className="upload-fly"
+          aria-hidden="true"
+          style={{ left: fly.left, top: fly.top, "--fly-x": `${fly.x}px`, "--fly-y": `${fly.y}px` } as CSSProperties}
+          onAnimationEnd={() => setFly(null)}
+        />
+      )}
+    </dialog>
+  );
+
+  if (desktop)
+    return (
+      <div className="upload-page">
+        <section className="upload-main" aria-labelledby={`${ids}-title`}>
+          <header className="upload-header">
+            <h1 id={`${ids}-title`}>{s.tabUpload}</h1>
+            {tabs}
+          </header>
+          {panel}
+          {dialogElement}
+        </section>
+        {section === "mine" && detail}
+      </div>
+    );
+  return (
+    <section className="card upload">
+      {tabs}
+      {panel}
+      {dialogElement}
     </section>
   );
 }

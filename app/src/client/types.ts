@@ -886,5 +886,9 @@ export interface UiStrings {
     noItems: string;
     reupload: string;
     reuploadNotice: string;
+    submitted: string;
+    detail: string;
+    viewSource: string;
+    hideSource: string;
   };
 }

@@ -6136,6 +6136,392 @@ label.inline {
   font-size: 13px;
 }
 
+/* 桌機的上傳頁（#344，畫板 K-Uploads；UploadPage 的 upload-page 只在桌機、不是展示模式時出現）：頁面不留邊，
+   左邊是頁首（h1 28px／700＋分段切換）與填滿寬度的內容，右邊是貼齊右緣的整高「上傳詳情」欄（我的上傳選了一份時才有）。兩欄各自捲動。
+   手機與平板仍是 section.card.upload，不受影響 */
+main.page:has(> .upload-page) {
+  display: flex;
+  padding: 0;
+  overflow: hidden;
+}
+
+.upload-page {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: none;
+}
+
+.upload-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 20px;
+  padding: 32px clamp(16px, 3vw, 40px);
+}
+
+.upload-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.upload-header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+/* 分段切換：40px 高、圓角 8px；選中的一段 surfaceRaised 底、粗體。「我的上傳 N」的 N 是還在處理中的上傳數 */
+.upload-segments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: 12px;
+}
+
+.upload-segments [role="tab"] {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-textMuted);
+  font-size: 14px;
+}
+
+.upload-segments [role="tab"][aria-selected="true"] {
+  background: var(--color-surfaceRaised);
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+/* 提示：surfaceRaised 底的說明列（不用橘色外框）；重新上傳修正版的提示也是 */
+.upload-hint,
+.upload-page .notice-info {
+  margin: 0;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--color-surfaceRaised);
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--color-textMuted);
+}
+
+.upload-page .notice-info .notice-icon {
+  display: none;
+}
+
+.upload-page .notice-info .notice-body strong {
+  color: var(--color-text);
+}
+
+/* 錯誤（萃取失敗、讀取或寫入失敗；畫板 I-States）：surface 底、1px border 的卡片，warning 的圖示，
+   訊息 15px／600，說明 13px textMuted，按鈕 40px 的中性按鈕。訊息沿用原本的文字 */
+.upload-page .notice-error {
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+}
+
+.upload-page .notice-error .notice-icon {
+  width: 22px;
+  height: 22px;
+  line-height: 18px;
+  border: 2px solid var(--color-warning);
+  background: none;
+  color: var(--color-warning);
+  font-size: 13px;
+}
+
+.upload-page .notice-error .notice-body {
+  gap: 10px;
+  font-size: 13px;
+  color: var(--color-textMuted);
+}
+
+.upload-page .notice-error .notice-body strong {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.upload-page .notice-error button {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* 送出後的進度卡：surface 底、primary 1.5px 外框；「已送出〈標題〉」18px 粗體與說明，下方四段 6px 的進度條
+   （完成 success、目前 primary、還沒到 border）；目前的步驟字較粗 */
+.review-progress--card {
+  gap: 16px;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1.5px solid var(--color-primary);
+  background: var(--color-surface);
+}
+
+.review-progress__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+}
+
+.review-progress__head strong {
+  font-size: 18px;
+}
+
+.review-progress__head .muted {
+  font-size: 14px;
+}
+
+.review-progress--card .upload-step {
+  gap: 6px;
+  padding-top: 0;
+  border-top: 0;
+  font-size: 14px;
+}
+
+.review-progress--card .upload-step::before {
+  content: "";
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-border);
+}
+
+.review-progress--card .upload-step.is-done::before {
+  background: var(--color-success);
+}
+
+.review-progress--card .upload-step.is-active::before {
+  background: var(--color-primary);
+}
+
+.review-progress--card .upload-step.is-done {
+  color: var(--color-text);
+}
+
+.review-progress--card .upload-step.is-active {
+  font-weight: 700;
+}
+
+/* 我的上傳：每份一列（surfaceRaised 底、圓角 12px、最矮 64px）：標題 15px 粗體，下方是文件日期（mono 12px）與項目數；選中的列 primary 外框 */
+.upload-page .my-uploads__list {
+  gap: 8px;
+}
+
+.upload-page .my-upload {
+  gap: 8px 14px;
+  min-height: 64px;
+  padding: 10px 16px;
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  background: var(--color-surfaceRaised);
+  font-size: 14px;
+}
+
+.upload-page .my-upload[aria-pressed="true"] {
+  border-color: var(--color-primary);
+}
+
+.my-upload__text {
+  display: flex;
+  flex: 1 1 200px;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.upload-page .my-upload__title {
+  flex: none;
+  font-size: 15px;
+}
+
+.my-upload__meta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-textMuted);
+}
+
+.my-upload__date {
+  font-family: var(--font-mono);
+}
+
+/* 狀態膠囊：28px 高、粗體 13px；審核中 primarySoft、部分退回與退回 warningSoft、已核准 successSoft、已上傳 surface 底 */
+.upload-page .badge[data-status] {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 0;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--color-surface);
+  color: var(--color-textMuted);
+}
+
+.upload-page .badge:is([data-status="in_review"], [data-status="pending"]) {
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+  color: var(--color-primary);
+}
+
+.upload-page .badge:is([data-status="partly_rejected"], [data-status="rejected"]) {
+  background: color-mix(in srgb, var(--color-warning) 14%, var(--color-surface));
+  color: var(--color-warning);
+}
+
+.upload-page .badge[data-status="approved"] {
+  background: color-mix(in srgb, var(--color-success) 14%, var(--color-surface));
+  color: var(--color-success);
+}
+
+/* 上傳詳情：貼齊右緣的整高欄（340～420px，surface 底、左側 border），從右側滑入（base） */
+.upload-detail {
+  flex: 0 0 clamp(340px, 28vw, 420px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 32px 24px;
+  border-left: 1px solid var(--color-border);
+  background: var(--color-surface);
+  animation: kSlideIn var(--motion-base) var(--ease-enter) backwards;
+}
+
+.upload-detail__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.upload-detail__eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--color-textMuted);
+}
+
+.upload-detail h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.upload-detail > .badge {
+  align-self: flex-start;
+}
+
+/* 每組萃取結果一列：44px、surfaceRaised 底；類型色點（關係是 textMuted）、名稱、結果（已核准 success、退回 warning、審核中 textMuted） */
+.upload-detail__items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.upload-detail__items li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: var(--color-surfaceRaised);
+  font-size: 14px;
+}
+
+.upload-detail__items .type-dot {
+  width: 10px;
+  height: 10px;
+}
+
+.upload-detail__name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.upload-detail__state {
+  flex: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-textMuted);
+}
+
+.upload-detail__state[data-status="approved"] {
+  color: var(--color-success);
+}
+
+.upload-detail__state[data-status="rejected"] {
+  color: var(--color-warning);
+}
+
+.upload-detail__note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-textMuted);
+}
+
+.upload-detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.upload-detail > button,
+.upload-detail__actions button {
+  align-self: flex-start;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* 看原文：reading 紙面，段落前 ¶N；萃取出的實體以類型色的 3px 底線標出（畫板 B-Ingest） */
+.upload-source {
+  padding: 20px 20px 8px;
+  border-radius: 16px;
+  background: var(--color-reading);
+  color: var(--color-readingText);
+  font-size: 15px;
+  line-height: 2;
+}
+
+.upload-source .source-passage {
+  color: inherit;
+}
+
+.upload-source p {
+  margin: 0 0 12px;
+}
+
+.upload-entity {
+  padding-bottom: 1px;
+  border-bottom: 3px solid var(--type-color);
+}
+
 /* 展示模式（#260，docs/design.md「展示模式」的「字級與主題」）：main.tsx 在 <html> 標上 data-mode="presentation"。
    只覆蓋字級與尺寸（--present-*），顏色 token 不變；一般模式的規則不讀這些變數，所以不受影響（presentation.test.ts 檢查）。
    圖譜節點標籤（18px、選取 26px）畫在 cytoscape 上：graph-style.ts 的 presentSizes() 讀 --present-graph-* 與 --present-label */

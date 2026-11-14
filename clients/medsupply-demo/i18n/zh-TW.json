@@ -639,7 +639,11 @@
     "relations": "關係",
     "noItems": "這份文件沒有萃取出實體或關係。",
     "reupload": "重新上傳修正版",
-    "reuploadNotice": "已帶入原本的標題、語言、可見等級與專案。選擇修正後的檔案再送出，會成為一份新的文件重新送審。"
+    "reuploadNotice": "已帶入原本的標題、語言、可見等級與專案。選擇修正後的檔案再送出，會成為一份新的文件重新送審。",
+    "submitted": "已送出「{title}」",
+    "detail": "上傳詳情",
+    "viewSource": "看原文",
+    "hideSource": "收起原文"
   },
   "presentation": {
     "script": "劇本",

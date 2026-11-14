@@ -1,6 +1,7 @@
 // 我的上傳（#284，docs/design.md「日常工具」的「我的上傳」）：每份上傳的狀態與送出後的四步進度。
 // 資料來自 store.ts 的 readMyUploads()（待審項目與目前有效的決定，ADR 0009）；本工作階段還在萃取的文件另由萃取的狀態判斷。
 import type { ReviewDocument, ReviewStatus } from "../extraction/store";
+import type { FoundTerm } from "./upload-helpers";
 
 // uploaded：還沒有萃取出項目（萃取中、失敗或沒有找到，#284 決定 4）；rejected：全部退回（#284 決定 3）
 export type MyUploadStatus = "uploaded" | "in_review" | "approved" | "partly_rejected" | "rejected";
@@ -72,3 +73,27 @@ export const reuploadOf = (doc: Pick<ReviewDocument, "title" | "language" | "vis
 
 // 部分退回或全部退回時才提供「重新上傳修正版」
 export const canReupload = (status: MyUploadStatus) => status === "partly_rejected" || status === "rejected";
+
+// 桌機分段切換的「我的上傳 N」（#344）：自己還在處理中的上傳數（本工作階段還在萃取，或有項目在等審核）
+export function inProgressCount(docs: readonly Pick<ReviewDocument, "id" | "entities" | "relations">[], extracting: ReadonlySet<string>): number {
+  return docs.filter((d) => {
+    const c = reviewCounts(d, extracting.has(d.id));
+    return c.extracting || myUploadStatus(c) === "in_review";
+  }).length;
+}
+
+// 上傳詳情的原文（#344，畫板 B-Ingest 的實體底線）：萃取出的實體的各語言名稱與類型，退回的實體不標。
+// 標出的位置由 upload-helpers.ts 的 underlineRanges() 算（與確認視窗的預覽相同）
+export function uploadTerms(doc: Pick<ReviewDocument, "entities">): FoundTerm[] {
+  const seen = new Set<string>();
+  const terms: FoundTerm[] = [];
+  for (const e of doc.entities) {
+    if (e.status === "rejected") continue;
+    for (const name of Object.values(e.names)) {
+      if (name === undefined || name === "" || seen.has(name)) continue;
+      seen.add(name);
+      terms.push({ name, type: e.type, order: terms.length });
+    }
+  }
+  return terms;
+}

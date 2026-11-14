@@ -639,7 +639,11 @@
     "relations": "Relations",
     "noItems": "No entities or relations were extracted from this document.",
     "reupload": "Upload a corrected version",
-    "reuploadNotice": "The original title, language, visibility level and project are filled in. Choose the corrected file and submit it; it becomes a new document and goes through review again."
+    "reuploadNotice": "The original title, language, visibility level and project are filled in. Choose the corrected file and submit it; it becomes a new document and goes through review again.",
+    "submitted": "Submitted “{title}”",
+    "detail": "Upload details",
+    "viewSource": "View source",
+    "hideSource": "Hide source"
   },
   "presentation": {
     "script": "Script",

@@ -155,7 +155,7 @@
 
 ### `app/src/upload/`
 
-上傳；說明見 `docs/upload.md`。畫面是 `app/src/ui/UploadPage.tsx`，其中「我的上傳」是 `app/src/ui/MyUploads.tsx`，狀態與四步進度的純函式在 `app/src/ui/my-uploads.ts`。
+上傳；說明見 `docs/upload.md`。畫面是 `app/src/ui/UploadPage.tsx`（桌機的頁首、分段切換與右側的上傳詳情欄，#344），其中「我的上傳」的清單、上傳詳情與「看原文」是 `app/src/ui/MyUploads.tsx`，狀態、四步進度、處理中的數量與原文中標出的實體的純函式在 `app/src/ui/my-uploads.ts`。
 
 - `chunk.ts`：切段
 - `docx.ts`：以動態 import 載入 `mammoth`（見 ADR 0002）
@@ -173,7 +173,7 @@
 - `output.ts`：解析與驗證
 - `prompt.ts`：prompt
 - `run.ts`：分批呼叫 `/api/ask`
-- `store.ts`：經 `withIdentity()` 寫入待審、讀取待審區與我的上傳（`readMyUploads()`）、核准與退回（只用 INSERT；規則由 RLS 執行，見 `docs/data-model.md`「待審與核准」，測試在 `app/tests/extraction/`）
+- `store.ts`：經 `withIdentity()` 寫入待審、讀取待審區與我的上傳（`readMyUploads()`，附文件日期與第一個看得到的段落）、核准與退回（只用 INSERT；規則由 RLS 執行，見 `docs/data-model.md`「待審與核准」，測試在 `app/tests/extraction/`）
 
 ### `app/src/conflicts/`
 
