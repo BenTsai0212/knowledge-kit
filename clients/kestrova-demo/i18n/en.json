@@ -261,6 +261,7 @@
   "reviewSummary": "Approving adds {entities, plural, one {# entity} other {# entities}} and {relations, plural, one {# relation} other {# relations}}; {merged, plural, one {# entity merges into an existing one} other {# entities merge into existing ones}} and {existing, plural, one {# relation is} other {# relations are}} already in the graph.",
   "reviewProgress": "{count, plural, one {# group needs} other {# groups need}} your confirmation",
   "reviewProgressDone": "Nothing needs your confirmation. You can approve everything in this document.",
+  "reviewUploadedBy": "Uploaded by {name}",
   "reviewDecideLeft": "{count, plural, one {# group needs} other {# groups need}} your decision and will remain after approving everything",
   "reviewPrepared": "The system prepared {count, plural, one {# item} other {# items}} — show",
   "reviewPreparedMergeHint": "After merging, anyone who can see this document can also see these entities.",

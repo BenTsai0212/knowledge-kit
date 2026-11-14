@@ -261,6 +261,7 @@
   "reviewSummary": "核准後新增 {entities} 個實體、{relations} 段關係；{merged} 個實體合併到既有實體，{existing} 段關係圖譜已有。",
   "reviewProgress": "還有 {count} 組需要你確認",
   "reviewProgressDone": "沒有需要你確認的項目，可以核准這份文件的全部。",
+  "reviewUploadedBy": "{name} 上傳",
   "reviewDecideLeft": "還有 {count} 組需要你決定，核准全部後仍會留下",
   "reviewPrepared": "系統已準備 {count} 筆，可查看",
   "reviewPreparedMergeHint": "合併後，看得到這份文件的人也會看到這些實體。",

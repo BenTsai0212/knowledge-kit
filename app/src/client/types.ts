@@ -590,6 +590,8 @@ export interface UiStrings {
   reviewSummary: string;
   reviewProgress: string;
   reviewProgressDone: string;
+  // 桌機待審頁的文件標頭：上傳者的膠囊（#345）
+  reviewUploadedBy: string;
   reviewDecideLeft: string;
   reviewPrepared: string;
   reviewPreparedMergeHint: string;
