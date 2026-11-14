@@ -308,6 +308,8 @@ export interface UiStrings {
   modelLoadingTitle: string;
   modelDownloadingTitle: string;
   modelDownloadProgress: string;
+  // 手機登入頁的下載進度列「{loaded}／{total} MB」（#355，畫板 K-Mobile）
+  modelDownloadBar: string;
   modelPreparing: string;
   // 語意向量 provider 準備失敗、改用 keyword-hash 時的提示（問答頁與評測台）
   retrievalFallbackTitle: string;

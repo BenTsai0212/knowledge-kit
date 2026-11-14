@@ -1074,8 +1074,8 @@ main.qa > .source .source-text mark.entering {
   padding-bottom: calc(72px + env(safe-area-inset-bottom));
 }
 
-/* 只有兩個頁籤（展示模式的登入頁），沒有分頁列，只留 safe area */
-.app.app--phone:has(> .mobile-segmented) {
+/* 登入前（#355）沒有分頁列，只留 safe area */
+.app.app--phone-entry {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -1195,31 +1195,6 @@ main.qa > .source .source-text mark.entering {
   stroke-width: 1.75;
   stroke-linecap: round;
   stroke-linejoin: round;
-}
-
-/* 只有兩個頁籤時（展示模式的登入頁；登入後是 PresentationBar）：頂端列下方的分段切換 */
-.mobile-segmented {
-  display: flex;
-  gap: 0.25rem;
-  margin: 0.75rem 1rem 0;
-  padding: 0.25rem;
-  border-radius: var(--radius-pill);
-  background: var(--color-surfaceRaised);
-}
-
-.mobile-segmented button {
-  flex: 1 1 0;
-  min-height: 44px;
-  border: none;
-  border-radius: var(--radius-pill);
-  background: none;
-  color: var(--color-textMuted);
-}
-
-.mobile-segmented button[aria-current="page"] {
-  background: var(--color-surface);
-  color: var(--color-primary);
-  font-weight: 700;
 }
 
 /* 底部面板（BottomSheet.tsx）：圓角 24px、40×5px 拖曳把手、背後 overlay；開關用 base（退場由 closeDialog() 加上 is-closing），
@@ -5096,6 +5071,254 @@ main.page:has(> .eval-page--desktop) {
   .entry__panel button.link {
     min-height: 44px;
   }
+}
+
+/* 手機的登入頁（#355，畫板 K-Mobile）：登入前沒有頂端列與分頁列（App 的 app--phone-entry）。
+   帳號登入：上方 330px 是主視覺，左上是產品名稱與「虛構資料」；表單不包卡片，直接接在下方（surface 底、上緣 1px border），
+   帳號單選列、虛線的密碼欄，下載進度列、「登入」與「使用邀請碼體驗」靠下。
+   使用邀請碼體驗：不顯示主視覺，「ACCESS」、標題、邀請碼欄與說明在中間，「開始使用」與「← 改用帳號登入」在下方 */
+.app--phone-entry > main.entry {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - env(safe-area-inset-bottom));
+  overflow: visible;
+}
+
+.app--phone-entry > main.entry > .hero {
+  flex: none;
+  height: 330px;
+}
+
+.entry-brand {
+  position: absolute;
+  z-index: 1;
+  top: 18px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.entry-brand__name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.entry-brand__tag {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px dashed var(--color-textMuted);
+  border-radius: var(--radius-small);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.app--phone-entry .entry__panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 20px 26px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.app--phone-entry .entry__panel .access-code {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: none;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+}
+
+.app--phone-entry .entry__panel h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+/* 帳號登入不顯示「SIGN IN」與「或」；「帳號」「密碼」的標籤只給輔助技術（畫板以單選列與 placeholder 表示） */
+.app--phone-entry .sign-in > .entry-eyebrow,
+.app--phone-entry .sign-in__or {
+  display: none;
+}
+
+.app--phone-entry :is(.sign-in__label, .sign-in__field, .access-code__label) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* 帳號單選列：高 46px、mono 14px 的展示帳號，角色名稱在同一列右側 */
+.app--phone-entry .account-card {
+  min-height: 46px;
+  padding: 0 12px;
+}
+
+.app--phone-entry .account-card:has(input:checked) {
+  padding: 0 11.5px;
+}
+
+.app--phone-entry .account-card input {
+  width: 14px;
+  height: 14px;
+}
+
+.app--phone-entry .account-card__text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 8px;
+}
+
+.app--phone-entry .account-card__account {
+  font-size: 14px;
+}
+
+.app--phone-entry .entry__panel input.sign-in__password {
+  height: 52px;
+  padding: 0 14px;
+  border: 1px dashed var(--color-textMuted);
+  background-color: transparent;
+  font-size: 15px;
+  opacity: 1;
+}
+
+.app--phone-entry .sign-in > p.muted {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* 語意模型的下載進度列（RetrievalNotice 的 bar）：mono 11px 的標題與 MB，下方 4px 的進度條 */
+.model-bar {
+  display: grid;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.model-bar__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-textMuted);
+}
+
+.model-bar progress {
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border: none;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  background: var(--color-border);
+  accent-color: var(--color-primary);
+}
+
+.model-bar progress::-webkit-progress-bar {
+  background: var(--color-border);
+}
+
+.model-bar progress::-webkit-progress-value {
+  background: var(--color-primary);
+}
+
+.model-bar progress::-moz-progress-bar {
+  background: var(--color-primary);
+}
+
+.app--phone-entry .entry-primary {
+  height: 52px;
+  margin-top: auto;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.app--phone-entry .model-bar + .entry-primary {
+  margin-top: 0;
+}
+
+.app--phone-entry .sign-in__alt {
+  height: 52px;
+  border-radius: 12px;
+  border-color: var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* 使用邀請碼體驗：沒有主視覺，背景是頁面底色 */
+.app--phone-entry > main.entry:has(form.access-code) > :is(.hero, .entry-brand) {
+  display: none;
+}
+
+.app--phone-entry > main.entry:has(form.access-code) > .entry__panel {
+  padding: 24px 20px 32px;
+  border-top: none;
+  background: none;
+}
+
+.app--phone-entry form.access-code {
+  gap: 14px;
+}
+
+/* 「ACCESS」到說明垂直置中（上下的 auto 平分剩下的高度），「開始使用」靠下 */
+.app--phone-entry form.access-code > .entry-eyebrow {
+  margin-top: auto;
+}
+
+.app--phone-entry .entry__panel form.access-code h2 {
+  font-size: 24px;
+}
+
+.app--phone-entry .entry__panel input.entry-code {
+  height: 52px;
+  padding: 0 14px;
+  border: 1.5px solid var(--color-text);
+  border-radius: 12px;
+  background: var(--color-surface);
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.app--phone-entry .entry__panel input.entry-code[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+.app--phone-entry form.access-code > p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.app--phone-entry .sign-in__back {
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
 }
 
 /* 主視覺（docs/design.md「入口頁主視覺」）：三層景深在 3D 透視中緩慢擺動；顏色只讀 token 與實體類型色 */

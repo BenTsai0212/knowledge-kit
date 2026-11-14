@@ -140,6 +140,7 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
 - 逐段讀取取得的 bytes 與 `arrayBuffer()` 相同，大小與 SHA-256 驗證、快取與固定 commit 都不變。
 - `createProvider(config, factories, onProgress)` 把回呼交給實作（`ProviderFactory` 的參數）；App 只在顯示的數字改變時更新畫面。
 - 只有 `preparesModel()`（`providers.ts`）為真的實作顯示準備中的提示；`keyword-hash` 的客戶畫面不變。
+- 手機的登入頁（#355）以 `bar` 顯示：準備中是「登入」上方的一條進度列（標題、`modelDownloadBar` 的「已下載／總共 MB」與進度條），不是提示框；降級的提示照常顯示。
 - 文字是 `client/i18n/` 的 `modelLoadingTitle`、`modelDownloadingTitle`、`modelDownloadProgress`（參數 `{loaded}`、`{total}`）與 `modelPreparing`。測試以注入的假下載回報進度（`download.test.ts`、`providers.test.ts`），畫面以 `renderToStaticMarkup` 檢查（`app/src/ui/retrieval-notice.test.ts`）。
 
 ### 降級

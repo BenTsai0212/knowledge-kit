@@ -498,7 +498,7 @@ export function App() {
 
   const Nav = layout === "phone" ? MobileNav : layout === "tablet" ? NavRail : Sidebar;
   // 展示模式登入後是頂端列（#260），不論寬度都取代 Nav（手機寬度的排列見 app.css），所以畫面上只有它的「問答｜圖譜」切換，
-  // 不會與手機的分段切換（layout.ts 的 usesSegmented，只剩展示模式的登入頁）同時出現
+  // 不會與其他導覽同時出現
   const presentationBar = presentationMode && accessCode !== null;
   const phone = layout === "phone" && !presentationBar;
   // 平板（#255）：原文與實體從右側滑出覆蓋，不常駐右欄。展示模式沿用 1920×1080 的規格縮放（docs/design.md「平板」），不改用滑出面板
@@ -507,6 +507,8 @@ export function App() {
   // 桌機登入前（#334，畫板 K-Login）：沒有左側導覽，頂端列＋登入頁；沒有導覽可以切到其他頁，所以不論目前的頁籤都顯示登入頁。
   // 平板與手機的登入頁照舊（#327）
   const desktopEntry = layout === "desktop" && accessCode === null;
+  // 手機登入前（#355，畫板 K-Mobile）：沒有頂端列與底部分頁列（展示模式也一樣），登入頁自己有標示；同樣不論目前的頁籤都顯示登入頁
+  const phoneEntry = layout === "phone" && accessCode === null;
   // 桌機登入後（≥ 1025px，展示模式除外）：問答頁照畫板 QA（#335）；app--desktop 讓桌機的樣式不影響手機、平板、展示模式與登入前的 app--entry
   const desktop = !overlay && !presentationBar && !desktopEntry;
   // 身分對照只在展示模式的頂端列、開關開啟時（線上 demo 一律關閉，online-demo.ts 的 demoCompare）
@@ -601,10 +603,10 @@ export function App() {
       </BottomSheet>
     );
   return (
-    <div className={phone ? "app app--phone" : tablet ? "app app--tablet" : desktopEntry ? "app app--entry" : desktop ? "app app--desktop" : "app"}>
+    <div className={phoneEntry ? "app app--phone app--phone-entry" : phone ? "app app--phone" : tablet ? "app app--tablet" : desktopEntry ? "app app--entry" : desktop ? "app app--desktop" : "app"}>
       {/* 只渲染一種導覽結構：展示模式登入後是頂端列，沒有「更換邀請碼」與「這次的問題」（docs/design.md「隱藏與保留」）；
           其他情況手機是頂端列＋底部分頁列、平板是左側的圖示導覽列、桌機是左側導覽（#255），桌機登入前是登入頁的頂端列（#334）。
-          展示模式在手機與平板的登入頁照常用 Nav */}
+          手機登入前沒有導覽（#355），標示在登入頁的主視覺上；平板的登入頁照常用 Nav */}
       {presentationBar ? (
         <PresentationBar
           language={language}
@@ -619,7 +621,7 @@ export function App() {
         />
       ) : desktopEntry ? (
         <EntryBar language={language} onLanguage={(code) => crossFade(() => flushSync(() => changeLanguage(code)))} />
-      ) : (
+      ) : phoneEntry ? null : (
         <Nav
           language={language}
           identity={identity}
@@ -665,7 +667,7 @@ export function App() {
         <main className="page">
           <p className="card error">{s.loadFailed}</p>
         </main>
-      ) : !desktopEntry && view !== "qa" && view !== "home" && (view !== "evals" || accessCode !== null) ? (
+      ) : !desktopEntry && !phoneEntry && view !== "qa" && view !== "home" && (view !== "evals" || accessCode !== null) ? (
         <main className="page">
           {db === null ? (
             <p className="card muted">{s.loading}</p>
@@ -763,8 +765,18 @@ export function App() {
           {!overlay && sidePanel()}
         </main>
       ) : accessCode === null ? (
-        // 登入頁（#228、#287、#334）：左側主視覺、右側登入面板與語意模型的下載進度；窄螢幕時主視覺在上
+        // 登入頁（#228、#287、#334）：左側主視覺、右側登入面板與語意模型的下載進度；窄螢幕時主視覺在上。
+        // 手機（#355，畫板 K-Mobile）：主視覺左上是產品名稱與「虛構資料」，下載進度是「登入」上方的一條進度列
         <main className="entry">
+          {phoneEntry && (
+            <header className="entry-brand">
+              <h1 className="entry-brand__name">
+                {s.productName}
+                <span className="visually-hidden"> / {client.displayName[language]}</span>
+              </h1>
+              <span className="badge entry-brand__tag">{s.fictionalData}</span>
+            </header>
+          )}
           <EntryHero />
           <div className="entry__panel">
             <SignInPanel
@@ -774,8 +786,9 @@ export function App() {
               presentation={presentationMode}
               onAccount={(role, code) => onSignIn({ kind: "account", role }, code)}
               onCode={(code) => onSignIn({ kind: "code" }, code)}
+              progress={phoneEntry && <RetrievalNotice language={language} preparesModel={preparesModel(client.retrieval)} status={providerStatus} bar />}
             />
-            <RetrievalNotice language={language} preparesModel={preparesModel(client.retrieval)} status={providerStatus} />
+            {!phoneEntry && <RetrievalNotice language={language} preparesModel={preparesModel(client.retrieval)} status={providerStatus} />}
           </div>
         </main>
       ) : view === "home" ? (

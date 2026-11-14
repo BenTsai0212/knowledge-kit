@@ -2,7 +2,7 @@
 // 帳號登入只是展示：帳號是各角色展示帳號的單選卡，密碼欄停用；不用 <form>，帳號與密碼不送出、不保存，瀏覽器不會當成登入表單
 // （單選鈕的 name 只用來把同一組歸在一起，讓方向鍵能在卡片間移動）。
 // 展示模式（?mode=presentation）只顯示邀請碼（#287 決定 2）。fork 時把帳號登入換成客戶的身分驗證（docs/client-config.md「登入（展示）」）
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { clientConfig } from "../client/load";
 import { errorMessage, strings } from "../client/i18n";
 import { AccessCodeForm } from "./AccessCodeForm";
@@ -23,9 +23,11 @@ interface Props {
   presentation: boolean;
   onAccount(role: string, accessCode: string): void;
   onCode(accessCode: string): void;
+  // 手機（#355，畫板 K-Mobile）：語意模型的下載進度列，放在「登入」（或「開始使用」）上方；其他寬度在面板下方另外顯示
+  progress?: ReactNode;
 }
 
-export function SignInPanel({ language, identity, rejected, presentation, onAccount, onCode }: Props) {
+export function SignInPanel({ language, identity, rejected, presentation, onAccount, onCode, progress }: Props) {
   const s = strings(language);
   const [withCode, setWithCode] = useState(!offersAccountSignIn(presentation) || rejected?.via === "code");
   const [role, setRole] = useState(identity);
@@ -49,7 +51,7 @@ export function SignInPanel({ language, identity, rejected, presentation, onAcco
   if (withCode) {
     return (
       <>
-        <AccessCodeForm language={language} rejected={rejected?.via === "code" ? rejected.code : null} onSubmit={onCode} titleRef={title} />
+        <AccessCodeForm language={language} rejected={rejected?.via === "code" ? rejected.code : null} onSubmit={onCode} titleRef={title} progress={progress} />
         {offersAccountSignIn(presentation) && (
           <button type="button" className="link sign-in__back" onClick={() => switchTo(false)}>
             <span aria-hidden="true">← </span>
@@ -87,7 +89,7 @@ export function SignInPanel({ language, identity, rejected, presentation, onAcco
         ))}
       </div>
       <label>
-        {s.signInPassword}
+        <span className="sign-in__field">{s.signInPassword}</span>
         <input type="password" className="sign-in__password" disabled autoComplete="off" placeholder={s.signInNoPassword} aria-describedby={ids.hint} />
       </label>
       {/* 沒有公開碼的部署：/api/ask 仍以邀請碼把關，帳號登入也要輸入（#287）；放在密碼欄下方 */}
@@ -115,6 +117,7 @@ export function SignInPanel({ language, identity, rejected, presentation, onAcco
           </p>
         </div>
       )}
+      {progress}
       <button type="button" className="entry-primary" disabled={accessCode === null} onClick={submit}>
         {s.signInSubmit}
       </button>

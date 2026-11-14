@@ -4,6 +4,7 @@
   "modelLoadingTitle": "Loading the semantic model",
   "modelDownloadingTitle": "Downloading the semantic model",
   "modelDownloadProgress": "{loaded} of {total} MB downloaded. The model is downloaded on first use and loaded from the browser cache after that.",
+  "modelDownloadBar": "{loaded} / {total} MB",
   "modelPreparing": "Questions you ask now will be answered once the model is ready.",
   "retrievalFallbackTitle": "Semantic search is unavailable; using keyword search instead",
   "retrievalFallback": {

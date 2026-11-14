@@ -112,7 +112,7 @@
 - `layout.ts`：斷點（`layoutFor()`、`useLayout()`）、手機分頁的分配（`phoneTabs()`）、底部面板的拖曳門檻與 `sheetSnap()`、底部面板以上的可見部分 `visibleArea()`（純函式，測試在 `layout.test.ts`）
 - `MentionPanel.tsx`：問答頁的右側面板：回答提到的實體（純函式在 `mentions.ts`）
 - `mentions.ts`：`MentionPanel.tsx` 的純函式
-- `MobileNav.tsx`：≤ 600px 時取代左側導覽的手機頂端列＋底部分頁列（含「更多」面板與展示模式的分段切換），見 `docs/design.md`「手機與平板」
+- `MobileNav.tsx`：≤ 600px 時取代左側導覽的手機頂端列＋底部分頁列（含「更多」面板；登入前不顯示，#355），見 `docs/design.md`「手機與平板」
 - `motion.ts`：動態的刻度與 CSS 變數 `--motion-*`、`--ease-*`；圖譜展開的動態與「減少動態效果」的判斷
 - `NavRail.tsx`：平板（601–1024px）的左側圖示導覽列，與 `Sidebar`、`MobileNav` 共用 `NavProps`；App 依 `useLayout()` 只渲染其中一種
 - `Notice.tsx`：共用的提示框（`className` 依位置調整樣式，例如桌機問答頁的額度與需要管理者的說明條）

@@ -4,6 +4,7 @@
   "modelLoadingTitle": "正在載入語意模型",
   "modelDownloadingTitle": "正在下載語意模型",
   "modelDownloadProgress": "已下載 {loaded}／{total} MB。第一次使用需要下載，之後從瀏覽器的快取載入。",
+  "modelDownloadBar": "{loaded}／{total} MB",
   "modelPreparing": "現在送出的問題會在模型準備好後回答。",
   "retrievalFallbackTitle": "語意檢索無法使用，已改用關鍵字檢索",
   "retrievalFallback": {
