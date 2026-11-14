@@ -384,6 +384,8 @@ export interface UiStrings {
   closeSource: string;
   // 手機原文面板的「出處 N／M」（{n}、{total}）與上一個、下一個出處（#256）
   sourceStep: string;
+  // 手機底部面板的標題「原文 · 出處 N／M」（#354，畫板 G-Mobile-QA）；平板的滑出面板照舊用 sourceStep
+  sourceSheetStep: string;
   sourcePrev: string;
   sourceNext: string;
   // 桌機原文欄的「這次回答的出處」清單與段落編號「¶N」（#335）

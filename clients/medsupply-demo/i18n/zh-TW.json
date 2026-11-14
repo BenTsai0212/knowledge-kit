@@ -66,6 +66,7 @@
   "sourceHeading": "原文 · 出處 {n}",
   "closeSource": "關閉原文",
   "sourceStep": "出處 {n}／{total}",
+  "sourceSheetStep": "原文 · 出處 {n}／{total}",
   "sourcePrev": "上一個出處",
   "sourceNext": "下一個出處",
   "sourceCitedList": "這次回答的出處",

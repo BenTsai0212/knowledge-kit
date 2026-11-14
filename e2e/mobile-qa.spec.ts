@@ -1,5 +1,5 @@
 // 手機的問答與原文面板（#256，docs/design.md「問答（手機）」）：390×844 時點引用標號，原文從底部面板升起（高 74%），
-// 標題列是「出處 N／M」與上一個、下一個（44px）；原文在 reading 紙面、引用段落用 markReading；下方「回報有錯」。
+// 標題列是「原文 · 出處 N／M」（#354）與上一個、下一個（44px）；原文在 reading 紙面、引用段落用 markReading；下方「回報有錯」。
 // 每一步都檢查整頁沒有橫向捲動。往下拖曳的手感、safe area 與動態的觀感由人在實機確認。/api/ask 一律是假的回應。
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { openApp, s } from "./support/app";
@@ -8,7 +8,7 @@ import { askWithSeveralSources } from "./support/citing-answer";
 test.use({ viewport: { width: 390, height: 844 } });
 
 const sheet = (page: Page) => page.locator("dialog.source-sheet");
-const stepTitle = (n: number, total: number) => s.sourceStep.replace("{n}", String(n)).replace("{total}", String(total));
+const stepTitle = (n: number, total: number) => s.sourceSheetStep.replace("{n}", String(n)).replace("{total}", String(total));
 const noHorizontalScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
 // 等面板與螢光的動態結束（進場、刷過）再量
 const settle = (el: Locator) => el.evaluate(async (node) => void (await Promise.all(node.getAnimations({ subtree: true }).map((a) => a.finished))));

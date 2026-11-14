@@ -21,7 +21,7 @@ export interface AnswerState {
   // 回答提到的實體（#195）：以送出當下的身分讀出的圖譜，與從中挑出的實體（mentions.ts）。
   // 拒答時 entities 是空的，圖譜用來產生「可以試試」（#285）
   mentions?: { graph: Graph; entities: GraphEntity[] };
-  // 引用到的段落中說法不同（並存）的組合：兩段的引用標號（conflicts/marks.ts 的 citedConflicts()，#335）；只在桌機顯示
+  // 引用到的段落中說法不同（並存）的組合：兩段的引用標號（conflicts/marks.ts 的 citedConflicts()，#335）；只在桌機與手機顯示（#354）
   conflicts?: Array<[number, number]>;
   // 這一題送出的回報（#286）：回答下方顯示處理結果；再回報一次時換成新的回報
   reportId?: string;
@@ -170,9 +170,9 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
   return (
     <section id={id} ref={ref} className={classes} style={{ "--done": doneStep } as CSSProperties} aria-live="polite">
       <h2>{heading ?? state.question}</h2>
-      {/* 回答本體：桌機是問題泡泡下方的回答卡片（#335，畫板 QA）；其他版面沒有自己的樣式，與直接放在 section 中相同 */}
+      {/* 回答本體：桌機與手機是問題泡泡下方的回答卡片（#335 畫板 QA、#354 畫板 G-Mobile-QA）；平板與展示模式沒有自己的樣式，與直接放在 section 中相同 */}
       <div className="answer__body">
-        {/* 依據：引用到的段落數，與原文欄「這次回答的出處」、手機「出處 N／M」的 M 相同（#322）；只在桌機顯示 */}
+        {/* 依據：引用到的段落數，與原文欄「這次回答的出處」、手機「出處 N／M」的 M 相同（#322）；只在桌機與手機顯示 */}
         {answer?.kind === "answer" && answer.cited.length > 0 && (
           <p className="answer-basis">{fill(s.answerBasis, { count: new Set(answer.cited).size }, language)}</p>
         )}
@@ -204,7 +204,7 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
               <ul>
                 {refusalNextSteps({ canUpload, graph, question: state.question, language }).map((x, i) => (
                   <li key={suggestionKey(x)} className={x.kind === "step" && x.step === "upload" ? "refusal-next__upload" : undefined} style={{ "--i": staggerIndex(i) } as CSSProperties}>
-                    {/* 桌機是並排的卡片（#335，畫板 K-Answer）：小標與實體的類型色點只在桌機顯示；上傳那一項是卡片下方的一行 */}
+                    {/* 桌機是並排的卡片（#335，畫板 K-Answer）：小標與實體的類型色點只在桌機與手機顯示；上傳那一項是卡片下方的一行 */}
                     {suggestionKind(x) !== null && <span className="refusal-kind">{suggestionKind(x)}</span>}
                     <span className="refusal-step">
                       {suggestionEntity(x) !== null && <span className="type-dot" style={{ "--type-color": typeColor(suggestionEntity(x)!.type) } as CSSProperties} aria-hidden="true" />}
@@ -219,7 +219,7 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
         {/* 錯誤是中性的卡片，不用 danger（#280）；prompt_too_long 沒有送出，下一步是縮短問題 */}
         {answer?.kind === "error" && category !== "modelRefusal" && (
           <div className="problem" role="status">
-            {/* 桌機的圖示（#335，畫板 I-States）：可以再試是重新整理的箭頭，問題要改是縮短的線條；其他版面不顯示 */}
+            {/* 桌機的圖示（#335，畫板 I-States）：可以再試是重新整理的箭頭，問題要改是縮短的線條；平板與展示模式不顯示 */}
             <svg className="problem-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d={category === "fixQuestion" ? "M4 7h16M4 12h10M4 17h6" : "M21 12a9 9 0 1 1-3-6.7M21 4v5h-5"} />
             </svg>
@@ -237,7 +237,7 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
         )}
         {answer?.kind === "answer" && (
           <>
-            {/* 說法不同（#335，畫板 QA）：兩段都被引用的並存組合，照 system 第 5 條並列、不寫「以…為準」；只在桌機顯示 */}
+            {/* 說法不同（#335，畫板 QA）：兩段都被引用的並存組合，照 system 第 5 條並列、不寫「以…為準」；只在桌機與手機顯示 */}
             {state.conflicts?.map(([a, b]) => (
               <p key={`${a}-${b}`} className="answer-conflict">
                 <svg viewBox="0 0 24 24" aria-hidden="true">

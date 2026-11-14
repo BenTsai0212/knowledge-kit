@@ -817,6 +817,8 @@ export function App() {
             {onlineDemo.enabled && <p className="badge warning">{s.demoQaNotice}</p>}
             <RetrievalNotice language={language} preparesModel={preparesModel(client.retrieval)} status={providerStatus} compact={presentationMode} />
             {adminError !== null && <AdminNotice language={language} {...adminError} />}
+            {/* 手機的「每一題獨立回答」（#354）：輸入區改成單行輸入列後，說明與桌機相同移到頂部 */}
+            {phone && <p className="muted qa-phone-note">{s.qaHeaderNote}</p>}
             {/* 手機的「這次的問題」在問答頁頂部（#256 決定 1）；展示模式不顯示（#260） */}
             {phone && !presentationMode && <SessionQuestions language={language} questions={turns} onQuestion={scrollToTurn} />}
             {compareEnabled && compare !== null ? (
@@ -884,7 +886,8 @@ export function App() {
               onAsk={(question) => void (compare !== null ? runCompare(question) : onAsk(question))}
               limit={limit}
               presets={!presentationMode}
-              line={desktop}
+              // 桌機（#335，畫板 QA）與手機（#354，畫板 G-Mobile-QA）是單行輸入列；平板與展示模式照舊
+              line={desktop || phone}
             />
           </div>
           {!overlay && sidePanel()}
