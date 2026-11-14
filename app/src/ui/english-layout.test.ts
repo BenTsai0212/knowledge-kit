@@ -67,6 +67,13 @@ describe("圖譜節點的名稱（最寬 112px、最多兩行）", () => {
 });
 
 describe("手機待審頁的分段", () => {
+  it("每個頁籤至少 44×44px（文字短的頁籤也一樣），分段切換仍是一行、橫向捲動", () => {
+    const tab = rules().find((r) => r.media === null && r.selector === '.review-page--phone .review-tabs [role="tab"]');
+    expect(tab?.decls).toMatchObject({ "min-height": "44px", "min-width": "44px" });
+    const tabs = rules().find((r) => r.media === null && r.selector === ".review-tabs");
+    expect(tabs?.decls).toMatchObject({ "flex-wrap": "nowrap", "overflow-x": "auto" });
+  });
+
   it("英文 “Resolved differences” 改為 “Resolved”", () => {
     expect(en.reviewDecidedTab).toBe("Resolved");
   });

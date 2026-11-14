@@ -3063,8 +3063,11 @@ button.chip.graph-chip[aria-pressed="true"] {
   overflow: visible;
 }
 
+/* 文字短的頁籤（例如「回報」只有 32px）也至少 44px 寬（#282 PR 3 修正要求）；文字置中，仍在列內橫向捲動 */
 .review-page--phone .review-tabs [role="tab"] {
   min-height: 44px;
+  min-width: 44px;
+  text-align: center;
 }
 
 .review-page--phone .review-toolbar {
