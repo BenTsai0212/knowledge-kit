@@ -96,6 +96,7 @@
   "graphZoomIn": "拡大",
   "graphZoomOut": "縮小",
   "graphLegendNote": "形と色の両方で区別",
+  "graphCounts": "エンティティ {entities} 件 · 関係 {relations} 件",
   "graphJustExpanded": "展開したばかり",
   "graphListMode": "リスト表示",
   "graphKeyboard": {

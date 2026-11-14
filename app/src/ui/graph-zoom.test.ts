@@ -134,6 +134,11 @@ describe("換層級時的視角", () => {
     expect(rendered(v, 40, -30)).toEqual({ x: 195, y: 125.5 });
   });
 
+  it("panToCenter：area 有 top 時，節點落在 top 以下的可見部分中央（#357 修正要求）", () => {
+    const v = { zoom: 1.5, pan: panToCenter({ x: 40, y: -30 }, 1.5, { width: 390, height: 200, top: 51 }) };
+    expect(rendered(v, 40, -30)).toEqual({ x: 195, y: 151 });
+  });
+
   it("元件以最終位置與全部元素（含外圍的群組泡泡）計算目標視角，不以 fit 對還在泡泡位置的節點", () => {
     const show = zoomView.slice(zoomView.indexOf("const show ="), zoomView.indexOf("const shown ="));
     expect(show.indexOf("viewportFor(instance.elements().boundingBox()")).toBeGreaterThan(-1);

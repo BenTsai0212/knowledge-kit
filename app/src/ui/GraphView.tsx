@@ -38,6 +38,8 @@ interface Props {
   api?: RefObject<GraphViewApi | null>;
   // 手機的實體面板蓋住視窗下方的比例（#257，停在 56% 時是 SHEET_HALF；沒有面板時 0）：選取的節點平移到面板以上的中央
   cover?: number;
+  // 手機（#357 修正要求）：浮在畫布上方的一列（已展開的路徑與麵包屑）。面板開著時選取的節點置中在這一列下緣與面板上緣之間，不被它蓋住
+  overlay?: RefObject<HTMLElement | null>;
   // 桌機（#336 修正要求）：選取與逐步展開時的縮放上限（graph-style.ts 的 FOCUS_MAX_ZOOM）；沒有傳入時（手機、平板、展示模式）照舊
   maxFocusZoom?: number;
 }
@@ -224,14 +226,16 @@ export function reveal(cy: Core, keyboard: KeyboardMarks | null, reduced: boolea
   else cy.animate({ center: { eles: node } }, { duration: ms, easing: "ease-in-out" });
 }
 
-// 畫布沒被底部面板蓋住的部分（rendered px）；cover 是 0 時是整個畫布
-export function areaOf(cy: Core, cover: number): { width: number; height: number } {
+// 畫布沒被底部面板蓋住的部分（rendered px）；cover 是 0 時是整個畫布。overlay 有內容時，可見部分從它的下緣開始（#357 修正要求）
+export function areaOf(cy: Core, cover: number, overlay: HTMLElement | null = null): { width: number; height: number; top: number } {
   const top = cy.container()?.getBoundingClientRect().top ?? 0;
-  return visibleArea({ top, width: cy.width(), height: cy.height() }, globalThis.innerHeight, cover);
+  const bar = overlay?.getBoundingClientRect();
+  const inset = bar === undefined || bar.height === 0 ? 0 : bar.bottom - top;
+  return visibleArea({ top, width: cy.width(), height: cy.height() }, globalThis.innerHeight, cover, inset);
 }
 
 // 節點平移到可見部分的中央（縮放不變，#257）；減少動態效果時直接到位
-export function centerIn(cy: Core, node: CollectionReturnValue, area: { width: number; height: number }, ms: number) {
+export function centerIn(cy: Core, node: CollectionReturnValue, area: { width: number; height: number; top?: number }, ms: number) {
   if (node.empty()) return;
   const pan = panToCenter(node.position(), cy.zoom(), area);
   if (ms === 0) cy.pan(pan);
@@ -299,7 +303,7 @@ const FOCUS_PADDING = 40;
 // 手機的實體面板開著時（cover > 0），只平移：選取的節點放在面板以上的中央，縮放不變；聚焦集合超出可見部分時由使用者自己拖曳或縮放（#257）
 // 展示模式改由 presentFocus() 決定 zoom 與位置：聚焦集合與標籤整個放進畫面、標籤不重疊
 // 桌機傳入 maxZoom 時改由 focusViewport() 決定：縮放在 FOCUS_MIN_ZOOM～maxZoom（標籤 12～16px），聚焦集合放得進時選取的節點靠近中央、整個聚焦集合留在畫布內
-function animateFocus(cy: Core, graph: Graph, previous: Expansion, next: Expansion, reduced: boolean, cover: number, maxZoom?: number) {
+function animateFocus(cy: Core, graph: Graph, previous: Expansion, next: Expansion, reduced: boolean, cover: number, overlay: HTMLElement | null, maxZoom?: number) {
   const [expandMs, panMs] = [motionDuration(reduced, EXPAND_MS), motionDuration(reduced, PAN_MS)];
   cy.stop(true, false);
   const center = (eles: CollectionReturnValue) => (panMs === 0 ? cy.center(eles) : cy.animate({ center: { eles } }, { duration: panMs, easing: "ease-in-out" }));
@@ -336,7 +340,7 @@ function animateFocus(cy: Core, graph: Graph, previous: Expansion, next: Expansi
     return;
   }
   const [box, extent] = [eles.boundingBox(), cy.extent()];
-  if (cover > 0 && selected.nonempty()) centerIn(cy, selected, areaOf(cy, cover), panMs);
+  if (cover > 0 && selected.nonempty()) centerIn(cy, selected, areaOf(cy, cover, overlay), panMs);
   else if (box.w <= extent.w && box.h <= extent.h) center(selected);
   else fit(eles, FOCUS_PADDING);
 }
@@ -366,7 +370,7 @@ export function trackContainer(element: HTMLElement, cy: Core): () => void {
   };
 }
 
-export function GraphView({ graph, language, selected, path, onSelect, expansion, excluded = NONE, isolated = false, compact = false, labelGraph = graph, keyboard = null, api, cover = 0, maxFocusZoom }: Props) {
+export function GraphView({ graph, language, selected, path, onSelect, expansion, excluded = NONE, isolated = false, compact = false, labelGraph = graph, keyboard = null, api, cover = 0, overlay, maxFocusZoom }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const cy = useRef<Core | null>(null);
   // tap 事件在 cytoscape 實例建立時註冊，以 ref 取得最新的 onSelect
@@ -456,12 +460,12 @@ export function GraphView({ graph, language, selected, path, onSelect, expansion
       const id = selectedOf(next);
       if (opened && id !== null) {
         cy.current.stop(true, false);
-        centerIn(cy.current, cy.current.$id(id), areaOf(cy.current, cover), motionDuration(reduced.current, PAN_MS));
+        centerIn(cy.current, cy.current.$id(id), areaOf(cy.current, cover, overlay?.current), motionDuration(reduced.current, PAN_MS));
       }
       return;
     }
     markFresh(cy.current, graph, applied.current, next);
-    animateFocus(cy.current, graph, applied.current, next, reduced.current, cover, maxFocusZoom);
+    animateFocus(cy.current, graph, applied.current, next, reduced.current, cover, overlay?.current ?? null, maxFocusZoom);
     applied.current = next;
   }, [expansion, path, excluded, isolated, cover]);
 

@@ -2718,7 +2718,7 @@ button.chip.graph-chip[aria-pressed="true"] {
   }
 }
 
-/* 手機的圖譜（#257，docs/design.md「圖譜（手機）」）：GraphPage 依 layout.ts 加上 graph-page--phone。
+/* 手機的圖譜（#257、#357，docs/design.md「圖譜（手機）」，畫板 G-Mobile-Graph）：GraphPage 依 layout.ts 加上 graph-page--phone。
    圖譜佔滿頂端列與分頁列之間（.app--phone 的 padding-bottom 已留分頁列與 safe area），頁面本身不捲動；
    畫布 touch-action: none，單指平移與雙指縮放交給 cytoscape（只改相機，不切換語意縮放的層級，#254） */
 .app.app--phone:has(.graph-page--phone) {
@@ -2738,43 +2738,108 @@ button.chip.graph-chip[aria-pressed="true"] {
   padding: 0;
 }
 
+/* 畫布左右滿版（#357 修正）：.graph-page 的 align-items: start 是桌機 grid 用的，沿用到 flex column 時 .graph-main 只有內容寬度，
+   所以手機改回 stretch，畫布寬度等於畫面寬度；搜尋列與分段切換由 .graph-tools 自己留 16px */
 .graph-page.graph-page--phone {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   flex: 1 1 auto;
   min-height: 0;
   gap: 0;
 }
 
+/* 不套卡片：畫布從上方工具列下緣填滿到分頁列 */
 .graph-page--phone .graph-main {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
-  padding: 0.5rem 1rem 0;
-  border: none;
-  border-radius: 0;
+  background: var(--color-background);
 }
 
-/* 上方：搜尋佔一整行，下一行是「篩選與找路徑」與「圖譜｜清單」；觸控目標至少 44px */
+/* 上方（#357）：一列是搜尋框（放大鏡、placeholder「搜尋名稱」）＋ 44px 的篩選圖示按鈕，下一列是靠左的「圖譜｜清單」分段切換 */
 .graph-page--phone .graph-tools {
-  gap: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  margin: 0;
+  padding: 16px 16px 8px;
+}
+
+.graph-tools__row {
+  display: flex;
+  gap: 8px;
 }
 
 .graph-page--phone .entity-search {
-  flex: 1 1 100%;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
-.graph-page--phone .graph-tools button,
-.graph-page--phone .graph-tools input,
-.graph-page--phone .graph-trail button {
+.graph-page--phone .entity-search--field input[type="search"] {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.graph-page--phone button.graph-filters-button {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-color: var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+/* 分段切換：surfaceRaised 的槽，選取的一段是 surface 底、粗體；觸控目標 44px */
+.graph-page--phone .graph-mode {
+  align-self: flex-start;
+  gap: 0;
+  margin: 0;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--color-surfaceRaised);
+}
+
+.graph-page--phone .graph-mode button.chip {
   min-height: 44px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-textMuted);
+  font-size: 13px;
+}
+
+.graph-page--phone .graph-mode button.chip[aria-pressed="true"] {
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+/* 畫布：淡點陣底紋、沒有框線與圓角，填滿剩下的高度；已展開的路徑浮在左上，實體與關係數在右下 */
+.graph-phone-stage {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  background-image: radial-gradient(var(--color-border) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
 .graph-page--phone .graph-frame {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   flex: 1 1 auto;
+  min-width: 0;
   min-height: 12rem;
+  border-radius: 0;
 }
 
 /* 展示模式登入後的手機寬度沒有分頁列（不是 app--phone），頁面照常捲動，畫布維持窄寬度的高度 */
@@ -2784,14 +2849,60 @@ button.chip.graph-chip[aria-pressed="true"] {
 
 .graph-page--phone .graph-canvas {
   height: auto;
+  border: none;
+  border-radius: 0;
+  background-image: none;
   touch-action: none;
+}
+
+.graph-phone-stage .graph-trail {
+  position: absolute;
+  top: 8px;
+  left: 16px;
+  right: 16px;
+  z-index: 1;
+  min-height: 0;
+  margin: 0;
+  pointer-events: none;
+}
+
+.graph-phone-stage .graph-trail nav {
+  width: fit-content;
+  max-width: 100%;
+  padding: 0 4px 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  font-size: 13px;
+  pointer-events: auto;
+}
+
+.graph-page--phone .graph-trail button {
+  min-height: 44px;
+}
+
+.graph-counts {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 1;
+  color: var(--color-textMuted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  pointer-events: none;
 }
 
 .graph-page--phone .graph-list {
   flex: 1 1 auto;
   height: auto;
   min-height: 0;
-  margin-bottom: 0.5rem;
+  margin: 0 16px 0.5rem;
+}
+
+/* 清單模式：已展開的路徑在清單上方（沒有展開時不佔高度） */
+.graph-page--phone .graph-main > .graph-trail {
+  min-height: 0;
+  margin: 0 16px 8px;
 }
 
 .graph-filters .card {
@@ -2799,7 +2910,7 @@ button.chip.graph-chip[aria-pressed="true"] {
   border: none;
 }
 
-/* 實體面板（可展開的底部面板）：標題只給報讀器，畫面上由面板內的類型徽章與名稱開頭；內容不再加卡片外框 */
+/* 實體面板（可展開的底部面板，#357）：標題只給報讀器，畫面上由面板內的類型膠囊、名稱與「關聯 N · 文件 N」同一列開頭 */
 .entity-sheet .bottom-sheet__header h2 {
   position: absolute;
   width: 1px;
@@ -2809,19 +2920,108 @@ button.chip.graph-chip[aria-pressed="true"] {
   white-space: nowrap;
 }
 
-.entity-sheet .entity.card {
-  padding: 0;
+.entity--sheet {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, auto);
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 12px;
+}
+
+.entity--sheet > :not(.entity-badge, h2, .entity-counts) {
+  grid-column: 1 / -1;
+}
+
+.entity--sheet .entity-badge {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.entity--sheet h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.entity--sheet .entity-counts {
+  font-size: 11px;
+  text-align: end;
+}
+
+/* 「在問答中問」「只看它」等寬、48px */
+.entity--sheet .entity-actions {
+  flex-wrap: nowrap;
+  gap: 8px;
+  margin: 0;
+}
+
+.entity--sheet .entity-actions button {
+  flex: 1 1 0;
+  min-height: 48px;
+  border-radius: 12px;
+  font-size: 15px;
+}
+
+.entity--sheet .entity-actions button:not(.secondary) {
+  font-weight: 700;
+}
+
+.entity--sheet .entity-actions button.secondary {
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+/* 「相關實體」「出現的文件」的標題只給報讀器：畫面上直接是列與引用段落 */
+.entity--sheet h3 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* 相關實體：每則一列（48px、surfaceRaised 底、圓角 10px），整列可點 */
+.entity--sheet .entity-rows {
+  gap: 6px;
+}
+
+.entity--sheet .entity-row {
+  min-height: 48px;
+  gap: 10px;
   border: none;
+  border-radius: 10px;
+  background: var(--color-surfaceRaised);
 }
 
-/* 「在問答中問／只看它」與下方「相關實體」標題之間留間距（#257 PR 1 審查） */
-.entity-sheet .entity-actions {
-  margin-bottom: 1rem;
+.entity--sheet .entity-row .type-dot {
+  width: 10px;
+  height: 10px;
 }
 
-/* 面板內的按鈕至少 44px 高（.bottom-sheet button），清單中的實體連結改以基線對齊，與同列的關係名稱同高（#257 PR 1 審查） */
-.entity-sheet li > button.link {
-  vertical-align: baseline;
+.entity--sheet .entity-row button.link {
+  min-height: 0;
+  padding: 0;
+  font-size: 14px;
+}
+
+.entity--sheet .entity-row__relation {
+  font-size: 12px;
+}
+
+.entity--sheet .entity-documents {
+  margin: 0;
+}
+
+.entity--sheet .entity-excerpt {
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.75;
 }
 
 /* 時間軸（#241，docs/design.md）：依實體篩選的晶片一排，可換行；晶片的樣式沿用 button.chip */

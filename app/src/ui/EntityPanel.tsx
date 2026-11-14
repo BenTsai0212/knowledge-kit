@@ -27,6 +27,9 @@ interface Props {
   // 出現的文件是 surfaceRaised 卡片（文件名＋摘錄，實體名稱用 mark）；展示模式的桌機也用（#349，畫板 H-Graph，數量只列「關聯 N · 出現在 N 份文件」）；
   // 手機與平板不傳
   wide?: boolean;
+  // 手機的底部面板（#357，畫板 G-Mobile-Graph）：類型膠囊、名稱與「關聯 N · 文件 N」同一列，相關實體依實體合併成每則一列（與 wide 的列相同），
+  // 引用段落沿用 reading 紙面；不套卡片
+  sheet?: boolean;
 }
 
 // 圖譜頁右側的實體面板（#199，設計系統 v1 #240）：類型徽章（類型色淡底＋形狀）、名稱、關聯／文件／出處數；
@@ -36,7 +39,7 @@ interface Props {
 // 名稱與搜尋結果相同，同名的實體加上第一個相關實體的名稱（#198）
 const typeColor = (type: string) => clientConfig.knowledgeModel.entityTypes.find((t) => t.id === type)?.color ?? "var(--color-graphFallback)";
 
-export function EntityPanel({ graph, entityId, language, onSelect, onShowOnly, onAskAbout, onOpenSource, retractions, onRetract, wide = false }: Props) {
+export function EntityPanel({ graph, entityId, language, onSelect, onShowOnly, onAskAbout, onOpenSource, retractions, onRetract, wide = false, sheet = false }: Props) {
   const s = strings(language);
   // 正在確認撤回的文件、撤回中、錯誤訊息
   const [confirming, setConfirming] = useState<string | null>(null);
@@ -48,6 +51,9 @@ export function EntityPanel({ graph, entityId, language, onSelect, onShowOnly, o
   const relations = new Map(graph.relations.map((r) => [r.id, r]));
   // 出處依文件分組，點標題打開第一段；出處優先顯示介面語言（#36）
   const documents = entityDocuments(entity, language);
+  // 相關實體畫成列（桌機、展示模式與手機）；展示模式與手機依實體合併
+  const rows = wide || sheet;
+  const grouped = sheet || (wide && presentationMode);
 
   const retractionOf = (documentId: string) => retractions.find((r) => r.documentId === documentId);
   const entityName = (id: string) => {
@@ -93,7 +99,7 @@ export function EntityPanel({ graph, entityId, language, onSelect, onShowOnly, o
   };
 
   return (
-    <section className={wide ? "entity entity--wide" : "card entity"} aria-label={name}>
+    <section className={wide ? "entity entity--wide" : sheet ? "entity entity--sheet" : "card entity"} aria-label={name}>
       <span className={`entity-badge shape-${entityTypeShape(entity.type)}`} style={{ "--type-color": typeColor(entity.type) } as CSSProperties}>
         <span className="type-dot" aria-hidden="true" />
         {entityTypeLabel(entity.type, language)}
@@ -104,6 +110,8 @@ export function EntityPanel({ graph, entityId, language, onSelect, onShowOnly, o
         {" · "}
         {wide && presentationMode ? (
           fill(s.presentation.entityDocuments, { count: documents.length }, language)
+        ) : sheet ? (
+          fill(s.graphDocumentCount, { count: documents.length })
         ) : (
           <>
             {fill(s.graphDocumentCount, { count: documents.length })}
@@ -121,11 +129,11 @@ export function EntityPanel({ graph, entityId, language, onSelect, onShowOnly, o
         </button>
       </div>
       <h3>{s.relatedEntities}</h3>
-      {wide ? (
+      {rows ? (
         // 整列可點（按鈕的 ::after 蓋住整列），按鈕的名稱只有實體名稱；關係名稱在右側，方向以箭頭表示
         // 展示模式（#349，畫板 H-Graph）：同一個實體的多則關係合併成一列（「← 隸屬 · 負責」）
         <ul className="entity-rows">
-          {(presentationMode
+          {(grouped
             ? relatedEntityGroups(graph, entityId, language).map((g) => ({ key: g.entity.id, entity: g.entity, relation: relationGroupLabel(g.relations) }))
             : relatedEntities(graph, entityId, language).map((r) => ({ key: r.relationId, entity: r.entity, relation: relationGroupLabel([r]) }))
           ).map((r) => (

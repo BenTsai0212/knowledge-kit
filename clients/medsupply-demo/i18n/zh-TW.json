@@ -96,6 +96,7 @@
   "graphZoomIn": "放大",
   "graphZoomOut": "縮小",
   "graphLegendNote": "形狀＋顏色雙重區分",
+  "graphCounts": "{entities} 實體 · {relations} 關係",
   "graphJustExpanded": "剛展開",
   "graphListMode": "清單模式",
   "graphKeyboard": {

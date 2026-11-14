@@ -86,8 +86,8 @@
 - `cross-fade.ts`：切換語言、Light／Dark 的交叉淡換
 - `entity-icons.ts`：實體類型的圖示集
 - `EntityIcon.tsx`：圖例的圖示
-- `EntityPanel.tsx`：圖譜頁的實體面板；桌機（`wide`）是右側整高欄的列與卡片（#336），展示模式的桌機也用（#349，相關實體依實體合併成一列）
-- `EntitySearch.tsx`：以名稱搜尋實體；`field` 是桌機圖譜頁首的搜尋框（#336）
+- `EntityPanel.tsx`：圖譜頁的實體面板；桌機（`wide`）是右側整高欄的列與卡片（#336），展示模式的桌機也用（#349，相關實體依實體合併成一列）；手機（`sheet`）是底部面板的版面（#357）
+- `EntitySearch.tsx`：以名稱搜尋實體；`field` 是桌機圖譜頁首與手機圖譜上方的搜尋框（#336、#357）
 - `entry-hero.ts`：入口頁主視覺版面的純函式
 - `EntryBar.tsx`：桌機登入頁的頂端列（登入前沒有左側導覽，#334）
 - `EntryHero.tsx`：入口頁的主視覺（見 `docs/design.md`「入口頁主視覺」）
@@ -101,7 +101,7 @@
 - `graph-style.ts`：圖譜的配色（深色模式切換時重新套用）
 - `graph-zoom.ts`：三層語意縮放的層級、細節層與圖上元素的純函式；`panToCenter()` 在手機實體面板開著時，把選取的節點平移到面板以上的中央；`focusViewport()` 是桌機選取時的視角（縮放上限，聚焦集合留在畫布內）
 - `GraphList.tsx`：圖譜的清單模式
-- `GraphPage.tsx`：圖譜頁；桌機是畫板 `Graph`、`G-Scale` 的版面（#336），展示模式的桌機是畫板 `H-Graph`（#349）
+- `GraphPage.tsx`：圖譜頁；桌機是畫板 `Graph`、`G-Scale` 的版面（#336），展示模式的桌機是畫板 `H-Graph`（#349），手機是畫板 `G-Mobile-Graph`（#357）
 - `GraphView.tsx`：圖譜（cytoscape，動態載入）；`areaOf()`、`centerIn()` 與 `GraphZoomView` 共用；`cover` prop
 - `GraphZoomView.tsx`：大量節點時的三層語意縮放（見 `docs/graph.md`「三層語意縮放（畫面）」）；`cover` prop
 - `home.ts`：首頁的純函式（問過的問題與相對時間、狀態點、實體形狀等）
@@ -109,7 +109,7 @@
 - `identity-compare.ts`：身分對照的純函式：欄的順序與目前身分、目前的題目、一欄一欄送出、`C`／`Esc`
 - `IdentityCompare.tsx`：展示模式的身分對照，每個身分一欄，沿用 `AnswerView`（純函式在 `identity-compare.ts`；畫板 `H-QA`，#349），見 `docs/qa.md`「身分對照」
 - `IdentitySheet.tsx`：身分與語言面板的內容（手機、平板與桌機使用者卡的選單共用；身分單選卡附 `roles[].scope`、語言分段切換、更換邀請碼；帳號登入時只顯示帳號與角色）
-- `layout.ts`：斷點（`layoutFor()`、`useLayout()`）、手機分頁的分配（`phoneTabs()`）、底部面板的拖曳門檻與 `sheetSnap()`、底部面板以上的可見部分 `visibleArea()`（純函式，測試在 `layout.test.ts`）
+- `layout.ts`：斷點（`layoutFor()`、`useLayout()`）、手機分頁的分配（`phoneTabs()`）、底部面板的拖曳門檻與 `sheetSnap()`、底部面板以上的可見部分 `visibleArea()`（扣掉浮在畫布上方的一列）（純函式，測試在 `layout.test.ts`）
 - `MentionPanel.tsx`：問答頁的右側面板：回答提到的實體（純函式在 `mentions.ts`）
 - `mentions.ts`：`MentionPanel.tsx` 的純函式
 - `MobileNav.tsx`：≤ 600px 時取代左側導覽的手機頂端列＋底部分頁列（含「更多」面板；登入前不顯示，#355），見 `docs/design.md`「手機與平板」

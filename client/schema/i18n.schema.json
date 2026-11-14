@@ -14,7 +14,7 @@
     "accessCodeLabel", "accessCodeHint", "demoAccessCodeHint", "demoQaNotice", "demoUploadNotice", "accessCodeSubmit", "changeAccessCode", "signInTitle", "signInAccount", "signInAccountOption", "signInPassword", "signInNoPassword", "signInSubmit", "signInWithCode", "signInBack", "signInEyebrow", "accessCodeEyebrow", "signInOr", "signInAccountHint", "signOut", "identityBadge", "identityAndLanguage", "userCardScope", "navMore", "presetQuestions", "scenarioRole",
     "questionLabel", "questionPlaceholder", "askButton", "answering", "emptyAnswer", "emptyAnswerReason", "emptyAnswerAction", "qaIndependent", "qaHeaderNote", "sessionQuestions", "sessionQuestionsCount", "answerMentions", "answerBasis", "answerConflict", "followUpTitle", "followUpOutgoing", "followUpIncoming", "viewInGraph", "openSource", "sourceTitle", "sourceHeading",
     "closeSource", "sourceStep", "sourceSheetStep", "sourcePrev", "sourceNext", "sourceCitedList", "paragraphNumber", "views", "tabQa", "tabHome", "tabGraph", "legend", "graphEmpty", "graphEmptyReason", "switchIdentity", "selectEntity", "graphExpanded", "graphShowAll", "graphShowOnly",
-    "graphSearch", "graphSearchNone", "graphTopConnected", "graphRelationCount", "graphDocumentCount", "graphSourceCount", "graphAskAbout", "graphFilters", "graphFindPath", "graphZoomIn", "graphZoomOut", "graphLegendNote", "graphJustExpanded", "graphListMode", "graphKeyboard", "graphZoom", "askAboutEntity", "relatedEntities",
+    "graphSearch", "graphSearchNone", "graphTopConnected", "graphRelationCount", "graphDocumentCount", "graphSourceCount", "graphAskAbout", "graphFilters", "graphFindPath", "graphZoomIn", "graphZoomOut", "graphLegendNote", "graphCounts", "graphJustExpanded", "graphListMode", "graphKeyboard", "graphZoom", "askAboutEntity", "relatedEntities",
     "entitySources", "graphRetract", "graphRetractWillRemove", "graphRetractNoChange", "graphRetractConfirm", "graphRetractCancel", "tabTimeline", "pathTitle", "pathFrom", "pathTo", "pathChoose", "pathNotFound", "pathNotFoundReason", "pathChangeEnd",
     "timelineFilter", "timelineAll", "timelineEmpty", "timelineEmptyReason", "timelineFilterEmptyReason", "timelineShowAll", "undated", "tabUpload", "uploadNotAllowed", "uploadNotAllowedReason", "uploadEphemeral",
     "uploadFile", "fileChoose", "fileNone", "uploadPaste", "uploadPastePlaceholder", "uploadDocTitle", "uploadLanguage", "uploadVisibility",
@@ -157,6 +157,7 @@
     "graphZoomIn": { "$ref": "#/definitions/Text" },
     "graphZoomOut": { "$ref": "#/definitions/Text" },
     "graphLegendNote": { "$ref": "#/definitions/Text" },
+    "graphCounts": { "$ref": "#/definitions/Text" },
     "graphJustExpanded": { "$ref": "#/definitions/Text" },
     "graphListMode": { "$ref": "#/definitions/Text" },
     "graphKeyboard": {

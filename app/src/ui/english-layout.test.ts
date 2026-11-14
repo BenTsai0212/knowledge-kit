@@ -220,10 +220,11 @@ describe("排版規則", () => {
           .filter(([p, v]) => /^(?:width|max-width|inline-size|max-inline-size)$/.test(p) && /\d(?:px|rem|em|ch)\b/.test(v))
           .map(([p, v]) => `${r.selector} { ${p}: ${v} }`),
       );
-    // 桌機圖譜的放大／縮小（#336）、手機待審頁的重新整理（#282，觸控目標 44px）也是沒有文字的圖示按鈕
+    // 桌機圖譜的放大／縮小（#336）、手機圖譜的篩選（#357）、手機待審頁的重新整理（#282，觸控目標 44px）也是沒有文字的圖示按鈕
     expect(fixed).toEqual([
       ".icon-button { width: 2rem }",
       ".graph-zoom-buttons button { width: 44px }",
+      ".graph-page--phone button.graph-filters-button { width: 44px }",
       ".review-page--phone .review-toolbar .icon-button { width: 44px }",
     ]);
   });
