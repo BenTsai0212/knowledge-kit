@@ -13,8 +13,10 @@
 // 「回報」分頁是問答的回答錯誤回報（ADR 0007 決定 7，ReportList.tsx）。
 // 桌機（#345，畫板 F-Review、F-Empty）：review-page--desktop 加上 h1「待審」、填滿內容區；文件標頭有上傳者與可見範圍的膠囊，
 // 萃取結果每組一列，「編輯名稱」「出處」「變更合併對象」「展開」是列內的次要按鈕（其他版面仍是底線連結）。樣式都在 app.css
+// 手機（#282）：review-page--phone；需要決定的組（sheetReason）與待處理的說法不同只畫一行摘要與「›」，點了以底部面板處理
+// （groupBody、conflictBody 與列表共用）；「核准這份文件的全部」在卡片最下方、sticky 固定在分頁列之上
 // 讀取與寫入都經 store.ts、conflicts/store.ts（RLS 決定看得到、能核准什麼）；模型輸出一律以文字節點顯示。
-import { Fragment, useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { Fragment, useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { clientConfig } from "../client/load";
 import type { LocalizedText } from "../client/types";
 import { decideConflict, readConflicts, type ConflictDecision, type ConflictItem, type ConflictPassage } from "../conflicts/store";
@@ -24,6 +26,7 @@ import { approve, readReview, reject, retract, ReviewError, type EntityApproval,
 import { readGraph, type Graph } from "../graph/read";
 import { readReports, type AnswerReport } from "../reports/store";
 import { AccessBadges } from "./AccessBadges";
+import { BottomSheet } from "./BottomSheet";
 import { entityOptionLabel, entityTypeLabel, relationTypeLabel } from "./graph-labels";
 import { Notice } from "./Notice";
 import { EmptyState } from "./EmptyState";
@@ -48,9 +51,12 @@ import {
   reviewDocuments,
   reviewGroups,
   reviewTabCounts,
+  sheetReason,
   toastText,
   waitingRelations,
   type EntityChoice,
+  type ReviewGroup,
+  type ReviewGroups,
 } from "./review-helpers";
 import { fill, strings } from "../client/i18n";
 import { createToastTimer, type ToastTimer } from "./toast-timer";
@@ -74,6 +80,8 @@ interface Props {
   onViewInGraph(entityId: string): void;
   // 桌機（≥ 1025px，展示模式除外）：照畫板 F-Review（#345）；手機與平板不傳
   desktop?: boolean;
+  // 手機（≤ 600px，展示模式除外，#282）：需要決定的項目畫成一行摘要、以底部面板處理，「核准這份文件的全部」固定在下方
+  phone?: boolean;
 }
 
 // 撤銷的對象：決定 id 與這次寫入的項目 id（撤銷後這些列在原位重新展開，#243）
@@ -98,7 +106,7 @@ const typeColor = (type: string) => knowledgeModel.entityTypes.find((t) => t.id 
 // 待審實體沒有主要名稱（name），依介面語言取 names
 const pendingName = (e: ReviewEntity, language: string) => e.names[language] || Object.values(e.names)[0] || e.id;
 
-export function ReviewPage({ db, identity, language, extracting, onOpenSource, onChanged, onGotoGraph, onGotoUpload, onViewInGraph, desktop = false }: Props) {
+export function ReviewPage({ db, identity, language, extracting, onOpenSource, onChanged, onGotoGraph, onGotoUpload, onViewInGraph, desktop = false, phone = false }: Props) {
   const s = strings(language);
   const [tab, setTab] = useState<Tab>("pending");
   const ids = useId();
@@ -138,6 +146,8 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   const [restored, setRestored] = useState<ReadonlySet<string>>(new Set());
   // 說法不同正在播放的決定（並存、取代，#243 PR 4）：播完才寫入，新的資料讀回來時清空
   const [settling, setSettling] = useState<ReadonlyMap<string, ConflictDecision>>(new Map());
+  // 手機的底部面板（#282）：正在處理的組（實體 id）或說法不同（id）
+  const [sheet, setSheet] = useState<{ docId: string; kind: "group" | "conflict"; id: string } | null>(null);
   const reads = useRef(createRequestGate());
   const [version, setVersion] = useState(0);
   // 分頁列右側還有內容時的漸層提示（#288）：捲動、分頁列大小改變（視窗寬度、數量）與每次繪製後重新判斷
@@ -440,6 +450,13 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
         {fill(s.reviewSources, { count }, language)}
       </button>
     );
+  // 類型的形狀與名稱
+  const typeBadge = (e: ReviewEntity) => (
+    <span className={`entity-badge shape-${entityTypeShape(e.type)}`} style={{ "--type-color": typeColor(e.type) } as CSSProperties}>
+      <span className="type-dot" aria-hidden="true" />
+      <span className="entity-badge__label">{entityTypeLabel(e.type, language)}</span>
+    </span>
+  );
   // 實體列的標示（#243）：新增、自動合併、系統建議；需要逐筆決定的沒有標示
   const markLabels = { new: s.reviewNew, auto: s.reviewAutoMerged, suggested: s.reviewSuggested };
   // 一筆實體一行（#189、#243）：類型的形狀與名稱、名稱、標示、出處數，最後是退回與核准。
@@ -464,10 +481,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
     return (
       <div className={missing.length > 0 ? "review-entity is-warning" : "review-entity"}>
         <div className="review-row">
-          <span className={`entity-badge shape-${entityTypeShape(e.type)}`} style={{ "--type-color": typeColor(e.type) } as CSSProperties}>
-            <span className="type-dot" aria-hidden="true" />
-            <span className="entity-badge__label">{entityTypeLabel(e.type, language)}</span>
-          </span>
+          {typeBadge(e)}
           {isEditing ? (
             <span className="review-names editing">
               {client.languages.map((l) => (
@@ -585,8 +599,93 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
     </div>
   );
 
+  // 需要確認的一組：實體一行，關係掛在它底下；「確認」一併核准已經可以核准的關係。列表與手機的底部面板共用
+  const groupBody = (doc: ReviewDocument, g: ReviewGroups, group: ReviewGroup) => {
+    const plan = groupPlan(doc, group, g.prepared.entities, suggestions, allChoices, client.languages);
+    const waiting = waitingRelations(doc, group, g.prepared.entities, suggestions, allChoices, client.languages);
+    const relationCount = plan === null ? 0 : plan.relations.length + plan.existingRelations.length;
+    return (
+      <div className="review-item__body">
+        {entityRow(doc, group.entity, {
+          confirm: () => {
+            if (plan) void approveItems(doc.id, plan, 0, [group.entity.id]);
+          },
+          confirmLabel: relationCount > 0 ? fill(s.reviewConfirmWithRelations, { count: relationCount }, language) : s.reviewConfirm,
+          confirmDisabled: plan === null,
+        })}
+        {group.relations.length > 0 && (
+          <ul className="review-rows">
+            {group.relations.map((x, i) => (
+              <li key={x.relation.id} {...itemProps(x.relation.id, i)}>
+                <div className="review-item__body">{relationRow(doc, x.relation, { existing: x.existing, waiting: waiting.has(x.relation.id) })}</div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  };
+  // 一則說法不同：差異說明、新舊說法並排；待處理時下方三個決定按鈕。列表與手機的底部面板共用
+  const conflictBody = (doc: ReviewDocument, c: ConflictItem) => (
+    <div className="review-item__body review-conflict">
+      <p className="conflict-summary" lang={c.newPassage.language}>
+        {c.summary}
+      </p>
+      {c.decision !== null && <span className="badge">{s.conflictDecisions[c.decision]}</span>}
+      {/* 並存：兩卡之間畫出等號、兩邊標上關聯；取代：舊說法變淡、劃掉（#243 PR 4） */}
+      <div className="conflict-pair" data-settle={settling.get(c.id)}>
+        {conflictSide(s.conflictNew, c.newPassage, { linked: settling.get(c.id) === "coexist" ? { index: 0, other: c.oldPassage } : undefined })}
+        {settling.get(c.id) === "coexist" && (
+          <span className="conflict-equals" aria-hidden="true">
+            <span />
+            <span />
+          </span>
+        )}
+        {conflictSide(s.conflictOld, c.oldPassage, {
+          linked: settling.get(c.id) === "coexist" ? { index: 1, other: c.newPassage } : undefined,
+          superseded: settling.get(c.id) === "supersede",
+        })}
+      </div>
+      {c.decision === null && (
+        <div className="conflict-actions">
+          {CONFLICT_DECISIONS.map((d) => (
+            <button key={d} type="button" className={d === "not_conflict" ? "secondary" : undefined} disabled={busy} onClick={() => decide(doc.id, c.id, d)}>
+              {busy ? s.reviewWorking : s.conflictDecisions[d]}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+  // 手機上需要決定的項目（#282）：一行摘要、要做的決定與「›」，點了打開底部面板處理
+  // （包在 review-item__body 中：列收合、往左淡出的動態與其他列相同）
+  const sheetRow = (label: ReactNode, reason: string, open: () => void) => (
+    <div className="review-item__body">
+      <button type="button" className="review-sheet-row" disabled={busy} onClick={open}>
+        <span className="review-sheet-row__label">{label}</span>
+        <span className="badge warning">{reason}</span>
+        <span className="review-sheet-row__more" aria-hidden="true">
+          ›
+        </span>
+      </button>
+    </div>
+  );
+  // 底部面板的內容：從目前的資料找回這一項。核准或退回（列開始離開）、說法不同已決定時面板關閉；
+  // 找不到時（重新讀取後已不在待審）同樣關閉，關閉後才清掉 sheet
+  const sheetView = (() => {
+    const doc = sheet === null ? undefined : docs.find((d) => d.id === sheet.docId);
+    if (sheet === null || doc === undefined) return null;
+    if (sheet.kind === "conflict") {
+      const c = conflicts.find((x) => x.id === sheet.id);
+      return c === undefined ? null : { title: s.conflictSection, open: c.decision === null, body: conflictBody(doc, c) };
+    }
+    const g = reviewGroups(doc, suggestions, allChoices, graph, client.languages);
+    const group = g.groups.find((x) => x.entity.id === sheet.id);
+    return group === undefined ? null : { title: pendingName(group.entity, language), open: !leaving.has(group.entity.id), body: groupBody(doc, g, group) };
+  })();
+
   return (
-    <div className={desktop ? "review-page review-page--desktop" : "review-page"}>
+    <div className={desktop ? "review-page review-page--desktop" : phone ? "review-page review-page--phone" : "review-page"}>
       {desktop && (
         <header className="review-header">
           <h1>{s.tabReview}</h1>
@@ -712,6 +811,11 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
           if (tab === "pending" && !firstOpen.current.has(doc.id)) firstOpen.current.set(doc.id, !collapsible);
           const open = !collapsible || (openDocs[doc.id] ?? firstOpen.current.get(doc.id) ?? false);
           const bodyId = `${ids}-doc-${doc.id}`;
+          const approveAllButton = (
+            <button type="button" disabled={busy} onClick={() => approveAll(doc.id, batchPlan(doc, suggestions, allChoices, client.languages, graph))}>
+              {busy ? s.reviewWorking : s.reviewApproveDocument}
+            </button>
+          );
           return (
             <section key={doc.id} className="card review-doc">
               {notice?.docId === doc.id && notice.error !== undefined && (
@@ -761,9 +865,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                         ) : (
                           <span className="muted">{s.reviewProgressDone}</span>
                         )}
-                        <button type="button" disabled={busy} onClick={() => approveAll(doc.id, batchPlan(doc, suggestions, allChoices, client.languages, graph))}>
-                          {busy ? s.reviewWorking : s.reviewApproveDocument}
-                        </button>
+                        {!phone && approveAllButton}
                       </>
                     )}
                     {collapsible && (
@@ -790,29 +892,19 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                     {g.groups.length > 0 && (
                       <ul className="review-list">
                         {g.groups.map((group, gi) => {
-                          const plan = groupPlan(doc, group, g.prepared.entities, suggestions, allChoices, client.languages);
-                          const waiting = waitingRelations(doc, group, g.prepared.entities, suggestions, allChoices, client.languages);
-                          const relationCount = plan === null ? 0 : plan.relations.length + plan.existingRelations.length;
+                          const reason = phone ? sheetReason(group, client.languages) : null;
                           return (
                             <li key={group.entity.id} {...itemProps(group.entity.id, gi)}>
-                              <div className="review-item__body">
-                                {entityRow(doc, group.entity, {
-                                  confirm: () => {
-                                    if (plan) void approveItems(doc.id, plan, 0, [group.entity.id]);
-                                  },
-                                  confirmLabel: relationCount > 0 ? fill(s.reviewConfirmWithRelations, { count: relationCount }, language) : s.reviewConfirm,
-                                  confirmDisabled: plan === null,
-                                })}
-                                {group.relations.length > 0 && (
-                                  <ul className="review-rows">
-                                    {group.relations.map((x, i) => (
-                                      <li key={x.relation.id} {...itemProps(x.relation.id, i)}>
-                                        <div className="review-item__body">{relationRow(doc, x.relation, { existing: x.existing, waiting: waiting.has(x.relation.id) })}</div>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                )}
-                              </div>
+                              {reason === null
+                                ? groupBody(doc, g, group)
+                                : sheetRow(
+                                    <>
+                                      {typeBadge(group.entity)}
+                                      <span className="review-sheet-row__text">{pendingName(group.entity, language)}</span>
+                                    </>,
+                                    reason === "choose" ? s.reviewSheetChoose : s.reviewSheetNames,
+                                    () => setSheet({ docId: doc.id, kind: "group", id: group.entity.id }),
+                                  )}
                             </li>
                           );
                         })}
@@ -885,43 +977,30 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                 <ul className="review-list">
                   {docConflicts.map((c, i) => (
                     <li key={c.id} {...itemProps(c.id, i)}>
-                      <div className="review-item__body review-conflict">
-                        <p className="conflict-summary" lang={c.newPassage.language}>
-                          {c.summary}
-                        </p>
-                        {c.decision !== null && <span className="badge">{s.conflictDecisions[c.decision]}</span>}
-                        {/* 並存：兩卡之間畫出等號、兩邊標上關聯；取代：舊說法變淡、劃掉（#243 PR 4） */}
-                        <div className="conflict-pair" data-settle={settling.get(c.id)}>
-                          {conflictSide(s.conflictNew, c.newPassage, { linked: settling.get(c.id) === "coexist" ? { index: 0, other: c.oldPassage } : undefined })}
-                          {settling.get(c.id) === "coexist" && (
-                            <span className="conflict-equals" aria-hidden="true">
-                              <span />
-                              <span />
-                            </span>
-                          )}
-                          {conflictSide(s.conflictOld, c.oldPassage, {
-                            linked: settling.get(c.id) === "coexist" ? { index: 1, other: c.newPassage } : undefined,
-                            superseded: settling.get(c.id) === "supersede",
-                          })}
-                        </div>
-                        {c.decision === null && (
-                          <div className="conflict-actions">
-                            {CONFLICT_DECISIONS.map((d) => (
-                              <button key={d} type="button" className={d === "not_conflict" ? "secondary" : undefined} disabled={busy} onClick={() => decide(doc.id, c.id, d)}>
-                                {busy ? s.reviewWorking : s.conflictDecisions[d]}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      {phone && c.decision === null
+                        ? sheetRow(
+                            <span className="review-sheet-row__text" lang={c.newPassage.language}>
+                              {c.summary}
+                            </span>,
+                            s.conflictSection,
+                            () => setSheet({ docId: doc.id, kind: "conflict", id: c.id }),
+                          )
+                        : conflictBody(doc, c)}
                     </li>
                   ))}
                 </ul>
               </div>
+              {/* 手機（#282）：「核准這份文件的全部」固定在畫面下方（分頁列之上），捲到卡片底部時回到卡片內 */}
+              {phone && g !== null && hasItems && <div className="review-doc__approve-all">{approveAllButton}</div>}
             </section>
           );
         })}
       </div>
+      {sheet !== null && (
+        <BottomSheet open={sheetView?.open ?? false} onClose={() => setSheet(null)} title={sheetView?.title ?? ""} language={language} className="review-sheet">
+          {sheetView?.body}
+        </BottomSheet>
+      )}
     </div>
   );
 }

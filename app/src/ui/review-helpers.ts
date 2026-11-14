@@ -297,6 +297,11 @@ export const choiceCard = (choice: EntityChoice): "merge" | "new" | null =>
 // 名稱缺少的語言（#243）：去掉前後空白後沒有值的語言，依 languages 的順序。只用於建立新實體（合併時名稱不使用）
 export const missingNameLanguages = (names: LocalizedText, languages: readonly string[]) => languages.filter((l) => (names[l] ?? "").trim() === "");
 
+// 手機上以底部面板處理的組（#282，docs/design.md「待審」手機）：要選擇合併對象（decide），或模型寫的名稱缺少語言時，
+// 列表只畫一行摘要與「›」。依模型的名稱判斷，不隨面板中填寫的名稱改變（填好後列不會換成另一種畫法）；其他組直接退回或核准
+export const sheetReason = (group: Pick<ReviewGroup, "entity" | "kind">, languages: readonly string[]): "choose" | "names" | null =>
+  group.kind === "decide" ? "choose" : missingNameLanguages(group.entity.names, languages).length > 0 ? "names" : null;
+
 // 文件卡片可以收合（#243）：沒有需要你確認的組、也沒有待處理的說法不同
 export const docCollapsible = (toConfirm: number, pendingConflicts: number) => toConfirm === 0 && pendingConflicts === 0;
 

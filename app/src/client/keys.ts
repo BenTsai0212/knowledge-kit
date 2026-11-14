@@ -249,7 +249,7 @@ const uiStrings = {
   tabReview: "required", reviewPendingTab: "required", reviewRejectedTab: "required", reviewEmpty: "required", reviewEmptyReason: "required", reviewUploadAnother: "required",
   reviewRejectedEmpty: "required", reviewExtracting: "required", reviewRefresh: "required",
   reviewEntities: "required", reviewRelations: "required", reviewApproveDocument: "required", reviewApprove: "required",
-  reviewReject: "required", reviewWorking: "required", reviewNeedsChoice: "required", reviewChangeChoice: "required",
+  reviewReject: "required", reviewWorking: "required", reviewNeedsChoice: "required", reviewSheetChoose: "required", reviewSheetNames: "required", reviewChangeChoice: "required",
   reviewCreateNew: "required", reviewMergeInto: "required", reviewMergeHint: "required",
   reviewApprovedCount: "required", reviewRejectedWithEntity: "required", reviewRelationBlocked: "required",
   reviewNamesRequired: "required", reviewRequired: "required", reviewSkippedNames: "required", reviewSummary: "required",

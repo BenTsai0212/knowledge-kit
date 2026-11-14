@@ -257,6 +257,8 @@
   "reviewReject": "Reject",
   "reviewWorking": "Working…",
   "reviewNeedsChoice": "Decide one by one: choose an entity to merge into, or create a new one",
+  "reviewSheetChoose": "Choose a merge",
+  "reviewSheetNames": "Add names",
   "reviewChangeChoice": "Change merge target",
   "reviewCreateNew": "Create a new entity",
   "reviewMergeInto": "Merge into an existing entity",

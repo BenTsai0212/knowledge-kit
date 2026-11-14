@@ -2,8 +2,20 @@
 // 每一頁都檢查 375px 沒有橫向捲動、該頁新增的可點元件至少 44px（觸控目標）。橫向滑動的手感與 iOS 安全區由人在實機確認。
 // /api/ask 一律是假的回應（openApp）。
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { EVALS_PATH, gotoView, openApp, s, switchIdentity } from "./support/app";
-import { NO_NON_REVIEWER, NO_REVIEWER, NO_UPLOADER, nonReviewer, reviewer, uploader } from "./support/client";
+import { EVALS_PATH, gotoView, language, openApp, s, switchIdentity } from "./support/app";
+import {
+  client,
+  knowledgeModel,
+  NO_NON_REVIEWER,
+  NO_REVIEWER,
+  NO_REVIEWING_UPLOADER,
+  NO_UPLOADER,
+  nonReviewer,
+  reviewer,
+  reviewingUploader,
+  uploader,
+} from "./support/client";
+import { FAKE_ENTITY_NAME, sseBody } from "./support/fake-ask";
 
 test.use({ viewport: { width: 375, height: 812 } });
 
@@ -102,6 +114,73 @@ test.describe("上傳", () => {
     await expect(dot).toBeVisible();
     expect(await gotoView(page, "upload")).toBe(true);
     await expect(dot).toHaveCount(0);
+  });
+});
+
+test.describe("待審", () => {
+  test.skip(reviewingUploader === undefined, NO_REVIEWING_UPLOADER);
+  test.skip(client.languages.length < 2, "名稱缺少語言的實體需要兩種以上的語言");
+
+  test("分段切換一行、橫向捲動；缺少語言名稱的實體只顯示摘要與「›」，點了以底部面板處理；「核准這份文件的全部」固定在下方", async ({ page }) => {
+    await openApp(page);
+    await switchIdentity(page, reviewingUploader!.id);
+    // 萃取的實體只有介面語言的名稱：需要補上其他語言，在手機上以底部面板處理（其他請求交給 openApp 的假回應）
+    await page.route("**/api/ask", async (route) => {
+      const body = route.request().postDataJSON() as { system?: string };
+      if (!(body.system ?? "").startsWith("You extract entities")) return route.fallback();
+      const entity = { key: "e1", type: knowledgeModel.entityTypes[0].id, names: { [language]: FAKE_ENTITY_NAME }, sources: [1] };
+      await route.fulfill({ status: 200, headers: { "Content-Type": "text/event-stream" }, body: sseBody(JSON.stringify({ entities: [entity], relations: [] })) });
+    });
+    expect(await gotoView(page, "upload")).toBe(true);
+    await page.getByLabel(s.uploadFile).setInputFiles("e2e/fixtures/upload-note.md");
+    await page.getByRole("button", { name: s.uploadPreview }).click();
+    const upload = page.getByRole("dialog", { name: s.uploadConfirmTitle });
+    await upload.getByRole("button", { name: s.uploadSubmit, exact: true }).click();
+    await expect(upload.getByText(s.uploadDone)).toBeVisible();
+    await upload.getByRole("button", { name: s.uploadAnother }).click();
+    await expect(upload).toBeHidden();
+
+    // 萃取在背景執行：到待審頁按重新整理，直到摘要列出現
+    expect(await gotoView(page, "review")).toBe(true);
+    const row = page.locator(".review-page--phone button.review-sheet-row").filter({ hasText: FAKE_ENTITY_NAME });
+    await expect(async () => {
+      await page.getByRole("button", { name: s.reviewRefresh }).first().click();
+      await expect(row).toBeVisible({ timeout: 2_000 });
+    }).toPass();
+    const card = page.locator("section.review-doc").filter({ has: row });
+    await expect(row).toContainText(s.reviewSheetNames);
+    await expect(row).toContainText("›");
+    // 列表上沒有名稱欄位與核准按鈕：在底部面板中處理
+    await expect(card.locator(".review-entity")).toHaveCount(0);
+
+    // 分段切換：一行、在列內橫向捲動
+    const tabs = page.locator(".review-tabs [role=tab]");
+    const tops = await tabs.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
+    expect(new Set(tops).size).toBe(1);
+    expect(await page.locator(".review-tabs").evaluate((el) => getComputedStyle(el).overflowX)).toBe("auto");
+
+    // 「核准這份文件的全部」固定在分頁列之上，在可見範圍內；卡片頁首沒有這個按鈕
+    const approveAll = card.locator(".review-doc__approve-all");
+    expect(await approveAll.evaluate((el) => getComputedStyle(el).position)).toBe("sticky");
+    await expect(approveAll.getByRole("button", { name: s.reviewApproveDocument })).toBeInViewport();
+    await expect(card.locator(".review-doc__side").getByRole("button", { name: s.reviewApproveDocument })).toHaveCount(0);
+    await expectTouchTargets(page.locator(".review-tabs [role=tab], .review-toolbar .icon-button, button.review-sheet-row, .review-doc__approve-all > button"));
+    expect(await noHorizontalScroll(page)).toBe(true);
+
+    // 點摘要列打開底部面板：補上缺少的名稱後確認，面板關閉、這份文件沒有遺留
+    await row.click();
+    const sheet = page.locator("dialog.review-sheet");
+    await expect(sheet).toBeVisible();
+    await expect(sheet.getByRole("heading", { name: FAKE_ENTITY_NAME })).toBeVisible();
+    const missing = sheet.locator('input[aria-invalid="true"]');
+    await expect(missing).toHaveCount(client.languages.length - 1);
+    // 填好一種語言後欄位不再標示缺少：每次填第一個，直到沒有缺少的語言
+    while ((await missing.count()) > 0) await missing.first().fill(FAKE_ENTITY_NAME);
+    expect(await noHorizontalScroll(page)).toBe(true);
+    await sheet.getByRole("button", { name: new RegExp(`^${s.reviewConfirm}`) }).click();
+    await expect(sheet).toBeHidden();
+    await expect(page.locator(".toast-region")).toContainText(FAKE_ENTITY_NAME);
+    await expect(card).toHaveCount(0);
   });
 });
 

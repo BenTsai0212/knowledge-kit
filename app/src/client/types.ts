@@ -588,6 +588,9 @@ export interface UiStrings {
   reviewReject: string;
   reviewWorking: string;
   reviewNeedsChoice: string;
+  // 手機的一行摘要上要做的決定（#282）：選擇合併對象、補上缺少語言的名稱
+  reviewSheetChoose: string;
+  reviewSheetNames: string;
   // 系統已準備的實體：展開合併選擇（#243）
   reviewChangeChoice: string;
   reviewCreateNew: string;
