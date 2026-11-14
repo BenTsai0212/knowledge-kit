@@ -217,7 +217,7 @@ Rules:
 | `ui/mentions.ts` | 「回答提到」的實體（`mentionedEntities()`）、鄰近圖（`neighborhood()`）、「接著問」（`followUps()`）的純函式 |
 | `ui/SourcePanel.tsx` | 桌機的原文欄（其他頁籤顯示在頁面下方）：「原文 · 出處 N」與 ✕、文件標題與該身分看得到的段落（段落前有 `¶N`）（原文紙面 `ui/SourceText.tsx`，與手機共用），標示被引用的段落並捲動到該處；段落旁有說法不同與取代的標示（`ui/PassageMarks.tsx`，點擊後打開另一段，見 [docs/conflicts.md](conflicts.md)「畫面」）；從某一題的引用打開時，下方是「這次回答的出處」 |
 | `ui/SourceSheet.tsx` | 手機（≤ 600px）的原文面板（#256）：底部面板（`ui/BottomSheet.tsx`，高 74%），見下方「版面」的「手機」 |
-| `ui/SessionQuestions.tsx` | 手機的「這次的問題（N）」（#256 決定 1）：問答頁頂部的按鈕，打開底部面板列出問題，點一題就關閉面板並捲到該題；沒有提問時與展示模式不顯示 |
+| `ui/SessionQuestions.tsx` | 手機與平板的「這次的問題（N）」（#256 決定 1、#333）：問答頁頂部的按鈕，打開底部面板（平板是右側的滑出面板）列出問題，點一題就關閉面板並捲到該題；沒有提問時與展示模式不顯示 |
 | `ui/source-steps.ts` | 手機原文面板的「出處 N／M」與上一個、下一個（`sourceSteps()`），與「在圖譜中查看」的目標實體（`sourceGraphTarget()`）的純函式 |
 
 - **版面**（#195）：問答頁是左導覽、中間對話、右側面板的三欄。
@@ -246,7 +246,7 @@ Rules:
     - 問題泡泡、回答卡片與其中的狀態（說法不同、拒答、錯誤、回報結果、今天用完了）沿用桌機的規則（`:is(.app--desktop, .app--phone)`，#354，畫板 `G-Mobile-QA`），手機另外調整尺寸：泡泡最寬 82%、15px；卡片內距 16px、本文 16px；引用標號 26×24px；預設問題與「回答提到」的膠囊高 44px（觸控目標）。
     - 輸入區是 `background` 底的整寬列：預設問題只留膠囊（不顯示情境與情境角色），下方是與桌機相同的單行輸入列（`input`，Enter 送出，500 字的說明與 `danger` 邊線相同）。「每一題獨立回答 · 只用你這個身分看得到的文件」移到問答頁頂部的一行小字。
     - 原文面板（手機，#354）：文件名 18px；紙面 16px／1.9，未引用的段落 `textMuted`（Dark 的紙面是亮色，用 `readingText`）；「在圖譜中查看」與「回報有錯」並排、高 48px。平板的滑出面板不變。驗證：`e2e/mobile-qa-design.spec.ts`（390×844）。
-    - 「這次的問題（N）」在問答頁頂部（`SessionQuestions.tsx`），打開底部面板；面板關閉、焦點回到按鈕之後才捲到選的那一題，題目留出頂端列的高度（`scroll-margin-top`）。平板沿用同一個按鈕、打開滑出面板，等 #255 的 `SlideOver` 之後再補。
+    - 「這次的問題（N）」在問答頁頂部（`SessionQuestions.tsx`），打開底部面板；面板關閉、焦點回到按鈕之後才捲到選的那一題，題目留出頂端列的高度（`scroll-margin-top`）。平板（601–1024px）沿用同一個按鈕，打開右側的滑出面板（`BottomSheet` 的 `side="right"`，#333）；平板沒有 sticky 的頂端列，捲到題目的頂端。驗證：`e2e/tablet.spec.ts`（820×1180）。
     - 驗證：`source-steps.test.ts`（N／M、上下、目標實體）、`global-motion.test.ts`（高度、升起與刷過的延遲）、`english-layout.test.ts`（「回答提到」的祖先 grid 不被撐寬）、`e2e/mobile-qa.spec.ts`（390×844：點引用 → 面板與螢光 → 下一個 → 關閉、往下拖；「回報有錯」；沒有橫向捲動）、`e2e/mobile-qa-layout.spec.ts`（390×844：預設問題一行、輸入區在捲動前後都貼齊分頁列、引用標號 24px 與 44px 的觸控範圍、「回答提到」一行、「這次的問題」）。
   - 不寫 ADR：只是畫面版面的調整，不改技術選擇或資料流程（#195 決定）。
 - **資料庫**：頁面載入時在瀏覽器中以 PGlite 建立記憶體資料庫，執行 migration 並匯入資料集（與測試相同的 `openDatabase()`＋`seedDataset()`）。載入完成前預設問題不能按。

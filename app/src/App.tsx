@@ -840,8 +840,8 @@ export function App() {
             {adminError !== null && <AdminNotice language={language} {...adminError} />}
             {/* 手機的「每一題獨立回答」（#354）：輸入區改成單行輸入列後，說明與桌機相同移到頂部 */}
             {phone && <p className="muted qa-phone-note">{s.qaHeaderNote}</p>}
-            {/* 手機的「這次的問題」在問答頁頂部（#256 決定 1）；展示模式不顯示（#260） */}
-            {phone && !presentationMode && <SessionQuestions language={language} questions={turns} onQuestion={scrollToTurn} />}
+            {/* 手機與平板的「這次的問題」在問答頁頂部（#256 決定 1、#333），平板打開右側的滑出面板；展示模式不顯示（#260） */}
+            {overlay && !presentationMode && <SessionQuestions language={language} questions={turns} onQuestion={scrollToTurn} side={side} />}
             {compareEnabled && compare !== null ? (
               <IdentityCompare
                 language={language}

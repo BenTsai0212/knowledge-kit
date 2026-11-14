@@ -1442,7 +1442,7 @@ main.qa > .source .source-text mark.entering {
   inset: calc(50% - 22px);
 }
 
-/* 「這次的問題（N）」（SessionQuestions.tsx，#256 決定 1）：問答頁頂部的按鈕，打開列出問題的底部面板 */
+/* 「這次的問題（N）」（SessionQuestions.tsx，#256 決定 1、#333）：問答頁頂部的按鈕，打開列出問題的面板（手機是底部面板，平板是滑出面板）；觸控目標至少 44px */
 .session-questions-button {
   align-self: flex-start;
   min-height: 44px;
@@ -1458,6 +1458,7 @@ main.qa > .source .source-text mark.entering {
 
 .session-questions-list button {
   width: 100%;
+  min-height: 44px;
   border: none;
   background: none;
   color: var(--color-primary);

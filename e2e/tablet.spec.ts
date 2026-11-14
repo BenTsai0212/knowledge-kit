@@ -1,5 +1,5 @@
 // 平板（#255 PR 3，docs/design.md「平板」）：820×1180 時左側是 72px 的圖示導覽列（頁籤 60×56px、底部是身分的頭像），沒有左側導覽與手機的分頁列；
-// 身分與語言、原文、圖譜的實體從右側滑出覆蓋（最寬 420px，實體 400px），Esc 與關閉按鈕關閉，開啟時焦點在面板內、關閉後回到觸發的元件。
+// 身分與語言、原文、圖譜的實體、問答的「這次的問題」（#333）從右側滑出覆蓋（最寬 420px，實體 400px），Esc 與關閉按鈕關閉，開啟時焦點在面板內、關閉後回到觸發的元件。
 // 每一步都檢查整頁沒有橫向捲動。向右滑的手感與 safe area 由人在實機確認。/api/ask 一律是假的回應。
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { EVALS_PATH, identityBadge, identitySheet, openApp, openTab, presetQuestions, roleCard, s, switchIdentity } from "./support/app";
@@ -106,4 +106,41 @@ test("圖譜：點實體後實體面板從右側滑出（最寬 400px），Esc �
   await page.keyboard.press("Escape");
   await expect(sheet).toBeHidden();
   expect(await noHorizontalScroll(page)).toBe(true);
+});
+
+test("「這次的問題（N）」（#333）：沒有提問時不顯示；3 題後打開滑出面板、選第 3 題 → 面板關閉、焦點回到按鈕、第 3 題在可見範圍內", async ({ page }, testInfo) => {
+  await openApp(page);
+  const button = page.locator(".session-questions-button");
+  await expect(button).toHaveCount(0);
+  const questions = [presetQuestions[0].text, "第二題", "第三題"];
+  for (const question of questions) {
+    await page.getByPlaceholder(s.questionPlaceholder).fill(question);
+    await page.getByRole("button", { name: s.askButton, exact: true }).click();
+    const answer = page.locator("section.answer").last();
+    await expect(answer.getByRole("heading", { name: question })).toBeVisible();
+    await expect(answer.getByText(s.answering)).toHaveCount(0);
+  }
+  await expect(button).toHaveText(s.sessionQuestionsCount.replace("{count}", String(questions.length)));
+  expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+
+  // 從頁面頂部打開，選最後一題：關閉面板後焦點回到按鈕，但畫面要停在選的那一題
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await button.click();
+  const sheet = page.locator("dialog.session-questions-sheet");
+  await expectSlideOver(sheet, 420);
+  await expect(sheet.getByRole("heading", { name: s.sessionQuestions })).toBeVisible();
+  await expect(sheet.getByRole("listitem")).toHaveText(questions);
+  expect(await focusInside(page, "dialog.session-questions-sheet")).toBe(true);
+  // 觸控目標至少 44px
+  const heights = await sheet.getByRole("listitem").getByRole("button").evaluateAll((bs) => bs.map((b) => b.getBoundingClientRect().height));
+  for (const height of heights) expect(height).toBeGreaterThanOrEqual(44);
+  expect(await noHorizontalScroll(page)).toBe(true);
+
+  await sheet.getByRole("button", { name: questions[2], exact: true }).click();
+  await expect(sheet).toBeHidden();
+  await expect(button).toBeFocused();
+  await expect(page.locator("section.answer").nth(2).getByRole("heading", { name: questions[2] })).toBeInViewport();
+  expect(await noHorizontalScroll(page)).toBe(true);
+  // 截圖附在 E2E 的報告（playwright-report artifact）
+  await testInfo.attach("tablet-session-questions-820.png", { body: await page.screenshot(), contentType: "image/png" });
 });

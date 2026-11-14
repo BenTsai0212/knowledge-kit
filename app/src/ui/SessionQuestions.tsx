@@ -1,6 +1,6 @@
-// 手機的「這次的問題」（#256 決定 1）：問答頁頂部一個「這次的問題（N）」按鈕，按下以底部面板列出這次問過的問題，
-// 點一題就關閉面板並捲到該題。沒有提問時不顯示；展示模式由 App 不渲染（與桌機的左側清單相同，#260）。
-// 桌機在左側導覽（Sidebar 的 session-questions）；平板等 #255 的滑出面板之後再補。
+// 手機與平板的「這次的問題」（#256 決定 1、#333）：問答頁頂部一個「這次的問題（N）」按鈕，按下列出這次問過的問題
+// （手機是底部面板，平板是右側的滑出面板），點一題就關閉面板並捲到該題。沒有提問時不顯示；展示模式由 App 不渲染（與桌機的左側清單相同，#260）。
+// 桌機在左側導覽（Sidebar 的 session-questions）。
 import { useRef, useState } from "react";
 import { fill, strings } from "../client/i18n";
 import { BottomSheet } from "./BottomSheet";
@@ -10,9 +10,11 @@ interface Props {
   questions: readonly { id: string; question: string }[];
   // 捲到該題（與左側導覽相同）
   onQuestion(id: string): void;
+  // 面板從哪一側出現：手機是 bottom，平板是 right（#255 的滑出面板）
+  side: "bottom" | "right";
 }
 
-export function SessionQuestions({ language, questions, onQuestion }: Props) {
+export function SessionQuestions({ language, questions, onQuestion, side }: Props) {
   const s = strings(language);
   const [open, setOpen] = useState(false);
   // 面板關閉後焦點會回到「這次的問題」按鈕（BottomSheet），所以等關閉之後才捲到選的那一題，避免又被捲回頂部
@@ -33,6 +35,7 @@ export function SessionQuestions({ language, questions, onQuestion }: Props) {
         title={s.sessionQuestions}
         language={language}
         className="session-questions-sheet"
+        side={side}
       >
         <ol className="session-questions-list">
           {questions.map((q) => (
