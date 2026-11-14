@@ -139,6 +139,9 @@ describe("頁面外層與清單的欄寬", () => {
     // 手機的時間軸（#282）：篩選晶片一行、橫向滑動；.timeline-page 不是 grid
     ".app--phone .timeline-filter": [...page],
     ".app--phone .timeline-filter button.chip": [...page],
+    // 桌機的時間軸（#346）：篩選一列，放不下時在列內橫向捲動；.timeline-page--desktop 是 flex
+    ".timeline-page--desktop .timeline-filter": [...page],
+    ".timeline-page--desktop .timeline-filter button.chip": [...page],
     // 手機的「回答提到」（#256）：一行、橫向滑動；.answer 不是 grid，.qa-center 與手機的 main.qa 是 flex
     ".app--phone .mentions": [".conversation", ...page],
     ".app--phone .mentions > p, .app--phone .mention-group": [".conversation", ...page],

@@ -138,7 +138,7 @@
 - `SourceSheet.tsx`：手機的原文面板（底部面板）
 - `SourceText.tsx`：原文紙面，桌機與手機共用
 - `theme.ts`：由 `client/theme.json` 設定 CSS 變數（深色模式用 `darkColors`）
-- `timeline-view.ts`：時間軸的區段與篩選的純函式
+- `timeline-view.ts`：時間軸的區段與篩選、桌機的年份分組、範圍與說法不同的純函式
 - `TimelinePage.tsx`：時間軸（見 `docs/graph.md`）
 
 ### `app/src/graph/`
@@ -281,6 +281,7 @@ Playwright 的端對端測試（`*.spec.ts`）；設定在根目錄的 `playwrig
 - `support/dataset.ts`：以 `app/src/evals/oracle.ts` 算出各身分看不到的段落；身分對照用的「只有一個身分看得到的題目」與只出現在答案段落的比對文字（`onlyOneSees()`）
 - `support/fake-ask.ts`：假的 `/api/ask`（含串流到一半的假回應）
 - `support/skip-reporter.ts`：列出略過的測試與原因（參考情境有略過時失敗）
+- `timeline-desktop.spec.ts`：桌機的時間軸（1440×900，#346）與平板不變
 
 ### `scripts/`
 

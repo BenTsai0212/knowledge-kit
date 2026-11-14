@@ -241,6 +241,7 @@ const uiStrings = {
   uploadClearFile: "required",
   uploadAudience: "required", listSeparator: "required", uploadConfirmTitle: "required", uploadBack: "required",
   uploadShowAll: "required", uploadWriting: "required", uploadAnother: "required", timelineUploaded: "required", timelineMentions: "required",
+  timelineMentionsLine: "required", timelineShowPassages: "required", timelineHidePassages: "required", timelineDocuments: "required", timelineMonthRange: "required", timelineSummary: "required",
   extractTitle: "required", extractRunning: "required", extractDone: "required", extractEntities: "required",
   extractRelations: "required", extractDropped: "required", extractSkipped: "required",
   extractFailed: "required", extractNotRun: "required", extractRetry: "required", extractErrors: "required",

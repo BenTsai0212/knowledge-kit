@@ -3056,6 +3056,197 @@ button.chip.graph-chip[aria-pressed="true"] {
   min-height: 44px;
 }
 
+/* 桌機的時間軸（#346，畫板 F-Timeline；TimelinePage 的 timeline-page--desktop，展示模式不套用）：填滿內容區（不受 960px 限制），
+   頁首（h1＋範圍）、「依實體篩選」＋一列膠囊、依年份分組的三欄格線（72px 日期、24px 時間軸線、卡片），精簡卡片展開後才列出段落，
+   未註明日期在底部，以上方分隔線隔開、不畫時間軸線。手機與平板沒有這個 class，不受影響 */
+main.page:has(> .timeline-page--desktop) {
+  padding: 32px clamp(16px, 4vw, 56px);
+}
+
+.timeline-page.timeline-page--desktop {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: none;
+}
+
+.timeline-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.timeline-head h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.timeline-head p {
+  margin: 0;
+  font-size: 14px;
+}
+
+/* 篩選：標籤＋一列膠囊（36px），放不下時在列內橫向捲動，頁面不出現橫向捲動 */
+.timeline-page--desktop .timeline-filter {
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding-bottom: 2px;
+}
+
+.timeline-filter__label {
+  flex: none;
+  margin-right: 4px;
+  font-size: 13px;
+  color: var(--color-textMuted);
+}
+
+.timeline-page--desktop .timeline-filter button.chip {
+  flex: none;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.timeline-page--desktop .timeline-filter button.chip[aria-pressed="true"] {
+  border-width: 1.5px;
+  padding: 0 calc(14px - 0.5px);
+  font-weight: 600;
+}
+
+.timeline-page--desktop .timeline {
+  margin: 0;
+}
+
+.timeline-year h2,
+.timeline-page--desktop .timeline-undated h2 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-textMuted);
+}
+
+.timeline-page--desktop .timeline-entry {
+  grid-template-columns: 72px 24px minmax(0, 1fr);
+  column-gap: 16px;
+}
+
+.timeline-page--desktop .timeline-date {
+  font-size: 12px;
+  padding-top: 18px;
+}
+
+.timeline-page--desktop .timeline-dot {
+  margin-top: 20px;
+  border: 0;
+  box-shadow: 0 0 0 4px var(--color-background);
+}
+
+.timeline-page--desktop.is-filtered .timeline-entry:not(.dimmed) .timeline-dot {
+  background: var(--filter-color);
+}
+
+.timeline-page--desktop .timeline-entry.dimmed .timeline-dot {
+  background: var(--color-border);
+}
+
+.timeline-page--desktop .timeline-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 8px 0;
+  padding: 14px 18px;
+  border-radius: 14px;
+}
+
+.timeline-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.timeline-card__head h3 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.timeline-lang {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  color: var(--color-textMuted);
+  text-decoration: none;
+}
+
+/* 說法不同的小膠囊（conflictSoft 底、conflictText 字） */
+.timeline-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--color-conflictSoft);
+  color: var(--color-conflictText);
+  font-size: 13px;
+}
+
+.timeline-note svg {
+  flex: none;
+}
+
+.timeline-mentions-line {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-textMuted);
+}
+
+/* 展開段落的按鈕：次要文字色的小按鈕（沿用畫板的次要文字與外框） */
+.timeline-toggle {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface);
+  color: var(--color-textMuted);
+  font-size: 13px;
+}
+
+.timeline-toggle:hover {
+  border-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+.timeline-page--desktop .timeline-passages {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 14px;
+  color: var(--color-textMuted);
+}
+
+/* 未註明日期：上方分隔線，卡片佔滿寬度、不畫日期欄與時間軸線 */
+.timeline-page--desktop .timeline-undated {
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+}
+
+.timeline-page--desktop .timeline-undated .timeline-entry {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.timeline-page--desktop .timeline-undated :is(.timeline-date, .timeline-rail) {
+  display: none;
+}
+
 .upload {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

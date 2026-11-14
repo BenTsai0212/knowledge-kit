@@ -545,6 +545,15 @@ export interface UiStrings {
   timelineUploaded: string;
   // 時間軸卡片中文件提到的實體
   timelineMentions: string;
+  // 桌機時間軸（#346）：卡片的「提到：…」一行（{names} 以 listSeparator 連接）
+  timelineMentionsLine: string;
+  // 桌機時間軸的卡片：展開與收合段落清單（{count} 是段落數）
+  timelineShowPassages: string;
+  timelineHidePassages: string;
+  // 桌機時間軸的頁首：文件數、月份範圍（{from}、{to}）、範圍與文件數（{range}、{documents}）
+  timelineDocuments: string;
+  timelineMonthRange: string;
+  timelineSummary: string;
   extractTitle: string;
   extractRunning: string;
   extractDone: string;

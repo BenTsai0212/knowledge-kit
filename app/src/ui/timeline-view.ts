@@ -51,3 +51,40 @@ export function timelineEmptyKind(sections: TimelineSections, filter: string | n
 export function entityTypeShape(type: string): HeroShape {
   return heroShape(clientConfig.knowledgeModel.entityTypes.find((t) => t.id === type)?.icon);
 }
+
+// 桌機（#346，畫板 F-Timeline）：有日期的文件依年份分組（年份是分組標題，日期欄只放 MM-DD）。rows 已由新到舊，各組保持原本的順序；
+// 不是「YYYY-MM-DD」的日期歸在 year 為 null 的組（沒有標題）
+export function yearGroups(rows: readonly TimelineRow[]): Array<{ year: string | null; rows: TimelineRow[] }> {
+  const groups: Array<{ year: string | null; rows: TimelineRow[] }> = [];
+  for (const row of rows) {
+    const year = row.entry.date === null ? null : dateParts(row.entry.date).year;
+    const last = groups.at(-1);
+    if (last !== undefined && last.year === year) last.rows.push(row);
+    else groups.push({ year, rows: [row] });
+  }
+  return groups;
+}
+
+// 桌機頁首的範圍（#346）：最早與最晚的文件月份，依介面語言以 Intl 格式化（例如「2026年1月」「January 2026」），
+// 兩者相同時 to 為 null；連接兩者的文字在翻譯檔（timelineMonthRange）。Intl 的 formatRange 在 zh-TW 會變成「2026/1至2026/5」，所以不用。
+// 只用傳入的文件（目前身分看得到的），沒有日期的文件不計入；沒有可用的日期時為 null
+export function timelineMonths(entries: readonly TimelineEntry[], language: string): { from: string; to: string | null } | null {
+  const dated = entries.flatMap((e) => (e.date === null ? [] : [e.date])).filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date));
+  const months = Array.from(new Set(dated.map((date) => date.slice(0, 7)))).sort();
+  if (months.length === 0) return null;
+  const format = (month: string) => new Intl.DateTimeFormat(language, { year: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${month}-01T00:00:00Z`));
+  return { from: format(months[0]), to: months.length === 1 ? null : format(months.at(-1)!) };
+}
+
+// 卡片的語言短標（#346）：語言代碼的主要部分轉大寫（zh-TW → ZH、en → EN）
+export const languageTag = (code: string): string => code.split("-")[0].toUpperCase();
+
+// 卡片的說法不同小膠囊（#346）：各段落已處理為「並存」的另一份文件，依第一次出現的順序、同一份文件只列一次。
+// 標示經 RLS 讀出，只有看得到另一段時才有（readPassageMarks()）
+export function conflictDocuments(entry: TimelineEntry): Array<{ documentId: string; title: string }> {
+  const seen = new Map<string, string>();
+  for (const mark of entry.passages.flatMap((p) => p.marks)) {
+    if (mark.kind === "conflict" && mark.documentId !== entry.documentId && !seen.has(mark.documentId)) seen.set(mark.documentId, mark.documentTitle);
+  }
+  return [...seen].map(([documentId, title]) => ({ documentId, title }));
+}
