@@ -291,9 +291,9 @@ export type ExtractFailure = "format" | "truncated" | "write" | "no_access_code"
 export type EvalReportText =
   | "download" | "previous" | "previousInvalid" | "set" | "title" | "editNote" | "headline" | "headlineMet"
   | "headlineUnmet" | "headlineIncomplete" | "headlineBothMet" | "headlineSecondUnmet" | "unmetItem" | "metricsTitle" | "result" | "meets"
-  | "second" | "bothMeet" | "passMark" | "failMark" | "metLabel" | "unmetLabel" | "bothLabel" | "evaluatedOn"
-  | "footer" | "thresholdLegend" | "undetermined" | "stabilityTitle" | "stabilityWith" | "stabilityDiffering"
-  | "noteBankDiffers" | "noteBankUnknown" | "noteIncomplete" | "noteSettingsDiffer" | "noteCurrentIncomplete" | "rolesTitle" | "roleLine" | "leakExplain"
+  | "second" | "bothMeet" | "passMark" | "failMark" | "metLabel" | "unmetLabel" | "bothLabel" | "evaluatedOn" | "client"
+  | "current" | "thresholdList" | "options" | "footerTitle" | "page" | "roleCard" | "roleLeaked" | "thresholdLegend" | "undetermined" | "stabilityTitle" | "stabilityWith" | "stabilityDiffering"
+  | "noteBankDiffers" | "noteBankUnknown" | "noteIncomplete" | "noteSettingsDiffer" | "noteCurrentIncomplete" | "rolesTitle" | "leakExplain"
   | "limitsTitle" | "limitQuestions" | "limitAccess" | "limitScope" | "appendixTitle" | "matrixTitle" | "matrixCell" | "role"
   | "category" | "restrictedNote" | "failuresTitle" | "number" | "failed" | "reason" | "action" | "noFailures"
   | "numberNote" | "conditionsTitle" | "bank" | "bankValue" | "unknown" | "coverage" | "coverageValue" | "coverageLevel"
@@ -707,6 +707,8 @@ export interface UiStrings {
   evalRunning: string;
   evalProgress: string;
   evalDone: string;
+  // 評測完成時總覽的狀態（{done}、{total}）
+  evalCompleted: string;
   evalStopped: string;
   evalAborted: string;
   evalConfirmTitle: string;

@@ -1,13 +1,13 @@
 // 品質報告的 HTML（#210）：自成一頁、不依賴外部資源、第一頁與附錄的內容，以及機密（不含段落文字、forbidden、回答與題目 id）。
 // 以參考情境的題庫與資料集組成假的評測結果，不呼叫 API。
 import { describe, expect, it } from "vitest";
-import { strings } from "../client/i18n";
+import { fill, strings } from "../client/i18n";
 import { clientConfig } from "../client/load";
 import type { LanguageCode } from "../client/types";
 import { dataset } from "../dataset/load";
 import { evalQuestions } from "./load";
 import { qualityReport, restrictedRoles, type ReportSource } from "./report";
-import { cssString, escapeHtml, reportHtml } from "./report-html";
+import { appendixPages, escapeHtml, PAGE_ROWS, reportHtml } from "./report-html";
 import type { QuestionResult } from "./run";
 import { summarize, type QuestionScore } from "./score";
 import type { EvalQuestion } from "./types";
@@ -94,13 +94,13 @@ describe("reportHtml：第一頁與附錄", () => {
       expect(page).toContain(escapeHtml(access.roles.find((r) => r.id === role)!.label[language]));
     }
     // 兩次比較的欄位只在有第二份時出現
-    expect(page).not.toContain(escapeHtml(t.bothMeet));
+    expect(page).not.toContain(`<th>${escapeHtml(t.second)}</th>`);
   });
 
   it("未達門檻與兩次比較：標題寫出未達的指標，第二次的欄位與結果不同的題數", () => {
     const page = html(source(allFail()), source(allPass()));
     expect(page).not.toContain(escapeHtml(t.headlineMet));
-    expect(page).toContain(escapeHtml(t.bothMeet));
+    expect(page).toContain(`<th>${escapeHtml(t.second)}</th>`);
     expect(page).toContain(escapeHtml(t.stabilityTitle));
     expect(page).toContain(escapeHtml(t.reason));
   });
@@ -152,20 +152,55 @@ describe("reportHtml：機密（#210 決定 3 與補充）", () => {
 // 版面（#281，docs/design.md「品質報告的列印版面」）；列印成 PDF 的實際版面由人工確認（中文與英文各一次）
 describe("reportHtml：列印版面", () => {
   const styleOf = (page: string) => page.slice(page.indexOf("<style>"), page.indexOf("</style>"));
-  const firstOf = (page: string) => page.slice(page.indexOf('<section class="first">'), page.indexOf('<section class="appendix">'));
-  const appendixOf = (page: string) => page.slice(page.indexOf('<section class="appendix">'));
+  const firstOf = (page: string) => page.slice(page.indexOf('<section class="page first"'), page.indexOf('<section class="page appendix"'));
+  const appendixOf = (page: string) => page.slice(page.indexOf('<section class="page appendix"'));
+  const pagesOf = (page: string) => page.split('<section class="page ').slice(1);
   const count = (text: string, part: string) => text.split(part).length - 1;
   const s = strings(language);
 
-  it("A4 直式；頁尾是「客戶 · 品質報告 第 N／M 頁」（頁碼用 CSS 計數器）", () => {
+  it("A4 直式；每頁一個 section，頁尾是「客戶 · 品質報告」與「第 N／M 頁」（#347）", () => {
     for (const lang of client.languages) {
-      const style = styleOf(html(source(allPass()), null, lang));
-      expect(style).toContain("size: A4 portrait;");
-      const footer = /@bottom-center \{ content: ([^;]+);/.exec(style)?.[1] ?? "";
-      expect(footer).toContain("counter(page)");
-      expect(footer).toContain("counter(pages)");
-      expect(footer).not.toMatch(/\{pages?\}|\{client\}/);
-      expect(footer).toContain(cssString(client.displayName[lang] ?? CLIENT).slice(1, -1));
+      const r = strings(lang).evalReport;
+      const name = client.displayName[lang] ?? CLIENT;
+      const page = html(source(allPass()), null, lang);
+      expect(styleOf(page)).toContain("size: A4 portrait;");
+      const pages = pagesOf(page);
+      expect(pages.length).toBeGreaterThanOrEqual(2);
+      pages.forEach((p, i) => {
+        const label = escapeHtml(fill(r.page, { page: i + 1, pages: pages.length }, lang));
+        expect(p).toContain(`aria-label="${label}"`);
+        expect(p).toContain(`<footer class="page-foot"><span>${escapeHtml(fill(r.footerTitle, { client: name }, lang))}</span><span>${label}</span></footer>`);
+      });
+    }
+    expect(styleOf(html(source(allPass())))).toContain(".page { margin: 0; box-shadow: none; min-height: 296mm; break-after: page; }");
+  });
+
+  it("未通過的題目全部列出：放不下時延續到下一頁，測試條件在最後一頁", () => {
+    const pages = pagesOf(html(source(allFail())));
+    const restricted = restrictedRoles(access);
+    const failures = questions.filter((q) => !restricted.has(q.role)).length;
+    expect(failures).toBeGreaterThan(PAGE_ROWS);
+    expect(pages.length).toBeGreaterThan(2);
+    const rows = pages.map((p) => [...p.matchAll(/<tr><td>(\d+)<\/td>/g)].length);
+    expect(rows.reduce((a, b) => a + b, 0)).toBe(failures);
+    expect(rows[0]).toBe(0);
+    // 身分 × 類別只在第 2 頁，測試條件只在最後一頁
+    expect(pages.filter((p) => p.includes(escapeHtml(t.matrixTitle)))).toEqual([pages[1]]);
+    expect(pages.filter((p) => p.includes(escapeHtml(t.conditionsTitle)))).toEqual([pages.at(-1)]);
+  });
+
+  it("appendixPages：題目少時附錄一頁；多時依序分頁、不漏不重複", () => {
+    expect(appendixPages(0, 3)).toEqual([{ from: 0, to: 0, matrix: true, conditions: true }]);
+    expect(appendixPages(3, 3)).toEqual([{ from: 0, to: 3, matrix: true, conditions: true }]);
+    for (const n of [5, 20, 41, 100]) {
+      const pages = appendixPages(n, 3);
+      expect(pages.filter((p) => p.matrix)).toEqual([pages[0]]);
+      expect(pages.filter((p) => p.conditions)).toEqual([pages.at(-1)]);
+      pages.forEach((p, i) => {
+        expect(p.from).toBe(i === 0 ? 0 : pages[i - 1].to);
+        expect(p.to - p.from).toBeLessThanOrEqual(PAGE_ROWS);
+      });
+      expect(pages.at(-1)!.to).toBe(n);
     }
   });
 
@@ -183,6 +218,10 @@ describe("reportHtml：列印版面", () => {
     const masthead = first.slice(first.indexOf('<header class="masthead">'), first.indexOf("</header>"));
     for (const x of [s.productName, CLIENT, "2026-11-10", "0123456789ab"]) expect(masthead).toContain(escapeHtml(x));
     expect(first.indexOf("</header>")).toBeLessThan(first.indexOf("<h1>"));
+    expect(masthead).toContain("<svg");
+    // 各身分一張卡片：「身分 · N 題」與「✓ 滲漏 0 題」
+    expect(count(first, "<li><span>")).toBe(new Set(questions.map((q) => q.role)).size);
+    expect(first).toContain(escapeHtml(`${t.passMark} ${fill(t.roleLeaked, { leaked: 0 }, language)}`));
     expect(count(first, '<div class="bar"')).toBe(4);
     expect(first.match(/<span class="limit" style="left: [\d.]+%"><\/span>/g)).toHaveLength(4);
     expect(first).toContain(escapeHtml(t.thresholdLegend));
@@ -222,11 +261,11 @@ describe("reportHtml：列印版面", () => {
 
   it("各身分以 ✓／✕ 標出滲漏；附錄以 ✕ 標出有未通過的格", () => {
     const pass = html(source(allPass()));
-    expect(firstOf(pass)).toContain(`<li>${escapeHtml(t.passMark)} `);
+    expect(firstOf(pass)).toContain(`<strong>${escapeHtml(t.passMark)} `);
     expect(appendixOf(pass)).not.toContain(escapeHtml(t.failMark));
     const fail = html(source(allFail()));
-    expect(firstOf(fail)).toContain(`<li>${escapeHtml(t.failMark)} `);
-    expect(appendixOf(fail)).toContain(`<td>${escapeHtml(t.failMark)} `);
+    expect(firstOf(fail)).toContain(`<strong>${escapeHtml(t.failMark)} `);
+    expect(appendixOf(fail)).toContain(`<td class="miss">${escapeHtml(t.failMark)} `);
   });
 
   it("可填寫的欄位：螢幕上是虛線框，列印時變成底線；上方的說明條列印時隱藏", () => {
@@ -234,9 +273,9 @@ describe("reportHtml：列印版面", () => {
     expect(page).toContain(`<div class="field" contenteditable="true" role="textbox" aria-label="${escapeHtml(t.reason)}"></div>`);
     expect(page).toContain(`aria-label="${escapeHtml(t.action)}"`);
     const style = styleOf(page);
-    expect(style).toMatch(/\n\.field \{[^}]*border: 1px dashed;/);
+    expect(style).toMatch(/\n\.field \{[^}]*border: 1px dashed /);
     const print = style.slice(style.indexOf("@media print"));
-    expect(print).toContain(".field { border: 0; border-bottom: 1px solid; }");
+    expect(print).toContain(".field { border: 0; border-bottom: 1px solid; border-radius: 0; }");
     expect(print).toContain(".note { display: none; }");
   });
 
@@ -248,9 +287,5 @@ describe("reportHtml：列印版面", () => {
     expect(styleOf(page)).toContain(".metrics { table-layout: fixed; }");
     for (const key of ["citation", "answer", "leakage", "refusal"] as const) expect(page).toContain(escapeHtml(en.evalMetrics[key]));
     expect(page).toContain(escapeHtml(en.evalReport.evaluatedOn));
-  });
-
-  it("cssString 跳脫引號、反斜線、角括號與換行", () => {
-    expect(cssString('a"b\\c</style>\n')).toBe('"a\\22 b\\5c c\\3c /style\\3e \\a "');
   });
 });

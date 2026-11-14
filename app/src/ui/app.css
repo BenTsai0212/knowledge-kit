@@ -4462,6 +4462,291 @@ label.inline {
   }
 }
 
+/* 桌機的評測台（#347，畫板 F-Evals）：EvalPage 的 eval-page--desktop，手機與平板沒有這個 class，不受影響。
+   頁首 h1 28px／700＋同一列的題庫摘要（textMuted）；填滿內容區（不受 main.page 的最寬限制）；卡片 surface、圓角 16px、padding 20px，標題 17px；
+   設定 A／B 是 surfaceRaised 的區塊，標籤與輸入同一列（輸入靠右、mono）；說明是 textMuted 小字；按鈕列 44px（開始評測 primary，其餘外框）；
+   總覽與每題結果是只有橫線的表格，通過／未通過是 successSoft／warningSoft 的膠囊（不用紅色）；點一列在下方展開（surfaceRaised 的區塊） */
+main.page:has(> .eval-page--desktop) {
+  padding: 32px clamp(16px, 3vw, 48px);
+}
+
+.eval-page.eval-page--desktop {
+  max-width: none;
+  gap: 20px;
+}
+
+.eval-page--desktop .eval-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.eval-page--desktop .eval-header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.eval-page--desktop .eval-header p {
+  font-size: 14px;
+}
+
+.eval-page--desktop .eval-overview {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+
+.eval-page--desktop .card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border-radius: 16px;
+}
+
+.eval-page--desktop .card h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.eval-page--desktop .eval-sets {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.eval-page--desktop .eval-sets fieldset {
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+}
+
+.eval-page--desktop .eval-sets legend {
+  float: left;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.eval-page--desktop .eval-sets label {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.eval-page--desktop .eval-sets input {
+  width: 64px;
+  height: 36px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+.eval-page--desktop .card > label.inline {
+  gap: 10px;
+  min-height: 32px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.eval-page--desktop .eval-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-textMuted);
+}
+
+.eval-page--desktop .eval-actions {
+  gap: 8px;
+  margin: 0;
+}
+
+.eval-page--desktop .eval-actions button {
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.eval-page--desktop .eval-actions button.secondary {
+  padding: 0 16px;
+  border-color: var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+/* 品質報告的選項（設定組、另一次的 JSON）：收在按鈕列下方 */
+.eval-page--desktop .eval-report {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+.eval-page--desktop .eval-report summary {
+  cursor: pointer;
+  color: var(--color-textMuted);
+}
+
+.eval-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+}
+
+.eval-card-head p {
+  margin: 0;
+}
+
+.eval-legend {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+  font-size: 12px;
+}
+
+.eval-page--desktop .eval-card-head {
+  align-items: center;
+}
+
+.eval-page--desktop .eval-summary .eval-card-head {
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.eval-page--desktop .eval-status {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-textMuted);
+}
+
+.eval-page--desktop .eval-card-head label.inline {
+  gap: 8px;
+  font-size: 13px;
+}
+
+.eval-page--desktop .eval-legend {
+  margin-left: auto;
+}
+
+.eval-page--desktop .eval-legend .eval-outcome {
+  color: var(--color-textMuted);
+}
+
+.eval-page--desktop .eval-table {
+  font-size: 13px;
+}
+
+.eval-page--desktop .eval-table th,
+.eval-page--desktop .eval-table td {
+  padding: 10px 12px 10px 0;
+}
+
+.eval-page--desktop .eval-table thead th {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  border-top: 0;
+  font-weight: 400;
+  color: var(--color-textMuted);
+}
+
+.eval-page--desktop .eval-table tbody th {
+  font-weight: 600;
+}
+
+.eval-page--desktop .eval-threshold {
+  font-size: 12px;
+}
+
+/* 總覽的值（mono）與膠囊上下排列 */
+.eval-page--desktop .eval-summary td {
+  vertical-align: top;
+}
+
+.eval-page--desktop .eval-value {
+  display: block;
+  margin-bottom: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.eval-page--desktop .eval-verdict {
+  padding: 1px 8px;
+  border: 0;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.eval-page--desktop .eval-verdict.pass {
+  color: var(--color-success);
+}
+
+.eval-page--desktop .eval-verdict.fail {
+  color: var(--color-warning);
+}
+
+/* 每題的結果：整列可點（展開在下方），題目是一般文字的按鈕 */
+.eval-page--desktop .eval-results {
+  min-width: 52rem;
+}
+
+.eval-page--desktop .eval-row {
+  cursor: pointer;
+}
+
+.eval-page--desktop .eval-row:hover td,
+.eval-page--desktop .eval-row.is-open td {
+  background: color-mix(in srgb, var(--color-surfaceRaised) 50%, var(--color-surface));
+}
+
+.eval-page--desktop .eval-number {
+  width: 44px;
+  font-size: 12px;
+  color: var(--color-textMuted);
+}
+
+.eval-page--desktop button.link.eval-question {
+  color: var(--color-text);
+  text-decoration: none;
+  line-height: 1.5;
+}
+
+.eval-page--desktop button.link.eval-question:hover {
+  text-decoration: underline;
+}
+
+.eval-page--desktop .eval-chip {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.eval-page--desktop .eval-outcome {
+  font-weight: 600;
+}
+
+.eval-page--desktop .eval-detail > td {
+  padding: 4px 0 12px;
+  border-top: 0;
+}
+
+.eval-page--desktop .eval-detail-sets > div {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--color-surfaceRaised);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
 /* 入口頁（#228）：左側主視覺、右側登入面板；窄螢幕時主視覺在上、面板在下。
    桌機（#334，畫板 K-Login）：主視覺佔滿左側，登入面板是右側寬 380～520px 的一欄（surface 底、左邊 1px border），內容垂直置中 */
 .app > main.entry {

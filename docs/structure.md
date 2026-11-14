@@ -92,7 +92,7 @@
 - `EntryBar.tsx`：桌機登入頁的頂端列（登入前沒有左側導覽，#334）
 - `EntryHero.tsx`：入口頁的主視覺（見 `docs/design.md`「入口頁主視覺」）
 - `eval-helpers.ts`：評測台的純函式
-- `EvalPage.tsx`：評測台
+- `EvalPage.tsx`：評測台；桌機（`eval-page--desktop`）是 h1、按鈕列、總覽表與可點的每題結果列（#347）
 - `ExtractionStatus.tsx`：萃取狀態
 - `FilePicker.tsx`：檔案選擇（原生 input 視覺上隱藏，按鈕與檔名跟著主題與翻譯，見 `docs/design.md`「表單元件」）
 - `gone-motion.ts`：切換身分時看不到的內容消失
@@ -200,7 +200,7 @@
 - `keys.ts`：題庫（`client/evals/`）的鍵清單
 - `load.ts`：題庫的讀取
 - `oracle.ts`：權限讀取規則的獨立實作（`expectedVisible()`，`app/tests/db/oracle.ts` 重新匯出）
-- `report-html.ts`：把 `report.ts` 的內容轉成自成一頁的 HTML
+- `report-html.ts`：把 `report.ts` 的內容轉成自成一頁的 HTML（A4 每頁一個 `section.page`，附錄的分頁 `appendixPages()`，#347）
 - `report.ts`：給客戶的品質報告的內容（純函式，只放序號、類別、身分、數字與判定）
 - `run.ts`：執行（評測專用的記憶體資料庫 `openEvalDatabase()`、預計呼叫次數、逐題執行、停止與錯誤處理、兩組檢索設定）
 - `score.ts`：評分的純函式（引用、關鍵重點、拒答、禁止內容、滲漏、指標彙總；滲漏的反向驗證在 `app/tests/evals/`）
@@ -259,6 +259,7 @@ Playwright 的端對端測試（`*.spec.ts`）；設定在根目錄的 `playwrig
 - `compare.spec.ts`：展示模式的身分對照，只在 `VITE_DEMO_COMPARE=1` 的 build 執行畫面的測試（比對文字只出現在一個答案段落的檢查不需要開關）
 - `demo.spec.ts`：線上 demo 的設定，只在 `VITE_ONLINE_DEMO=1` 的 build 執行
 - `entry-touch.spec.ts`：入口（手機與平板）與觸控目標（#255 PR 4）
+- `evals-desktop.spec.ts`：桌機的評測台與品質報告（1440×900，#347）
 - `fixtures/`：上傳用的虛構檔案
 - `graph-desktop.spec.ts`：桌機的圖譜（1440×900）的版面、實體欄與縮放按鈕
 - `graph-mobile.spec.ts`：手機的圖譜（390×844）的版面、「篩選與找路徑」與實體面板
