@@ -105,7 +105,7 @@
 - `GraphView.tsx`：圖譜（cytoscape，動態載入）；`areaOf()`、`centerIn()` 與 `GraphZoomView` 共用；`cover` prop
 - `GraphZoomView.tsx`：大量節點時的三層語意縮放（見 `docs/graph.md`「三層語意縮放（畫面）」）；`cover` prop
 - `home.ts`：首頁的純函式（問過的問題與相對時間、狀態點、實體形狀等）
-- `HomePage.tsx`：首頁（登入後的預設頁）；桌機（`wide`）是畫板 `K-Home` 的版面（#331）
+- `HomePage.tsx`：首頁（登入後的預設頁）；桌機（`wide`）是畫板 `K-Home` 的版面（#331），手機（`phone`）是畫板 `K-Mobile` 的首頁（#356）
 - `identity-compare.ts`：身分對照的純函式：欄的順序與目前身分、目前的題目、一欄一欄送出、`C`／`Esc`
 - `IdentityCompare.tsx`：展示模式的身分對照，每個身分一欄，沿用 `AnswerView`（純函式在 `identity-compare.ts`；畫板 `H-QA`，#349），見 `docs/qa.md`「身分對照」
 - `IdentitySheet.tsx`：身分與語言面板的內容（手機、平板與桌機使用者卡的選單共用；身分單選卡附 `roles[].scope`、語言分段切換、更換邀請碼；帳號登入時只顯示帳號與角色）
@@ -263,6 +263,7 @@ Playwright 的端對端測試（`*.spec.ts`）；設定在根目錄的 `playwrig
 - `fixtures/`：上傳用的虛構檔案
 - `graph-desktop.spec.ts`：桌機的圖譜（1440×900）的版面、實體欄與縮放按鈕
 - `graph-mobile.spec.ts`：手機的圖譜（390×844）的版面、「篩選與找路徑」與實體面板
+- `home-mobile.spec.ts`：手機的首頁（390×844，#356）
 - `home.spec.ts`：首頁
 - `interactions.spec.ts`：互動邊角
 - `layout.spec.ts`：三欄版面

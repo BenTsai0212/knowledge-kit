@@ -6060,6 +6060,219 @@ main.page:has(> .eval-page--desktop) {
   font-size: 13px;
 }
 
+/* 手機（#356，畫板 K-Mobile 的首頁）：區塊不是卡片，標題與列直接放在 background 上；問候 22px；
+   提問框是單行輸入列（框內的「提問」），下方一行可橫向滑動的常見問題膠囊；觸控目標至少 44px */
+.home--phone {
+  gap: 14px;
+}
+
+.home--phone .home__top h2 {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.home--phone .home__cards {
+  gap: 18px;
+}
+
+.home--phone .home__card {
+  gap: 8px;
+}
+
+.home--phone .home__card h3 {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.home__count {
+  font-weight: 400;
+  color: var(--color-textMuted);
+}
+
+.home--phone .composer--compact {
+  gap: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.home--phone .free-question--compact {
+  align-items: center;
+  gap: 6px;
+  padding: 5px 5px 5px 0;
+  border: 1.5px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+}
+
+.home--phone .free-question--compact:has([aria-invalid="true"]) {
+  border-color: var(--color-danger);
+}
+
+.home--phone .free-question--compact input {
+  height: 44px;
+  padding: 0 12px;
+  border: none;
+  background-color: var(--color-surface);
+  font-size: 16px;
+}
+
+.home--phone .free-question--compact button {
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+/* 主管：「開始審核」是主要按鈕，提問框的「提問」改成框線按鈕 */
+.home--phone .home__waiting:has(.home__start) ~ .composer--compact .free-question--compact button {
+  border-color: var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+}
+
+.home--phone .composer--compact .presets {
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+}
+
+.home--phone .composer--compact .scenario {
+  flex: none;
+  flex-wrap: nowrap;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+/* 常見問題的名稱只給輔助技術（群組的 aria-label） */
+.home--phone .composer--compact .scenario > span {
+  display: none;
+}
+
+.home--phone .composer--compact .presets button {
+  flex: none;
+  height: 44px;
+  scroll-snap-align: start;
+}
+
+/* 有更新：surface 底、border 框的列（至少 60px），整列可以點，右側是 › */
+.home--phone .home__row--raised {
+  flex-wrap: nowrap;
+  gap: 10px;
+  min-height: 60px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.home__row--tap {
+  width: 100%;
+  color: var(--color-text);
+  text-align: start;
+}
+
+.home__chevron {
+  flex: none;
+  color: var(--color-textMuted);
+  font-size: 18px;
+}
+
+/* 問過的問題與最近新增的文件：每則一行，下方 1px 的線 */
+.home--phone .home__row--line {
+  flex-wrap: nowrap;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.home--phone .home__list {
+  gap: 0;
+}
+
+.home--phone .home__updates .home__list {
+  gap: 8px;
+}
+
+.home--phone .home__documents .home__row--line {
+  gap: 10px;
+  min-height: 48px;
+}
+
+/* 文件標題與最近看過的觸控目標至少 44px：標題撐滿列高 */
+.home--phone .home__documents button.home__name {
+  align-self: stretch;
+  text-align: start;
+}
+
+.home--phone .home__chip {
+  height: 44px;
+}
+
+.home--phone .home__when {
+  font-size: 11px;
+}
+
+.home--phone .home__tag {
+  padding: 1px 7px;
+  font-size: 11px;
+}
+
+/* 主管的數字卡：兩欄；說法不同時第一張是 1.5px 的 conflict 框，副標是 conflictText */
+.home__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.home__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+}
+
+.home__stat--conflict {
+  padding: 13.5px;
+  border: 1.5px solid var(--color-conflict);
+}
+
+.home__stat-count {
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.home__stat-label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.home__stat-sub {
+  font-size: 12px;
+  color: var(--color-textMuted);
+}
+
+.home__stat--conflict .home__stat-sub {
+  color: var(--color-conflictText);
+}
+
+.home__start {
+  width: 100%;
+  height: 50px;
+  margin-top: 6px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
 /* 我的上傳（#284，docs/design.md「日常工具」的「我的上傳」）：上傳頁頂端的兩段沿用待審頁的底線式分頁；
    每份一列（標題可以截斷，完整文字在 title），點了在右側顯示詳情；手機從底部升起詳情面板 */
 .upload-sections {
