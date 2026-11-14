@@ -423,6 +423,8 @@ export interface UiStrings {
   graphZoomIn: string;
   graphZoomOut: string;
   graphLegendNote: string;
+  // 手機圖譜右下的看得到的實體與關係數（#357）
+  graphCounts: string;
   graphJustExpanded: string;
   graphListMode: string;
   // 圖譜的鍵盤操作與報讀（#289，docs/design.md「圖譜的鍵盤操作與螢幕報讀器」）：外框的 aria-roledescription 與 aria-label、

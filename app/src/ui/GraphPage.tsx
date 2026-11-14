@@ -80,8 +80,8 @@ function focusAfter(element: HTMLElement) {
 // 圖譜頁：切換身分或語言時重新讀取；之後才回來的舊結果忽略；已展開的路徑截到第一個看不到的實體之前，路徑的兩端已看不到時清除。
 // 逐步展開（#199）：點節點從它展開，已展開的路徑累積；「回到全部」顯示全貌。
 // 中間是搜尋框、類型篩選（圖例）與圖，右側是實體面板（沒有選取時列出關聯最多的實體當起點）與多跳路徑。
-// 手機（#257，docs/design.md「圖譜（手機）」）：圖譜佔滿頂端列與分頁列之間，上方是搜尋、「篩選與找路徑」與「圖譜｜清單」；
-// 類型篩選、「只顯示關聯 ≥ N」、多跳路徑與關聯最多的實體收進「篩選與找路徑」底部面板；點節點、搜尋或在清單選取時打開實體面板
+// 手機（#257、#357，docs/design.md「圖譜（手機）」）：圖譜佔滿頂端列與分頁列之間，上方是搜尋框＋篩選圖示按鈕與「圖譜｜清單」的分段切換；
+// 類型篩選、「只顯示關聯 ≥ N」、多跳路徑與關聯最多的實體收進篩選按鈕打開的底部面板；點節點、搜尋或在清單選取時打開實體面板
 // （可展開的底部面板，停在 56% 高）。關閉實體面板只收起面板，選取與展開路徑不變（#257 決定 1）
 // 桌機（#336，docs/graph.md「桌機」）：頁首一列、畫布上方的工具列、填滿高度的畫布與貼齊右緣的實體欄；沒有選取時不列「關聯最多」
 export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, canReview, onRetracted, initialSelected = null, canSwitchIdentity, onViewed }: Props) {
@@ -432,6 +432,7 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
       onOpenSource={onOpenSource}
       retractions={canReview && retractions?.entityId === selected ? retractions.list : []}
       wide={desktop || stage}
+      sheet={phone}
       onRetract={async (r) => {
         try {
           await retract(db, identity, r.decisionIds);
@@ -471,7 +472,7 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
         language={language}
         label={s.graphSearch}
         types={filter}
-        field={desktop}
+        field={desktop || phone}
         onPick={(id) => {
           setExpansion(only(id));
           showEntity();
@@ -749,25 +750,79 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
     );
   }
 
+  const modeSwitch = (
+    <div className="graph-mode" role="group" aria-label={k.modeLabel}>
+      {(["graph", "list"] as const).map((m) => (
+        <button key={m} type="button" className="chip" aria-pressed={mode === m} onClick={() => setMode(m)}>
+          {m === "graph" ? k.modeGraph : k.modeList}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (phone) {
+    // 手機（#357，畫板 G-Mobile-Graph）：上方一列是搜尋框（放大鏡、placeholder）＋篩選圖示按鈕，下一列是「圖譜｜清單」的分段切換；
+    // 畫布不套卡片、填滿到分頁列，已展開的路徑與麵包屑浮在畫布左上，右下是看得到的實體與關係數（只算 readGraph() 的可見圖，#247）
+    return (
+      <div className="graph-page graph-page--phone">
+        <section className="graph-main">
+          <div className="graph-tools">
+            <div className="graph-tools__row">
+              {searchBox}
+              <button type="button" className="secondary graph-filters-button" aria-label={s.graphFilters} onClick={() => setFiltersOpen(true)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                  <path d="M4 6h16M7 12h10M10 18h4" />
+                </svg>
+              </button>
+            </div>
+            {modeSwitch}
+          </div>
+          {mode === "list" ? (
+            <>
+              {trail}
+              {list}
+            </>
+          ) : (
+            <>
+              <div className="graph-phone-stage">
+                {trail}
+                {frameElement}
+                <span className="graph-counts">
+                  {fill(s.graphCounts, { entities: graph.entities.length, relations: graph.relations.length }, language)}
+                </span>
+              </div>
+              {keysAndHelp}
+            </>
+          )}
+          {announcerElement}
+        </section>
+        <BottomSheet open={filtersOpen} onClose={() => setFiltersOpen(false)} title={s.graphFilters} language={language} className="graph-filters">
+          {filters}
+          {pathPanel}
+          {selected === null && start}
+        </BottomSheet>
+        {/* 實體面板：標題（實體名稱）只給報讀器，畫面上由面板內的類型徽章與名稱開頭 */}
+        <BottomSheet
+          open={entityOpen && selected !== null}
+          onClose={() => setEntityOpen(false)}
+          title={selected === null ? "" : nameOf(selected)}
+          language={language}
+          className="entity-sheet"
+          expandable
+        >
+          {entityPanel}
+        </BottomSheet>
+      </div>
+    );
+  }
+
   return (
-    <div className={phone ? "graph-page graph-page--phone" : tablet ? "graph-page graph-page--tablet" : "graph-page"}>
+    <div className={tablet ? "graph-page graph-page--tablet" : "graph-page"}>
       <section className="card graph-main">
         <div className="graph-tools">
           {searchBox}
-          {phone ? (
-            <button type="button" className="secondary graph-filters-button" onClick={() => setFiltersOpen(true)}>
-              {s.graphFilters}
-            </button>
-          ) : (
-            filters
-          )}
-          <div className="graph-mode" role="group" aria-label={k.modeLabel}>
-            {(["graph", "list"] as const).map((m) => (
-              <button key={m} type="button" className="chip" aria-pressed={mode === m} onClick={() => setMode(m)}>
-                {m === "graph" ? k.modeGraph : k.modeList}
-              </button>
-            ))}
-          </div>
+          {filters}
+          {modeSwitch}
         </div>
         {trail}
         {mode === "list" ? (
@@ -780,26 +835,7 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
         )}
         {announcerElement}
       </section>
-      {phone ? (
-        <>
-          <BottomSheet open={filtersOpen} onClose={() => setFiltersOpen(false)} title={s.graphFilters} language={language} className="graph-filters">
-            {filters}
-            {pathPanel}
-            {selected === null && start}
-          </BottomSheet>
-          {/* 實體面板：標題（實體名稱）只給報讀器，畫面上由面板內的類型徽章與名稱開頭 */}
-          <BottomSheet
-            open={entityOpen && selected !== null}
-            onClose={() => setEntityOpen(false)}
-            title={selected === null ? "" : nameOf(selected)}
-            language={language}
-            className="entity-sheet"
-            expandable
-          >
-            {entityPanel}
-          </BottomSheet>
-        </>
-      ) : tablet ? (
+      {tablet ? (
         <>
           <div className="graph-side">
             {selected === null && start}

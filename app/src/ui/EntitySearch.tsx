@@ -21,7 +21,7 @@ interface Props {
   onPick(entityId: string): void;
   // 清空輸入框時（多跳路徑的兩端）
   onClear?(): void;
-  // 桌機的圖譜頁首（#336，畫板 Graph）：標籤只給報讀器，輸入框前有搜尋 icon，placeholder 是標籤
+  // 桌機的圖譜頁首（#336，畫板 Graph）與手機的圖譜上方（#357，畫板 G-Mobile-Graph）：標籤只給報讀器，輸入框前有搜尋 icon，placeholder 是標籤
   field?: boolean;
 }
 

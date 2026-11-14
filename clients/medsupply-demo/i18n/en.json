@@ -96,6 +96,7 @@
   "graphZoomIn": "Zoom in",
   "graphZoomOut": "Zoom out",
   "graphLegendNote": "Shape + color, not color alone",
+  "graphCounts": "{entities, plural, one {# entity} other {# entities}} · {relations, plural, one {# relation} other {# relations}}",
   "graphJustExpanded": "Just expanded",
   "graphListMode": "List mode",
   "graphKeyboard": {

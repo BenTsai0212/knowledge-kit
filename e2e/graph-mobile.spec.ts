@@ -1,6 +1,7 @@
 // 手機的圖譜（#257，docs/design.md「圖譜（手機）」）：390×844 時圖譜佔滿頂端列與分頁列之間、頁面不捲動；
 // 上方是搜尋、「篩選與找路徑」（底部面板）與「圖譜｜清單」；搜尋或點節點打開實體面板（停在 56% 高、往上拉到全高），關閉後保留選取。
-// 實體面板開著時，選取的節點平移到面板以上（上半部）的中央，「關閉」在標題列右側；面板內容依序是類型徽章與名稱、數量、「在問答中問」「只看它」、關係、原文片段。
+// 實體面板開著時，選取的節點平移到面板以上（上半部）的中央，「關閉」在標題列右側；面板內容依序是類型膠囊、名稱與數量（同一列）、「在問答中問」「只看它」、
+// 相關實體的列、原文片段（#357，版面的細節見 mobile-graph-design.spec.ts）。
 // 雙指縮放、往上拉的手感與 safe area 由人在實機確認。
 // 圖譜不呼叫模型；/api/ask 不會被呼叫（在問答中問只填進輸入框）
 import { expect, test, type Page } from "@playwright/test";
@@ -189,7 +190,7 @@ async function upperCenter(page: Page): Promise<{ x: number; y: number }> {
   return { x: canvas.x + canvas.width / 2, y: (canvas.y + Math.min(sheetTop, canvas.y + canvas.height)) / 2 };
 }
 
-test("實體面板：選取的節點平移到面板以上的中央，內容依序排列；按鈕列與標題有間距、關係列的連結與文字同一基線", async ({ page }) => {
+test("實體面板：選取的節點平移到面板以上的中央，內容依序排列", async ({ page }) => {
   await openGraph(page);
   const node = await uniqueNode(page);
   test.skip(node === null, "圖中沒有名稱不重複的節點");
@@ -205,44 +206,20 @@ test("實體面板：選取的節點平移到面板以上的中央，內容依�
   near(at.x, target.x);
   near(at.y, target.y);
 
-  // 內容的順序（由上而下）：類型徽章、名稱、關聯與文件數、「在問答中問」「只看它」、相關實體、原文片段（reading 紙面）
+  // 內容的順序（由上而下，#357 畫板 G-Mobile-Graph）：類型膠囊、名稱與數量同一列，「在問答中問」「只看它」，相關實體的列，原文片段（reading 紙面）
   const panel = sheet.getByRole("region", { name });
-  const parts = [
-    panel.locator(".entity-badge"),
-    panel.getByRole("heading", { name, level: 2 }),
-    panel.locator(".entity-counts"),
-    panel.getByRole("button", { name: s.graphAskAbout }),
-    panel.getByRole("button", { name: s.graphShowOnly }),
-    panel.getByRole("heading", { name: s.relatedEntities, level: 3 }),
-    panel.getByRole("heading", { name: s.entitySources, level: 3 }),
-  ];
-  const ys: number[] = [];
-  for (const part of parts) ys.push((await part.boundingBox())!.y);
-  // 「在問答中問」與「只看它」在同一列
-  expect(ys).toEqual([...ys].sort((a, b) => a - b));
-  const excerpts = panel.locator(".entity-excerpt");
-  if ((await excerpts.count()) > 0) expect((await excerpts.first().boundingBox())!.y).toBeGreaterThan(ys.at(-1)!);
-
-  // 按鈕列與「相關實體」標題之間有間距（#257 PR 1 審查）
+  const header = (await panel.locator(".entity-badge").boundingBox())!;
   const actions = (await panel.locator(".entity-actions").boundingBox())!;
-  const related = (await panel.getByRole("heading", { name: s.relatedEntities, level: 3 }).boundingBox())!;
-  expect(related.y - (actions.y + actions.height)).toBeGreaterThanOrEqual(12);
-
-  // 關係列：實體連結的文字與同列的關係名稱同一基線（文字底端相差不到 2px）
-  const offsets = await panel.evaluate((section, heading) => {
-    const list = [...section.querySelectorAll("h3")].find((h) => h.textContent === heading)?.nextElementSibling;
-    return [...(list?.querySelectorAll("li") ?? [])].map((li) => {
-      const bottom = (n: Node) => {
-        const range = document.createRange();
-        range.selectNodeContents(n);
-        return range.getClientRects()[0]?.bottom ?? Number.NaN;
-      };
-      const text = [...li.childNodes].find((n) => n.nodeType === Node.TEXT_NODE && n.textContent!.trim() !== "");
-      const link = li.querySelector("button.link");
-      return text === undefined || link === null ? 0 : Math.abs(bottom(text) - bottom(link.firstChild ?? link));
-    });
-  }, s.relatedEntities);
-  for (const offset of offsets) expect(offset).toBeLessThan(2);
+  expect(actions.y).toBeGreaterThan(header.y + header.height);
+  const rows = panel.locator(".entity-row");
+  const ys: number[] = [actions.y + actions.height];
+  for (const row of await rows.all()) ys.push((await row.boundingBox())!.y);
+  const excerpts = panel.locator(".entity-excerpt");
+  if ((await excerpts.count()) > 0) ys.push((await excerpts.first().boundingBox())!.y);
+  expect(ys).toEqual([...ys].sort((a, b) => a - b));
+  // 「相關實體」「出現的文件」的標題仍在（只給報讀器）
+  await expect(panel.getByRole("heading", { name: s.relatedEntities, level: 3 })).toHaveCount(1);
+  await expect(panel.getByRole("heading", { name: s.entitySources, level: 3 })).toHaveCount(1);
   expect(await noHorizontalScroll(page)).toBe(true);
 });
 

@@ -222,7 +222,7 @@ const uiStrings = {
   tabGraph: "required", legend: "required", graphEmpty: "required", graphEmptyReason: "required", switchIdentity: "required", selectEntity: "required",
   graphExpanded: "required", graphShowAll: "required", graphShowOnly: "required",
   graphSearch: "required", graphSearchNone: "required", graphTopConnected: "required", graphRelationCount: "required",
-  graphDocumentCount: "required", graphSourceCount: "required", graphAskAbout: "required", graphFilters: "required", graphFindPath: "required", graphZoomIn: "required", graphZoomOut: "required", graphLegendNote: "required", graphJustExpanded: "required", graphListMode: "required", graphKeyboard: "required", graphZoom: "required", askAboutEntity: "required",
+  graphDocumentCount: "required", graphSourceCount: "required", graphAskAbout: "required", graphFilters: "required", graphFindPath: "required", graphZoomIn: "required", graphZoomOut: "required", graphLegendNote: "required", graphCounts: "required", graphJustExpanded: "required", graphListMode: "required", graphKeyboard: "required", graphZoom: "required", askAboutEntity: "required",
   relatedEntities: "required", entitySources: "required",
   graphRetract: "required", graphRetractWillRemove: "required", graphRetractNoChange: "required", graphRetractConfirm: "required",
   graphRetractCancel: "required", tabTimeline: "required", pathTitle: "required",
