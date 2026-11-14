@@ -138,6 +138,9 @@ describe("頁面外層與清單的欄寬", () => {
     ".table-scroll": [".eval-overview", ".eval-page", ...page],
     ".eval-chip": [".eval-page", ...page],
     ".eval-outcome": [".eval-overview", ".eval-page", ...page],
+    // 手機評測台的指標卡（#282 審查）：判定膠囊與「通過／總數」不換行；.eval-metric__set 是 flex
+    ".eval-metric .eval-verdict": [".eval-metric__body", ".eval-metric", ".eval-metrics", ".eval-page", ...page],
+    ".eval-metric__fraction": [".eval-metric__body", ".eval-metric", ".eval-metrics", ".eval-page", ...page],
     // 桌機圖譜的層級路徑（#336）：一行、在列內橫向捲動；.graph-page--desktop 與 main.page 是 flex（min-width: 0）
     ".graph-page--desktop .graph-trail": [".app", ...page],
     // 首頁的列與「最近看過」（#331）：桌機的卡片是 auto-fit（minmax(min(100%, 340px), 1fr)）

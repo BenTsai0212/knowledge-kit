@@ -1,5 +1,7 @@
 // 評測台（#62，docs/evals.md「畫面」）：兩組檢索設定、預計呼叫次數的確認、進度與停止、總覽、每題的結果與兩組差異、下載 JSON 與品質報告（#210）。
 // 桌機（#347，畫板 F-Evals）：頁首 h1、設定卡的標籤與輸入同一列、按鈕列（開始評測、下載 JSON、下載品質報告）、總覽表、每題結果表＋圖例，點一列在下方展開。
+// 手機（#282，docs/design.md「時間軸、上傳、待審、評測台與更多（手機）」）：以看結果為主。設定收合成一列，點了以底部面板編輯與開始；
+// 四項指標兩欄，附「✓ 通過（≥ 門檻）」；題目一題一列（預設只列兩組不同的題目），點一題以底部面板看回答與引用；「下載品質報告」在最下方。
 // 只有 canReview 的身分看得到（App 決定）。評測使用專用的記憶體資料庫，評測結束、停止或離開頁籤時關閉。
 import { Fragment, useEffect, useRef, useState, type CSSProperties } from "react";
 import { errorMessage, fill, strings, taskErrorMessage } from "../client/i18n";
@@ -17,7 +19,26 @@ import { openRetriever } from "../retrieval/retrieve";
 import { answerSentences } from "./answer-motion";
 import { closeDialog } from "./dialog-motion";
 import { prefersReducedMotion } from "./motion";
-import { bankSummary, createEvalDatabases, differs, effectiveForm, evalReport, outcome, parseReportSource, parseSettings, progressCells, settingsForm, setSummary, TOP_K_MAX, verdicts, type Outcome, type SettingsForm } from "./eval-helpers";
+import { BottomSheet } from "./BottomSheet";
+import {
+  bankSummary,
+  createEvalDatabases,
+  differs,
+  effectiveForm,
+  evalReport,
+  outcome,
+  parseReportSource,
+  parseSettings,
+  progressCells,
+  resultRows,
+  settingsBrief,
+  settingsForm,
+  setSummary,
+  TOP_K_MAX,
+  verdicts,
+  type Outcome,
+  type SettingsForm,
+} from "./eval-helpers";
 import { EmptyState } from "./EmptyState";
 import { FilePicker } from "./FilePicker";
 import { useLayout } from "./layout";
@@ -70,14 +91,20 @@ function save(blob: Blob, name: string) {
 
 export function EvalPage({ language, accessCode, uploadedCount, provider, status, run, onRun, onRejectAccessCode }: Props) {
   const s = strings(language);
-  const desktop = useLayout() === "desktop";
+  const layout = useLayout();
+  const desktop = layout === "desktop";
+  const phone = layout === "phone";
   const [forms, setForms] = useState<SettingsForm[]>([DEFAULT_FORM, DEFAULT_FORM]);
   const [useB, setUseB] = useState(false);
   const [model, setModel] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [estimate, setEstimate] = useState({ ask: 0, grade: 0, total: 0 });
   const [failed, setFailed] = useState(false);
-  const [onlyDiff, setOnlyDiff] = useState(false);
+  // 手機預設只列兩組不同的題目（#282）
+  const [onlyDiff, setOnlyDiff] = useState(phone);
+  // 手機的底部面板：評測設定、點選的題目（關閉時保留題目，退場動畫期間內容不消失）
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [picked, setPicked] = useState<{ id: string; open: boolean } | null>(null);
   // 展開的題目 id
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   // 進入頁籤時已有的結果不重播動態（進度格與指標彈出），之後開始的評測才播
@@ -201,7 +228,7 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
   const summaries = run?.sets.map((set) => setSummary(applicable, set, thresholds, run.mode)) ?? [];
   const twoSets = run !== null && run.sets.length === 2;
   const byId = run?.sets.map((set) => new Map(set.results.map((r) => [r.question, r]))) ?? [];
-  const rows = questions.filter((q) => !onlyDiff || !twoSets || differs(byId[0].get(q.id), byId[1].get(q.id), run?.mode ?? "keyPoints"));
+  const rows = resultRows(questions, run, onlyDiff);
   const index = new Map(questions.map((q, i) => [q.id, i + 1]));
   const animate = run !== null && run.startedAt !== stillRun;
   const cells = run === null ? [] : progressCells(run, applicable);
@@ -213,19 +240,40 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
       return next;
     });
 
+  const thresholdText = (key: (typeof METRICS)[number]) =>
+    key === "leakage" ? fill(s.evalAtMost, { count: LEAKAGE_LIMIT }) : fill(s.evalAtLeast, { percent: percent(thresholds[key]) });
+
   // 四項指標的徽章：通過 success 淡底、未通過 warning 淡底（不用紅色）；--i 是評測完成時依序彈出的順序
   function metricCell(summary: Summary, key: (typeof METRICS)[number]) {
     const m: Metric = summary[key];
     const value = key === "leakage" ? fill(s.evalLeakCount, { count: m.passed }) : m.rate === null ? s.evalNotApplicable : fill(s.evalRate, { passed: m.passed, total: m.total, percent: percent(m.rate) });
     const status = m.meets === null ? (summary.complete ? s.evalNotApplicable : s.evalIncomplete) : m.meets ? s.evalPass : s.evalFail;
     const tone = m.meets === null ? "" : m.meets ? " pass" : " fail";
+    const badge = (label: string) => (
+      <span className={`badge eval-verdict${tone}`} style={{ "--i": METRICS.indexOf(key) } as CSSProperties}>
+        {label}
+      </span>
+    );
+    const ungradable = key === "answer" && summary.answer.ungradable > 0 && <div className="muted">{fill(s.evalUngradable, { count: summary.answer.ungradable })}</div>;
+    if (phone) {
+      // 手機的指標卡片（#282）：大字的百分比與小字的「通過／總數」在同一行，下面是不換行的「✓ 通過」膠囊；門檻在卡片標籤旁
+      const big = key === "leakage" ? value : m.rate === null ? s.evalNotApplicable : fill(s.evalPercent, { percent: percent(m.rate) });
+      const small = key === "leakage" || m.rate === null ? null : fill(s.progress, { done: m.passed, total: m.total });
+      return (
+        <>
+          <span className="eval-metric__line">
+            <span className="eval-metric__value">{big}</span>
+            {small !== null && <span className="eval-metric__fraction">{small}</span>}
+          </span>
+          {badge(m.meets === null ? status : `${m.meets ? "✓" : "✗"} ${status}`)}
+          {ungradable}
+        </>
+      );
+    }
     return (
       <>
-        <span className="eval-value">{value}</span>{" "}
-        <span className={`badge eval-verdict${tone}`} style={{ "--i": METRICS.indexOf(key) } as CSSProperties}>
-          {status}
-        </span>
-        {key === "answer" && summary.answer.ungradable > 0 && <div className="muted">{fill(s.evalUngradable, { count: summary.answer.ungradable })}</div>}
+        <span className="eval-value">{value}</span> {badge(status)}
+        {ungradable}
       </>
     );
   }
@@ -330,6 +378,313 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
     );
   }
 
+  // 設定 A／B、設定 B 與模型評分的勾選：桌機與平板在設定卡片中，手機在底部面板中
+  const settingsFields = (
+    <>
+      <div className="eval-sets">
+        {forms.map((f, i) => (
+          <fieldset key={i} disabled={busy || (i === 1 && !useB)}>
+            <legend>{fill(s.evalSetName, { name: SET_NAMES[i] })}</legend>
+            <label>
+              {s.evalTopK}
+              <input type="number" min={1} max={TOP_K_MAX} step={1} value={f.topK} onChange={(e) => setForm(i, "topK", e.target.value)} />
+            </label>
+            <label>
+              {s.evalMinScore}
+              <input type="number" min={0} max={1} step={0.05} value={f.minScore} onChange={(e) => setForm(i, "minScore", e.target.value)} />
+            </label>
+          </fieldset>
+        ))}
+      </div>
+      <label className="inline">
+        <input type="checkbox" checked={useB} disabled={busy} onChange={(e) => setUseB(e.target.checked)} />
+        {s.evalUseSetB}
+      </label>
+      <label className="inline">
+        <input type="checkbox" checked={model} disabled={busy} onChange={(e) => setModel(e.target.checked)} />
+        {s.evalModelGrading}
+      </label>
+      {plan === null && <p className="error">{s.evalInvalidSettings}</p>}
+    </>
+  );
+  const settingsNotices = (
+    <>
+      <RetrievalNotice language={language} preparesModel={preparesModel(client.retrieval)} status={status} />
+      {uploadedCount > 0 &&
+        (desktop ? <p className="eval-hint">{fill(s.evalUploaded, { count: uploadedCount })}</p> : <Notice kind="info" title={fill(s.evalUploaded, { count: uploadedCount })} />)}
+      {failed && <p className="error">{s.loadFailed}</p>}
+    </>
+  );
+  const stopButton = (
+    <button type="button" className="secondary" onClick={() => controller.current?.abort()}>
+      {s.evalStop}
+    </button>
+  );
+  const startButton = (onClick: () => void) => (
+    <button type="button" disabled={busy || plan === null} onClick={onClick}>
+      {phase === "estimating" ? s.evalPreparing : s.evalStart}
+    </button>
+  );
+  const downloadButton = (
+    <button type="button" className="secondary" disabled={run === null || phase === "running"} onClick={download}>
+      {s.evalDownload}
+    </button>
+  );
+  const reportButton = (
+    <button type="button" className="secondary" disabled={run?.status !== "done" || phase === "running"} onClick={() => void downloadReport()}>
+      {s.evalReport.download}
+    </button>
+  );
+  // 次要位置：兩組設定時選要報告的那一組、選另一次的下載 JSON 比較穩定性（行為不變）
+  const reportOptions = run?.status === "done" && phase !== "running" && (
+    <details className="eval-report">
+      <summary>{s.evalReport.options}</summary>
+      {run.sets.length === 2 && (
+        <label>
+          {s.evalReport.set}
+          <select value={reportSet} onChange={(e) => setReportSet(Number(e.target.value))}>
+            {run.sets.map((set, i) => (
+              <option key={i} value={i}>
+                {fill(s.parenthetical, { text: fill(s.evalSetName, { name: SET_NAMES[i] }), note: fill(s.evalSettingsValue, set.settings) })}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      <FilePicker
+        label={s.evalReport.previous}
+        accept=".json,application/json"
+        onChange={(e) => void choosePrevious(e.target.files?.[0])}
+        button={s.fileChoose}
+        status={previousName ?? <span className="muted">{s.fileNone}</span>}
+      />
+      {previousInvalid && <p className="error">{s.evalReport.previousInvalid}</p>}
+    </details>
+  );
+  const stoppedNotice = run?.status === "stopped" && (
+    <Notice kind="warning" title={s.evalStopped}>
+      {run.stopReason === "aborted" ? s.evalAborted : errorMessage(language, run.stopReason ?? "")}
+    </Notice>
+  );
+  // 尚未執行（#245）：下一步與設定區的「開始評測」相同（文字不同，避免同名的兩個按鈕）
+  const emptyState = (
+    <EmptyState
+      icon="evals"
+      title={s.evalEmptyTitle}
+      reason={s.evalEmptyReason}
+      actions={[{ label: s.evalEmptyAction, onClick: () => void prepare(), disabled: busy || plan === null }]}
+    />
+  );
+  const settled = animate && run.status === "done";
+  const summaryClass = ["card", "eval-summary", !animate && "still", settled && "settled"].filter(Boolean).join(" ");
+  const summaryHead = run !== null && (
+    <div className="eval-card-head">
+      <h3>{s.evalSummary}</h3>
+      {run.status === "running" && (
+        <p aria-live="polite">
+          {s.evalRunning} {fill(s.evalProgress, { done: Math.min(done + 1, cells.length), total: cells.length })}
+        </p>
+      )}
+      {(desktop || phone) && run.status === "done" && <p className="eval-status">{fill(s.evalCompleted, { done, total: cells.length })}</p>}
+    </div>
+  );
+  // 評測中（progress）：每題結果回來就填一格；真實題數在標題列，格子只是輔助
+  const progress = (
+    <ol className="eval-progress" aria-hidden="true">
+      {cells.map((cell, i) => (
+        <li key={i}>{cell !== null && <span className={`eval-cell ${cell === "incorrect" ? "fail" : "pass"}`} />}</li>
+      ))}
+    </ol>
+  );
+  const resultsHead = (
+    <div className="eval-card-head">
+      <h3>{s.evalResults}</h3>
+      {twoSets && (
+        <label className="inline">
+          <input type="checkbox" checked={onlyDiff} onChange={(e) => setOnlyDiff(e.target.checked)} />
+          {s.evalOnlyDiff}
+        </label>
+      )}
+      <p className="eval-legend">
+        {OUTCOMES.map((o) => (
+          <span key={o} className={`eval-outcome ${o}`}>
+            {OUTCOME_SYMBOL[o]} {outcomeText[o]}
+          </span>
+        ))}
+      </p>
+    </div>
+  );
+  // 對話框（#246）：遮罩淡入、本體 98%→100% 延後 60ms；Esc 也先播放退場再關閉
+  const confirmDialog = (
+    <dialog
+      ref={dialog}
+      className="dialog"
+      aria-label={s.evalConfirmTitle}
+      onCancel={(e) => (e.preventDefault(), closeDialog(e.currentTarget, prefersReducedMotion()))}
+      onClose={() => phase === "confirm" && void cancel()}
+    >
+      <h2>{s.evalConfirmTitle}</h2>
+      <p>{fill(s.evalConfirmCalls, estimate)}</p>
+      <p className="muted">{s.evalConfirmLimit}</p>
+      <div className="dialog-actions">
+        <button type="button" onClick={() => void start()}>
+          {s.evalConfirmStart}
+        </button>
+        <button type="button" className="secondary" onClick={() => void cancel()}>
+          {s.evalCancel}
+        </button>
+      </div>
+    </dialog>
+  );
+
+  if (phone) {
+    const meta = (q: EvalQuestion) => [s.evalCategories[q.category], access.roles.find((r) => r.id === q.role)?.label[language] ?? q.role].join(s.listSeparator);
+    const pickedQ = picked === null ? undefined : questions.find((q) => q.id === picked.id);
+    // 一題一列的結果：只畫符號（文字給螢幕閱讀器），圖例在標題列
+    const mark = (q: EvalQuestion, r: QuestionResult | undefined, run: EvalRun) => {
+      if (!applies(q, run.providerId) || r === undefined)
+        return (
+          <span className="muted">
+            <span aria-hidden="true">–</span>
+            <span className="visually-hidden">{applies(q, run.providerId) ? s.evalNotRun : s.evalRequiresSemantic}</span>
+          </span>
+        );
+      const o = outcome(q, r, run.mode);
+      return (
+        <span className={`eval-outcome ${o}`}>
+          <span aria-hidden="true">{OUTCOME_SYMBOL[o]}</span>
+          <span className="visually-hidden">{outcomeText[o]}</span>
+        </span>
+      );
+    };
+    return (
+      <div className="eval-page eval-page--phone">
+        <header className="eval-header">
+          <h2>{s.tabEvals}</h2>
+          <p className="muted">{fill(s.evalBankSummary, BANK)}</p>
+        </header>
+        {/* 設定收合成一列：「評測設定 A topK 5 · B topK 8 ›」，點了以底部面板編輯與開始 */}
+        <button type="button" className="eval-settings-row" aria-haspopup="dialog" onClick={() => setSettingsOpen(true)}>
+          <span>{s.evalSettings}</span>
+          <span className="eval-settings-row__value">{settingsBrief(forms, useB, SET_NAMES).map((b) => fill(s.evalSettingsBrief, b)).join(" · ")}</span>
+          <span className="eval-settings-row__more" aria-hidden="true">
+            ›
+          </span>
+        </button>
+        {settingsNotices}
+        {phase === "running" && <div className="eval-actions">{stopButton}</div>}
+        {stoppedNotice}
+        {run === null ? (
+          emptyState
+        ) : (
+          <section className={summaryClass}>
+            {summaryHead}
+            {run.status === "running" && progress}
+            {/* 四項指標兩欄；兩組時每張卡片列出 A、B */}
+            <ul className="eval-metrics">
+              {METRICS.map((key) => (
+                <li key={key} className="eval-metric">
+                  <span className="eval-metric__name">
+                    {s.evalMetrics[key]} <span className="eval-metric__threshold">{thresholdText(key)}</span>
+                  </span>
+                  {summaries.map((summary, i) => (
+                    <div key={i} className="eval-metric__set">
+                      {twoSets && <span className="eval-metric__set-name">{SET_NAMES[i]}</span>}
+                      <div className="eval-metric__body">{metricCell(summary, key)}</div>
+                    </div>
+                  ))}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {run !== null && (
+          <section className="card eval-results-card">
+            {resultsHead}
+            {rows.length === 0 ? (
+              <p className="muted">{s.evalNoDiff}</p>
+            ) : (
+              <ul className="eval-question-list">
+                {rows.map((q) => (
+                  <li key={q.id}>
+                    <button type="button" className="eval-question-row" aria-haspopup="dialog" onClick={() => setPicked({ id: q.id, open: true })}>
+                      <span className="eval-number">
+                        {s.evalNumber}
+                        {index.get(q.id)}
+                      </span>
+                      <span className="eval-question-row__text">
+                        {q.question}
+                        <span className="muted">{meta(q)}</span>
+                      </span>
+                      <span className="eval-question-row__sets">
+                        {byId.map((results, i) => (
+                          <span key={i}>
+                            {twoSets && `${SET_NAMES[i]} `}
+                            {mark(q, results.get(q.id), run)}
+                          </span>
+                        ))}
+                      </span>
+                      <span className="eval-settings-row__more" aria-hidden="true">
+                        ›
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+        {/* 「下載品質報告」在最下方 */}
+        {run !== null && (
+          <div className="eval-report-footer">
+            {reportOptions}
+            {reportButton}
+          </div>
+        )}
+        {confirmDialog}
+        <BottomSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} title={s.evalSettings} language={language} className="eval-settings-sheet">
+          {settingsFields}
+          <div className="dialog-actions eval-actions">
+            {phase === "running"
+              ? stopButton
+              : startButton(() => {
+                  setSettingsOpen(false);
+                  void prepare();
+                })}
+            {downloadButton}
+          </div>
+        </BottomSheet>
+        <BottomSheet
+          open={picked?.open ?? false}
+          onClose={() => setPicked((p) => (p === null ? null : { ...p, open: false }))}
+          title={pickedQ?.question ?? ""}
+          language={language}
+          className="eval-question-sheet"
+          expandable
+        >
+          {pickedQ !== undefined && run !== null && (
+            <>
+              <p className="muted">
+                {s.evalNumber}
+                {index.get(pickedQ.id)}
+                {s.listSeparator}
+                {meta(pickedQ)}
+              </p>
+              <div className="eval-detail-sets">
+                {byId.map((results, i) => (
+                  <div key={i} role="group" aria-label={fill(s.evalSetName, { name: SET_NAMES[i] })}>
+                    {twoSets && <h4>{fill(s.evalSetName, { name: SET_NAMES[i] })}</h4>}
+                    {resultDetail(pickedQ, results.get(pickedQ.id), run)}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </BottomSheet>
+      </div>
+    );
+  }
+
   return (
     <div className={desktop ? "eval-page eval-page--desktop" : "eval-page"}>
       <header className="eval-header">
@@ -341,113 +696,26 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
       <div className="eval-overview">
         <section className="card eval-settings">
           <h3>{s.evalSettings}</h3>
-          <div className="eval-sets">
-            {forms.map((f, i) => (
-              <fieldset key={i} disabled={busy || (i === 1 && !useB)}>
-                <legend>{fill(s.evalSetName, { name: SET_NAMES[i] })}</legend>
-                <label>
-                  {s.evalTopK}
-                  <input type="number" min={1} max={TOP_K_MAX} step={1} value={f.topK} onChange={(e) => setForm(i, "topK", e.target.value)} />
-                </label>
-                <label>
-                  {s.evalMinScore}
-                  <input type="number" min={0} max={1} step={0.05} value={f.minScore} onChange={(e) => setForm(i, "minScore", e.target.value)} />
-                </label>
-              </fieldset>
-            ))}
-          </div>
-          <label className="inline">
-            <input type="checkbox" checked={useB} disabled={busy} onChange={(e) => setUseB(e.target.checked)} />
-            {s.evalUseSetB}
-          </label>
-          <label className="inline">
-            <input type="checkbox" checked={model} disabled={busy} onChange={(e) => setModel(e.target.checked)} />
-            {s.evalModelGrading}
-          </label>
-          {plan === null && <p className="error">{s.evalInvalidSettings}</p>}
-          <RetrievalNotice language={language} preparesModel={preparesModel(client.retrieval)} status={status} />
-          {uploadedCount > 0 &&
-            (desktop ? <p className="eval-hint">{fill(s.evalUploaded, { count: uploadedCount })}</p> : <Notice kind="info" title={fill(s.evalUploaded, { count: uploadedCount })} />)}
-          {failed && <p className="error">{s.loadFailed}</p>}
+          {settingsFields}
+          {settingsNotices}
           {/* 按鈕列：開始評測（評測中換成停止）、下載 JSON、下載品質報告（用這次的結果產生）；還不能用時停用 */}
           <div className="dialog-actions eval-actions">
-            {phase === "running" ? (
-              <button type="button" className="secondary" onClick={() => controller.current?.abort()}>
-                {s.evalStop}
-              </button>
-            ) : (
-              <button type="button" disabled={busy || plan === null} onClick={() => void prepare()}>
-                {phase === "estimating" ? s.evalPreparing : s.evalStart}
-              </button>
-            )}
-            <button type="button" className="secondary" disabled={run === null || phase === "running"} onClick={download}>
-              {s.evalDownload}
-            </button>
-            <button type="button" className="secondary" disabled={run?.status !== "done" || phase === "running"} onClick={() => void downloadReport()}>
-              {s.evalReport.download}
-            </button>
+            {phase === "running" ? stopButton : startButton(() => void prepare())}
+            {downloadButton}
+            {reportButton}
           </div>
           {!desktop && run?.status === "done" && <p className="muted">{s.evalDone}</p>}
-          {/* 次要位置：兩組設定時選要報告的那一組、選另一次的下載 JSON 比較穩定性（行為不變） */}
-          {run?.status === "done" && phase !== "running" && (
-            <details className="eval-report">
-              <summary>{s.evalReport.options}</summary>
-              {run.sets.length === 2 && (
-                <label>
-                  {s.evalReport.set}
-                  <select value={reportSet} onChange={(e) => setReportSet(Number(e.target.value))}>
-                    {run.sets.map((set, i) => (
-                      <option key={i} value={i}>
-                        {fill(s.parenthetical, { text: fill(s.evalSetName, { name: SET_NAMES[i] }), note: fill(s.evalSettingsValue, set.settings) })}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-              <FilePicker
-                label={s.evalReport.previous}
-                accept=".json,application/json"
-                onChange={(e) => void choosePrevious(e.target.files?.[0])}
-                button={s.fileChoose}
-                status={previousName ?? <span className="muted">{s.fileNone}</span>}
-              />
-              {previousInvalid && <p className="error">{s.evalReport.previousInvalid}</p>}
-            </details>
-          )}
-          {run?.status === "stopped" && (
-            <Notice kind="warning" title={s.evalStopped}>
-              {run.stopReason === "aborted" ? s.evalAborted : errorMessage(language, run.stopReason ?? "")}
-            </Notice>
-          )}
+          {reportOptions}
+          {stoppedNotice}
         </section>
 
-        {/* 尚未執行（#245）：下一步與設定區的「開始評測」相同（文字不同，避免同名的兩個按鈕） */}
         {run === null ? (
-          <EmptyState
-            icon="evals"
-            title={s.evalEmptyTitle}
-            reason={s.evalEmptyReason}
-            actions={[{ label: s.evalEmptyAction, onClick: () => void prepare(), disabled: busy || plan === null }]}
-          />
+          emptyState
         ) : (
-          <section className={["card", "eval-summary", !animate && "still", animate && run.status === "done" && "settled"].filter(Boolean).join(" ")}>
-            <div className="eval-card-head">
-              <h3>{s.evalSummary}</h3>
-              {run.status === "running" && (
-                <p aria-live="polite">
-                  {s.evalRunning} {fill(s.evalProgress, { done: Math.min(done + 1, cells.length), total: cells.length })}
-                </p>
-              )}
-              {desktop && run.status === "done" && <p className="eval-status">{fill(s.evalCompleted, { done, total: cells.length })}</p>}
-            </div>
-            {/* 評測中（progress）：每題結果回來就填一格；真實題數在上一行，格子只是輔助。桌機在評測完成後只留總覽表 */}
-            {(!desktop || run.status === "running") && (
-              <ol className="eval-progress" aria-hidden="true">
-                {cells.map((cell, i) => (
-                  <li key={i}>{cell !== null && <span className={`eval-cell ${cell === "incorrect" ? "fail" : "pass"}`} />}</li>
-                ))}
-              </ol>
-            )}
+          <section className={summaryClass}>
+            {summaryHead}
+            {/* 桌機在評測完成後只留總覽表 */}
+            {(!desktop || run.status === "running") && progress}
             <div className="table-scroll">
               <table className="eval-table">
                 <thead>
@@ -466,7 +734,7 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
                   {METRICS.map((key) => (
                     <tr key={key}>
                       <th scope="row">{s.evalMetrics[key]}</th>
-                      <td className="eval-threshold">{key === "leakage" ? fill(s.evalAtMost, { count: LEAKAGE_LIMIT }) : fill(s.evalAtLeast, { percent: percent(thresholds[key]) })}</td>
+                      <td className="eval-threshold">{thresholdText(key)}</td>
                       {summaries.map((summary, i) => (
                         <td key={i}>{metricCell(summary, key)}</td>
                       ))}
@@ -479,45 +747,11 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
         )}
       </div>
 
-      {/* 對話框（#246）：遮罩淡入、本體 98%→100% 延後 60ms；Esc 也先播放退場再關閉 */}
-      <dialog
-        ref={dialog}
-        className="dialog"
-        aria-label={s.evalConfirmTitle}
-        onCancel={(e) => (e.preventDefault(), closeDialog(e.currentTarget, prefersReducedMotion()))}
-        onClose={() => phase === "confirm" && void cancel()}
-      >
-        <h2>{s.evalConfirmTitle}</h2>
-        <p>{fill(s.evalConfirmCalls, estimate)}</p>
-        <p className="muted">{s.evalConfirmLimit}</p>
-        <div className="dialog-actions">
-          <button type="button" onClick={() => void start()}>
-            {s.evalConfirmStart}
-          </button>
-          <button type="button" className="secondary" onClick={() => void cancel()}>
-            {s.evalCancel}
-          </button>
-        </div>
-      </dialog>
+      {confirmDialog}
 
       {run !== null && (
         <section className="card eval-results-card">
-          <div className="eval-card-head">
-            <h3>{s.evalResults}</h3>
-            {twoSets && (
-              <label className="inline">
-                <input type="checkbox" checked={onlyDiff} onChange={(e) => setOnlyDiff(e.target.checked)} />
-                {s.evalOnlyDiff}
-              </label>
-            )}
-            <p className="eval-legend">
-              {OUTCOMES.map((o) => (
-                <span key={o} className={`eval-outcome ${o}`}>
-                  {OUTCOME_SYMBOL[o]} {outcomeText[o]}
-                </span>
-              ))}
-            </p>
-          </div>
+          {resultsHead}
           {/* 寬表格放在可橫向捲動的容器；可聚焦，讓鍵盤也能捲動 */}
           <div className="table-scroll" role="region" aria-label={s.evalResults} tabIndex={0}>
             <table className="eval-table eval-results">

@@ -732,9 +732,12 @@ export interface UiStrings {
   evalMetric: string;
   evalThreshold: string;
   evalSettingsValue: string;
+  // 手機收合的評測設定一列（#282）：每組的名稱與 topK，例如「A topK 5」
+  evalSettingsBrief: string;
   evalAtLeast: string;
   evalAtMost: string;
   evalRate: string;
+  evalPercent: string;
   evalLeakCount: string;
   evalUngradable: string;
   evalPass: string;
@@ -743,6 +746,8 @@ export interface UiStrings {
   evalNotApplicable: string;
   evalResults: string;
   evalOnlyDiff: string;
+  // 手機預設只列兩組不同的題目，沒有時的說明（#282）
+  evalNoDiff: string;
   evalDiffers: string;
   evalQuestion: string;
   evalNotRun: string;

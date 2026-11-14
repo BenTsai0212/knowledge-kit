@@ -7,7 +7,7 @@ import type { RetrievalConfig } from "../client/types";
 import { keywordHashProvider } from "../retrieval/keyword-hash";
 import { createProvider, PROVIDERS, RETRIEVAL_DEFAULTS, withRetrievalDefaults } from "../retrieval/providers";
 import css from "./app.css?raw";
-import { bankSummary, createEvalDatabases, differs, effectiveForm, evalReport, outcome, parseReportSource, parseSettings, progressCells, setSummary, settingsForm, verdicts } from "./eval-helpers";
+import { bankSummary, createEvalDatabases, differs, effectiveForm, evalReport, outcome, parseReportSource, parseSettings, progressCells, resultRows, setSummary, settingsBrief, settingsForm, verdicts } from "./eval-helpers";
 import { MOTION, STAGGER } from "./motion";
 
 const { thresholds } = clientConfig.client.evals;
@@ -218,6 +218,35 @@ describe("每題的結果、題庫摘要與進度格（#244）", () => {
       ],
     };
     expect(progressCells(run, qs)).toEqual(["correct", "incorrect", "correct", null]);
+  });
+
+  it("手機（#282）：設定收合成一列，只列要跑的組與 topK", () => {
+    const forms = [settingsForm({ topK: 5, minScore: 0.2 }), settingsForm({ topK: 8, minScore: 0.3 })];
+    expect(settingsBrief(forms, true, ["A", "B"])).toEqual([
+      { name: "A", topK: "5" },
+      { name: "B", topK: "8" },
+    ]);
+    expect(settingsBrief(forms, false, ["A", "B"])).toEqual([{ name: "A", topK: "5" }]);
+  });
+
+  it("每題的結果：勾選且有兩組時只列兩組不同的題目；一組或沒勾選時全部列出", () => {
+    const qs = [answerQ, refusalQ];
+    const refusal = result({ id: refusalQ.id, citation: null, keyPoints: null, refused: true });
+    const run = (sets: QuestionResult[][]): EvalRun => ({
+      mode: "keyPoints",
+      providerId: "keyword-hash",
+      status: "done",
+      startedAt: "2026-11-14T00:00:00.000Z",
+      sets: sets.map((results) => ({ settings: { topK: 5, minScore: 0.2 }, results })),
+    });
+    const two = run([
+      [result(), refusal],
+      [result({ citation: { pass: false, cited: [], dropped: [] } }), refusal],
+    ]);
+    expect(resultRows(qs, two, true)).toEqual([answerQ]);
+    expect(resultRows(qs, two, false)).toEqual(qs);
+    expect(resultRows(qs, run([[result(), refusal]]), true)).toEqual(qs);
+    expect(resultRows(qs, null, true)).toEqual(qs);
   });
 
   it("動態：進度格以 kGrow（linear）填滿；完成時四項指標以 kPopS 依序彈出，延遲 900／960／1020／1080ms 寫成 --motion-* 的組合", () => {
