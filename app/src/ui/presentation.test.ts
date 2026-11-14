@@ -32,7 +32,7 @@ describe("字級表（docs/design.md「字級與主題」）", () => {
     ["原文面板", ".source-text", "font-size", "22px"],
     ["頁籤、身分、按鈕（高）", ":is(button:not(.link, .citation), select, .primary-tabs button)", "min-height", "56px"],
     ["「虛構資料」「展示用權限」", ":is(.badge, .access-badge)", "font-size", "16px"],
-    ["原文面板的寬", "main.qa > .source", "width", "min(620px, 100vw)"],
+    ["原文面板的寬", ":is(main.qa, main.page) > .source", "width", "min(620px, 100vw)"],
     ["圖譜的實體卡片：名稱", "section.entity > h2", "font-size", "44px"],
     ["圖譜的實體卡片：按鈕（高）", ".entity-actions button", "min-height", "64px"],
   ];

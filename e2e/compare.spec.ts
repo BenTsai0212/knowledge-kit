@@ -117,7 +117,9 @@ test.describe("畫面", () => {
     // 對照時沒有輸入區（#349）：先以一般問答問一題，打開對照時沿用這一題
     await question.fill(target?.text ?? scenarios.scenarios[0].questions[0].text[language]);
     await page.getByRole("button", { name: s.askButton, exact: true }).click();
-    await expect(page.locator("section.answer")).toContainText(FAKE_ANSWER_LEAD);
+    // 回答（或拒答：題目可能只有其他身分看得到）結束後才能打開對照
+    await expect(page.locator("section.answer .answer-text").first()).toBeVisible();
+    await expect(button).toBeEnabled();
     await page.locator("body").press("c");
     await expect(button).toHaveAttribute("aria-pressed", "true");
     await expect(page.locator(".composer")).toHaveCount(0);

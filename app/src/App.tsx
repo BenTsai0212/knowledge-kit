@@ -514,10 +514,10 @@ export function App() {
   const compareDisabled = retriever === null || answering;
   const toggleCompare = () => (compare !== null ? closeCompare() : compareDisabled ? undefined : void runCompare(compareQuestion(turns)));
   // 主持人快捷鍵 C／Esc（docs/design.md「主持人快捷鍵」）：只在問答頁、焦點不在文字輸入時；Esc 在原文或實體面板打開時交給面板。
-  // 展示模式的原文卡片（#349，畫板 H-QA）：Esc 關閉，焦點回到打開它的引用標號（與「關閉」按鈕相同）
+  // 展示模式的原文卡片（#349，畫板 H-QA）：Esc 關閉，焦點回到打開它的引用標號（與「關閉」按鈕相同）；圖譜頁也是（外框自己處理的 Esc 不算）
   const compareKeys = useRef<(e: KeyboardEvent) => void>(() => {});
   compareKeys.current = (e) => {
-    if (presentationBar && view === "qa" && source !== null && e.key === "Escape" && !e.defaultPrevented) {
+    if (presentationBar && source !== null && e.key === "Escape" && !e.defaultPrevented) {
       e.preventDefault();
       return closeSourcePanel();
     }

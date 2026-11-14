@@ -7104,12 +7104,17 @@ main.page:has(> .upload-page) {
 }
 
 /* 原文（#349，畫板 H-QA）：從右側滑入、浮在對話上的圓角卡片（寬 620px、上下右各留 32／40px、陰影），中間欄不讓出位置。
-   上方「原文 · 出處 N」與「關閉 Esc」，下面是文件名與 reading 紙面（引用段落 markReading）；「這次回答的出處」不顯示（換出處點回答中的標號） */
+   上方「原文 · 出處 N」與「關閉 Esc」，下面是文件名與 reading 紙面（引用段落 markReading）；「這次回答的出處」不顯示（換出處點回答中的標號）。
+   圖譜頁打開的原文（實體卡片的文件）同樣浮在右側，不佔版面（否則擠掉畫布） */
+:root[data-mode="presentation"] main.page:has(> .source) {
+  position: relative;
+}
+
 :root[data-mode="presentation"] main.qa.with-panel:has(> .source) {
   grid-template-columns: var(--present-script-width) minmax(0, 1fr);
 }
 
-:root[data-mode="presentation"] main.qa > .source {
+:root[data-mode="presentation"] :is(main.qa, main.page) > .source {
   position: absolute;
   top: 32px;
   right: 40px;
@@ -7165,7 +7170,7 @@ main.page:has(> .upload-page) {
   font-weight: 700;
 }
 
-:root[data-mode="presentation"] main.qa > .source .source-text {
+:root[data-mode="presentation"] :is(main.qa, main.page) > .source .source-text {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;

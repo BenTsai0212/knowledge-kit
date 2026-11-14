@@ -39,6 +39,8 @@ test("問答：回答附出處，點出處打開原文；圖譜：畫出畫布",
 
   await openTab(page, s.tabGraph);
   await expect(page.locator(".graph-canvas canvas").first()).toBeVisible();
+  // 原文仍開著時也是浮動的卡片，不擠掉圖譜的畫布（#349）
+  await expect(sourcePanel(page)).toHaveCSS("position", "absolute");
 });
 
 // 以第一個預設問題的身分問一題，等回答出現
@@ -280,8 +282,9 @@ test.describe("1920×1080", () => {
     await expect(panel).toBeVisible();
     await expect(panel).toHaveCSS("border-top-left-radius", "24px");
     await expect(panel).not.toHaveCSS("box-shadow", "none");
+    // 滑入的動畫（kSlideIn）結束後量
+    await expect.poll(async () => rightGap(page, (await panel.boundingBox())!)).toBe(40);
     const box = (await panel.boundingBox())!;
-    expect(await rightGap(page, box)).toBe(40);
     await expect.poll(async () => { const b = (await body.boundingBox())!; return b.x + b.width <= box.x; }).toBe(true);
     await expect(panel.getByRole("button", { name: s.closeSource })).toContainText("Esc");
     expect(await noHorizontalScroll(page)).toBe(true);
