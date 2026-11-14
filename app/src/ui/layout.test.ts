@@ -73,12 +73,20 @@ describe("visibleArea（實體面板以上的可見部分，#257）", () => {
   const canvas = { top: 120, width: 390, height: 640 };
 
   it("面板停在 56% 時，可見部分是畫布上緣到面板上緣", () => {
-    expect(visibleArea(canvas, 844, SHEET_HALF)).toEqual({ width: 390, height: 844 * (1 - SHEET_HALF) - 120 });
+    expect(visibleArea(canvas, 844, SHEET_HALF)).toEqual({ width: 390, height: 844 * (1 - SHEET_HALF) - 120, top: 0 });
   });
 
   it("沒有面板、面板沒蓋到畫布或整個畫布都被蓋住時是整個畫布", () => {
-    expect(visibleArea(canvas, 844, 0)).toEqual({ width: 390, height: 640 });
-    expect(visibleArea({ ...canvas, height: 100 }, 844, SHEET_HALF)).toEqual({ width: 390, height: 100 });
-    expect(visibleArea({ ...canvas, top: 500 }, 844, SHEET_HALF)).toEqual({ width: 390, height: 640 });
+    expect(visibleArea(canvas, 844, 0)).toEqual({ width: 390, height: 640, top: 0 });
+    expect(visibleArea({ ...canvas, height: 100 }, 844, SHEET_HALF)).toEqual({ width: 390, height: 100, top: 0 });
+    expect(visibleArea({ ...canvas, top: 500 }, 844, SHEET_HALF)).toEqual({ width: 390, height: 640, top: 0 });
+  });
+
+  it("畫布上方浮著一列（已展開）時，面板開著的可見部分從這一列下緣開始（#357 修正要求）", () => {
+    const above = 844 * (1 - SHEET_HALF) - 120;
+    expect(visibleArea(canvas, 844, SHEET_HALF, 54)).toEqual({ width: 390, height: above - 54, top: 54 });
+    // 沒有面板時不扣；扣掉後沒有剩下高度時不扣
+    expect(visibleArea(canvas, 844, 0, 54)).toEqual({ width: 390, height: 640, top: 0 });
+    expect(visibleArea(canvas, 844, SHEET_HALF, above + 1)).toEqual({ width: 390, height: above, top: 0 });
   });
 });

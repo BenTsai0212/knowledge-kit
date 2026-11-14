@@ -43,10 +43,19 @@ export function sheetSnap(at: SheetStop, dy: number, sheetHeight: number): Sheet
 }
 
 // 實體面板停在 56% 高時圖譜還看得到的部分（#257）：畫布從上緣到面板上緣（視窗高的 44%）；面板沒蓋到畫布或 cover 是 0 時是整個畫布。
-// canvas 是畫布在視窗中的上緣與大小（getBoundingClientRect），回傳的大小以畫布的 rendered px 計
-export function visibleArea(canvas: { top: number; width: number; height: number }, viewportHeight: number, cover: number): { width: number; height: number } {
+// canvas 是畫布在視窗中的上緣與大小（getBoundingClientRect），回傳的大小以畫布的 rendered px 計。
+// inset 是浮在畫布上方的一列（手機的「已展開」與麵包屑，#357 修正要求）下緣離畫布上緣的距離：面板開著時可見部分從這一列下緣開始（top），
+// 讓選取的節點置中在這一列與面板之間；扣掉後沒有剩下高度時不扣
+export function visibleArea(
+  canvas: { top: number; width: number; height: number },
+  viewportHeight: number,
+  cover: number,
+  inset = 0,
+): { width: number; height: number; top: number } {
   const above = viewportHeight * (1 - cover) - canvas.top;
-  return { width: canvas.width, height: cover > 0 && above > 0 ? Math.min(canvas.height, above) : canvas.height };
+  const bottom = cover > 0 && above > 0 ? Math.min(canvas.height, above) : canvas.height;
+  const top = cover > 0 && inset > 0 && inset < bottom ? inset : 0;
+  return { width: canvas.width, height: bottom - top, top };
 }
 
 // 分頁列的圖示（24×24 的線條，沿用空狀態的圖示）；首頁與「更多」另外畫

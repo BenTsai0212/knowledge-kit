@@ -135,6 +135,23 @@ test("選取後實體面板停在約一半高，節點在畫布可見的上半�
   expect(at.y).toBeGreaterThan(canvas.y);
   expect(at.y).toBeLessThan(sheetBox.y);
   expect(at.y).toBeLessThan(844 / 2);
+  // 選取的節點的外框不被浮在畫布上方的「已展開」列蓋住（#357 修正要求）：節點置中在這一列下緣與面板上緣之間
+  const trail = page.locator(".graph-phone-stage .graph-trail nav");
+  if (await trail.isVisible()) {
+    const bar = await box(trail);
+    const nodeBox = await page.evaluate(
+      ({ selector, id }) => {
+        const container = document.querySelector<HTMLElement & { _cyreg?: { cy?: Cy } }>(selector)!;
+        const rect = container.getBoundingClientRect();
+        const b = container._cyreg!.cy!.$id(id).renderedBoundingBox({ includeLabels: false });
+        return { x1: rect.left + b.x1, y1: rect.top + b.y1, x2: rect.left + b.x2, y2: rect.top + b.y2 };
+      },
+      { selector: CANVAS, id },
+    );
+    const overlaps = nodeBox.x1 < bar.x + bar.width && nodeBox.x2 > bar.x && nodeBox.y1 < bar.y + bar.height && nodeBox.y2 > bar.y;
+    expect(overlaps, JSON.stringify({ nodeBox, bar })).toBe(false);
+    expect(nodeBox.y2).toBeLessThanOrEqual(sheetBox.y);
+  }
 
   const panel = sheet.getByRole("region", { name });
   // 類型膠囊、名稱與「關聯 N · 文件 N」同一列（垂直方向重疊），由左而右；手機不列出處數

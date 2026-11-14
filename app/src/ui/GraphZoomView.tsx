@@ -31,6 +31,8 @@ interface Props {
   api?: RefObject<GraphViewApi | null>;
   // 手機的實體面板蓋住視窗下方的比例（#257，見 GraphView）：細節層選取的節點平移到面板以上的中央
   cover?: number;
+  // 手機（#357 修正要求，見 GraphView）：浮在畫布上方的麵包屑；面板開著時選取的節點置中在它與面板之間
+  overlay?: RefObject<HTMLElement | null>;
   // 桌機（#336 修正要求，見 GraphView）：細節層（選取實體）的縮放上限；沒有傳入時是 MAX_VIEW_ZOOM
   maxFocusZoom?: number;
 }
@@ -135,7 +137,7 @@ export function GraphZoomView(props: Props) {
     const chosen = instance.$id(p.selected ?? "");
     const target =
       cover > 0 && p.level === "detail" && chosen.nonempty()
-        ? { zoom: whole.zoom, pan: panToCenter(chosen.position(), whole.zoom, areaOf(instance, cover)) }
+        ? { zoom: whole.zoom, pan: panToCenter(chosen.position(), whole.zoom, areaOf(instance, cover, p.overlay?.current)) }
         : whole;
     const still = reduced.current || calm;
     if (!still && previous === "overview" && p.level !== "overview")
@@ -201,7 +203,7 @@ export function GraphZoomView(props: Props) {
     shownCover.current = cover;
     if (cy.current === null || !opened || props.level !== "detail" || props.selected === null) return;
     cy.current.stop(true, false);
-    centerIn(cy.current, cy.current.$id(props.selected), areaOf(cy.current, cover), motionDuration(reduced.current, PAN_MS));
+    centerIn(cy.current, cy.current.$id(props.selected), areaOf(cy.current, cover, props.overlay?.current), motionDuration(reduced.current, PAN_MS));
   }, [props.cover]);
 
   useEffect(() => {

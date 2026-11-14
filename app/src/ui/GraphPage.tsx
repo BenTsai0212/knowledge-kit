@@ -136,6 +136,8 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
   const frame = useRef<HTMLDivElement>(null);
   const help = useRef<HTMLDialogElement>(null);
   const search = useRef<HTMLDivElement>(null);
+  // 已展開的路徑與麵包屑（手機浮在畫布上方）：實體面板開著時選取的節點置中在它與面板之間（#357 修正要求）
+  const trailRef = useRef<HTMLDivElement>(null);
   // Space 之前的展開（再按一次 Space 時回到這裡）
   const beforeOnly = useRef<Expansion | null>(null);
   // 用 / 跳到搜尋框時，選了結果後焦點回到外框（#289）；在 render 之後才移動焦點，讓進入時讀到新的選取
@@ -484,7 +486,7 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
   );
   // 已展開的路徑與大量節點時的麵包屑（桌機在畫布上方工具列的左邊）。這一列沒有展開時也保留高度：出現或消失時畫布不移動
   const trail = (
-    <div className="graph-trail">
+    <div className="graph-trail" ref={trailRef}>
       {zoom !== null && (
         <nav aria-label={z.breadcrumb} className="graph-crumbs">
           <ol>
@@ -567,6 +569,7 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
           keyboard={focused ? { current, cursor } : null}
           api={view}
           cover={sheetCover}
+          overlay={trailRef}
           maxFocusZoom={desktop ? FOCUS_MAX_ZOOM : undefined}
         />
       ) : (
@@ -582,6 +585,7 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
           keyboard={focused ? { current, cursor } : null}
           api={view}
           cover={sheetCover}
+          overlay={trailRef}
           maxFocusZoom={desktop ? FOCUS_MAX_ZOOM : undefined}
         />
       )}

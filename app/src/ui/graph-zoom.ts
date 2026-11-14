@@ -164,9 +164,10 @@ export function viewportFor(
 }
 
 // 把 position（model 座標）移到 area（rendered px，從畫布左上角起）中央時的平移量
-export const panToCenter = (position: Point, zoom: number, area: { width: number; height: number }): Point => ({
+// area.top：可見部分從畫布上緣往下多少 px 開始（visibleArea() 的 inset），沒有時是 0
+export const panToCenter = (position: Point, zoom: number, area: { width: number; height: number; top?: number }): Point => ({
   x: area.width / 2 - zoom * position.x,
-  y: area.height / 2 - zoom * position.y,
+  y: (area.top ?? 0) + area.height / 2 - zoom * position.y,
 });
 
 // 桌機選取與逐步展開時的視角（#336 修正要求）：目前的縮放限制在 minZoom～maxZoom（標籤 12～16px）。
