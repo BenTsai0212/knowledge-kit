@@ -1,6 +1,6 @@
 // 冒煙測試（#66）：各頁籤能打開並完成基本操作。/api/ask 一律是假的回應（support/fake-ask.ts）。
 import { expect, test } from "@playwright/test";
-import { EVALS_PATH, openApp, openTab, presetQuestions, s, sourcePanel, switchIdentity, uploadAndReview } from "./support/app";
+import { EVALS_PATH, expandTimelineEntry, openApp, openTab, presetQuestions, s, sourcePanel, switchIdentity, uploadAndReview } from "./support/app";
 import { access, language, NO_REVIEWER, NO_REVIEWING_UPLOADER, NO_UPLOADER, reviewer, reviewingUploader, uploader } from "./support/client";
 import { FAKE_ANSWER_LEAD } from "./support/fake-ask";
 
@@ -50,7 +50,7 @@ test("圖譜：畫出畫布，點節點打開實體面板", async ({ page }) => 
 test("時間軸：列出文件，打開原文", async ({ page }) => {
   await openTab(page, s.tabTimeline);
   const first = page.locator("ol.timeline > li").first();
-  await expect(first).toBeVisible();
+  await expandTimelineEntry(first);
   await first.getByRole("button", { name: s.openSource }).first().click();
   await expect(sourcePanel(page)).toBeVisible();
 });

@@ -134,6 +134,13 @@ export async function openTab(page: Page, label: string): Promise<void> {
 
 export const sourcePanel = (page: Page) => page.getByRole("complementary", { name: s.sourceTitle });
 
+// 桌機的時間軸卡片預設精簡（#346）：段落與「打開原文」在展開後才顯示。手機與平板沒有展開按鈕，不做任何事
+export async function expandTimelineEntry(entry: Locator): Promise<void> {
+  await expect(entry).toBeVisible();
+  const toggle = entry.locator('button.timeline-toggle[aria-expanded="false"]');
+  if ((await toggle.count()) > 0) await toggle.click();
+}
+
 // 以目前的身分上傳 fixtures 的檔案（預設 upload-note.md），萃取在背景執行（目前的身分要能上傳）。
 // title：文件標題（沒有時用檔名）；visibility：可見等級的 id（沒有時用上傳頁的預設）
 export async function upload(page: Page, options: { file?: string; title?: string; visibility?: string } = {}): Promise<void> {

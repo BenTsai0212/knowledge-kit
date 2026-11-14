@@ -1,7 +1,7 @@
 // 畫面層的越權測試（#66）：切換身分後，畫面上不殘留新身分看不到的內容。
 // 看不到的段落以 app/src/evals/oracle.ts 算出（support/dataset.ts），不以畫面或資料庫的結果為準。
 import { expect, test, type Page } from "@playwright/test";
-import { EVALS_PATH, language, openApp, openTab, presetQuestions, s, sourcePanel, switchIdentity, tab, type RoleId } from "./support/app";
+import { EVALS_PATH, expandTimelineEntry, language, openApp, openTab, presetQuestions, s, sourcePanel, switchIdentity, tab, type RoleId } from "./support/app";
 import { access, NO_NON_REVIEWER, NO_REVIEWER, nonReviewer, reviewer } from "./support/client";
 import { hiddenDocument, hiddenPassages, leakedPassages, visibleNamesIn } from "./support/dataset";
 import { askStreamCancelled, askStreamOpen, event, holdAskStream, pushAskStream, sseBody } from "./support/fake-ask";
@@ -24,6 +24,7 @@ for (const role of lessPrivileged) {
     await switchIdentity(page, viewer);
     await openTab(page, s.tabTimeline);
     const doc = page.locator(`ol.timeline > li[data-document-id="${docId}"]`);
+    await expandTimelineEntry(doc);
     await doc.getByRole("button", { name: s.openSource }).first().click();
     await expect(sourcePanel(page)).toBeVisible();
     // 比對本身有效：切換前畫面上確實有該身分看不到的段落
