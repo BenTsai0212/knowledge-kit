@@ -4579,6 +4579,117 @@ label.inline {
   }
 }
 
+/* 手機的評測台（#282，畫板 G-Mobile-Pages「評測台」；EvalPage 的 eval-page--phone）：設定收合成一列（點了開底部面板）、
+   四項指標兩欄的卡片、題目一題一列（點了開底部面板）、「下載品質報告」在最下方。可點的列與按鈕至少 44px */
+.eval-settings-row,
+.eval-question-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: start;
+}
+
+.eval-settings-row {
+  min-height: 48px;
+  padding: 0 0.875rem;
+  border-radius: 12px;
+}
+
+.eval-settings-row__value {
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-textMuted);
+}
+
+.eval-settings-row__more {
+  flex: none;
+  margin-inline-start: auto;
+  color: var(--color-textMuted);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.eval-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.eval-metric {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+}
+
+.eval-metric__name {
+  font-size: 0.75rem;
+  color: var(--color-textMuted);
+}
+
+.eval-page--phone .eval-card-head label.inline,
+.eval-page--phone .eval-actions button,
+.eval-settings-sheet .eval-actions button {
+  min-height: 44px;
+}
+
+.eval-question-list {
+  display: grid;
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.eval-question-row {
+  min-height: 52px;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-radius: 10px;
+  background: var(--color-surfaceRaised);
+}
+
+.eval-question-row .eval-number {
+  flex: none;
+  color: var(--color-textMuted);
+}
+
+.eval-question-row__text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.eval-question-row__sets {
+  display: flex;
+  flex: none;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.eval-report-footer {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.eval-report-footer > button {
+  min-height: 48px;
+}
+
 /* 桌機的評測台（#347，畫板 F-Evals）：EvalPage 的 eval-page--desktop，手機與平板沒有這個 class，不受影響。
    頁首 h1 28px／700＋同一列的題庫摘要（textMuted）；填滿內容區（不受 main.page 的最寬限制）；卡片 surface、圓角 16px、padding 20px，標題 17px；
    設定 A／B 是 surfaceRaised 的區塊，標籤與輸入同一列（輸入靠右、mono）；說明是 textMuted 小字；按鈕列 44px（開始評測 primary，其餘外框）；

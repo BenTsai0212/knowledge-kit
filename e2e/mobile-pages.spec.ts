@@ -198,6 +198,76 @@ test.describe("待審", () => {
   });
 });
 
+test.describe("評測台", () => {
+  test.skip(reviewer === undefined, NO_REVIEWER);
+
+  test("設定收合成一列、指標兩欄、預設只列兩組不同的題目，點一題以底部面板查看；「下載品質報告」在最下方", async ({ page }) => {
+    // 兩組設定各跑一次題庫（/api/ask 是假的回應）
+    test.setTimeout(480_000);
+    await openApp(page, EVALS_PATH);
+    await switchIdentity(page, reviewer!.id);
+    expect(await gotoView(page, "evals")).toBe(true);
+    const evals = page.locator(".eval-page--phone");
+    const setName = (name: string) => s.evalSetName.replace("{name}", name);
+
+    // 設定收合成一列，欄位不在頁面上
+    const settingsRow = evals.locator("button.eval-settings-row");
+    await expect(settingsRow).toContainText(s.evalSettings);
+    await expect(page.getByLabel(s.evalTopK).first()).toBeHidden();
+    await expectTouchTargets(settingsRow);
+    expect(await noHorizontalScroll(page)).toBe(true);
+
+    // 點了以底部面板編輯：加上設定 B（topK 1），開始評測時面板關閉
+    await settingsRow.click();
+    const settings = page.locator("dialog.eval-settings-sheet");
+    await expect(settings).toBeVisible();
+    await settings.getByLabel(s.evalUseSetB).check();
+    await settings.getByRole("group", { name: setName("B") }).getByLabel(s.evalTopK).fill("1");
+    await expectTouchTargets(settings.locator(".eval-actions button"));
+    await settings.getByRole("button", { name: s.evalStart, exact: true }).click();
+    await expect(settings).toBeHidden();
+    await expect(settingsRow).toContainText(s.evalSettingsBrief.replace("{name}", "B").replace("{topK}", "1"));
+    const confirm = page.getByRole("dialog", { name: s.evalConfirmTitle });
+    await confirm.getByRole("button", { name: s.evalConfirmStart, exact: true }).click();
+    const report = evals.locator(".eval-report-footer > button");
+    await expect(report).toHaveText(s.evalReport.download);
+    await expect(report).toBeEnabled({ timeout: 420_000 });
+
+    // 四項指標兩欄，附「✓ 通過（≥ 門檻）」或「✗ 未通過（…）」
+    const metrics = evals.locator(".eval-metrics > li");
+    await expect(metrics).toHaveCount(4);
+    const boxes = await metrics.evaluateAll((els) => els.map((el) => el.getBoundingClientRect()).map((r) => [Math.round(r.left), Math.round(r.top)]));
+    expect(new Set(boxes.map(([left]) => left)).size).toBe(2);
+    expect(boxes[0][1]).toBe(boxes[1][1]);
+    await expect(metrics.first().locator(".eval-verdict").first()).toContainText(/^[✓✗] /);
+
+    // 預設只列兩組不同的題目；取消勾選後列出全部
+    const onlyDiff = evals.getByLabel(s.evalOnlyDiff);
+    await expect(onlyDiff).toBeChecked();
+    const rows = evals.locator("button.eval-question-row");
+    const differing = await rows.count();
+    if (differing === 0) await expect(evals.getByText(s.evalNoDiff)).toBeVisible();
+    await onlyDiff.uncheck();
+    await expect.poll(() => rows.count()).toBeGreaterThan(0);
+    expect(await rows.count()).toBeGreaterThanOrEqual(differing);
+    await expectTouchTargets(evals.locator("button.eval-question-row, .eval-results-card .eval-card-head label.inline, .eval-report-footer > button"));
+
+    // 「下載品質報告」是頁面的最後一個元素（底部面板與對話框除外）
+    expect(await evals.evaluate((el) => [...el.children].filter((c) => c.tagName !== "DIALOG").at(-1)?.classList.contains("eval-report-footer"))).toBe(true);
+    expect(await noHorizontalScroll(page)).toBe(true);
+
+    // 點一題以底部面板看兩組的回答與引用；關閉後回到列表
+    await rows.first().click();
+    const question = page.locator("dialog.eval-question-sheet");
+    await expect(question).toBeVisible();
+    await expect(question.getByRole("group", { name: setName("A") })).toBeVisible();
+    await expect(question.getByRole("group", { name: setName("B") })).toBeVisible();
+    expect(await noHorizontalScroll(page)).toBe(true);
+    await question.getByRole("button", { name: s.dialogClose }).click();
+    await expect(question).toBeHidden();
+  });
+});
+
 test.describe("更多（主管）", () => {
   test.skip(reviewer === undefined, NO_REVIEWER);
 

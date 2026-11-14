@@ -61,6 +61,18 @@ export function differs(a: QuestionResult | undefined, b: QuestionResult | undef
   return (Object.keys(x) as (keyof typeof x)[]).some((k) => x[k] !== y[k]);
 }
 
+// 每題結果要列出的題目：勾選「只顯示兩組不同的題目」且有兩組時，只留兩組結果不同的題目（differs）；手機預設勾選（#282）
+export function resultRows(questions: readonly EvalQuestion[], run: EvalRun | null, onlyDiff: boolean): EvalQuestion[] {
+  if (run === null || run.sets.length !== 2 || !onlyDiff) return [...questions];
+  const [a, b] = run.sets.map((set) => new Map(set.results.map((r) => [r.question, r])));
+  return questions.filter((q) => differs(a.get(q.id), b.get(q.id), run.mode));
+}
+
+// 手機收合的評測設定一列（#282）：要跑的每組設定的名稱與 topK，例如「A topK 5 · B topK 8」；沒勾選設定 B 時只有 A
+export function settingsBrief(forms: readonly SettingsForm[], useB: boolean, names: readonly string[]): { name: string; topK: string }[] {
+  return forms.slice(0, useB ? 2 : 1).map((f, i) => ({ name: names[i], topK: f.topK }));
+}
+
 // 下載 JSON 的內容：provider、模型、題庫版本、不適用的題目、設定、門檻（含固定的權限滲漏上限，格式與門檻可設定時相同）、每組的指標與每題結果、開始與結束時間；不含邀請碼。
 // 品質報告（evals/report.ts）以這個內容為輸入，題庫版本用來比對另一次的下載 JSON（#210）
 export function evalReport(run: EvalRun, questions: EvalQuestion[], thresholds: EvalThresholds, meta: { model: ModelCode; questionBank: QuestionBank }) {
