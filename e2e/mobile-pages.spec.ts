@@ -286,13 +286,14 @@ test.describe("評測台", () => {
 test.describe("更多（主管）", () => {
   test.skip(reviewer === undefined, NO_REVIEWER);
 
-  test("列出時間軸與待審，待審的數量標在清單上；沒有 ?tools=evals 時沒有評測台", async ({ page }) => {
+  test("列出時間軸與待審，待審的數量（不是 0 時）標在清單上；沒有 ?tools=evals 時沒有評測台", async ({ page }) => {
     await openApp(page);
     await switchIdentity(page, reviewer!.id);
     await page.locator('.mobile-tabbar [data-view="more"]').click();
     await expect(moreSheet(page)).toBeVisible();
     expect(await moreItems(page).evaluateAll((bs) => bs.map((b) => b.getAttribute("data-view")))).toEqual(["timeline", "review"]);
-    await expect(moreSheet(page).locator('[data-view="review"] .tab-count')).toHaveText(/^\d+$/);
+    // 0 時不顯示（#358，mobile-timeline-uploads.spec.ts）；顯示時是正整數
+    await expect(moreSheet(page).locator('[data-view="review"] .tab-count').filter({ hasText: /^0$/ })).toHaveCount(0);
     await expectTouchTargets(moreItems(page));
     expect(await noHorizontalScroll(page)).toBe(true);
   });
@@ -302,7 +303,8 @@ test.describe("更多（主管）", () => {
     await switchIdentity(page, reviewer!.id);
     await page.locator('.mobile-tabbar [data-view="more"]').click();
     expect(await moreItems(page).evaluateAll((bs) => bs.map((b) => b.getAttribute("data-view")))).toEqual(["timeline", "review", "evals"]);
-    await expect(moreSheet(page).locator('[data-view="review"] .tab-count')).toHaveText(/^\d+$/);
+    // 0 時不顯示（#358，mobile-timeline-uploads.spec.ts）；顯示時是正整數
+    await expect(moreSheet(page).locator('[data-view="review"] .tab-count').filter({ hasText: /^0$/ })).toHaveCount(0);
   });
 });
 

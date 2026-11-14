@@ -44,8 +44,7 @@ function TypeMark({ type }: { type: string }) {
   );
 }
 
-// 日期：平板接成「YYYY-MM-DD」；手機的日期欄（46px）年與月日分兩行，不顯示中間的「-」（#282）；
-// 桌機只放 MM-DD，年份在分組標題（#346）
+// 日期：平板與展示模式接成「YYYY-MM-DD」；桌機（#346）與手機（#358）只放 MM-DD，年份在分組標題
 function DateText({ date, monthOnly }: { date: string; monthOnly: boolean }) {
   const { year, monthDay } = dateParts(date);
   return (
@@ -79,8 +78,12 @@ export function TimelinePage({ db, identity, language, uploaded, focus, onFocuse
   // 畫面上的清單是哪個身分、語言讀的；切換身分時的上一份清單與消失播完的時間
   const shown = useRef<{ identity: string; language: string; entries: TimelineEntry[] } | null>(null);
   const [gone, setGone] = useState<{ previous: TimelineEntry[]; ms: number } | null>(null);
-  // 桌機（≥ 1025px，展示模式除外，#346 畫板 F-Timeline）：頁首與範圍、一列篩選、依年份分組、精簡卡片（展開後才列出段落）
-  const desktop = useLayout() === "desktop" && !presentationMode;
+  // 桌機（≥ 1025px，展示模式除外，#346 畫板 F-Timeline）：頁首與範圍、一列篩選、依年份分組、精簡卡片（展開後才列出段落）。
+  // 手機（≤ 600px，展示模式除外，#358 畫板 G-Mobile-Pages）：同一套精簡卡片與年份分組，頁首只有文件數，卡片不列「提到」與語言短標
+  const layout = useLayout();
+  const desktop = layout === "desktop" && !presentationMode;
+  const phone = layout === "phone" && !presentationMode;
+  const compact = desktop || phone;
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set());
   const toggle = (documentId: string) =>
     setExpanded((ids) => {
@@ -172,12 +175,12 @@ export function TimelinePage({ db, identity, language, uploaded, focus, onFocuse
         onAnimationEnd={(e) => e.animationName.startsWith("timeline-flash") && setFlash(null)}
       >
         <time className="timeline-date" dateTime={entry.date ?? undefined}>
-          {entry.date !== null && <DateText date={entry.date} monthOnly={desktop} />}
+          {entry.date !== null && <DateText date={entry.date} monthOnly={compact} />}
         </time>
         <span className="timeline-rail" aria-hidden="true">
           <span className="timeline-dot" />
         </span>
-        {desktop ? compactCard(entry, mentioned) : (
+        {compact ? compactCard(entry, mentioned) : (
           <div className="card timeline-card">
             <h3>{entry.title}</h3>
             <p className="timeline-meta">
@@ -217,7 +220,8 @@ export function TimelinePage({ db, identity, language, uploaded, focus, onFocuse
     </ul>
   );
 
-  // 桌機的精簡卡片（#346）：標題、可見範圍、語言短標、說法不同的小膠囊、「提到：…」一行；段落清單與「打開原文」在展開後顯示
+  // 桌機的精簡卡片（#346）：標題、可見範圍、語言短標、說法不同的小膠囊、「提到：…」一行；段落清單與「打開原文」在展開後顯示。
+  // 手機（#358）：標題、可見範圍、說法不同的小膠囊，不列語言短標與「提到」
   const compactCard = (entry: TimelineEntry, mentioned: string[]) => {
     const open = expanded.has(entry.documentId);
     const passagesId = `timeline-passages-${entry.documentId}`;
@@ -226,9 +230,11 @@ export function TimelinePage({ db, identity, language, uploaded, focus, onFocuse
         <div className="timeline-card__head">
           <h3>{entry.title}</h3>
           <AccessBadges visibility={entry.visibility} project={entry.project} language={language} />
-          <abbr className="timeline-lang" title={languageNames.of(entry.language) ?? entry.language}>
-            {languageTag(entry.language)}
-          </abbr>
+          {desktop && (
+            <abbr className="timeline-lang" title={languageNames.of(entry.language) ?? entry.language}>
+              {languageTag(entry.language)}
+            </abbr>
+          )}
           {uploaded.has(entry.documentId) && <span className="badge primary">{s.timelineUploaded}</span>}
         </div>
         {conflictDocuments(entry).map((d) => (
@@ -239,7 +245,7 @@ export function TimelinePage({ db, identity, language, uploaded, focus, onFocuse
             {fill(s.conflictMarks.conflict, { title: d.title })}
           </span>
         ))}
-        {mentioned.length > 0 && <p className="timeline-mentions-line">{fill(s.timelineMentionsLine, { names: mentioned.map(label).join(s.listSeparator) })}</p>}
+        {desktop && mentioned.length > 0 && <p className="timeline-mentions-line">{fill(s.timelineMentionsLine, { names: mentioned.map(label).join(s.listSeparator) })}</p>}
         <button type="button" className="timeline-toggle" aria-expanded={open} aria-controls={open ? passagesId : undefined} onClick={() => toggle(entry.documentId)}>
           {open ? s.timelineHidePassages : fill(s.timelineShowPassages, { count: entry.passages.length }, language)}
         </button>
@@ -259,7 +265,7 @@ export function TimelinePage({ db, identity, language, uploaded, focus, onFocuse
   const filterColor = entityId === null ? undefined : (entityTypes.find((t) => t.id === byId.get(entityId)?.type)?.color ?? "var(--color-primary)");
 
   const datedList = (dated: TimelineRow[]) =>
-    desktop ? (
+    compact ? (
       yearGroups(dated).map((g) => (
         <section key={g.year ?? ""} className="timeline-year">
           {g.year !== null && <h2>{g.year}</h2>}
@@ -272,13 +278,16 @@ export function TimelinePage({ db, identity, language, uploaded, focus, onFocuse
 
   return (
     <div
-      className={desktop ? `timeline-page timeline-page--desktop${entityId === null ? "" : " is-filtered"}` : "timeline-page"}
+      className={
+        desktop ? `timeline-page timeline-page--desktop${entityId === null ? "" : " is-filtered"}` : phone ? "timeline-page timeline-page--phone" : "timeline-page"
+      }
       style={desktop && filterColor !== undefined ? ({ "--filter-color": filterColor } as CSSProperties) : undefined}
     >
-      {desktop && (
+      {compact && (
         <header className="timeline-head">
           <h1>{s.tabTimeline}</h1>
-          {summary !== null && <p className="muted">{summary}</p>}
+          {/* 手機的頁首只有文件數（畫板 G-Mobile-Pages） */}
+          {(desktop ? summary : documents) !== null && <p className="muted">{desktop ? summary : documents}</p>}
         </header>
       )}
       <div className="timeline-filter" role="group" aria-label={s.timelineFilter}>

@@ -138,8 +138,8 @@
 - `SourceSheet.tsx`：手機的原文面板（底部面板，標題「原文 · 出處 N／M」，#354）與平板的滑出面板
 - `SourceText.tsx`：原文紙面，桌機與手機共用
 - `theme.ts`：由 `client/theme.json` 設定 CSS 變數（深色模式用 `darkColors`）
-- `timeline-view.ts`：時間軸的區段與篩選、桌機的年份分組、範圍與說法不同的純函式
-- `TimelinePage.tsx`：時間軸（見 `docs/graph.md`）
+- `timeline-view.ts`：時間軸的區段與篩選、桌機與手機的年份分組、範圍與說法不同的純函式
+- `TimelinePage.tsx`：時間軸（見 `docs/graph.md`；桌機與手機是精簡卡片，#346、#358）
 
 ### `app/src/graph/`
 
@@ -155,7 +155,7 @@
 
 ### `app/src/upload/`
 
-上傳；說明見 `docs/upload.md`。畫面是 `app/src/ui/UploadPage.tsx`（桌機的頁首、分段切換與右側的上傳詳情欄，#344），其中「我的上傳」的清單、上傳詳情與「看原文」是 `app/src/ui/MyUploads.tsx`，狀態、四步進度、處理中的數量、上傳詳情的萃取階段、原文中標出的實體與手機「上傳」分頁小點的純函式在 `app/src/ui/my-uploads.ts`。
+上傳；說明見 `docs/upload.md`。畫面是 `app/src/ui/UploadPage.tsx`（桌機的頁首、分段切換與右側的上傳詳情欄，#344；手機的頁首、分段切換與底部面板的上傳詳情，#358），其中「我的上傳」的清單、上傳詳情與「看原文」是 `app/src/ui/MyUploads.tsx`，狀態、四步進度、處理中的數量、上傳詳情的萃取階段、原文中標出的實體與手機「上傳」分頁小點的純函式在 `app/src/ui/my-uploads.ts`。
 
 - `chunk.ts`：切段
 - `docx.ts`：以動態 import 載入 `mammoth`（見 ADR 0002）
@@ -270,6 +270,7 @@ Playwright 的端對端測試（`*.spec.ts`）；設定在根目錄的 `playwrig
 - `mentions.spec.ts`：回答提到
 - `mobile-pages.spec.ts`：手機的時間軸、上傳、待審、評測台與更多（375×812）
 - `mobile-qa.spec.ts`：手機的問答與原文面板（390×844）
+- `mobile-timeline-uploads.spec.ts`：手機的時間軸、上傳頁首與我的上傳（390×844，#358）
 - `mobile.spec.ts`：手機的共同結構（390×844）
 - `presentation.spec.ts`：展示模式
 - `qa-desktop.spec.ts`：桌機的問答頁與原文欄（1440×900，#335）

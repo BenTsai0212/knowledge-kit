@@ -134,7 +134,7 @@ export async function openTab(page: Page, label: string): Promise<void> {
 
 export const sourcePanel = (page: Page) => page.getByRole("complementary", { name: s.sourceTitle });
 
-// 桌機的時間軸卡片預設精簡（#346）：段落與「打開原文」在展開後才顯示。手機與平板沒有展開按鈕，不做任何事
+// 桌機與手機的時間軸卡片預設精簡（#346、#358）：段落與「打開原文」在展開後才顯示。平板沒有展開按鈕，不做任何事
 export async function expandTimelineEntry(entry: Locator): Promise<void> {
   await expect(entry).toBeVisible();
   const toggle = entry.locator('button.timeline-toggle[aria-expanded="false"]');
