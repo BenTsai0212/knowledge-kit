@@ -67,6 +67,13 @@ describe("圖譜節點的名稱（最寬 112px、最多兩行）", () => {
 });
 
 describe("手機待審頁的分段", () => {
+  it("每個頁籤至少 44×44px（文字短的頁籤也一樣），分段切換仍是一行、橫向捲動", () => {
+    const tab = rules().find((r) => r.media === null && r.selector === '.review-page--phone .review-tabs [role="tab"]');
+    expect(tab?.decls).toMatchObject({ "min-height": "44px", "min-width": "44px" });
+    const tabs = rules().find((r) => r.media === null && r.selector === ".review-tabs");
+    expect(tabs?.decls).toMatchObject({ "flex-wrap": "nowrap", "overflow-x": "auto" });
+  });
+
   it("英文 “Resolved differences” 改為 “Resolved”", () => {
     expect(en.reviewDecidedTab).toBe("Resolved");
   });
@@ -136,6 +143,8 @@ describe("頁面外層與清單的欄寬", () => {
     // 首頁的列與「最近看過」（#331）：桌機的卡片是 auto-fit（minmax(min(100%, 340px), 1fr)）
     ".home__name, .home__question, .home__sub, .home__entity-name": [".home__list", ".home__cards", ".home--wide .home__cards", ".home", ...page],
     ".my-upload__title": [".my-uploads__list", ".my-uploads", ".upload", ...page],
+    // 手機待審頁需要決定的一行摘要（#282）：名稱或差異說明以省略號截斷；.review-item 的內容是 min-width: 0
+    ".review-sheet-row__text": [".review-list", ".review-page", ...page],
     // 手機的時間軸（#282）：篩選晶片一行、橫向滑動；.timeline-page 不是 grid
     ".app--phone .timeline-filter": [...page],
     ".app--phone .timeline-filter button.chip": [...page],
@@ -205,8 +214,12 @@ describe("排版規則", () => {
           .filter(([p, v]) => /^(?:width|max-width|inline-size|max-inline-size)$/.test(p) && /\d(?:px|rem|em|ch)\b/.test(v))
           .map(([p, v]) => `${r.selector} { ${p}: ${v} }`),
       );
-    // 桌機圖譜的放大／縮小（#336）也是沒有文字的圖示按鈕
-    expect(fixed).toEqual([".icon-button { width: 2rem }", ".graph-zoom-buttons button { width: 44px }"]);
+    // 桌機圖譜的放大／縮小（#336）、手機待審頁的重新整理（#282，觸控目標 44px）也是沒有文字的圖示按鈕
+    expect(fixed).toEqual([
+      ".icon-button { width: 2rem }",
+      ".graph-zoom-buttons button { width: 44px }",
+      ".review-page--phone .review-toolbar .icon-button { width: 44px }",
+    ]);
   });
 
   it("只有名稱類可以截斷：按鈕、分段、晶片沒有 text-overflow", () => {

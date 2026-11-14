@@ -257,6 +257,8 @@
   "reviewReject": "退回",
   "reviewWorking": "處理中…",
   "reviewNeedsChoice": "需逐筆決定：請選擇合併對象或建立新實體",
+  "reviewSheetChoose": "選擇合併對象",
+  "reviewSheetNames": "補上名稱",
   "reviewChangeChoice": "變更合併對象",
   "reviewCreateNew": "建立新實體",
   "reviewMergeInto": "合併到既有實體",

@@ -2,8 +2,20 @@
 // 每一頁都檢查 375px 沒有橫向捲動、該頁新增的可點元件至少 44px（觸控目標）。橫向滑動的手感與 iOS 安全區由人在實機確認。
 // /api/ask 一律是假的回應（openApp）。
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { EVALS_PATH, gotoView, openApp, s, switchIdentity } from "./support/app";
-import { NO_NON_REVIEWER, NO_REVIEWER, NO_UPLOADER, nonReviewer, reviewer, uploader } from "./support/client";
+import { EVALS_PATH, field, gotoView, language, openApp, s, switchIdentity } from "./support/app";
+import {
+  client,
+  NO_NON_REVIEWER,
+  NO_REVIEWER,
+  NO_REVIEWING_UPLOADER,
+  NO_UPLOADER,
+  nonReviewer,
+  reviewer,
+  reviewingUploader,
+  uploader,
+} from "./support/client";
+import { twoCandidateNames } from "./support/dataset";
+import { sseBody } from "./support/fake-ask";
 
 test.use({ viewport: { width: 375, height: 812 } });
 
@@ -102,6 +114,87 @@ test.describe("上傳", () => {
     await expect(dot).toBeVisible();
     expect(await gotoView(page, "upload")).toBe(true);
     await expect(dot).toHaveCount(0);
+  });
+});
+
+test.describe("待審", () => {
+  test.skip(reviewingUploader === undefined, NO_REVIEWING_UPLOADER);
+  // 需要逐筆決定的實體：名稱的文件語言取自一個既有實體、其他語言取自同類型的另一個，合併時有兩個候選。
+  // 萃取的寫入會捨棄缺少任一語言名稱的實體（extraction/output.ts 的 bad_names），所以「補上名稱」的摘要列無法經萃取產生，
+  // 這裡用「選擇合併對象」走同一條摘要列與底部面板的路徑（sheetReason() 兩種原因的判斷在 review-helpers.test.ts）
+  const candidate = reviewingUploader === undefined ? undefined : twoCandidateNames(reviewingUploader.id, client.languages, language);
+  test.skip(candidate === undefined, "需要兩個看得到、類型相同的實體");
+
+  test("分段切換一行、橫向捲動；需要選擇合併對象的實體只顯示摘要與「›」，點了以底部面板處理；「核准這份文件的全部」固定在下方", async ({ page }) => {
+    const { type, names } = candidate!;
+    const name = names[language];
+    await openApp(page);
+    await switchIdentity(page, reviewingUploader!.id);
+    // 萃取結果是上面的實體（其他請求交給 openApp 的假回應）
+    await page.route("**/api/ask", async (route) => {
+      const body = route.request().postDataJSON() as { system?: string };
+      if (!(body.system ?? "").startsWith("You extract entities")) return route.fallback();
+      const entity = { key: "e1", type, names, sources: [1] };
+      await route.fulfill({ status: 200, headers: { "Content-Type": "text/event-stream" }, body: sseBody(JSON.stringify({ entities: [entity], relations: [] })) });
+    });
+    expect(await gotoView(page, "upload")).toBe(true);
+    // 貼上內文含有實體名稱的文字
+    await page.getByPlaceholder(s.uploadPastePlaceholder).fill(`${name} 負責檢查手機的待審頁。`);
+    await field(page, s.uploadDocTitle, "input").fill("E2E mobile review note");
+    await page.getByRole("button", { name: s.uploadPreview }).click();
+    const upload = page.getByRole("dialog", { name: s.uploadConfirmTitle });
+    await upload.getByRole("button", { name: s.uploadSubmit, exact: true }).click();
+    await expect(upload.getByText(s.uploadDone)).toBeVisible();
+    await upload.getByRole("button", { name: s.uploadAnother }).click();
+    await expect(upload).toBeHidden();
+
+    // 萃取在背景執行：到待審頁按重新整理，直到摘要列出現
+    expect(await gotoView(page, "review")).toBe(true);
+    const row = page.locator(".review-page--phone button.review-sheet-row").filter({ hasText: name });
+    await expect(async () => {
+      await page.getByRole("button", { name: s.reviewRefresh }).first().click();
+      await expect(row).toBeVisible({ timeout: 2_000 });
+    }).toPass();
+    // has 在 section 之內找：不能用含外層 .review-page--phone 的 row
+    const card = page.locator("section.review-doc").filter({ has: page.locator("button.review-sheet-row", { hasText: name }) });
+    await expect(card).toHaveCount(1);
+    await expect(row).toContainText(s.reviewSheetChoose);
+    await expect(row).toContainText("›");
+    // 名稱完整顯示，不以省略號截斷（空間不夠時是要做的決定換到下一行）
+    const rowName = row.locator(".review-sheet-row__name");
+    await expect(rowName).toHaveText(name);
+    expect(await rowName.evaluate((el) => el.scrollWidth <= el.clientWidth && getComputedStyle(el).textOverflow !== "ellipsis")).toBe(true);
+    // 列表上沒有合併選擇與核准按鈕：在底部面板中處理
+    await expect(card.locator(".review-entity")).toHaveCount(0);
+
+    // 分段切換：一行、在列內橫向捲動
+    const tabs = page.locator(".review-tabs [role=tab]");
+    const tops = await tabs.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
+    expect(new Set(tops).size).toBe(1);
+    expect(await page.locator(".review-tabs").evaluate((el) => getComputedStyle(el).overflowX)).toBe("auto");
+
+    // 「核准這份文件的全部」固定在分頁列之上，在可見範圍內；卡片頁首沒有這個按鈕
+    const approveAll = card.locator(".review-doc__approve-all");
+    expect(await approveAll.evaluate((el) => getComputedStyle(el).position)).toBe("sticky");
+    await expect(approveAll.getByRole("button", { name: s.reviewApproveDocument })).toBeInViewport();
+    await expect(card.locator(".review-doc__side").getByRole("button", { name: s.reviewApproveDocument })).toHaveCount(0);
+    await expectTouchTargets(page.locator(".review-tabs [role=tab], .review-toolbar .icon-button, button.review-sheet-row, .review-doc__approve-all > button"));
+    expect(await noHorizontalScroll(page)).toBe(true);
+
+    // 點摘要列打開底部面板：兩個候選與「建立新實體」，還沒選擇時不能確認；選「建立新實體」後確認，面板關閉、這份文件沒有遺留
+    await row.click();
+    const sheet = page.locator("dialog.review-sheet");
+    await expect(sheet).toBeVisible();
+    await expect(sheet.getByRole("heading", { name })).toBeVisible();
+    expect(await sheet.getByRole("radio").count()).toBeGreaterThanOrEqual(3);
+    const confirm = sheet.getByRole("button", { name: new RegExp(`^${s.reviewConfirm}`) });
+    await expect(confirm).toBeDisabled();
+    await sheet.getByRole("radio", { name: s.reviewCreateNew, exact: true }).check();
+    expect(await noHorizontalScroll(page)).toBe(true);
+    await confirm.click();
+    await expect(sheet).toBeHidden();
+    await expect(page.locator(".toast-region")).toContainText(name);
+    await expect(card).toHaveCount(0);
   });
 });
 

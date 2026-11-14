@@ -3056,6 +3056,99 @@ button.chip.graph-chip[aria-pressed="true"] {
   min-height: 44px;
 }
 
+/* 手機的待審頁（#282，docs/design.md「時間軸、上傳、待審、評測台與更多（手機）」；ReviewPage 的 review-page--phone）：
+   分段切換單行、橫向捲動（.review-tabs），分頁與重新整理至少 44px；需要決定的項目是一行摘要與「›」，點了以底部面板處理；
+   「核准這份文件的全部」以 sticky 固定在分頁列之上。main 不當捲動容器，sticky 以整頁捲動為準 */
+.app.app--phone > main:has(> .review-page--phone) {
+  overflow: visible;
+}
+
+/* 文字短的頁籤（例如「回報」只有 32px）也至少 44px 寬（#282 PR 3 修正要求）；文字置中，仍在列內橫向捲動 */
+.review-page--phone .review-tabs [role="tab"] {
+  min-height: 44px;
+  min-width: 44px;
+  text-align: center;
+}
+
+.review-page--phone .review-toolbar {
+  align-items: center;
+}
+
+.review-page--phone .review-toolbar .icon-button {
+  flex: none;
+  width: 44px;
+  height: 44px;
+}
+
+/* 實體名稱優先完整顯示（畫板 G-Mobile-Pages 第 3 張）：空間不夠時，要做的決定與「›」換到下一行，名稱本身不截斷 */
+.review-sheet-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem;
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: start;
+}
+
+.review-sheet-row__label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.review-sheet-row__text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 名稱比整列還長時才在字間換行，不以省略號截斷 */
+.review-sheet-row__name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.review-sheet-row > .badge {
+  flex: none;
+  margin-inline-start: auto;
+}
+
+
+.review-sheet-row__label > .entity-badge {
+  flex: none;
+}
+
+.review-sheet-row__more {
+  flex: none;
+  color: var(--color-textMuted);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.review-doc__approve-all {
+  position: sticky;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  z-index: 5;
+  margin: 0.75rem -1rem -1rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--color-border);
+  border-radius: 0 0 var(--radius-large) var(--radius-large);
+  background: var(--color-surface);
+}
+
+.review-doc__approve-all > button {
+  width: 100%;
+  min-height: 44px;
+}
+
 /* 桌機的時間軸（#346，畫板 F-Timeline；TimelinePage 的 timeline-page--desktop，展示模式不套用）：填滿內容區（不受 960px 限制），
    頁首（h1＋範圍）、「依實體篩選」＋一列膠囊、依年份分組的三欄格線（72px 日期、24px 時間軸線、卡片），精簡卡片展開後才列出段落，
    未註明日期在底部，以上方分隔線隔開、不畫時間軸線。手機與平板沒有這個 class，不受影響 */

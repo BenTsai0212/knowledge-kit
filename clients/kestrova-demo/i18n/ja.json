@@ -257,6 +257,8 @@
   "reviewReject": "却下",
   "reviewWorking": "処理しています…",
   "reviewNeedsChoice": "個別に判断してください：統合先のエンティティを選ぶか、新しく作成します",
+  "reviewSheetChoose": "統合先を選ぶ",
+  "reviewSheetNames": "名前を補う",
   "reviewChangeChoice": "統合先を変更",
   "reviewCreateNew": "新しいエンティティを作成",
   "reviewMergeInto": "既存のエンティティに統合",

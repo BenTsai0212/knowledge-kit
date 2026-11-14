@@ -28,6 +28,7 @@ import {
   reviewDocuments,
   reviewGroups,
   reviewTabCounts,
+  sheetReason,
   toastText,
   waitingRelations,
   type EntityChoice,
@@ -475,5 +476,13 @@ describe("missingNameLanguages（#243）", () => {
     expect(missingNameLanguages({ "zh-TW": "王小明", en: "" }, ["zh-TW", "en"])).toEqual(["en"]);
     expect(missingNameLanguages({ en: " " }, ["zh-TW", "en"])).toEqual(["zh-TW", "en"]);
     expect(missingNameLanguages({ "zh-TW": "王小明", en: "Wang" }, ["zh-TW", "en"])).toEqual([]);
+  });
+});
+
+describe("sheetReason（#282 手機的底部面板）", () => {
+  it("要選擇合併對象、模型的名稱缺少語言時以底部面板處理；名稱完整的新增實體直接核准", () => {
+    expect(sheetReason({ kind: "decide", entity: entity("a") }, LANGS)).toBe("choose");
+    expect(sheetReason({ kind: "new", entity: { ...entity("b"), names: { "zh-TW": "乙", en: " " } } }, LANGS)).toBe("names");
+    expect(sheetReason({ kind: "new", entity: entity("c") }, LANGS)).toBeNull();
   });
 });
