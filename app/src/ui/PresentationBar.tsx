@@ -1,7 +1,7 @@
 // 展示模式的頂端列（#260 PR 2，docs/design.md「展示模式」的「版面」）：取代左側導覽。
-// 產品 icon、客戶名稱，下方一行「虛構資料 · 展示用權限」；「問答｜圖譜」分段切換（只有兩個頁籤時改用頂端的分段切換）；
-// 右側是身分分段切換（每個身分前標快捷鍵數字；按鍵本身屬於主持人快捷鍵的 Issue）與語言。
-// 「身分對照」按鈕在身分分段切換的右側（#261）：只有開關 VITE_DEMO_COMPARE 開啟時傳入 compare；按下切換開關（aria-pressed），快捷鍵是 C。
+// 產品 icon、客戶名稱，下方一行 textMuted 的「虛構資料 · 展示用權限」；「問答｜圖譜」是 surfaceRaised 底的分段切換（選中 surface 底，#349 畫板 H-QA）；
+// 右側是「身分」標籤＋身分分段切換（每個身分前標快捷鍵數字，選中 text 底；按鍵本身屬於主持人快捷鍵的 #262）與語言。
+// 「身分對照 C」外框按鈕在身分分段切換的右側（#261）：只有開關 VITE_DEMO_COMPARE 開啟時傳入 compare；按下切換開關（aria-pressed），快捷鍵是 C。
 import { clientConfig } from "../client/load";
 import { strings } from "../client/i18n";
 import { IDENTITY_SELECT_ID } from "./empty-state";
@@ -42,11 +42,11 @@ export function PresentationBar({ language, identity, onIdentity, onLanguage, vi
             <span className="brand__client">{clientConfig.client.displayName[language]}</span>
           </span>
         </h1>
-        {/* 標示不縮小（RFC 0001）：兩個標示各自是 badge，以「·」連成一行 */}
+        {/* 標示不縮小（RFC 0001）：客戶名稱下方一行 16px 的小字，以「·」連成一行 */}
         <p className="presentation-bar__labels">
-          <span className="badge">{s.fictionalData}</span>
+          <span>{s.fictionalData}</span>
           <span aria-hidden="true">·</span>
-          <span className="badge">{s.demoPermissions}</span>
+          <span>{s.demoPermissions}</span>
         </p>
       </div>
       <nav className="primary-tabs segmented" aria-label={s.views}>
@@ -57,6 +57,10 @@ export function PresentationBar({ language, identity, onIdentity, onLanguage, vi
         ))}
       </nav>
       <div className="segmented identity-segments" role="radiogroup" aria-label={s.identity}>
+        {/* 「身分」標籤：radiogroup 的名稱已是身分，報讀器不重複 */}
+        <span className="identity-segments__label" aria-hidden="true">
+          {s.identity}
+        </span>
         {clientConfig.access.roles.map((role, index) => {
           const checked = role.id === identity;
           const bumping = bump !== null && bump.role === role.id;
@@ -81,8 +85,8 @@ export function PresentationBar({ language, identity, onIdentity, onLanguage, vi
       </div>
       {compare !== undefined && (
         <button type="button" className="secondary presentation-bar__compare" aria-pressed={compare.open} disabled={compare.disabled} onClick={compare.onToggle}>
-          <kbd aria-hidden="true">C</kbd>
           {s.presentation.compare}
+          <kbd aria-hidden="true">C</kbd>
         </button>
       )}
       <label className="presentation-bar__language">

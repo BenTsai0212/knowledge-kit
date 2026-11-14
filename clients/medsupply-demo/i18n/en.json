@@ -666,9 +666,10 @@
     "scriptTotal": "{total, plural, one {# question} other {# questions}}",
     "scriptAsked": "Already asked",
     "compare": "Compare identities",
-    "compareEmpty": "Pick a question from the script or type one below: each identity answers it once.",
+    "compareEmpty": "Pick a question from the script: each identity answers it once.",
     "compareLimited": "Today's questions have been used up, so the comparison will not be sent.",
     "compareWaiting": "Sent after the previous column finishes",
-    "compareCurrent": "Current identity"
+    "compareCurrent": "Current identity",
+    "entityDocuments": "Appears in {count, plural, one {# document} other {# documents}}"
   }
 }

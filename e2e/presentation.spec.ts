@@ -1,7 +1,7 @@
 // 客戶展示模式（#129，docs/qa.md「展示模式」）：?mode=presentation 只顯示問答與圖譜兩個頁籤，能審查的身分也一樣。/api/ask 一律是假的回應。
 import { expect, test, type Page } from "@playwright/test";
 import { identityBadge, identitySegments, identitySheet, language, openApp, openTab, presetQuestions, s, sourcePanel, switchIdentity } from "./support/app";
-import { access, client, scenarios } from "./support/client";
+import { access, client, scenarios, theme } from "./support/client";
 import { FAKE_ANSWER_LEAD } from "./support/fake-ask";
 import { waitForGraphIdle } from "./support/graph";
 
@@ -52,7 +52,7 @@ async function askFirst(page: Page) {
 }
 
 // 字級與主題、隱藏與保留（#260，docs/design.md「展示模式」）
-test("字級放大（--present-*），原文從右側覆蓋、寬 620px", async ({ page }) => {
+test("字級放大（--present-*），原文是浮在右側的卡片、寬 620px", async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("data-mode", "presentation");
   await expect(page.locator("body")).toHaveCSS("font-size", "20px");
   const answer = await askFirst(page);
@@ -66,7 +66,7 @@ test("字級放大（--present-*），原文從右側覆蓋、寬 620px", async 
   await citation.click();
   const panel = sourcePanel(page);
   await expect(panel).toBeVisible();
-  await expect(panel).toHaveCSS("position", "fixed");
+  await expect(panel).toHaveCSS("position", "absolute");
   await expect(panel).toHaveCSS("width", "620px");
   await expect(panel.locator(".source-text")).toHaveCSS("font-size", "22px");
 });
@@ -129,9 +129,11 @@ test("頂端列：客戶名稱、標示、「問答｜圖譜」、身分分段�
 
 test("劇本：依情境分組；點另一個身分情境的題目時先切到該身分再送出，標 ✓ 與「第 N／M 題」", async ({ page }) => {
   const script = page.getByRole("navigation", { name: s.presentation.script });
-  await expect(script.getByRole("heading", { level: 2 })).toHaveCount(scenarios.scenarios.length);
+  // 「劇本」標題（h2）下，每個情境一組（h3，#349）
+  await expect(script.getByRole("heading", { level: 2 })).toHaveText(s.presentation.script);
+  await expect(script.getByRole("heading", { level: 3 })).toHaveCount(scenarios.scenarios.length);
   for (const scenario of scenarios.scenarios) {
-    await expect(script.getByRole("heading", { level: 2, name: scenario.title[language] })).toBeVisible();
+    await expect(script.getByRole("heading", { level: 3, name: scenario.title[language] })).toBeVisible();
   }
   const current = access.roles[0].id;
   const index = presetQuestions.findIndex((q) => q.role !== current);
@@ -225,7 +227,8 @@ test("圖譜：標籤放大、選取實體以外的節點 28%、實體卡片放�
   expect(layout!.selectedFont).toBeGreaterThanOrEqual(24);
   expect(layout!.selectedFont).toBeLessThanOrEqual(32);
 
-  const panel = page.locator(".graph-side section.entity");
+  // 右側的浮動卡片（#349，畫板 H-Graph）
+  const panel = page.locator(".graph-stage-card section.entity");
   await expect(panel.getByRole("heading", { level: 2 })).toHaveCSS("font-size", "44px");
   const ask = panel.getByRole("button", { name: s.graphAskAbout });
   await expect(ask).toHaveCSS("min-height", "64px");
@@ -233,6 +236,103 @@ test("圖譜：標籤放大、選取實體以外的節點 28%、實體卡片放�
   // 按鈕與「相關實體」標題之間留間距（#260 PR 3 審查）
   const related = panel.getByRole("heading", { level: 3, name: s.relatedEntities });
   expect((await related.boundingBox())!.y - ((await ask.boundingBox())!.y + (await ask.boundingBox())!.height)).toBeGreaterThanOrEqual(12);
+});
+
+// 1920×1080（#349，畫板 docs/design/v1/boards/H-QA.dc.html、H-Graph.dc.html）：問題泡泡是 text 底、劇本有編號、原文是浮動卡片
+// （Esc 關閉、焦點回到引用標號）、圖譜沒有搜尋框與找路徑、右側卡片的關聯是列、沒有橫向捲動。截圖附在報告（presentation-*-1920.png）
+test.describe("1920×1080", () => {
+  test.use({ viewport: { width: 1920, height: 1080 } });
+
+  const rgb = (hex: string) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(", ")})`;
+  const noHorizontalScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+  // 離右緣的距離（不含捲軸）
+  const rightGap = async (page: Page, box: { x: number; width: number }) =>
+    Math.round((await page.evaluate(() => document.documentElement.clientWidth)) - (box.x + box.width));
+
+  test("問答：頂端列、劇本的編號、問題泡泡、回答卡片、浮動的原文卡片", async ({ page }, testInfo) => {
+    // 頂端列：標示是一行小字（不是膠囊）、選中的身分是 text 底
+    const labels = page.locator(".presentation-bar__labels");
+    await expect(labels).toHaveText(new RegExp(`${s.fictionalData}\\s*·\\s*${s.demoPermissions}`));
+    await expect(labels.locator(".badge")).toHaveCount(0);
+    await expect(identitySegments(page).locator("label.is-checked")).toHaveCSS("background-color", rgb(theme.colors.text));
+
+    // 劇本：題目列前面是編號（01、02…）
+    const script = page.getByRole("navigation", { name: s.presentation.script });
+    await expect(script.locator(".script__mark").first()).toHaveText("01");
+
+    const answer = await askFirst(page);
+    const question = answer.locator("h2");
+    await expect(question).toHaveCSS("background-color", rgb(theme.colors.text));
+    await expect(question).toHaveCSS("color", rgb(theme.colors.surface));
+    // 回答是問題下方獨立的卡片
+    const body = answer.locator(".answer__body");
+    await expect(body).toHaveCSS("border-top-style", "solid");
+    expect((await body.boundingBox())!.y).toBeGreaterThan((await question.boundingBox())!.y + (await question.boundingBox())!.height);
+    // 自由提問是回答下方的單行輸入列
+    await expect(page.locator(".composer--line input")).toBeVisible();
+    await expect(page.locator(".composer textarea")).toHaveCount(0);
+    expect(await noHorizontalScroll(page)).toBe(true);
+
+    // 原文：浮在右側的圓角卡片（離右緣 40px、有陰影），回答卡片讓到它的左邊
+    const citation = answer.getByRole("button", { name: "1", exact: true });
+    await citation.click();
+    const panel = sourcePanel(page);
+    await expect(panel).toBeVisible();
+    await expect(panel).toHaveCSS("border-top-left-radius", "24px");
+    await expect(panel).not.toHaveCSS("box-shadow", "none");
+    const box = (await panel.boundingBox())!;
+    expect(await rightGap(page, box)).toBe(40);
+    await expect.poll(async () => { const b = (await body.boundingBox())!; return b.x + b.width <= box.x; }).toBe(true);
+    await expect(panel.getByRole("button", { name: s.closeSource })).toContainText("Esc");
+    expect(await noHorizontalScroll(page)).toBe(true);
+    await testInfo.attach("presentation-qa-1920.png", { body: await page.screenshot(), contentType: "image/png" });
+
+    // Esc 關閉原文，焦點回到引用標號
+    await page.keyboard.press("Escape");
+    await expect(panel).toHaveCount(0);
+    await expect(citation).toBeFocused();
+  });
+
+  test("圖譜：畫布不套卡片、左上麵包屑、右側卡片；沒有搜尋、篩選與找路徑，/ 不作用", async ({ page }, testInfo) => {
+    const errors: string[] = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    await openTab(page, s.tabGraph);
+    const canvas = ".graph-page .graph-canvas";
+    await waitForGraphIdle(page, canvas);
+    await expect(page.getByRole("combobox", { name: s.graphSearch })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: s.graphFindPath })).toHaveCount(0);
+    await expect(page.getByRole("list", { name: s.legend })).toHaveCount(0);
+    await expect(page.locator(".graph-stage")).toHaveCSS("border-top-style", "none");
+    const crumbs = page.getByRole("navigation", { name: s.graphZoom.breadcrumb });
+    await expect(crumbs.getByRole("button", { name: s.graphZoom.all })).toHaveAttribute("aria-current", "step");
+
+    // 從右側卡片的「關聯最多」選一個實體：麵包屑「全部 › 名稱」、關聯是 surfaceRaised 的列
+    await page.getByRole("region", { name: s.graphTopConnected }).getByRole("listitem").first().getByRole("button").click();
+    const card = page.locator(".graph-stage-card section.entity");
+    await expect(card).toBeVisible();
+    const name = (await card.getByRole("heading", { level: 2 }).innerText()).trim();
+    await expect(crumbs.getByRole("button", { name, exact: true })).toHaveAttribute("aria-current", "step");
+    const rows = card.locator(".entity-row");
+    await expect(rows.first()).toBeVisible();
+    await expect(rows.first()).toHaveCSS("background-color", rgb(theme.colors.surfaceRaised));
+    const cardBox = (await page.locator(".graph-stage-card").boundingBox())!;
+    expect(await rightGap(page, cardBox)).toBe(40);
+    expect((await page.locator(canvas).boundingBox())!.x + (await page.locator(canvas).boundingBox())!.width).toBeLessThanOrEqual(cardBox.x);
+    expect(await noHorizontalScroll(page)).toBe(true);
+    await testInfo.attach("presentation-graph-1920.png", { body: await page.screenshot(), contentType: "image/png" });
+
+    // 鍵盤操作（#289）照常：Tab 從「全部」進入外框；沒有搜尋框時 / 不作用、不報錯，焦點留在外框
+    const frame = page.getByRole("application", { name: s.graphKeyboard.label });
+    await crumbs.getByRole("button").last().focus();
+    await page.keyboard.press("Tab");
+    await expect(frame).toBeFocused();
+    await page.keyboard.type("/");
+    await expect(frame).toBeFocused();
+    // Esc 回到全部：右側卡片換回「關聯最多」
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("region", { name: s.graphTopConnected })).toBeVisible();
+    expect(errors).toEqual([]);
+  });
 });
 
 // 手機寬度（#255）：展示模式登入後仍是頂端列，不會同時出現手機的頂端列、分段切換或分頁列（App 只渲染一種導覽）

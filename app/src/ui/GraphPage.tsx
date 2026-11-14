@@ -107,8 +107,11 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
   // 平板（#255）：實體面板是右側的滑出面板（寬 400px），開始的說明與多跳路徑在圖的下方（單欄）
   const tablet = layout === "tablet";
   // 桌機（#336，畫板 Graph、G-Scale）：頁首一列（標題、搜尋、找路徑），畫布上方的工具列，畫布填滿剩下的高度，
-  // 實體面板是貼齊右緣的整高欄（沒有選取時畫布佔滿寬度）。展示模式維持原本的版面
+  // 實體面板是貼齊右緣的整高欄（沒有選取時畫布佔滿寬度）。展示模式的桌機是下面的 stage
   const desktop = layout === "desktop" && !presentationMode;
+  // 展示模式的桌機（#349，畫板 H-Graph）：畫布不套卡片、填滿左側，左上是麵包屑「全部 › 名稱」，右側浮動卡片是實體（沒有選取時是關聯最多的實體）。
+  // 不顯示搜尋、篩選、「圖譜｜清單」與找路徑；鍵盤操作（#289）照常，沒有搜尋框所以 / 不作用
+  const stage = layout === "desktop" && presentationMode;
   const [pathOpen, setPathOpen] = useState(false);
   const pathId = useId();
   const pathButton = useRef<HTMLButtonElement>(null);
@@ -295,8 +298,10 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
       return help.current?.showModal();
     }
     if (action === "search") {
+      const input = search.current?.querySelector("input");
+      if (input == null) return;
       searchFromFrame.current = true;
-      return search.current?.querySelector("input")?.focus();
+      return input.focus();
     }
     const at = focused && current !== null ? current : enter();
     if (at === null) return;
@@ -426,7 +431,7 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
       onAskAbout={(id) => onAskAbout(fill(s.askAboutEntity, { name: nameOf(id) }))}
       onOpenSource={onOpenSource}
       retractions={canReview && retractions?.entityId === selected ? retractions.list : []}
-      wide={desktop}
+      wide={desktop || stage}
       onRetract={async (r) => {
         try {
           await retract(db, identity, r.decisionIds);
@@ -630,6 +635,44 @@ export function GraphPage({ db, identity, language, onOpenSource, onAskAbout, ca
       {announcement}
     </p>
   );
+
+  if (stage) {
+    // 麵包屑：大量節點時沿用分群的層級，否則是「全部」＋已展開的路徑（點其中一段回到該層）
+    const crumbs =
+      zoom !== null ? (
+        trail
+      ) : (
+        <nav aria-label={z.breadcrumb} className="graph-crumbs">
+          <ol>
+            {[null, ...expansion].map((id, i) => (
+              <li key={id ?? ""}>
+                <button
+                  type="button"
+                  className="link"
+                  aria-current={i === expansion.length ? "step" : undefined}
+                  onClick={() => setExpansion(id === null ? ALL : expansion.slice(0, i))}
+                >
+                  {id === null ? z.all : nameOf(id)}
+                </button>
+              </li>
+            ))}
+          </ol>
+        </nav>
+      );
+    return (
+      <div className="graph-page graph-page--desktop graph-page--stage">
+        <section className="graph-main" aria-label={s.tabGraph}>
+          <div className="graph-stage">
+            <div className="graph-stage__crumbs">{crumbs}</div>
+            {frameElement}
+          </div>
+          {keysAndHelp}
+          {announcerElement}
+        </section>
+        <div className="graph-stage-card">{selected === null ? start : entityPanel}</div>
+      </div>
+    );
+  }
 
   if (desktop) {
     const closePath = () => (setPathOpen(false), pathButton.current?.focus());

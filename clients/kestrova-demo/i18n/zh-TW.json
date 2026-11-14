@@ -666,9 +666,10 @@
     "scriptTotal": "共 {total} 題",
     "scriptAsked": "已問過",
     "compare": "身分對照",
-    "compareEmpty": "從劇本選一題，或在下方輸入問題：每個身分會各回答一次。",
+    "compareEmpty": "從劇本選一題：每個身分會各回答一次。",
     "compareLimited": "今天的提問次數已經用完，身分對照不會送出。",
     "compareWaiting": "前一欄回答完成後送出",
-    "compareCurrent": "目前身分"
+    "compareCurrent": "目前身分",
+    "entityDocuments": "出現在 {count} 份文件"
   }
 }

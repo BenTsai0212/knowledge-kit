@@ -1,5 +1,6 @@
 import type { CitedSource, SourceDocument } from "../sources/source";
 import { AccessBadges } from "./AccessBadges";
+import { presentationMode } from "./online-demo";
 import { SourceText } from "./SourceText";
 import { fill, strings } from "../client/i18n";
 
@@ -13,7 +14,8 @@ interface Props {
   onClose(): void;
 }
 
-// 桌機的原文欄（#335，畫板 QA）：貼齊右緣的整高欄；手機改用底部面板（SourceSheet，#256），平板是滑出面板（#255）
+// 桌機的原文欄（#335，畫板 QA）：貼齊右緣的整高欄；手機改用底部面板（SourceSheet，#256），平板是滑出面板（#255）。
+// 展示模式（#349，畫板 H-QA）是浮在右側的圓角卡片（app.css），關閉按鈕是「關閉 Esc」（Esc 由 App 處理，焦點回到引用標號）
 export function SourcePanel({ language, source, onOpenSource, cited, onClose }: Props) {
   const s = strings(language);
   const current = cited?.find((c) => c.passageId === source.highlight);
@@ -21,11 +23,18 @@ export function SourcePanel({ language, source, onOpenSource, cited, onClose }: 
     <aside className="card source" aria-label={s.sourceTitle}>
       <header className="source__top">
         <p className="source__eyebrow">{current === undefined ? s.sourceTitle : fill(s.sourceHeading, { n: current.citation })}</p>
-        <button type="button" className="icon-button" aria-label={s.closeSource} onClick={onClose}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-            <path d="M6 6l12 12M18 6 6 18" />
-          </svg>
-        </button>
+        {presentationMode ? (
+          <button type="button" className="secondary source__close" aria-label={s.closeSource} onClick={onClose}>
+            {s.dialogClose}
+            <kbd aria-hidden="true">Esc</kbd>
+          </button>
+        ) : (
+          <button type="button" className="icon-button" aria-label={s.closeSource} onClick={onClose}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
+        )}
       </header>
       <div className="source__doc">
         <h2>{source.title}</h2>

@@ -831,10 +831,10 @@
       }
     },
     "presentation": {
-      "description": "展示模式的劇本（#260，docs/design.md「展示模式」的「版面」）：scriptProgress 的 {index}、{total} 是目前題目的位置與劇本的總題數；scriptTotal 的 {total} 是還沒點過劇本時的總題數；scriptAsked 是已問過的題目給輔助技術的說明；compare* 是身分對照（#261）：compare 是頂端列的按鈕，compareEmpty 是還沒有題目時，compareLimited 是這個分頁已用完提問次數時，compareWaiting 是還沒送出的欄，compareCurrent 是目前身分的欄給輔助技術的說明",
+      "description": "展示模式的劇本（#260，docs/design.md「展示模式」的「版面」）：scriptProgress 的 {index}、{total} 是目前題目的位置與劇本的總題數；scriptTotal 的 {total} 是還沒點過劇本時的總題數；scriptAsked 是已問過的題目給輔助技術的說明；compare* 是身分對照（#261）：compare 是頂端列的按鈕，compareEmpty 是還沒有題目時，compareLimited 是這個分頁已用完提問次數時，compareWaiting 是還沒送出的欄，compareCurrent 是目前身分的欄給輔助技術的說明；entityDocuments 的 {count} 是圖譜實體卡片上出現的文件數（#349）",
       "type": "object",
       "additionalProperties": false,
-      "required": ["script", "scriptProgress", "scriptTotal", "scriptAsked", "compare", "compareEmpty", "compareLimited", "compareWaiting", "compareCurrent"],
+      "required": ["script", "scriptProgress", "scriptTotal", "scriptAsked", "compare", "compareEmpty", "compareLimited", "compareWaiting", "compareCurrent", "entityDocuments"],
       "properties": {
         "script": { "$ref": "#/definitions/Text" },
         "scriptProgress": { "$ref": "#/definitions/Text" },
@@ -844,7 +844,8 @@
         "compareEmpty": { "$ref": "#/definitions/Text" },
         "compareLimited": { "$ref": "#/definitions/Text" },
         "compareWaiting": { "$ref": "#/definitions/Text" },
-        "compareCurrent": { "$ref": "#/definitions/Text" }
+        "compareCurrent": { "$ref": "#/definitions/Text" },
+        "entityDocuments": { "$ref": "#/definitions/Text" }
       }
     },
     "myUploads": {

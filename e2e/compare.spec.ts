@@ -4,11 +4,12 @@
 import { expect, test } from "@playwright/test";
 import { REFUSAL_MARKER } from "../app/src/qa/prompt";
 import { identitySegments, language, openApp, s } from "./support/app";
-import { access, scenarios } from "./support/client";
+import { access, scenarios, theme } from "./support/client";
 import { leakedPassages, normalizeText, onlyOneSees, passagesContaining } from "./support/dataset";
 import { FAKE_ANSWER_LEAD, sseBody } from "./support/fake-ask";
 
 const enabled = process.env.VITE_DEMO_COMPARE === "1";
+const rgb = (hex: string) => `rgb(${[1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(", ")})`;
 
 // 劇本中只有一個身分看得到答案段落（介面語言）的題目：參考情境是主管的題目
 const candidates = scenarios.scenarios.flatMap((x) =>
@@ -29,6 +30,9 @@ test("只有一個身分看得到的題目：比對文字只出現在一個答�
 });
 
 test.describe("畫面", () => {
+  // 展示模式的投影規格（docs/design.md「展示模式」、#349）
+  test.use({ viewport: { width: 1920, height: 1080 } });
+
   test.beforeEach(async ({ page }) => {
     test.skip(!enabled, "身分對照的開關 VITE_DEMO_COMPARE 沒有開啟：以 VITE_DEMO_COMPARE=1 npm run build 後執行");
     await openApp(page, "/?mode=presentation");
@@ -36,7 +40,7 @@ test.describe("畫面", () => {
 
   const compareButton = (page: import("@playwright/test").Page) => page.getByRole("banner").getByRole("button", { name: s.presentation.compare });
 
-  test("頂端列的按鈕開關對照；每個身分一欄、目前身分的欄 primary 框線；只有一個身分有答案的題目，其他欄是一般的拒答", async ({ page }) => {
+  test("頂端列的按鈕開關對照；每個身分一欄、目前身分的欄 primary 框線；只有一個身分有答案的題目，其他欄是一般的拒答", async ({ page }, testInfo) => {
     test.skip(target === undefined, "scenarios.json 沒有只有一個身分看得到答案段落（介面語言）的題目");
     const { text, only } = target!;
     // 送出的段落含答案段落時回答，否則拒答（每一欄各自以該身分檢索，所以只有看得到的身分送出答案段落）
@@ -80,6 +84,18 @@ test.describe("畫面", () => {
     }
     await expect(compare.locator(".compare__column.is-current")).toHaveCount(1);
 
+    // 畫板 H-QA（#349）：外層不是卡片、題目是與問答相同的大字泡泡、各欄等高、對照時沒有輸入區、沒有橫向捲動
+    // 欄本身是卡片，欄裡的回答不再有框（不是卡片中的卡片）
+    await expect(compare).toHaveCSS("border-top-style", "none");
+    await expect(columns.first().locator("section.answer")).toHaveCSS("border-top-style", "none");
+    await expect(compare.locator(".compare__question")).toHaveCSS("background-color", rgb(theme.colors.text));
+    await expect(columns.first().locator("section.answer > h2")).toHaveCSS("background-color", rgb(theme.colors.text));
+    const heights = await columns.evaluateAll((all) => all.map((c) => Math.round(c.getBoundingClientRect().height)));
+    expect(new Set(heights).size).toBe(1);
+    await expect(page.locator(".composer")).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await testInfo.attach("presentation-compare-1920.png", { body: await page.screenshot(), contentType: "image/png" });
+
     // C 關閉對照，回到原本的對話
     await page.locator("body").press("c");
     await expect(button).toHaveAttribute("aria-pressed", "false");
@@ -94,15 +110,19 @@ test.describe("畫面", () => {
     await page.locator("body").press("Escape");
     await expect(button).toHaveAttribute("aria-pressed", "false");
 
-    await page.locator("body").press("c");
+    // 焦點在輸入框時 C 是文字，不打開對照
     const question = page.getByLabel(s.questionLabel);
+    await question.press("c");
+    await expect(button).toHaveAttribute("aria-pressed", "false");
+    // 對照時沒有輸入區（#349）：先以一般問答問一題，打開對照時沿用這一題
     await question.fill(target?.text ?? scenarios.scenarios[0].questions[0].text[language]);
     await page.getByRole("button", { name: s.askButton, exact: true }).click();
+    await expect(page.locator("section.answer")).toContainText(FAKE_ANSWER_LEAD);
+    await page.locator("body").press("c");
+    await expect(button).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(".composer")).toHaveCount(0);
     const column = page.locator(".compare__column").first();
     await expect(column).toBeVisible();
     await expect(column).toHaveCSS("animation-duration", "0s");
-    // 焦點在輸入框時 C 是文字，不關閉對照
-    await question.press("c");
-    await expect(button).toHaveAttribute("aria-pressed", "true");
   });
 });

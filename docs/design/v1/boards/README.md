@@ -54,6 +54,9 @@
 | `success`、`warning`、`conflict`、`conflictSoft`、`conflictText`、`markSoft`、`markText` | 同名 |
 | `successSoft`、`warningSoft` | 以 `color-mix()` 由 `success`／`warning` 與 `surface` 調出，不新增色碼 |
 | `ePerson`、`eTeam`、`eProject` | 知識模型的實體類型色（`client/knowledge-model.json`） |
+| `eP`、`eT`、`eJ` | 同上（`H-Graph` 的簡寫：人員、團隊、專案，#349） |
+| `pSoft` | 類型色的淡底：`color-mix(in srgb, 類型色 14%, var(--color-surface))`（`.entity-badge` 的現有寫法，#349） |
+| `dot` | `border`（圖譜的點狀底紋，#349） |
 
 ### 上表以外的名稱
 
@@ -61,7 +64,7 @@
 
 - **與 `client/theme.json` 同名**：`danger`、`focus`、`mark`、`markReading`、`overlay`、`reading`、`readingText`。
 - **設計稿的外框，不實作**：`board`（畫板底色）、`bezel`（手機外框）。
-- **尚未對應**：`eJ`、`eP`、`eT`（圖譜的實體類型色的簡寫；各對應哪個類型依畫板確認，顏色一樣來自 `client/knowledge-model.json`）；`core`、`dot`、`edge`、`far`、`mid`、`glow`、`panel`（入口主視覺與圖譜的節點、連線、景深）；`inputLine`、`markLine`、`pSoft`、`tSoft`。
+- **尚未對應**：`core`、`edge`、`far`、`mid`、`glow`、`panel`（入口主視覺與圖譜的節點、連線、景深）；`inputLine`、`markLine`、`tSoft`。
 
 ## 設計稿用、不實作的內容
 

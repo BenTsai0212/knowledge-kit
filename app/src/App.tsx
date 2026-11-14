@@ -513,9 +513,14 @@ export function App() {
   const compareEnabled = presentationBar && demoCompare;
   const compareDisabled = retriever === null || answering;
   const toggleCompare = () => (compare !== null ? closeCompare() : compareDisabled ? undefined : void runCompare(compareQuestion(turns)));
-  // 主持人快捷鍵 C／Esc（docs/design.md「主持人快捷鍵」）：只在問答頁、焦點不在文字輸入時；Esc 在原文或實體面板打開時交給面板
+  // 主持人快捷鍵 C／Esc（docs/design.md「主持人快捷鍵」）：只在問答頁、焦點不在文字輸入時；Esc 在原文或實體面板打開時交給面板。
+  // 展示模式的原文卡片（#349，畫板 H-QA）：Esc 關閉，焦點回到打開它的引用標號（與「關閉」按鈕相同）
   const compareKeys = useRef<(e: KeyboardEvent) => void>(() => {});
   compareKeys.current = (e) => {
+    if (presentationBar && view === "qa" && source !== null && e.key === "Escape" && !e.defaultPrevented) {
+      e.preventDefault();
+      return closeSourcePanel();
+    }
     if (!compareEnabled || view !== "qa") return;
     const action = compareKey({ key: e.key, ctrlKey: e.ctrlKey, metaKey: e.metaKey, altKey: e.altKey, target: e.target instanceof Element ? (e.target as HTMLInputElement) : null }, compare !== null);
     if (action === null || (action === "close" && (source !== null || entity !== null))) return;
@@ -834,8 +839,9 @@ export function App() {
                 openEntity={entity}
                 onRetry={() => void runCompare(compare.question)}
                 retryDisabled={compare.finished < access.roles.length}
+                // 「換個問法」：對照時沒有輸入區，先關閉對照、回到一般問答的輸入列再填入
                 onDraft={(question) => {
-                  setDraft(question);
+                  flushSync(() => (closeCompare(), setDraft(question)));
                   document.getElementById(QUESTION_INPUT_ID)?.focus();
                 }}
                 // 在圖譜看它：以該欄的身分看圖譜（切換到該身分）
@@ -877,18 +883,20 @@ export function App() {
                 }}
               />
             )}
-            <QuestionPanel
-              language={language}
-              disabled={retriever === null || answering}
-              text={draft}
-              onText={setDraft}
-              // 身分對照打開時，輸入區送出的問題換成對照的題目
-              onAsk={(question) => void (compare !== null ? runCompare(question) : onAsk(question))}
-              limit={limit}
-              presets={!presentationMode}
-              // 桌機（#335，畫板 QA）與手機（#354，畫板 G-Mobile-QA）是單行輸入列；平板與展示模式照舊
-              line={desktop || phone}
-            />
+            {/* 身分對照時隱藏輸入區（#349 決定 2）：題目從劇本選；展示模式的自由提問是與桌機相同的單行輸入列，在回答下方 */}
+            {!(compareEnabled && compare !== null) && (
+              <QuestionPanel
+                language={language}
+                disabled={retriever === null || answering}
+                text={draft}
+                onText={setDraft}
+                onAsk={(question) => void onAsk(question)}
+                limit={limit}
+                presets={!presentationMode}
+                // 桌機（#335，畫板 QA）、手機（#354，畫板 G-Mobile-QA）與展示模式（#349）是單行輸入列；平板照舊
+                line={desktop || phone || presentationBar}
+              />
+            )}
           </div>
           {!overlay && sidePanel()}
           {!overlay && mentionPanel(false)}
