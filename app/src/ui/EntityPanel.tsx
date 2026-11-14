@@ -3,7 +3,8 @@ import { clientConfig } from "../client/load";
 import type { DocumentRetraction } from "../extraction/store";
 import type { Graph } from "../graph/read";
 import { relationCounts } from "../graph/search";
-import { entityDocuments, entityOptionLabel, entityTypeLabel, relatedEntities, relationTypeLabel, sourcesForLanguage } from "./graph-labels";
+import { entityDocuments, entityOptionLabel, entityTypeLabel, relatedEntities, relatedEntityGroups, relationGroupLabel, relationTypeLabel, sourcesForLanguage } from "./graph-labels";
+import { presentationMode } from "./online-demo";
 import { entityTypeShape } from "./timeline-view";
 import { fill, strings } from "../client/i18n";
 
@@ -23,7 +24,8 @@ interface Props {
   // 撤回此文件對這個實體的核准（含連帶的關係）；失敗時回傳錯誤訊息
   onRetract(retraction: DocumentRetraction): Promise<string | null>;
   // 桌機（#336，畫板 Graph）：右側整高欄。相關實體是 52px 的列（類型的形狀＋名稱＋右側關係名稱），
-  // 出現的文件是 surfaceRaised 卡片（文件名＋摘錄，實體名稱用 mark）；手機、平板與展示模式不傳
+  // 出現的文件是 surfaceRaised 卡片（文件名＋摘錄，實體名稱用 mark）；展示模式的桌機也用（#349，畫板 H-Graph，數量只列「關聯 N · 出現在 N 份文件」）；
+  // 手機與平板不傳
   wide?: boolean;
 }
 
@@ -100,9 +102,15 @@ export function EntityPanel({ graph, entityId, language, onSelect, onShowOnly, o
       <p className="entity-counts muted">
         {fill(s.graphRelationCount, { count: relationCounts(graph).get(entityId) ?? 0 })}
         {" · "}
-        {fill(s.graphDocumentCount, { count: documents.length })}
-        {" · "}
-        {fill(s.graphSourceCount, { count: sourcesForLanguage(entity.sources, language).length })}
+        {wide && presentationMode ? (
+          fill(s.presentation.entityDocuments, { count: documents.length }, language)
+        ) : (
+          <>
+            {fill(s.graphDocumentCount, { count: documents.length })}
+            {" · "}
+            {fill(s.graphSourceCount, { count: sourcesForLanguage(entity.sources, language).length })}
+          </>
+        )}
       </p>
       <div className="entity-actions">
         <button type="button" onClick={() => onAskAbout(entityId)}>
@@ -115,9 +123,13 @@ export function EntityPanel({ graph, entityId, language, onSelect, onShowOnly, o
       <h3>{s.relatedEntities}</h3>
       {wide ? (
         // 整列可點（按鈕的 ::after 蓋住整列），按鈕的名稱只有實體名稱；關係名稱在右側，方向以箭頭表示
+        // 展示模式（#349，畫板 H-Graph）：同一個實體的多則關係合併成一列（「← 隸屬 · 負責」）
         <ul className="entity-rows">
-          {relatedEntities(graph, entityId, language).map((r) => (
-            <li key={r.relationId} className="entity-row">
+          {(presentationMode
+            ? relatedEntityGroups(graph, entityId, language).map((g) => ({ key: g.entity.id, entity: g.entity, relation: relationGroupLabel(g.relations) }))
+            : relatedEntities(graph, entityId, language).map((r) => ({ key: r.relationId, entity: r.entity, relation: relationGroupLabel([r]) }))
+          ).map((r) => (
+            <li key={r.key} className="entity-row">
               <span
                 className={`type-dot shape-${entityTypeShape(r.entity.type)}`}
                 aria-hidden="true"
@@ -126,7 +138,7 @@ export function EntityPanel({ graph, entityId, language, onSelect, onShowOnly, o
               <button type="button" className="link" onClick={() => onSelect(r.entity.id)}>
                 {entityOptionLabel(graph, r.entity, language)}
               </button>
-              <span className="entity-row__relation muted">{r.outgoing ? `${r.label} →` : `← ${r.label}`}</span>
+              <span className="entity-row__relation muted">{r.relation}</span>
             </li>
           ))}
         </ul>

@@ -86,7 +86,7 @@
 - `cross-fade.ts`：切換語言、Light／Dark 的交叉淡換
 - `entity-icons.ts`：實體類型的圖示集
 - `EntityIcon.tsx`：圖例的圖示
-- `EntityPanel.tsx`：圖譜頁的實體面板；桌機（`wide`）是右側整高欄的列與卡片（#336）
+- `EntityPanel.tsx`：圖譜頁的實體面板；桌機（`wide`）是右側整高欄的列與卡片（#336），展示模式的桌機也用（#349，相關實體依實體合併成一列）
 - `EntitySearch.tsx`：以名稱搜尋實體；`field` 是桌機圖譜頁首的搜尋框（#336）
 - `entry-hero.ts`：入口頁主視覺版面的純函式
 - `EntryBar.tsx`：桌機登入頁的頂端列（登入前沒有左側導覽，#334）
@@ -101,13 +101,13 @@
 - `graph-style.ts`：圖譜的配色（深色模式切換時重新套用）
 - `graph-zoom.ts`：三層語意縮放的層級、細節層與圖上元素的純函式；`panToCenter()` 在手機實體面板開著時，把選取的節點平移到面板以上的中央；`focusViewport()` 是桌機選取時的視角（縮放上限，聚焦集合留在畫布內）
 - `GraphList.tsx`：圖譜的清單模式
-- `GraphPage.tsx`：圖譜頁；桌機是畫板 `Graph`、`G-Scale` 的版面（#336）
+- `GraphPage.tsx`：圖譜頁；桌機是畫板 `Graph`、`G-Scale` 的版面（#336），展示模式的桌機是畫板 `H-Graph`（#349）
 - `GraphView.tsx`：圖譜（cytoscape，動態載入）；`areaOf()`、`centerIn()` 與 `GraphZoomView` 共用；`cover` prop
 - `GraphZoomView.tsx`：大量節點時的三層語意縮放（見 `docs/graph.md`「三層語意縮放（畫面）」）；`cover` prop
 - `home.ts`：首頁的純函式（問過的問題與相對時間、狀態點、實體形狀等）
 - `HomePage.tsx`：首頁（登入後的預設頁）；桌機（`wide`）是畫板 `K-Home` 的版面（#331）
 - `identity-compare.ts`：身分對照的純函式：欄的順序與目前身分、目前的題目、一欄一欄送出、`C`／`Esc`
-- `IdentityCompare.tsx`：展示模式的身分對照，每個身分一欄，沿用 `AnswerView`（純函式在 `identity-compare.ts`），見 `docs/qa.md`「身分對照」
+- `IdentityCompare.tsx`：展示模式的身分對照，每個身分一欄，沿用 `AnswerView`（純函式在 `identity-compare.ts`；畫板 `H-QA`，#349），見 `docs/qa.md`「身分對照」
 - `IdentitySheet.tsx`：身分與語言面板的內容（手機、平板與桌機使用者卡的選單共用；身分單選卡附 `roles[].scope`、語言分段切換、更換邀請碼；帳號登入時只顯示帳號與角色）
 - `layout.ts`：斷點（`layoutFor()`、`useLayout()`）、手機分頁的分配（`phoneTabs()`）、底部面板的拖曳門檻與 `sheetSnap()`、底部面板以上的可見部分 `visibleArea()`（純函式，測試在 `layout.test.ts`）
 - `MentionPanel.tsx`：問答頁的右側面板：回答提到的實體（純函式在 `mentions.ts`）
@@ -119,7 +119,7 @@
 - `online-demo.ts`：唯一讀取處：線上 demo 的 `VITE_ONLINE_DEMO`、`VITE_PUBLIC_ACCESS_CODE`（預設關閉；開啟時隱藏評測台），展示模式 `?mode=presentation`（只顯示問答與圖譜），評測台的 `?tools=evals`，身分對照的 `VITE_DEMO_COMPARE`（預設關閉、線上 demo 一律關閉）；見 `docs/qa.md`「線上 demo」「展示模式」「身分對照」、`docs/evals.md`「開啟評測台」
 - `PassageMarks.tsx`：時間軸與原文面板的標示
 - `PathPanel.tsx`：圖譜頁的路徑面板；`panel` 是桌機「找路徑」打開的面板（#336）
-- `PresentationBar.tsx`：展示模式登入後的頂端列（不論寬度都取代 `Sidebar`／`MobileNav`）；`VITE_DEMO_COMPARE` 開啟時有「身分對照」按鈕，見 `docs/qa.md`「展示模式」「身分對照」
+- `PresentationBar.tsx`：展示模式登入後的頂端列（不論寬度都取代 `Sidebar`／`MobileNav`；畫板 `H-QA`、`H-Graph`，#349）；`VITE_DEMO_COMPARE` 開啟時有「身分對照」按鈕，見 `docs/qa.md`「展示模式」「身分對照」
 - `ProductIcon.tsx`：頁首的產品 icon（favicon 在 `app/public/favicon.svg`，見 `docs/design.md`「產品 icon（K 晶格）」）
 - `qa-errors.ts`：問答錯誤的五類（見 `docs/qa.md`「錯誤」）
 - `refusal-next-steps.ts`：拒答下方的下一步（見 `docs/qa.md`「拒答」）
@@ -130,11 +130,11 @@
 - `review-helpers.ts`：待審頁的核准計畫
 - `ReviewPage.tsx`：待審頁（含「說法不同」的並列與處理；桌機照畫板 `F-Review`、`F-Empty`，#345）
 - `script.ts`：劇本的純函式（分組與順序、第 N／M 題、已問過、是否切換身分）
-- `ScriptPanel.tsx`：展示模式問答頁左欄的劇本，見 `docs/qa.md`「展示模式」
+- `ScriptPanel.tsx`：展示模式問答頁左欄的劇本（畫板 `H-QA`，#349），見 `docs/qa.md`「展示模式」
 - `SessionQuestions.tsx`：手機的「這次的問題（N）」按鈕與底部面板（#256）
 - `Sidebar.tsx`：桌機的左側欄（客戶名稱、頁面項目、「虛構資料 · 展示用權限」、使用者卡與身分和語言選單，#330）
 - `source-steps.ts`：「出處 N／M」與「在圖譜中查看」目標的純函式
-- `SourcePanel.tsx`：桌機的原文欄（段落編號、「這次回答的出處」，#335）
+- `SourcePanel.tsx`：桌機的原文欄（段落編號、「這次回答的出處」，#335）；展示模式是浮動的原文卡片（#349）
 - `SourceSheet.tsx`：手機的原文面板（底部面板，標題「原文 · 出處 N／M」，#354）與平板的滑出面板
 - `SourceText.tsx`：原文紙面，桌機與手機共用
 - `theme.ts`：由 `client/theme.json` 設定 CSS 變數（深色模式用 `darkColors`）

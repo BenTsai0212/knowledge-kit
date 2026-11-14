@@ -666,9 +666,10 @@
     "scriptTotal": "全 {total} 問",
     "scriptAsked": "質問済み",
     "compare": "ユーザー比較",
-    "compareEmpty": "台本から質問を選ぶか、下に入力してください。各ユーザーが 1 回ずつ回答します。",
+    "compareEmpty": "台本から質問を選んでください。各ユーザーが 1 回ずつ回答します。",
     "compareLimited": "本日の質問回数を使い切ったため、比較は送信されません。",
     "compareWaiting": "前の列の回答が終わると送信します",
-    "compareCurrent": "現在のユーザー"
+    "compareCurrent": "現在のユーザー",
+    "entityDocuments": "{count} 件の文書に登場"
   }
 }

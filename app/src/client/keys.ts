@@ -407,6 +407,7 @@ export const i18nManifests: ManifestEntry[] = [
       compareLimited: "required",
       compareWaiting: "required",
       compareCurrent: "required",
+      entityDocuments: "required",
     } satisfies KeyManifest<UiStrings["presentation"]>,
   },
   {

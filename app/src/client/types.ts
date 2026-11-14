@@ -871,6 +871,8 @@ export interface UiStrings {
     compareLimited: string;
     compareWaiting: string;
     compareCurrent: string;
+    // 圖譜的實體卡片（#349，畫板 H-Graph）：「出現在 N 份文件」
+    entityDocuments: string;
   };
   myUploads: {
     tabNew: string;

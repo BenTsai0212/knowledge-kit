@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Graph, SourcePassage } from "../graph/read";
-import { entityName, entityOptionLabel, entityTypeLabel, nodeLabels, relatedEntities, relationTypeLabel, sourcesForLanguage } from "./graph-labels";
+import { entityName, entityOptionLabel, entityTypeLabel, nodeLabels, relatedEntities, relatedEntityGroups, relationGroupLabel, relationTypeLabel, sourcesForLanguage } from "./graph-labels";
 
 const entity = (id: string, names: Record<string, string>) => ({ id, type: "person", name: `${id}-name`, names, sources: [] });
 const graph: Graph = {
@@ -30,6 +30,25 @@ describe("圖譜的顯示文字", () => {
       ["r1", "Member of", true, "b"],
       ["r2", "Leads", false, "c"],
     ]);
+  });
+
+  it("展示模式的卡片：同一個實體的多則關係合併成一列（#349）", () => {
+    const pair: Graph = {
+      entities: [entity("hr", { "zh-TW": "人資部" }), entity("wu", { "zh-TW": "吳" }), entity("b", { "zh-TW": "乙" })],
+      relations: [
+        { id: "r1", type: "leads", from: "wu", to: "hr", sources: [] },
+        { id: "r2", type: "member-of", from: "hr", to: "b", sources: [] },
+        { id: "r3", type: "member-of", from: "wu", to: "hr", sources: [] },
+      ],
+    };
+    const groups = relatedEntityGroups(pair, "hr", "zh-TW");
+    expect(groups.map((g) => [g.entity.id, g.relations.map((r) => r.relationId)])).toEqual([
+      ["wu", ["r1", "r3"]],
+      ["b", ["r2"]],
+    ]);
+    expect(relationGroupLabel(groups[0].relations)).toBe("← 負責 · 隸屬");
+    expect(relationGroupLabel(groups[1].relations)).toBe("隸屬 →");
+    expect(relationGroupLabel([{ label: "負責", outgoing: false }, { label: "隸屬", outgoing: true }])).toBe("← 負責 · 隸屬 →");
   });
 
   it("下拉選單中，顯示名稱相同的實體加上第一個相關實體的名稱", () => {

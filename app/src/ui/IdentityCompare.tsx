@@ -1,5 +1,6 @@
 // 身分對照（#261，docs/design.md「展示模式」的「身分對照」）：同一題以每個身分各回答一次，依身分順序並排成欄，目前身分的欄用 primary 框線。
 // 每一欄都是一般問答的 AnswerView（拒答與下一步、錯誤、引用都相同），標題換成該欄的身分；不顯示數量、權限等級或「有內容被隱藏」的提示（#247）。
+// 外層不套卡片、每欄本身是卡片：身分標題是膠囊，題目是與問答相同的大字泡泡，各欄等高（#349，畫板 H-QA）。
 // 各欄逐欄出現（stagger 80ms，--column 是 staggerIndex，不用 --i 以免欄內的元素繼承；減少動態效果時直接到位）。送出與取消由 App 以 qa/compare.ts 的 askEach() 處理
 import type { CSSProperties } from "react";
 import { strings } from "../client/i18n";
@@ -66,7 +67,8 @@ export function IdentityCompare({ language, columns, compare, canUpload, onOpenS
                   data-role={column.role}
                   style={{ "--column": staggerIndex(index) } as CSSProperties}
                 >
-                  {column.current && <p className="badge compare__current">{s.presentation.compareCurrent}</p>}
+                  {/* 目前身分在畫面上以 primary 框線表示（#349，畫板 H-QA），文字只給報讀器 */}
+                  {column.current && <p className="visually-hidden">{s.presentation.compareCurrent}</p>}
                   {started ? (
                     <AnswerView
                       id={`compare-${compare.run}-${column.role}`}

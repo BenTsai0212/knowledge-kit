@@ -1,7 +1,7 @@
 // 展示模式的劇本（#260 PR 2）：分組順序、「第 N／M 題」、已問過與切換身分的判斷。畫面上的點選與身分切換以 E2E（e2e/presentation.spec.ts）確認
 import { describe, expect, it } from "vitest";
 import { clientConfig } from "../client/load";
-import { scriptItems, scriptKey, scriptPosition, switchesIdentity, wasAsked } from "./script";
+import { scriptItems, scriptKey, scriptNumber, scriptPosition, switchesIdentity, wasAsked } from "./script";
 
 const config = {
   scenarios: [
@@ -45,6 +45,15 @@ describe("scriptPosition（第 N／M 題）", () => {
   it("還沒點過劇本、或找不到的 key：沒有目前題目", () => {
     expect(scriptPosition(items, null)).toEqual({ index: null, total: 3 });
     expect(scriptPosition(items, "x/y")).toEqual({ index: null, total: 3 });
+  });
+});
+
+describe("scriptNumber（題目列的編號，#349）", () => {
+  const items = scriptItems(config);
+
+  it("劇本中的位置，補成兩位數", () => {
+    expect(scriptNumber(items, scriptKey("a", "q1"))).toBe("01");
+    expect(scriptNumber(items, scriptKey("b", "q2"))).toBe("03");
   });
 });
 
