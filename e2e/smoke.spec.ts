@@ -93,5 +93,6 @@ test("評測台：估算後執行到完成", async ({ page }) => {
   await page.getByRole("button", { name: s.evalStart }).click();
   const dialog = page.getByRole("dialog", { name: s.evalConfirmTitle });
   await dialog.getByRole("button", { name: s.evalConfirmStart, exact: true }).click();
-  await expect(page.getByText(s.evalDone)).toBeVisible({ timeout: 120_000 });
+  // 完成後「下載品質報告」才能按（桌機的完成狀態在總覽的標題列，#347）
+  await expect(page.getByRole("button", { name: s.evalReport.download })).toBeEnabled({ timeout: 120_000 });
 });

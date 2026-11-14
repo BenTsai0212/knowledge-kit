@@ -1,4 +1,5 @@
 // 評測台（#62，docs/evals.md「畫面」）：兩組檢索設定、預計呼叫次數的確認、進度與停止、總覽、每題的結果與兩組差異、下載 JSON 與品質報告（#210）。
+// 桌機（#347，畫板 F-Evals）：頁首 h1、設定卡的標籤與輸入同一列、按鈕列（開始評測、下載 JSON、下載品質報告）、總覽表、每題結果表＋圖例，點一列在下方展開。
 // 只有 canReview 的身分看得到（App 決定）。評測使用專用的記憶體資料庫，評測結束、停止或離開頁籤時關閉。
 import { Fragment, useEffect, useRef, useState, type CSSProperties } from "react";
 import { errorMessage, fill, strings, taskErrorMessage } from "../client/i18n";
@@ -19,6 +20,7 @@ import { prefersReducedMotion } from "./motion";
 import { bankSummary, createEvalDatabases, differs, effectiveForm, evalReport, outcome, parseReportSource, parseSettings, progressCells, settingsForm, setSummary, TOP_K_MAX, verdicts, type Outcome, type SettingsForm } from "./eval-helpers";
 import { EmptyState } from "./EmptyState";
 import { FilePicker } from "./FilePicker";
+import { useLayout } from "./layout";
 import { Notice } from "./Notice";
 import { RetrievalNotice } from "./RetrievalNotice";
 import type { ProviderStatus } from "./retrieval-notice";
@@ -33,8 +35,9 @@ const SET_NAMES = ["A", "B"];
 const BANK = bankSummary(questions);
 // 展開單題時顯示引用的段落（評測用的是資料集，不含上傳的文件）
 const PASSAGES = new Map(Object.values(dataset.documents).flatMap((d) => d.passages.map((p) => [p.id, p.text] as const)));
-// 每題的結果以符號＋文字區分，不只靠顏色
-const OUTCOME_SYMBOL: Record<Outcome, string> = { correct: "✓", refused: "✓", incorrect: "✗" };
+// 每題的結果以符號＋文字區分，不只靠顏色（畫板 F-Evals 的圖例：● 正確、○ 不正確、◇ 正確拒答）
+const OUTCOME_SYMBOL: Record<Outcome, string> = { correct: "●", incorrect: "○", refused: "◇" };
+const OUTCOMES: readonly Outcome[] = ["correct", "incorrect", "refused"];
 
 // 預設值先取自 client.json 的 retrieval，provider 準備好後換成實際生效的參數（降級時不同，#178）；只在這次評測有效
 const DEFAULT_FORM = settingsForm(client.retrieval);
@@ -67,6 +70,7 @@ function save(blob: Blob, name: string) {
 
 export function EvalPage({ language, accessCode, uploadedCount, provider, status, run, onRun, onRejectAccessCode }: Props) {
   const s = strings(language);
+  const desktop = useLayout() === "desktop";
   const [forms, setForms] = useState<SettingsForm[]>([DEFAULT_FORM, DEFAULT_FORM]);
   const [useB, setUseB] = useState(false);
   const [model, setModel] = useState(false);
@@ -217,7 +221,7 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
     const tone = m.meets === null ? "" : m.meets ? " pass" : " fail";
     return (
       <>
-        {value}{" "}
+        <span className="eval-value">{value}</span>{" "}
         <span className={`badge eval-verdict${tone}`} style={{ "--i": METRICS.indexOf(key) } as CSSProperties}>
           {status}
         </span>
@@ -327,9 +331,9 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
   }
 
   return (
-    <div className="eval-page">
+    <div className={desktop ? "eval-page eval-page--desktop" : "eval-page"}>
       <header className="eval-header">
-        <h2>{s.tabEvals}</h2>
+        {desktop ? <h1>{s.tabEvals}</h1> : <h2>{s.tabEvals}</h2>}
         <p className="muted">{fill(s.evalBankSummary, BANK)}</p>
       </header>
 
@@ -362,9 +366,11 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
           </label>
           {plan === null && <p className="error">{s.evalInvalidSettings}</p>}
           <RetrievalNotice language={language} preparesModel={preparesModel(client.retrieval)} status={status} />
-          {uploadedCount > 0 && <Notice kind="info" title={fill(s.evalUploaded, { count: uploadedCount })} />}
+          {uploadedCount > 0 &&
+            (desktop ? <p className="eval-hint">{fill(s.evalUploaded, { count: uploadedCount })}</p> : <Notice kind="info" title={fill(s.evalUploaded, { count: uploadedCount })} />)}
           {failed && <p className="error">{s.loadFailed}</p>}
-          <div className="dialog-actions">
+          {/* 按鈕列：開始評測（評測中換成停止）、下載 JSON、下載品質報告（用這次的結果產生）；還不能用時停用 */}
+          <div className="dialog-actions eval-actions">
             {phase === "running" ? (
               <button type="button" className="secondary" onClick={() => controller.current?.abort()}>
                 {s.evalStop}
@@ -374,16 +380,18 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
                 {phase === "estimating" ? s.evalPreparing : s.evalStart}
               </button>
             )}
-            {run !== null && phase !== "running" && (
-              <button type="button" className="secondary" onClick={download}>
-                {s.evalDownload}
-              </button>
-            )}
+            <button type="button" className="secondary" disabled={run === null || phase === "running"} onClick={download}>
+              {s.evalDownload}
+            </button>
+            <button type="button" className="secondary" disabled={run?.status !== "done" || phase === "running"} onClick={() => void downloadReport()}>
+              {s.evalReport.download}
+            </button>
           </div>
-          {run?.status === "done" && <p className="muted">{s.evalDone}</p>}
+          {!desktop && run?.status === "done" && <p className="muted">{s.evalDone}</p>}
+          {/* 次要位置：兩組設定時選要報告的那一組、選另一次的下載 JSON 比較穩定性（行為不變） */}
           {run?.status === "done" && phase !== "running" && (
-            <fieldset className="eval-report">
-              <legend>{s.evalReport.title}</legend>
+            <details className="eval-report">
+              <summary>{s.evalReport.options}</summary>
               {run.sets.length === 2 && (
                 <label>
                   {s.evalReport.set}
@@ -404,12 +412,7 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
                 status={previousName ?? <span className="muted">{s.fileNone}</span>}
               />
               {previousInvalid && <p className="error">{s.evalReport.previousInvalid}</p>}
-              <div className="dialog-actions">
-                <button type="button" className="secondary" onClick={() => void downloadReport()}>
-                  {s.evalReport.download}
-                </button>
-              </div>
-            </fieldset>
+            </details>
           )}
           {run?.status === "stopped" && (
             <Notice kind="warning" title={s.evalStopped}>
@@ -428,18 +431,23 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
           />
         ) : (
           <section className={["card", "eval-summary", !animate && "still", animate && run.status === "done" && "settled"].filter(Boolean).join(" ")}>
-            <h3>{s.evalSummary}</h3>
-            {run.status === "running" && (
-              <p aria-live="polite">
-                {s.evalRunning} {fill(s.evalProgress, { done: Math.min(done + 1, cells.length), total: cells.length })}
-              </p>
+            <div className="eval-card-head">
+              <h3>{s.evalSummary}</h3>
+              {run.status === "running" && (
+                <p aria-live="polite">
+                  {s.evalRunning} {fill(s.evalProgress, { done: Math.min(done + 1, cells.length), total: cells.length })}
+                </p>
+              )}
+              {desktop && run.status === "done" && <p className="eval-status">{fill(s.evalCompleted, { done, total: cells.length })}</p>}
+            </div>
+            {/* 評測中（progress）：每題結果回來就填一格；真實題數在上一行，格子只是輔助。桌機在評測完成後只留總覽表 */}
+            {(!desktop || run.status === "running") && (
+              <ol className="eval-progress" aria-hidden="true">
+                {cells.map((cell, i) => (
+                  <li key={i}>{cell !== null && <span className={`eval-cell ${cell === "incorrect" ? "fail" : "pass"}`} />}</li>
+                ))}
+              </ol>
             )}
-            {/* 評測中（progress）：每題結果回來就填一格；真實題數在上一行，格子只是輔助 */}
-            <ol className="eval-progress" aria-hidden="true">
-              {cells.map((cell, i) => (
-                <li key={i}>{cell !== null && <span className={`eval-cell ${cell === "incorrect" ? "fail" : "pass"}`} />}</li>
-              ))}
-            </ol>
             <div className="table-scroll">
               <table className="eval-table">
                 <thead>
@@ -493,14 +501,23 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
       </dialog>
 
       {run !== null && (
-        <section className="card">
-          <h3>{s.evalResults}</h3>
-          {twoSets && (
-            <label className="inline">
-              <input type="checkbox" checked={onlyDiff} onChange={(e) => setOnlyDiff(e.target.checked)} />
-              {s.evalOnlyDiff}
-            </label>
-          )}
+        <section className="card eval-results-card">
+          <div className="eval-card-head">
+            <h3>{s.evalResults}</h3>
+            {twoSets && (
+              <label className="inline">
+                <input type="checkbox" checked={onlyDiff} onChange={(e) => setOnlyDiff(e.target.checked)} />
+                {s.evalOnlyDiff}
+              </label>
+            )}
+            <p className="eval-legend">
+              {OUTCOMES.map((o) => (
+                <span key={o} className={`eval-outcome ${o}`}>
+                  {OUTCOME_SYMBOL[o]} {outcomeText[o]}
+                </span>
+              ))}
+            </p>
+          </div>
           {/* 寬表格放在可橫向捲動的容器；可聚焦，讓鍵盤也能捲動 */}
           <div className="table-scroll" role="region" aria-label={s.evalResults} tabIndex={0}>
             <table className="eval-table eval-results">
@@ -521,10 +538,11 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
                   const detail = `eval-detail-${q.id}`;
                   return (
                     <Fragment key={q.id}>
-                      <tr>
+                      {/* 點一列（或列中的問題按鈕，鍵盤可操作）在下方展開；按鈕的點擊冒泡到這一列，只切換一次 */}
+                      <tr className={open ? "eval-row is-open" : "eval-row"} onClick={() => toggle(q.id)}>
                         <td className="eval-number">{index.get(q.id)}</td>
                         <td>
-                          <button type="button" className="link eval-question" aria-expanded={open} aria-controls={open ? detail : undefined} onClick={() => toggle(q.id)}>
+                          <button type="button" className="link eval-question" aria-expanded={open} aria-controls={open ? detail : undefined}>
                             {q.question}
                           </button>
                           <div className="muted">
