@@ -800,6 +800,7 @@ export function App() {
             language={language}
             identity={identity}
             wide={!phone && !tablet}
+            phone={phone}
             waiting={canReview ? (pending?.identity === identity ? pending.summary : null) : undefined}
             // 一般員工的「有更新」：不能審核的身分；自己上傳的文件（#284）與已處理的回報（#286）
             updates={!canReview ? { extracting: activeExtractions, onOpenUpload: (id) => (setUploadFocus(id), setView("upload")) } : undefined}

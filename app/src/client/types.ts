@@ -838,6 +838,10 @@ export interface UiStrings {
     waitingConflicts: string;
     waitingReports: string;
     waitingEarliest: string;
+    // 手機的數字卡（#356，畫板 K-Mobile）：數字下方的名稱；earliestShort 的 {time} 是最早一則回報的相對時間
+    pendingDocuments: string;
+    pendingReports: string;
+    earliestShort: string;
     waitingDocumentsNote: string;
     waitingConflictsNote: string;
     handleReports: string;

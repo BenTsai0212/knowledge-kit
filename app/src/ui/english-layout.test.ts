@@ -142,6 +142,9 @@ describe("頁面外層與清單的欄寬", () => {
     ".graph-page--desktop .graph-trail": [".app", ...page],
     // 首頁的列與「最近看過」（#331）：桌機的卡片是 auto-fit（minmax(min(100%, 340px), 1fr)）
     ".home__name, .home__question, .home__sub, .home__entity-name": [".home__list", ".home__cards", ".home--wide .home__cards", ".home", ...page],
+    // 手機首頁的常見問題（#356）：一行、橫向滑動；提問框在 .home 的單欄
+    ".home--phone .composer--compact .presets": [".app", ".home", ...page],
+    ".home--phone .composer--compact .scenario": [".app", ".home", ...page],
     ".my-upload__title": [".my-uploads__list", ".my-uploads", ".upload", ...page],
     // 手機待審頁需要決定的一行摘要（#282）：名稱或差異說明以省略號截斷；.review-item 的內容是 min-width: 0
     ".review-sheet-row__text": [".review-list", ".review-page", ...page],
