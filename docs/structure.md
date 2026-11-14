@@ -128,7 +128,7 @@
 - `ReportResult.tsx`：回答下方與首頁的回報結果
 - `requests.ts`：切換身分或語言時捨棄進行中的提問
 - `review-helpers.ts`：待審頁的核准計畫
-- `ReviewPage.tsx`：待審頁（含「說法不同」的並列與處理）
+- `ReviewPage.tsx`：待審頁（含「說法不同」的並列與處理；桌機照畫板 `F-Review`、`F-Empty`，#345）
 - `script.ts`：劇本的純函式（分組與順序、第 N／M 題、已問過、是否切換身分）
 - `ScriptPanel.tsx`：展示模式問答頁左欄的劇本，見 `docs/qa.md`「展示模式」
 - `SessionQuestions.tsx`：手機的「這次的問題（N）」按鈕與底部面板（#256）
@@ -273,6 +273,7 @@ Playwright 的端對端測試（`*.spec.ts`）；設定在根目錄的 `playwrig
 - `qa-desktop.spec.ts`：桌機的問答頁與原文欄（1440×900，#335）
 - `reports.spec.ts`：回答錯誤回報
 - `retract.spec.ts`：撤回
+- `review-desktop.spec.ts`：桌機的待審頁（1440×900，#345）
 - `review.spec.ts`：待審頁
 - `smoke.spec.ts`：冒煙
 - `support/app.ts`：共用操作（介面文字從選定客戶的 `i18n/` 讀取）

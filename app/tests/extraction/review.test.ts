@@ -727,6 +727,14 @@ describe("上傳者讀得到自己上傳的文件（ADR 0009，#284）", { timeo
     await db.close();
   });
 
+  it("readReview 附上每份文件的上傳者（桌機待審頁的文件標頭，#345）", async () => {
+    const w = await setup();
+    const docs = await readReview(w.db, "manager");
+    expect(docs.find((d) => d.id === w.ds.documentId)?.uploadedBy).toBe("staff");
+    expect(docs.find((d) => d.id === w.dm.documentId)?.uploadedBy).toBe("manager");
+    await w.db.close();
+  });
+
   it("readMyUploads：只列自己上傳的文件與每一項的結果；還沒有項目的文件也列出", async () => {
     const w = await setup();
     const empty = await uploadDocument(

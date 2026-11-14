@@ -47,6 +47,8 @@ export interface ReviewDocument {
   // 文件的可見等級與專案（畫面上的標籤）
   visibility: string;
   project: string | null;
+  // 上傳者的身分 id（kk.documents.uploaded_by；不是上傳的文件時是 null）。桌機待審頁的文件標頭顯示（#345）
+  uploadedBy?: string | null;
   entities: ReviewEntity[];
   relations: ReviewRelation[];
 }
@@ -202,6 +204,7 @@ async function pendingDocuments(tx: Transaction, ownOnly: boolean): Promise<Revi
       language: string;
       visibility: string;
       project: string | null;
+      uploaded_by: string | null;
       entity_type: string;
       names: LocalizedText;
       decision: string | null;
@@ -209,7 +212,7 @@ async function pendingDocuments(tx: Transaction, ownOnly: boolean): Promise<Revi
       merge_into: string | null;
     }>(
       `SELECT p.id, p.document_id, d.title, d.language, d.visibility_level_id AS visibility, d.project_id AS project,
-              p.entity_type, p.names, r.decision, r.id AS decision_id, r.merge_into
+              d.uploaded_by, p.entity_type, p.names, r.decision, r.id AS decision_id, r.merge_into
          FROM kk.pending_entities p JOIN kk.documents d ON d.id = p.document_id
          LEFT JOIN kk.review_decisions r ON r.item_id = p.id AND ${ACTIVE("r")}
         ${ownOnly ? "WHERE d.uploaded_by = kk.current_identity_id()" : ""}
@@ -244,6 +247,7 @@ async function pendingDocuments(tx: Transaction, ownOnly: boolean): Promise<Revi
       language: e.language,
       visibility: e.visibility,
       project: e.project,
+      uploadedBy: e.uploaded_by,
       entities: [],
       relations: [],
     };

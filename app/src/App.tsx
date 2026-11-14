@@ -680,6 +680,7 @@ export function App() {
               onGotoGraph={() => setView("graph")}
               onGotoUpload={canUpload ? () => setView("upload") : undefined}
               onViewInGraph={(id) => (setGraphFocus(id), setView("graph"))}
+              desktop={desktop}
             />
           ) : view === "upload" ? (
             // 切換身分或語言時重建，清除表單、預覽與結果

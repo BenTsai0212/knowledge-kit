@@ -11,6 +11,8 @@
 // 每筆一行，按「編輯名稱」才可以修改；出處點開才顯示，預設 2 行、標出實體名稱；核准或退回後顯示短提示（#48），附「撤銷」（ADR 0007 決定 4）。
 // 每份文件另有「說法不同」區塊（#51）：新舊段落並列、三選一處理；已處理的在「已處理的說法不同」分頁。
 // 「回報」分頁是問答的回答錯誤回報（ADR 0007 決定 7，ReportList.tsx）。
+// 桌機（#345，畫板 F-Review、F-Empty）：review-page--desktop 加上 h1「待審」、填滿內容區；文件標頭有上傳者與可見範圍的膠囊，
+// 萃取結果每組一列，「編輯名稱」「出處」「變更合併對象」「展開」是列內的次要按鈕（其他版面仍是底線連結）。樣式都在 app.css
 // 讀取與寫入都經 store.ts、conflicts/store.ts（RLS 決定看得到、能核准什麼）；模型輸出一律以文字節點顯示。
 import { Fragment, useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { clientConfig } from "../client/load";
@@ -26,6 +28,7 @@ import { entityOptionLabel, entityTypeLabel, relationTypeLabel } from "./graph-l
 import { Notice } from "./Notice";
 import { EmptyState } from "./EmptyState";
 import { ReportList } from "./ReportList";
+import { roleLabel } from "./ReportResult";
 import { createRequestGate } from "./requests";
 import {
   batchPlan,
@@ -69,6 +72,8 @@ interface Props {
   onGotoUpload?(): void;
   // 回報中的實體：切到圖譜頁並選取該實體
   onViewInGraph(entityId: string): void;
+  // 桌機（≥ 1025px，展示模式除外）：照畫板 F-Review（#345）；手機與平板不傳
+  desktop?: boolean;
 }
 
 // 撤銷的對象：決定 id 與這次寫入的項目 id（撤銷後這些列在原位重新展開，#243）
@@ -93,7 +98,7 @@ const typeColor = (type: string) => knowledgeModel.entityTypes.find((t) => t.id 
 // 待審實體沒有主要名稱（name），依介面語言取 names
 const pendingName = (e: ReviewEntity, language: string) => e.names[language] || Object.values(e.names)[0] || e.id;
 
-export function ReviewPage({ db, identity, language, extracting, onOpenSource, onChanged, onGotoGraph, onGotoUpload, onViewInGraph }: Props) {
+export function ReviewPage({ db, identity, language, extracting, onOpenSource, onChanged, onGotoGraph, onGotoUpload, onViewInGraph, desktop = false }: Props) {
   const s = strings(language);
   const [tab, setTab] = useState<Tab>("pending");
   const ids = useId();
@@ -214,6 +219,8 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
     document.getElementById(`${ids}-tab-${next}`)?.focus();
   };
   const languageNames = new Intl.DisplayNames([language], { type: "language" });
+  // 列內的次要動作（#345）：桌機是外框按鈕，其他版面維持底線連結
+  const minor = desktop ? "secondary" : "link";
 
   // done：成功後的短提示；undoable 時 action 回傳的決定 id 交給「撤銷」。
   // motion（#243）：exit 是要退場的列與方式（先播完再寫入，失敗時列回到原狀），items 是這次寫入的項目（撤銷時重新展開），
@@ -429,7 +436,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   // 出處的開關：每筆一行，出處點開才顯示（#189）
   const sourcesToggle = (itemId: string, count: number) =>
     count > 0 && (
-      <button type="button" className="link" aria-expanded={openSources.has(itemId)} onClick={() => setOpenSources((cur) => flip(cur, itemId))}>
+      <button type="button" className={minor} aria-expanded={openSources.has(itemId)} onClick={() => setOpenSources((cur) => flip(cur, itemId))}>
         {fill(s.reviewSources, { count }, language)}
       </button>
     );
@@ -459,7 +466,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
         <div className="review-row">
           <span className={`entity-badge shape-${entityTypeShape(e.type)}`} style={{ "--type-color": typeColor(e.type) } as CSSProperties}>
             <span className="type-dot" aria-hidden="true" />
-            {entityTypeLabel(e.type, language)}
+            <span className="entity-badge__label">{entityTypeLabel(e.type, language)}</span>
           </span>
           {isEditing ? (
             <span className="review-names editing">
@@ -492,7 +499,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                 </Fragment>
               ))}
               {editable && (
-                <button type="button" className="link" disabled={busy} onClick={() => setEditing((cur) => flip(cur, e.id))}>
+                <button type="button" className={minor} disabled={busy} onClick={() => setEditing((cur) => flip(cur, e.id))}>
                   {s.reviewEditNames}
                 </button>
               )}
@@ -500,7 +507,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
           )}
           {mark !== null && <span className={`review-mark is-${mark}`}>{markLabels[mark]}</span>}
           {pending && !needsChoice && candidates.length > 0 && (
-            <button type="button" className="link" aria-expanded={shown} aria-controls={choiceId} onClick={() => setOpenChoices((cur) => flip(cur, e.id))}>
+            <button type="button" className={minor} aria-expanded={shown} aria-controls={choiceId} onClick={() => setOpenChoices((cur) => flip(cur, e.id))}>
               {s.reviewChangeChoice}
             </button>
           )}
@@ -557,10 +564,10 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   };
   // 一段關係一行：「起點 —關係→ 終點」、圖譜已有、出處的開關與退回；waiting：另一端還待審，確認這組時不會一起核准
   const relationRow = (doc: ReviewDocument, r: ReviewRelation, opts: { existing?: boolean; waiting?: boolean }) => (
-    <>
+    <div className="review-relation">
       <div className="review-row">
         <span>
-          {nameOf(doc, r.from)} —{relationTypeLabel(r.type, language)}→ {nameOf(doc, r.to)}
+          {nameOf(doc, r.from)} <span className="review-relation__type">—{relationTypeLabel(r.type, language)}→</span> {nameOf(doc, r.to)}
         </span>
         {opts.existing && <span className="review-mark is-existing">{s.reviewExisting}</span>}
         {r.rejectedWithEntity && <span className="badge">{s.reviewRejectedWithEntity}</span>}
@@ -575,11 +582,16 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
         )}
       </div>
       {openSources.has(r.id) && sourceList(doc, r.id, r.sources, [r.from, r.to])}
-    </>
+    </div>
   );
 
   return (
-    <div className="review-page">
+    <div className={desktop ? "review-page review-page--desktop" : "review-page"}>
+      {desktop && (
+        <header className="review-header">
+          <h1>{s.tabReview}</h1>
+        </header>
+      )}
       <div className="review-toolbar">
         {/* 第二層：底線式分頁（#243），數量直接接在名稱後（0 時不顯示） */}
         <div
@@ -654,7 +666,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
         )}
       </div>
       {extracting && <Notice kind="info" title={s.reviewExtracting} action={{ label: s.reviewRefresh, onClick: refresh, disabled: busy }} />}
-      <div className="review-panel" role="tabpanel" id={`${ids}-panel`} aria-labelledby={`${ids}-tab-${tab}`}>
+      <div className={tab === "reports" ? "review-panel review-panel--reports" : "review-panel"} role="tabpanel" id={`${ids}-panel`} aria-labelledby={`${ids}-tab-${tab}`}>
         {tab === "reports" && (
           <ReportList
             db={db}
@@ -716,7 +728,11 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
               <header className="review-doc__head">
                 <div className="review-doc__title">
                   <h2 lang={doc.language}>
-                    {doc.title} <AccessBadges visibility={doc.visibility} project={doc.project} language={language} />
+                    {doc.title}{" "}
+                    {desktop && doc.uploadedBy != null && (
+                      <span className="review-uploader" lang={language}>{fill(s.reviewUploadedBy, { name: roleLabel(doc.uploadedBy, language) }, language)}</span>
+                    )}{" "}
+                    <AccessBadges visibility={doc.visibility} project={doc.project} language={language} />
                   </h2>
                   {g !== null && hasItems && (
                     <p className="review-summary">
@@ -753,7 +769,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                     {collapsible && (
                       <button
                         type="button"
-                        className="link"
+                        className={minor}
                         aria-expanded={open}
                         aria-controls={bodyId}
                         onClick={() => setOpenDocs((cur) => ({ ...cur, [doc.id]: !open }))}
@@ -865,11 +881,11 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                 )}
 
                 {/* 說法不同（#51）：新舊段落左右並列，附模型的差異說明（純文字）；待審分頁有三個處理按鈕，已處理分頁顯示決定 */}
-                {docConflicts.length > 0 && <h3 className="review-group-title">{s.conflictSection}</h3>}
+                {docConflicts.length > 0 && <h3 className="review-group-title is-conflict">{s.conflictSection}</h3>}
                 <ul className="review-list">
                   {docConflicts.map((c, i) => (
                     <li key={c.id} {...itemProps(c.id, i)}>
-                      <div className="review-item__body">
+                      <div className="review-item__body review-conflict">
                         <p className="conflict-summary" lang={c.newPassage.language}>
                           {c.summary}
                         </p>

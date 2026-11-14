@@ -6362,3 +6362,477 @@ label.inline {
   border-radius: var(--radius-pill);
   background: var(--color-primary);
 }
+
+/* 桌機的待審頁（#345，畫板 F-Review、F-Empty）：ReviewPage 的 review-page--desktop（App 只在桌機、展示模式除外時傳 desktop），
+   手機與平板沒有這個 class，不受影響。頁首 h1 28px／700、填滿內容區（不受 main.page 的最寬限制）；
+   文件卡片分成標頭（上傳者 primarySoft、可見範圍 surfaceRaised 的膠囊，右側待確認的組數與「核准這份文件的全部」）與內容；
+   萃取結果每組一列（56px、surfaceRaised、圓角 12px：類型色圓點＋名稱＋出處，右側退回外框、確認 primary）；關係每則一列；
+   名稱缺少語言時 warningSoft 底＋warning 細框；合併是單選卡（選中 primary 框）；說法不同是 conflictSoft 底、conflictText 字的區塊。
+   回報清單兩欄、空狀態照 F-Empty（虛線框、線條圖示、一句說明、下一步按鈕） */
+main.page:has(> .review-page--desktop) {
+  padding: 32px clamp(16px, 3vw, 48px);
+}
+
+.review-page--desktop {
+  max-width: none;
+  gap: 20px;
+}
+
+.review-header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.review-page--desktop .review-tabs {
+  gap: 4px;
+}
+
+.review-page--desktop .review-tabs [role="tab"] {
+  height: 44px;
+  padding: 0 14px;
+}
+
+.review-page--desktop .review-panel {
+  gap: 20px;
+}
+
+/* 列內的按鈕：退回、編輯名稱、出處、變更合併對象、展開是外框（border、text），確認與核准全部是 primary */
+.review-page--desktop .review-doc button {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.review-page--desktop .review-doc button.secondary {
+  padding: 0 12px;
+  border-color: var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+  font-weight: 400;
+}
+
+.review-page--desktop .review-doc button.link {
+  height: auto;
+  padding: 0;
+  font-weight: 400;
+}
+
+.review-page--desktop .review-doc__side > button:not(.secondary) {
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+/* 文件卡片：標頭與內容以 border 分隔；收合時只有標頭 */
+.review-page--desktop .review-doc {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.review-page--desktop .review-doc > .notice {
+  margin: 16px 20px 0;
+}
+
+.review-page--desktop .review-doc__head {
+  align-items: center;
+  gap: 12px 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.review-page--desktop .review-doc:has(> .review-doc__body[hidden]) .review-doc__head {
+  border-bottom: 0;
+}
+
+.review-page--desktop .review-doc__title h2 {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.review-page--desktop .review-doc__title p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--color-textMuted);
+}
+
+.review-page--desktop .review-doc__side {
+  gap: 10px;
+}
+
+.review-page--desktop .review-doc__side > span {
+  font-size: 13px;
+}
+
+.review-uploader,
+.review-page--desktop .review-doc__title .access-badge {
+  display: inline-block;
+  vertical-align: middle;
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.review-uploader {
+  background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+  color: var(--color-text);
+}
+
+.review-page--desktop .review-doc__title .access-badge {
+  background: var(--color-surfaceRaised);
+  color: var(--color-textMuted);
+}
+
+.review-page--desktop .review-to-confirm {
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.review-page--desktop .review-decide-left {
+  margin: 12px 20px 0;
+}
+
+.review-page--desktop .review-doc__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 20px;
+}
+
+.review-page--desktop .review-doc__body[hidden] {
+  display: none;
+}
+
+.review-page--desktop .review-doc__body > ul {
+  margin: 0;
+}
+
+.review-page--desktop .review-group-title {
+  margin: 14px 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.review-page--desktop .review-group-title:first-child {
+  margin-top: 0;
+}
+
+.review-page--desktop .review-group-title.is-conflict {
+  color: var(--color-conflict);
+}
+
+.review-page--desktop .review-list,
+.review-page--desktop .review-rows {
+  gap: 6px;
+}
+
+.review-page--desktop .review-list > li {
+  border: 0;
+  padding: 0;
+}
+
+.review-page--desktop .review-rows {
+  margin-top: 6px;
+  padding-left: 24px;
+}
+
+/* 一列：實體 56px、關係 52px，內容垂直置中；動作靠右 */
+.review-page--desktop .review-entity,
+.review-page--desktop .review-relation {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  min-height: 56px;
+  box-sizing: border-box;
+  padding: 6px 14px;
+  border-radius: 12px;
+  background: var(--color-surfaceRaised);
+}
+
+.review-page--desktop .review-relation {
+  min-height: 52px;
+  font-size: 14px;
+}
+
+.review-page--desktop .review-row {
+  gap: 8px 12px;
+}
+
+.review-page--desktop .review-actions {
+  gap: 6px;
+}
+
+.review-page--desktop .review-names {
+  font-size: 15px;
+}
+
+/* 類型只顯示色點（形狀依類型），類型名稱留給螢幕閱讀器 */
+.review-page--desktop .review-entity .entity-badge {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.review-page--desktop .review-entity .entity-badge .type-dot {
+  width: 12px;
+  height: 12px;
+}
+
+.review-page--desktop .entity-badge__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.review-page--desktop .review-mark {
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  font-size: 12px;
+}
+
+.review-page--desktop .review-mark.is-new {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.review-page--desktop .review-relation__type {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-primary);
+}
+
+/* 名稱缺少語言：warningSoft 底、warning 細框，各語言的名稱欄位兩欄排列 */
+.review-page--desktop .review-entity.is-warning {
+  border: 0;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--color-warning) 10%, var(--color-surface));
+  box-shadow: inset 0 0 0 1.5px var(--color-warning);
+}
+
+.review-page--desktop .review-names.editing {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  gap: 8px;
+  flex: 1 1 100%;
+  order: 1;
+}
+
+.review-page--desktop .review-names.editing label.inline {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-textMuted);
+}
+
+.review-page--desktop .review-names.editing input {
+  height: 40px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.review-page--desktop .review-names.editing input[aria-invalid="true"] {
+  border: 1.5px solid var(--color-warning);
+}
+
+/* 合併：單選卡（surface 底、選中 primary 1.5px 框） */
+.review-page--desktop .review-choice {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding-left: 24px;
+}
+
+.review-page--desktop .review-choice__card {
+  min-height: 52px;
+  align-content: center;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--color-surface);
+  font-size: 14px;
+}
+
+.review-page--desktop .review-choice__card.is-selected {
+  border-color: var(--color-primary);
+  box-shadow: inset 0 0 0 0.5px var(--color-primary);
+}
+
+.review-page--desktop .review-choice input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary);
+}
+
+.review-page--desktop .review-hint {
+  padding-left: 24px;
+  font-size: 12px;
+}
+
+/* 說法不同：conflictSoft 底、conflictText 字；兩種說法是並列的 surface 卡片，三個決定是外框按鈕 */
+.review-page--desktop .review-conflict {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--color-conflictSoft);
+  color: var(--color-conflictText);
+}
+
+.review-page--desktop .review-conflict .conflict-summary {
+  margin: 0;
+  color: var(--color-conflictText);
+}
+
+.review-page--desktop .conflict-pair {
+  gap: 10px;
+  margin: 0;
+}
+
+.review-page--desktop .conflict-side {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.review-page--desktop .conflict-side h4 {
+  color: var(--color-textMuted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.review-page--desktop .conflict-actions {
+  gap: 6px;
+}
+
+.review-page--desktop .conflict-actions button {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 400;
+}
+
+/* 回報清單（F-Empty 的「待審 › 回報」）：兩欄卡片；原因是 surfaceRaised 的膠囊，處理按鈕是外框 */
+.review-page--desktop .review-panel--reports {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px;
+}
+
+.review-page--desktop .review-panel--reports > .empty-state {
+  grid-column: 1 / -1;
+}
+
+.review-page--desktop .report {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 20px;
+  border-radius: 16px;
+}
+
+.review-page--desktop .report p,
+.review-page--desktop .report h2 {
+  margin: 0;
+}
+
+.review-page--desktop .report h2 {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.review-page--desktop .report > p.muted {
+  font-size: 12px;
+}
+
+.review-page--desktop .report-chips .badge {
+  padding: 3px 10px;
+  border: 0;
+  background: var(--color-surfaceRaised);
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.review-page--desktop .report-actions button {
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border-color: var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+/* 空狀態（F-Empty）：虛線框、22px 線條圖示、15px 粗體標題、13px 說明、36px 的下一步（第一個 primary，第二個外框） */
+.review-page--desktop .empty-state {
+  align-content: start;
+  gap: 10px;
+  min-height: 170px;
+  box-sizing: border-box;
+  padding: 18px;
+  border: 1.5px dashed var(--color-textMuted);
+  border-radius: 12px;
+}
+
+.review-page--desktop .empty-state__icon {
+  width: 22px;
+  height: 22px;
+  stroke-width: 1.8;
+}
+
+.review-page--desktop .empty-state__title {
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.review-page--desktop .empty-state__reason {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.review-page--desktop .empty-state__actions {
+  gap: 6px;
+  margin-top: auto;
+}
+
+.review-page--desktop .empty-state__actions button {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.review-page--desktop .empty-state__actions button.secondary {
+  border-color: var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+  font-weight: 400;
+}
