@@ -183,11 +183,13 @@ async function nodeOnScreen(page: Page, id: string): Promise<{ x: number; y: num
   );
 }
 
-// 面板以上的可見部分（畫布上緣到面板上緣）的中央
+// 面板以上的可見部分（畫布上緣到面板上緣；浮在畫布上方的「已展開」列有顯示時從它的下緣開始，#357 修正要求）的中央
 async function upperCenter(page: Page): Promise<{ x: number; y: number }> {
   const canvas = (await page.locator(CANVAS).boundingBox())!;
   const sheetTop = (await entitySheet(page).boundingBox())!.y;
-  return { x: canvas.x + canvas.width / 2, y: (canvas.y + Math.min(sheetTop, canvas.y + canvas.height)) / 2 };
+  const trail = (await page.locator(".graph-phone-stage .graph-trail").boundingBox()) ?? null;
+  const top = trail !== null && trail.height > 0 ? trail.y + trail.height : canvas.y;
+  return { x: canvas.x + canvas.width / 2, y: (top + Math.min(sheetTop, canvas.y + canvas.height)) / 2 };
 }
 
 test("實體面板：選取的節點平移到面板以上的中央，內容依序排列", async ({ page }) => {
