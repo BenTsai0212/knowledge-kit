@@ -17,6 +17,7 @@ import {
   reviewCounts,
   reviewSteps,
   uploadTerms,
+  type ExtractionPhase,
   type MyUploadStatus,
   type ReviewCounts,
   type ReviewStepName,
@@ -95,6 +96,15 @@ export function ReviewProgress({ counts, language, title }: { counts: ReviewCoun
   );
 }
 
+// 桌機上傳詳情的摘要下方：目前狀態的說明（#344 審查）
+const STATUS_NOTE: Record<MyUploadStatus, (m: ReturnType<typeof strings>["myUploads"]) => string> = {
+  uploaded: (m) => m.noItems,
+  in_review: (m) => m.noteInReview,
+  approved: (m) => m.noteApproved,
+  partly_rejected: (m) => m.notePartlyRejected,
+  rejected: (m) => m.noteRejected,
+};
+
 const pendingName = (names: Record<string, string>, language: string, fallback: string) => names[language] || Object.values(names)[0] || fallback;
 
 interface ListProps {
@@ -154,14 +164,17 @@ interface DetailProps {
   doc: MyUploadDocument;
   language: string;
   extracting: boolean;
-  // 本工作階段上傳的文件的萃取狀態（失敗時的提示與重試）；沒有時為 null
+  // 本工作階段上傳的文件的萃取狀態（失敗時的提示與重試）；沒有時為 null。
+  // 桌機只傳進度（萃取中）或錯誤（萃取或比對失敗），萃取的處理紀錄不顯示（#344 審查）
   jobStatus: ReactNode;
+  // 本工作階段的萃取在哪個階段；不是本工作階段上傳的文件為 null（桌機在 null 或 done 時顯示摘要）
+  phase: ExtractionPhase | null;
   onReupload(reupload: Reupload): void;
   onClose(): void;
   desktop: boolean;
 }
 
-export function UploadDetail({ db, identity, doc, language, extracting, jobStatus, onReupload, onClose, desktop }: DetailProps) {
+export function UploadDetail({ db, identity, doc, language, extracting, jobStatus, phase, onReupload, onClose, desktop }: DetailProps) {
   const s = strings(language);
   const m = s.myUploads;
   const counts = reviewCounts(doc, extracting);
@@ -251,12 +264,20 @@ export function UploadDetail({ db, identity, doc, language, extracting, jobStatu
       </div>
       <h2 id={`upload-detail-${doc.id}`}>{doc.title}</h2>
       <p className="my-upload__meta">
-        <span className="my-upload__date">{doc.date ?? s.undated}</span> ·{" "}
-        {fill(m.itemCounts, { entities: doc.entities.length, relations: doc.relations.length }, language)}
+        <span className="my-upload__date">{doc.date ?? s.undated}</span>
       </p>
       <StatusBadge status={status} language={language} />
       {jobStatus}
-      {counts.total === 0 && !counts.extracting && <p className="muted">{m.noItems}</p>}
+      {/* 萃取完成後（或不是本工作階段上傳的文件）：一句摘要與目前狀態的說明（畫板 K-Uploads），不顯示萃取的處理紀錄 */}
+      {(phase === null || phase === "done") &&
+        (counts.total === 0 ? (
+          <p className="muted">{m.noItems}</p>
+        ) : (
+          <p className="upload-detail__summary">
+            {fill(m.extractSummary, { entities: doc.entities.length, relations: doc.relations.length }, language)}
+            <span className="upload-detail__note">{STATUS_NOTE[status](m)}</span>
+          </p>
+        ))}
       {items.length > 0 && (
         <ul className="upload-detail__items">
           {items.map((i) => (
@@ -272,7 +293,6 @@ export function UploadDetail({ db, identity, doc, language, extracting, jobStatu
           ))}
         </ul>
       )}
-      {status === "in_review" && <p className="upload-detail__note">{m.approvalNote}</p>}
       <UploadSource key={doc.id} db={db} identity={identity} doc={doc} language={language} />
       {reupload}
     </aside>

@@ -890,5 +890,10 @@ export interface UiStrings {
     detail: string;
     viewSource: string;
     hideSource: string;
+    extractSummary: string;
+    noteInReview: string;
+    noteApproved: string;
+    notePartlyRejected: string;
+    noteRejected: string;
   };
 }

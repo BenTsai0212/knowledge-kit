@@ -101,6 +101,14 @@ test("頁首與分段切換、送出後的四步進度卡、我的上傳的列�
   expect(detailBox.x).toBeGreaterThan((await box(row)).x + (await box(row)).width);
   await expect(detail.locator(".upload-detail__items li").filter({ hasText: FAKE_ENTITY_NAME })).toContainText(s.myUploads.statusInReview);
 
+  // 萃取完成後（#344 審查）：一句摘要與目前狀態的說明，不顯示萃取與比對的處理紀錄
+  const summary = detail.locator(".upload-detail__summary");
+  await expect(summary).toContainText(s.myUploads.extractSummary.split("{entities}")[0]);
+  await expect(summary).toContainText(s.myUploads.noteInReview);
+  await expect(detail.locator(".extraction")).toHaveCount(0);
+  await expect(detail).not.toContainText(s.extractDone);
+  await expect(detail).not.toContainText(s.conflictUnrelated);
+
   // 看原文：實體以類型色的 3px 底線標出
   await detail.getByRole("button", { name: s.myUploads.viewSource }).click();
   const source = detail.getByRole("region", { name: s.sourceTitle });

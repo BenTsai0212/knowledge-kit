@@ -6476,8 +6476,16 @@ main.page:has(> .upload-page) {
   color: var(--color-warning);
 }
 
-.upload-detail__note {
+/* 萃取完成後的一句摘要，下一行是目前狀態的說明（#344 審查） */
+.upload-detail__summary {
   margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.upload-detail__note {
+  display: block;
+  margin: 4px 0 0;
   font-size: 12px;
   line-height: 1.6;
   color: var(--color-textMuted);

@@ -82,6 +82,15 @@ export function inProgressCount(docs: readonly Pick<ReviewDocument, "id" | "enti
   }).length;
 }
 
+// 桌機的上傳詳情（#344 審查）：本工作階段的萃取在哪個階段。執行中是 extracting；停止後還有失敗或未執行的批次是 failed；
+// 其餘是 done（只有 done 時顯示「萃取出 N 個實體、N 段關係」的摘要，萃取的處理紀錄不顯示）
+export type ExtractionPhase = "extracting" | "failed" | "done";
+
+export function extractionPhase(batches: readonly { status: string }[], running: boolean): ExtractionPhase {
+  if (running) return "extracting";
+  return batches.some((b) => b.status !== "done") ? "failed" : "done";
+}
+
 // 上傳詳情的原文（#344，畫板 B-Ingest 的實體底線）：萃取出的實體的各語言名稱與類型，退回的實體不標。
 // 標出的位置由 upload-helpers.ts 的 underlineRanges() 算（與確認視窗的預覽相同）
 export function uploadTerms(doc: Pick<ReviewDocument, "entities">): FoundTerm[] {

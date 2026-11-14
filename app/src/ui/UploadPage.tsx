@@ -16,14 +16,14 @@ import { uploadDocument, UploadError } from "../upload/write";
 import type { ConflictState } from "../conflicts/run";
 import type { ExtractionState } from "../extraction/run";
 import { LevelBadge, ProjectBadge } from "./AccessBadges";
-import { ConflictStatus } from "./ConflictStatus";
+import { ConflictFailure, ConflictStatus } from "./ConflictStatus";
 import { EMPTY_ICONS, focusIdentity } from "./empty-state";
 import { EmptyState } from "./EmptyState";
-import { ExtractionStatus } from "./ExtractionStatus";
+import { ExtractionFailure, ExtractionStatus } from "./ExtractionStatus";
 import { FilePicker } from "./FilePicker";
 import { readMyUploads, type MyUploadDocument } from "../extraction/store";
 import { useLayout } from "./layout";
-import { countsFromBatches, inProgressCount, type Reupload } from "./my-uploads";
+import { countsFromBatches, extractionPhase, inProgressCount, type Reupload } from "./my-uploads";
 import { MyUploadList, ReviewProgress, UploadDetail } from "./MyUploads";
 import { Notice } from "./Notice";
 import { onlineDemo, presentationMode } from "./online-demo";
@@ -112,6 +112,21 @@ export function UploadPage({
       )}
     </>
   );
+  // 桌機的上傳詳情（#344 審查）：萃取中顯示進度，失敗時只顯示錯誤（萃取或比對），完成後由 UploadDetail 顯示摘要
+  const detailStatus = (job: Job) => {
+    const phase = extractionPhase(job.state.batches, job.running);
+    const node =
+      phase === "extracting" ? (
+        <ExtractionStatus state={job.state} running={job.running} language={language} onRetry={() => onRetryExtraction(job.state.documentId)} />
+      ) : phase === "failed" ? (
+        <ExtractionFailure state={job.state} language={language} onRetry={() => onRetryExtraction(job.state.documentId)} />
+      ) : (
+        client.conflicts.enabled &&
+        !job.conflictRunning &&
+        job.conflict !== undefined && <ConflictFailure state={job.conflict} language={language} onRetry={() => onRetryConflicts(job.state.documentId)} />
+      );
+    return { phase, node };
+  };
   const role = access.roles.find((r) => r.id === identity);
   const rank = new Map(access.visibilityLevels.map((l) => [l.id, l.rank]));
   const levels = role ? access.visibilityLevels.filter((l) => l.rank <= rank.get(role.visibility)!) : [];
@@ -515,6 +530,7 @@ export function UploadPage({
   );
   const doc = docs?.find((d) => d.id === selected);
   const job = doc === undefined ? undefined : extractions.find((x) => x.state.documentId === doc.id);
+  const jobDetail = job === undefined ? undefined : detailStatus(job);
   const detail = doc !== undefined && (
     <UploadDetail
       db={db}
@@ -522,7 +538,8 @@ export function UploadPage({
       doc={doc}
       language={language}
       extracting={extractingIds.has(doc.id)}
-      jobStatus={job === undefined ? null : jobStatus(job)}
+      jobStatus={job === undefined || jobDetail === undefined ? null : desktop ? jobDetail.node : jobStatus(job)}
+      phase={jobDetail?.phase ?? null}
       onReupload={startReupload}
       onClose={() => setSelected(null)}
       desktop={desktop}

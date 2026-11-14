@@ -643,7 +643,12 @@
     "submitted": "「{title}」を送信しました",
     "detail": "アップロードの詳細",
     "viewSource": "原文を見る",
-    "hideSource": "原文を閉じる"
+    "hideSource": "原文を閉じる",
+    "extractSummary": "エンティティ {entities} 件、関係 {relations} 件を抽出しました。",
+    "noteInReview": "レビュー待ちです。レビュー担当者が承認すると、質問応答と関係図に表示されます。",
+    "noteApproved": "承認済みです。内容は質問応答と関係図に表示されています。",
+    "notePartlyRejected": "一部の項目が差し戻されました。承認された項目は質問応答と関係図に表示されています。",
+    "noteRejected": "すべての項目が差し戻されたため、質問応答と関係図には表示されません。"
   },
   "presentation": {
     "script": "台本",

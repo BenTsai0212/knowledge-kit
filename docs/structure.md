@@ -155,7 +155,7 @@
 
 ### `app/src/upload/`
 
-上傳；說明見 `docs/upload.md`。畫面是 `app/src/ui/UploadPage.tsx`（桌機的頁首、分段切換與右側的上傳詳情欄，#344），其中「我的上傳」的清單、上傳詳情與「看原文」是 `app/src/ui/MyUploads.tsx`，狀態、四步進度、處理中的數量與原文中標出的實體的純函式在 `app/src/ui/my-uploads.ts`。
+上傳；說明見 `docs/upload.md`。畫面是 `app/src/ui/UploadPage.tsx`（桌機的頁首、分段切換與右側的上傳詳情欄，#344），其中「我的上傳」的清單、上傳詳情與「看原文」是 `app/src/ui/MyUploads.tsx`，狀態、四步進度、處理中的數量、上傳詳情的萃取階段與原文中標出的實體的純函式在 `app/src/ui/my-uploads.ts`。
 
 - `chunk.ts`：切段
 - `docx.ts`：以動態 import 載入 `mammoth`（見 ADR 0002）

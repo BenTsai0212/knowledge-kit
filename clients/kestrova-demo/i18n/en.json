@@ -643,7 +643,12 @@
     "submitted": "Submitted “{title}”",
     "detail": "Upload details",
     "viewSource": "View source",
-    "hideSource": "Hide source"
+    "hideSource": "Hide source",
+    "extractSummary": "Extracted {entities, plural, one {# entity} other {# entities}} and {relations, plural, one {# relation} other {# relations}}.",
+    "noteInReview": "Waiting for a reviewer. Content appears in Q&A and the graph after a reviewer approves it.",
+    "noteApproved": "Approved. The content now appears in Q&A and the graph.",
+    "notePartlyRejected": "Some items were rejected; the approved items appear in Q&A and the graph.",
+    "noteRejected": "All items were rejected and will not appear in Q&A or the graph."
   },
   "presentation": {
     "script": "Script",
