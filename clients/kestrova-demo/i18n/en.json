@@ -66,6 +66,7 @@
   "sourceHeading": "Source · Citation {n}",
   "closeSource": "Close source",
   "sourceStep": "Source {n} of {total}",
+  "sourceSheetStep": "Source · {n} of {total}",
   "sourcePrev": "Previous source",
   "sourceNext": "Next source",
   "sourceCitedList": "Sources for this answer",

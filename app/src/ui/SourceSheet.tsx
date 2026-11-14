@@ -1,6 +1,6 @@
 // 手機的原文面板（#256；平板是右側的滑出面板，#255，docs/design.md「問答（手機）」）：點引用標號時從底部升起（BottomSheet，高 74%）。
-// 標題列是「出處 N／M」與上一個、下一個出處（44px）；原文在 reading 紙面、引用段落用 markReading（SourceText，與桌機相同）；
-// 下方是「在圖譜中查看」與「回報有錯」。不是從某一題的引用打開時（段落旁的標示、其他頁面）只顯示「原文」。
+// 標題列是「原文 · 出處 N／M」小字（平板是「出處 N／M」）與上一個、下一個出處（44px）；原文在 reading 紙面、引用段落用 markReading、
+// 其他段落 textMuted（SourceText，與桌機相同，#354）；下方是並排的「在圖譜中查看」與「回報有錯」（畫板 G-Mobile-QA）。不是從某一題的引用打開時（段落旁的標示、其他頁面）只顯示「原文」。
 import { fill, strings } from "../client/i18n";
 import type { SourceDocument } from "../sources/source";
 import { AccessBadges } from "./AccessBadges";
@@ -37,7 +37,7 @@ export function SourceSheet({ language, source, steps, onStep, onOpenSource, onV
     <BottomSheet
       open
       onClose={onClose}
-      title={steps === null ? s.sourceTitle : fill(s.sourceStep, { n: steps.index, total: steps.total })}
+      title={steps === null ? s.sourceTitle : fill(side === "right" ? s.sourceStep : s.sourceSheetStep, { n: steps.index, total: steps.total })}
       language={language}
       className="source-sheet"
       side={side}

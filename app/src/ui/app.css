@@ -5861,7 +5861,8 @@ main.page:has(> .eval-page--desktop) {
 }
 
 /* 桌機的問答頁（#335，畫板 QA）：≥ 1025px 且不是展示模式時 App 加上 app--desktop。中間是頁首、對話（最寬 760px）與單行輸入列，
-   右側是貼齊右緣的整高原文欄（360～440px）。手機、平板與展示模式沒有 app--desktop，不受影響 */
+   右側是貼齊右緣的整高原文欄（360～440px）。手機、平板與展示模式沒有 app--desktop，不受影響。
+   問題泡泡、回答卡片與其中的狀態（:is(.app--desktop, .app--phone)）手機也沿用（#354，畫板 G-Mobile-QA），手機的尺寸在下方「手機的問答」另外調整 */
 .app--desktop main.qa.with-panel {
   grid-template-columns: minmax(0, 1fr) clamp(360px, 30vw, 440px);
 }
@@ -5895,8 +5896,8 @@ main.page:has(> .eval-page--desktop) {
   gap: 28px;
 }
 
-/* 一題：右對齊的問題泡泡（text 底、surface 字）＋回答卡片；section 本身不是卡片 */
-.app--desktop .conversation > .answer {
+/* 一題：右對齊的問題泡泡（text 底、surface 字）＋回答卡片；section 本身不是卡片（桌機與手機） */
+:is(.app--desktop, .app--phone) .conversation > .answer {
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -5905,7 +5906,7 @@ main.page:has(> .eval-page--desktop) {
   background: none;
 }
 
-.app--desktop .answer > h2 {
+:is(.app--desktop, .app--phone) .answer > h2 {
   align-self: flex-end;
   max-width: 80%;
   margin: 0;
@@ -5920,7 +5921,7 @@ main.page:has(> .eval-page--desktop) {
   overflow-wrap: anywhere;
 }
 
-.app--desktop .answer__body {
+:is(.app--desktop, .app--phone) .answer__body {
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -5930,16 +5931,16 @@ main.page:has(> .eval-page--desktop) {
   background: var(--color-surface);
 }
 
-.app--desktop .answer__body > * {
+:is(.app--desktop, .app--phone) .answer__body > * {
   margin: 0;
 }
 
-/* 「根據 N 段原文回答」：8px 的 success 點＋13px textMuted；手機、平板與展示模式不顯示 */
+/* 「根據 N 段原文回答」：8px 的 success 點＋13px textMuted；桌機與手機顯示，平板與展示模式不顯示 */
 .answer-basis {
   display: none;
 }
 
-.app--desktop .answer-basis {
+:is(.app--desktop, .app--phone) .answer-basis {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -5956,13 +5957,13 @@ main.page:has(> .eval-page--desktop) {
   background: var(--color-success);
 }
 
-.app--desktop .answer__body > .answer-text {
+:is(.app--desktop, .app--phone) .answer__body > .answer-text {
   font-size: 17px;
   line-height: 1.85;
 }
 
 /* 引用標號：不上標的小方塊（mono 12px），顏色沿用上面三個狀態的規則 */
-.app--desktop .answer-text button.citation {
+:is(.app--desktop, .app--phone) .answer-text button.citation {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -5977,34 +5978,34 @@ main.page:has(> .eval-page--desktop) {
 }
 
 /* 回答提到：上方 1px 分隔線、12px／600 的小標、40px 的膠囊 */
-.app--desktop .answer__body > .mentions {
+:is(.app--desktop, .app--phone) .answer__body > .mentions {
   gap: 10px;
   padding-top: 16px;
   border-top: 1px solid var(--color-border);
 }
 
-.app--desktop .mentions > p {
+:is(.app--desktop, .app--phone) .mentions > p {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.06em;
 }
 
-.app--desktop .mention-group {
+:is(.app--desktop, .app--phone) .mention-group {
   gap: 8px;
 }
 
-.app--desktop .mention-group > button.chip {
+:is(.app--desktop, .app--phone) .mention-group > button.chip {
   min-height: 40px;
   padding: 0 14px;
   gap: 8px;
   font-size: 14px;
 }
 
-.app--desktop .mention-group > button.chip[aria-pressed="true"] {
+:is(.app--desktop, .app--phone) .mention-group > button.chip[aria-pressed="true"] {
   padding: 0 13px;
 }
 
-.app--desktop .mention-group .type-dot {
+:is(.app--desktop, .app--phone) .mention-group .type-dot {
   width: 10px;
   height: 10px;
 }
@@ -6018,7 +6019,7 @@ main.page:has(> .eval-page--desktop) {
 }
 
 /* 輸入區：不是卡片；預設問題膠囊在上，下方是圓角 14px、1.5px text 框的單行輸入列（輸入框＋框內 44px 的「提問」） */
-.app--desktop .composer--line {
+:is(.app--desktop, .app--phone) .composer--line {
   max-width: 760px;
   width: 100%;
   gap: 12px;
@@ -6027,7 +6028,7 @@ main.page:has(> .eval-page--desktop) {
   background: none;
 }
 
-.app--desktop .composer--line .presets button {
+:is(.app--desktop, .app--phone) .composer--line .presets button {
   min-height: 36px;
   padding: 0 12px;
   border: 1px solid var(--color-border);
@@ -6198,7 +6199,7 @@ main.page:has(> .eval-page--desktop) {
 }
 
 /* 桌機回答卡片的狀態（#335 PR 2，畫板 QA、K-Answer、I-States）：說法不同、拒答、回報結果、錯誤與額度、「回報有錯」。
-   只在 app--desktop 之下顯示或改樣式；只給桌機的元素（說法不同的提示列、拒答卡片的小標與色點、錯誤的圖示與說明）在其他版面不顯示 */
+   只在 app--desktop 與 app--phone（#354）之下顯示或改樣式；只給這兩種版面的元素（說法不同的提示列、拒答卡片的小標與色點、錯誤的圖示與說明）在其他版面不顯示 */
 .answer-conflict,
 .refusal-kind,
 .refusal-next .type-dot,
@@ -6208,7 +6209,7 @@ main.page:has(> .eval-page--desktop) {
 }
 
 /* 說法不同：本文下方 conflictSoft 底、conflictText 字的提示列（圖示＋文字） */
-.app--desktop .answer-conflict {
+:is(.app--desktop, .app--phone) .answer-conflict {
   display: flex;
   gap: 12px;
   padding: 12px 14px;
@@ -6219,8 +6220,8 @@ main.page:has(> .eval-page--desktop) {
   line-height: 1.6;
 }
 
-.app--desktop .answer-conflict svg,
-.app--desktop .problem-icon {
+:is(.app--desktop, .app--phone) .answer-conflict svg,
+:is(.app--desktop, .app--phone) .problem-icon {
   flex: none;
   width: 18px;
   height: 18px;
@@ -6233,7 +6234,7 @@ main.page:has(> .eval-page--desktop) {
 }
 
 /* 拒答：回答卡片內的文字＋「可以試試」；下一步是並排的 surfaceRaised 卡片（小標＋內容，實體附類型色），上傳是卡片下方的一行 */
-.app--desktop .answer__body > .refusal {
+:is(.app--desktop, .app--phone) .answer__body > .refusal {
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -6241,20 +6242,20 @@ main.page:has(> .eval-page--desktop) {
   border: none;
 }
 
-.app--desktop .refusal > .answer-text {
+:is(.app--desktop, .app--phone) .refusal > .answer-text {
   margin: 0;
   font-size: 16px;
   line-height: 1.7;
 }
 
-.app--desktop .refusal-next > p {
+:is(.app--desktop, .app--phone) .refusal-next > p {
   margin: 0 0 8px;
   font-size: 14px;
   font-weight: 700;
   color: var(--color-text);
 }
 
-.app--desktop .refusal-next ul {
+:is(.app--desktop, .app--phone) .refusal-next ul {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 8px;
@@ -6262,7 +6263,7 @@ main.page:has(> .eval-page--desktop) {
   list-style: none;
 }
 
-.app--desktop .refusal-next li {
+:is(.app--desktop, .app--phone) .refusal-next li {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -6276,26 +6277,26 @@ main.page:has(> .eval-page--desktop) {
   line-height: 1.6;
 }
 
-.app--desktop .refusal-kind {
+:is(.app--desktop, .app--phone) .refusal-kind {
   display: block;
   font-size: 12px;
   color: var(--color-textMuted);
 }
 
-.app--desktop .refusal-step {
+:is(.app--desktop, .app--phone) .refusal-step {
   display: flex;
   align-items: baseline;
   gap: 8px;
   font-weight: 600;
 }
 
-.app--desktop .refusal-next .type-dot {
+:is(.app--desktop, .app--phone) .refusal-next .type-dot {
   display: inline-block;
   width: 10px;
   height: 10px;
 }
 
-.app--desktop .refusal-next li.refusal-next__upload {
+:is(.app--desktop, .app--phone) .refusal-next li.refusal-next__upload {
   grid-column: 1 / -1;
   padding: 4px 0 0;
   border: none;
@@ -6304,12 +6305,12 @@ main.page:has(> .eval-page--desktop) {
   color: var(--color-textMuted);
 }
 
-.app--desktop .refusal-next__upload .refusal-step {
+:is(.app--desktop, .app--phone) .refusal-next__upload .refusal-step {
   font-weight: 400;
 }
 
 /* 錯誤：回答卡片就是中性的卡片；圖示（warning）＋訊息＋「問題已保留…」，「重新提問」對齊訊息 */
-.app--desktop .answer__body > .problem {
+:is(.app--desktop, .app--phone) .answer__body > .problem {
   display: grid;
   grid-template-columns: 22px minmax(0, 1fr);
   column-gap: 14px;
@@ -6319,12 +6320,12 @@ main.page:has(> .eval-page--desktop) {
   background: none;
 }
 
-.app--desktop .problem > * {
+:is(.app--desktop, .app--phone) .problem > * {
   grid-column: 2;
   margin: 0;
 }
 
-.app--desktop .problem > .problem-icon {
+:is(.app--desktop, .app--phone) .problem > .problem-icon {
   display: block;
   grid-column: 1;
   grid-row: 1;
@@ -6334,24 +6335,24 @@ main.page:has(> .eval-page--desktop) {
   color: var(--color-warning);
 }
 
-.app--desktop .problem > p:not(.problem-kept, .problem-actions) {
+:is(.app--desktop, .app--phone) .problem > p:not(.problem-kept, .problem-actions) {
   font-size: 15px;
   font-weight: 600;
 }
 
-.app--desktop .problem-kept {
+:is(.app--desktop, .app--phone) .problem-kept {
   display: block;
   font-size: 13px;
   color: var(--color-textMuted);
 }
 
-.app--desktop .answer__body > .problem + .retry {
+:is(.app--desktop, .app--phone) .answer__body > .problem + .retry {
   margin-top: -8px;
   padding-left: 36px;
 }
 
-.app--desktop .answer__body > .retry button,
-.app--desktop .problem-actions button {
+:is(.app--desktop, .app--phone) .answer__body > .retry button,
+:is(.app--desktop, .app--phone) .problem-actions button {
   min-height: 40px;
   padding: 0 16px;
   border: 1px solid var(--color-border);
@@ -6363,7 +6364,7 @@ main.page:has(> .eval-page--desktop) {
 }
 
 /* 「回報有錯」：卡片內的次要按鈕（36px、圓角 8px、1px border、surface 底） */
-.app--desktop .answer__body > .report-open button.chip {
+:is(.app--desktop, .app--phone) .answer__body > .report-open button.chip {
   height: 36px;
   padding: 0 12px;
   border: 1px solid var(--color-border);
@@ -6375,7 +6376,7 @@ main.page:has(> .eval-page--desktop) {
 }
 
 /* 回報結果：左邊 3px 的狀態色線、狀態色淡底（處理中 primary、不是錯誤 success、已撤回 warning） */
-.app--desktop .answer__body > .report-result {
+:is(.app--desktop, .app--phone) .answer__body > .report-result {
   --report-edge: var(--color-primary);
   display: flex;
   flex-direction: column;
@@ -6389,19 +6390,19 @@ main.page:has(> .eval-page--desktop) {
   line-height: 1.7;
 }
 
-.app--desktop .report-result--not_error {
+:is(.app--desktop, .app--phone) .report-result--not_error {
   --report-edge: var(--color-success);
 }
 
-.app--desktop .report-result--retracted {
+:is(.app--desktop, .app--phone) .report-result--retracted {
   --report-edge: var(--color-warning);
 }
 
-.app--desktop .answer__body > .report-result p {
+:is(.app--desktop, .app--phone) .answer__body > .report-result p {
   margin: 0;
 }
 
-.app--desktop .report-result .report-result__head .badge {
+:is(.app--desktop, .app--phone) .report-result .report-result__head .badge {
   min-height: 26px;
   padding: 0 10px;
   border: none;
@@ -6412,7 +6413,7 @@ main.page:has(> .eval-page--desktop) {
   font-weight: 700;
 }
 
-.app--desktop .report-result__actions button {
+:is(.app--desktop, .app--phone) .report-result__actions button {
   min-height: 36px;
   padding: 0 12px;
   border: 1px solid var(--color-border);
@@ -6424,8 +6425,8 @@ main.page:has(> .eval-page--desktop) {
 }
 
 /* 今天用完了（I-States）：輸入列上方 surfaceRaised 底的說明條，時鐘圖示用 text；離線提示同樣是中性的說明條 */
-.app--desktop .notice--limit,
-.app--desktop .notice--offline {
+:is(.app--desktop, .app--phone) .notice--limit,
+:is(.app--desktop, .app--phone) .notice--offline {
   align-items: flex-start;
   gap: 12px;
   padding: 14px 16px;
@@ -6434,23 +6435,23 @@ main.page:has(> .eval-page--desktop) {
   background: var(--color-surfaceRaised);
 }
 
-.app--desktop .notice--limit .notice-icon,
-.app--desktop .notice--offline .notice-icon {
+:is(.app--desktop, .app--phone) .notice--limit .notice-icon,
+:is(.app--desktop, .app--phone) .notice--offline .notice-icon {
   background: none;
   color: var(--color-text);
 }
 
-.app--desktop .notice--limit .notice-body strong {
+:is(.app--desktop, .app--phone) .notice--limit .notice-body strong {
   font-size: 15px;
 }
 
-.app--desktop .notice--limit .notice-body > div {
+:is(.app--desktop, .app--phone) .notice--limit .notice-body > div {
   font-size: 13px;
   color: var(--color-textMuted);
 }
 
 /* 需要管理者（I-States）：對話區頂端 conflictSoft 底、conflictText 字的說明，不另加圖示 */
-.app--desktop .notice--admin {
+:is(.app--desktop, .app--phone) .notice--admin {
   padding: 16px 18px;
   border: none;
   border-radius: 14px;
@@ -6458,16 +6459,198 @@ main.page:has(> .eval-page--desktop) {
   color: var(--color-conflictText);
 }
 
-.app--desktop .notice--admin .notice-icon {
+:is(.app--desktop, .app--phone) .notice--admin .notice-icon {
   display: none;
 }
 
-.app--desktop .notice--admin .notice-body strong {
+:is(.app--desktop, .app--phone) .notice--admin .notice-body strong {
   font-size: 16px;
 }
 
-.app--desktop .notice--admin .admin-details {
+:is(.app--desktop, .app--phone) .notice--admin .admin-details {
   font-size: 13px;
+}
+
+/* 手機的問答（#354，畫板 G-Mobile-QA）：問題泡泡、回答卡片與狀態沿用上方桌機的規則，這裡只調整手機的尺寸。
+   引用標號 26×24px（觸控範圍由上方「手機的問答頁」的 ::after 補到 44px）；預設問題與「回答提到」的膠囊高 44px（觸控目標）。
+   輸入區是貼齊分頁列的整寬列（background 底）：預設問題只留膠囊一行、橫向滑動，下方是單行輸入列 */
+.app--phone .conversation {
+  gap: 20px;
+}
+
+.app--phone .conversation > .answer {
+  gap: 12px;
+}
+
+.app--phone .answer > h2 {
+  max-width: 82%;
+  padding: 10px 14px;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.app--phone .answer__body {
+  gap: 12px;
+  padding: 16px;
+}
+
+.app--phone .answer-basis {
+  font-size: 12px;
+}
+
+.app--phone .answer__body > .answer-text {
+  font-size: 16px;
+}
+
+.app--phone .answer-text button.citation {
+  min-width: 26px;
+  height: 24px;
+  padding: 0 6px;
+  vertical-align: 1px;
+}
+
+.app--phone .answer-conflict {
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.app--phone .answer__body > .mentions {
+  gap: 6px;
+  padding-top: 12px;
+}
+
+.app--phone .mention-group {
+  gap: 6px;
+}
+
+.app--phone .mention-group > button.chip,
+.app--phone .composer--line .presets button {
+  min-height: 44px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.app--phone .mention-group > button.chip[aria-pressed="true"] {
+  padding: 0 11px;
+}
+
+.app--phone .mention-group .type-dot {
+  width: 9px;
+  height: 9px;
+}
+
+.app--phone .composer--line {
+  width: auto;
+  max-width: none;
+  gap: 8px;
+  padding: 8px 12px 10px;
+  background: var(--color-background);
+}
+
+.app--phone .composer--line .presets,
+.app--phone .composer--line .scenario {
+  gap: 6px;
+}
+
+.app--phone .composer--line .scenario > span {
+  display: none;
+}
+
+.app--phone .composer--line .free-question {
+  gap: 6px;
+  padding: 5px;
+}
+
+.app--phone .composer--line .free-question:has([aria-invalid="true"]) {
+  padding: 4.5px;
+}
+
+.app--phone .composer--line .free-question input {
+  padding: 0 10px;
+}
+
+.app--phone .composer--line .free-question button[type="submit"] {
+  padding: 0 18px;
+  font-weight: 700;
+}
+
+.app--phone .composer--line .question-hint {
+  margin: 0;
+  font-size: 12px;
+}
+
+/* 「每一題獨立回答」：頁首的一行小字（桌機在 qa-header） */
+.qa-phone-note {
+  margin: 0;
+  font-size: 12px;
+}
+
+/* 原文面板（SourceSheet.tsx）：標題是 13px textMuted 的「原文 · 出處 N／M」；文件名 18px；紙面 16px／1.9，
+   未引用的段落 textMuted（Dark 的紙面是亮色，改用紙面文字，見上方深色的規則）；下方兩個並排的 48px 按鈕。平板的滑出面板不變 */
+.app--phone .source-sheet .bottom-sheet__body {
+  gap: 12px;
+}
+
+.app--phone .source-sheet .bottom-sheet__header h2 {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-textMuted);
+}
+
+.app--phone .source-sheet .source-step {
+  width: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-text);
+}
+
+.app--phone .source-sheet__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+}
+
+.app--phone .source-sheet .source-text {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 14px;
+  font-size: 16px;
+  line-height: 1.9;
+}
+
+.app--phone .source-sheet .source-text > p {
+  margin: 0;
+}
+
+.app--phone .source-sheet .source-text > p:not(.highlight) {
+  color: var(--color-textMuted);
+}
+
+:root[data-scheme="dark"] .app--phone .source-sheet .source-text > p:not(.highlight) {
+  color: var(--color-readingText);
+}
+
+.app--phone .source-sheet__actions {
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.app--phone .source-sheet__actions button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 14px;
 }
 
 /* 桌機的上傳頁（#344，畫板 K-Uploads；UploadPage 的 upload-page 只在桌機、不是展示模式時出現）：頁面不留邊，

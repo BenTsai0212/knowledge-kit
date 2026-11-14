@@ -135,7 +135,7 @@
 - `Sidebar.tsx`：桌機的左側欄（客戶名稱、頁面項目、「虛構資料 · 展示用權限」、使用者卡與身分和語言選單，#330）
 - `source-steps.ts`：「出處 N／M」與「在圖譜中查看」目標的純函式
 - `SourcePanel.tsx`：桌機的原文欄（段落編號、「這次回答的出處」，#335）
-- `SourceSheet.tsx`：手機的原文面板（底部面板）
+- `SourceSheet.tsx`：手機的原文面板（底部面板，標題「原文 · 出處 N／M」，#354）與平板的滑出面板
 - `SourceText.tsx`：原文紙面，桌機與手機共用
 - `theme.ts`：由 `client/theme.json` 設定 CSS 變數（深色模式用 `darkColors`）
 - `timeline-view.ts`：時間軸的區段與篩選、桌機的年份分組、範圍與說法不同的純函式
