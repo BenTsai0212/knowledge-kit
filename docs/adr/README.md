@@ -19,6 +19,7 @@ ADR（Architecture Decision Record）記錄「決定了什麼、為什麼、放�
 - 已 `Accepted` 的 ADR 不改寫決策內容；改方向就新增一份 ADR 取代它。
 - 單人專案可先以 `Proposed` 合併，隔天重看再改 `Accepted`（選用的冷卻期）。
 - 以 PR 提交，不能走快速通道。
+- 引用文獻或業界準則時，同一個 PR 把它加進 [docs/references.md](../references.md)，內文以引用標記連過去（例如 `[amershi2019](../references.md#amershi2019)`）。
 
 ## 範本
 

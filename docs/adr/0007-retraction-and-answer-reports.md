@@ -7,7 +7,7 @@
 
 ## 背景
 
-正確性的責任目前全部放在核准之前：`kk_app` 只能新增，每個待審項目只能決定一次（`review_decisions` 的主鍵），核准後不能修改或撤回；問答的回答錯了也沒有地方回報。審核者因此每一筆都得事前仔細看，這是「一直要人為 AI 負責」的疲乏來源。研究與業界做法一致指向「錯了能修、能回報」，並以紀錄與評測證明品質，而不是靠逐筆核准（Microsoft 人機互動準則 G9、G15；Google PAIR「Errors + Graceful Failure」；Green 2022；Parasuraman & Manzey 2010）。
+正確性的責任目前全部放在核准之前：`kk_app` 只能新增，每個待審項目只能決定一次（`review_decisions` 的主鍵），核准後不能修改或撤回；問答的回答錯了也沒有地方回報。審核者因此每一筆都得事前仔細看，這是「一直要人為 AI 負責」的疲乏來源。研究與業界做法一致指向「錯了能修、能回報」，並以紀錄與評測證明品質，而不是靠逐筆核准（Microsoft 人機互動準則 G9、G15 [amershi2019](../references.md#amershi2019)；Google PAIR「Errors + Graceful Failure」[pair-errors](../references.md#pair-errors)；Green 2022 [green2022](../references.md#green2022)；Parasuraman & Manzey 2010 [parasuraman2010](../references.md#parasuraman2010)）。
 
 限制：實體只要有一個看得到的出處就看得到，同一個實體可能由不同文件、不同人核准。撤回若刪除實體，會影響審核者看不到的文件帶進來的內容。
 
