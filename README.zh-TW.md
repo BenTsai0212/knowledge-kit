@@ -8,7 +8,11 @@
 
 demo 是展示用的原型，不是正式系統。
 
-Video tour: (coming soon)
+Video tour:
+
+https://github.com/user-attachments/assets/366a2934-f71d-45c3-a407-5cc1d6fb82eb
+
+
 
 ## 功能
 
