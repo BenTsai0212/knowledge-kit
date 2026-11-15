@@ -366,6 +366,8 @@ describe("reviewDocuments", () => {
     summary: "s",
     newPassage: passage(documentId),
     oldPassage: passage("old"),
+    hypotheses: null,
+    evidence: null,
     decision: null,
   });
 

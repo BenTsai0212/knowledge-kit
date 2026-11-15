@@ -311,6 +311,7 @@
   "conflictSection": "Differing statements",
   "conflictNew": "New statement",
   "conflictOld": "Existing statement",
+  "dialogueHypotheses": "Possible readings",
   "conflictDecisions": {
     "coexist": "They do differ; keep both",
     "supersede": "The new statement replaces the old one",

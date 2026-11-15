@@ -311,6 +311,7 @@
   "conflictSection": "說法不同",
   "conflictNew": "新說法",
   "conflictOld": "既有說法",
+  "dialogueHypotheses": "可能的解讀",
   "conflictDecisions": {
     "coexist": "確實說法不同，兩者並存",
     "supersede": "新說法取代舊說法",

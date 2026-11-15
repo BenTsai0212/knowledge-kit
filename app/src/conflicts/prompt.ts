@@ -17,8 +17,10 @@ Rules:
 2. Report a pair only when a new passage and an existing passage make claims about the same subject that cannot both be true, for example different dates, numbers, owners, or decisions. Different wording, extra detail, or a topic covered by only one side is not a conflict.
 3. Use only what the passages state. Do not use outside knowledge and do not guess.
 4. For each pair give the number of the new passage, the number of the existing passage, and a summary in ${p.language} under 80 characters, written as "subject: old → new", for example "Launch: Q2 → Q3".
-5. Reply with one JSON object and nothing else, in this shape:
-{"conflicts":[{"new":1,"existing":2,"summary":"…"}]}
+5. For each pair also give "hypotheses": 2 or 3 neutral readings of how the two passages relate, each a short, complete, first-person sentence in ${p.language} of at most 30 characters (about 12 characters in Chinese), for example "I think it was changed later" and "I think they describe different cases". Do not favor any of them and do not judge which passage is correct.
+6. For each pair also give "evidence": "text" is the one sentence or phrase, copied exactly from either passage, that best tells the hypotheses apart, and "supports" is the number of the hypothesis it supports, counting from 1.
+7. Reply with one JSON object and nothing else, in this shape:
+{"conflicts":[{"new":1,"existing":2,"summary":"…","hypotheses":["…","…"],"evidence":{"text":"…","supports":1}}]}
 If there are no conflicts, reply {"conflicts":[]}.`;
 }
 

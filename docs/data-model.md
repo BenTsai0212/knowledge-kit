@@ -76,7 +76,7 @@ PGlite 的 session user 固定是 superuser `postgres`。以 `username: "kk_app"
 | `pending_entities`、`pending_entity_sources`、`pending_relations`、`pending_relation_sources` | 待審的實體、關係與出處；每列帶 `document_id`，以複合外鍵保證出處與兩端屬於同一份文件 | 萃取（#44） |
 | `review_decisions` | `id` PK（由 `round` 算出：第 1 次等於 `item_id`，之後是 `<item_id>~<round>`）、`item_id`（待審實體或關係）、`round`（`(item_id, round)` 不重複）、`decision`（`approve`／`reject`）、`decided_by`、`names`、`merge_into` | 核准與退回（#44）；撤回後可以再決定（0009） |
 | `review_retractions` | `decision_id` PK（每個決定最多撤回一次）、`document_id`（項目所屬的文件）、`retracted_by`、`retracted_at`、`cascade_of`（連帶撤回時指向實體的撤回） | 撤回（ADR 0007，0009） |
-| `conflicts` | `id` PK（`pc-` 開頭）、`document_id`（新文件）、`new_passage_id`（新文件的段落，以複合外鍵保證屬於新文件）、`old_passage_id`（既有段落）、`summary`（1～200 字）；`(new_passage_id, old_passage_id)` 不重複 | 說法不同的偵測（#51） |
+| `conflicts` | `id` PK（`pc-` 開頭）、`document_id`（新文件）、`new_passage_id`（新文件的段落，以複合外鍵保證屬於新文件）、`old_passage_id`（既有段落）、`summary`（1～200 字）；`hypotheses`（`text[]`，2–3 個、每個 1～30 字、互不相同）、`evidence`（1～200 字）、`evidence_hypothesis`（證據支持的假設，1 起算），三者同時有值或同時為 NULL（0014）；`(new_passage_id, old_passage_id)` 不重複 | 說法不同的偵測（#51）；假設與證據（ADR 0012） |
 | `conflict_decisions` | `conflict_id` PK、`new_passage_id`、`old_passage_id`（以複合外鍵保證與 `conflicts` 一致）、`decision`（`coexist`／`supersede`／`not_conflict`）、`decided_by` | 主管的處理（#51） |
 | `answer_reports` | `id` PK（`ar-` 開頭）、`reported_by`、`reported_at`、`category`（6 類）、`note`（選填，1～1000 字）、`question`（1～500 字）、`answer`（拒答時 NULL）、`sent_passage_ids`、`cited_passage_ids`（`sent` 的子集）、`entity_ids`（三者都是 `text[]`） | 回答錯誤回報（ADR 0007，0010） |
 | `answer_report_resolutions` | `report_id` PK（每個回報處理一次）、`resolution`（`not_error`／`retracted`）、`resolved_by`、`resolved_at`、`note`（給回報的人的說明，選填，1～500 字，0012） | 回報的處理（ADR 0007，0010、0012） |

@@ -265,7 +265,7 @@ const uiStrings = {
   conflictDecisions: "required", conflictToast: "required", conflictMarks: "required", conflictTitle: "required",
   conflictWaiting: "required", conflictRunning: "required", conflictFound: "required", conflictFoundHint: "required",
   conflictDropped: "required", conflictUnchecked: "required", conflictUnrelated: "required",
-  conflictFailed: "required", conflictRetry: "required",
+  conflictFailed: "required", conflictRetry: "required", dialogueHypotheses: "required",
   reportButton: "required", reportCategory: "required", reportCategories: "required", reportNote: "required",
   reportSubmit: "required", reportCancel: "required", reportSent: "required", reportFailed: "required",
   reviewReportsTab: "required", reportsEmpty: "required", reportsEmptyReason: "required", reportRefusal: "required", reportAnswer: "required", reportMeta: "required",

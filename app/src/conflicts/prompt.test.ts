@@ -18,6 +18,15 @@ describe("比對的 prompt", () => {
     expect(system).toContain('If there are no conflicts, reply {"conflicts":[]}.');
   });
 
+  it("每組多要求中立的假設與逐字引用的證據（ADR 0012 決定 3），假設用文件的語言", () => {
+    const system = conflictSystemPrompt(conflictPromptParts(clientConfig, "zh-TW"));
+    expect(system).toContain('"hypotheses": 2 or 3 neutral readings');
+    expect(system).toContain("first-person sentence in Chinese (Taiwan) of at most 30 characters");
+    expect(system).toContain("Do not favor any of them and do not judge which passage is correct.");
+    expect(system).toContain("copied exactly from either passage");
+    expect(system).toContain('"hypotheses":["…","…"],"evidence":{"text":"…","supports":1}');
+  });
+
   it("新段落與既有段落各自編號並跳脫；附文件標題與日期，沒有日期時不放 date；不放段落 id", () => {
     const user = conflictUserMessage(
       { title: '進度 "更新"', date: "2026-10-20" },

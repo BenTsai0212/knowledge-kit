@@ -311,6 +311,7 @@
   "conflictSection": "記載の相違",
   "conflictNew": "新しい記載",
   "conflictOld": "既存の記載",
+  "dialogueHypotheses": "考えられる解釈",
   "conflictDecisions": {
     "coexist": "記載が異なるため、両方を残す",
     "supersede": "新しい記載が古い記載に代わる",

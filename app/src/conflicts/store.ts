@@ -2,6 +2,7 @@
 // 一律經 withIdentity()；誰能寫入、看得到、處理什麼，完全交給 RLS（migration 0008）。只用 INSERT。
 import type { Database } from "../db/database";
 import { ReviewError } from "../extraction/store";
+import type { ConflictEvidence } from "./output";
 
 export type ConflictDecision = "coexist" | "supersede" | "not_conflict";
 
@@ -13,6 +14,9 @@ export interface ConflictPair {
   oldPassage: string;
   // 模型的差異說明（純文字）
   summary: string;
+  // 中立的假設與證據（ADR 0012 決定 3）；不合格或省略時為 null，該組退回固定範本
+  hypotheses?: string[] | null;
+  evidence?: ConflictEvidence | null;
 }
 
 export interface ConflictPassage {
@@ -34,6 +38,9 @@ export interface ConflictItem {
   summary: string;
   newPassage: ConflictPassage;
   oldPassage: ConflictPassage;
+  // 中立的假設與證據；不合格或舊組合時為 null（docs/conflicts.md「假設與證據」）
+  hypotheses: string[] | null;
+  evidence: ConflictEvidence | null;
   // 尚未處理時為 null
   decision: ConflictDecision | null;
 }
@@ -55,13 +62,11 @@ export async function writeConflicts(db: Database, identityId: string | null, do
   try {
     await db.withIdentity(identityId, async (tx) => {
       for (const p of pairs) {
-        await tx.query("INSERT INTO kk.conflicts (id, document_id, new_passage_id, old_passage_id, summary) VALUES ($1, $2, $3, $4, $5)", [
-          p.id,
-          documentId,
-          p.newPassage,
-          p.oldPassage,
-          p.summary,
-        ]);
+        await tx.query(
+          `INSERT INTO kk.conflicts (id, document_id, new_passage_id, old_passage_id, summary, hypotheses, evidence, evidence_hypothesis)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [p.id, documentId, p.newPassage, p.oldPassage, p.summary, p.hypotheses ?? null, p.evidence?.text ?? null, p.evidence?.supports ?? null],
+        );
       }
     });
   } catch (e) {
@@ -78,8 +83,18 @@ const PASSAGE = (p: string, d: string) => `json_build_object(
 export function readConflicts(db: Database, identityId: string | null): Promise<ConflictItem[]> {
   return db.withIdentity(identityId, async (tx) => {
     const rows = (
-      await tx.query<{ id: string; document_id: string; summary: string; decision: ConflictDecision | null; new: ConflictPassage; old: ConflictPassage }>(
-        `SELECT c.id, c.document_id, c.summary, r.decision, ${PASSAGE("n", "nd")} AS new, ${PASSAGE("o", "od")} AS old
+      await tx.query<{
+        id: string;
+        document_id: string;
+        summary: string;
+        hypotheses: string[] | null;
+        evidence: string | null;
+        evidence_hypothesis: number | null;
+        decision: ConflictDecision | null;
+        new: ConflictPassage;
+        old: ConflictPassage;
+      }>(
+        `SELECT c.id, c.document_id, c.summary, c.hypotheses, c.evidence, c.evidence_hypothesis, r.decision, ${PASSAGE("n", "nd")} AS new, ${PASSAGE("o", "od")} AS old
            FROM kk.conflicts c
            JOIN kk.passages n ON n.id = c.new_passage_id JOIN kk.documents nd ON nd.id = n.document_id
            JOIN kk.passages o ON o.id = c.old_passage_id JOIN kk.documents od ON od.id = o.document_id
@@ -93,6 +108,8 @@ export function readConflicts(db: Database, identityId: string | null): Promise<
       summary: r.summary,
       newPassage: r.new,
       oldPassage: r.old,
+      hypotheses: r.hypotheses,
+      evidence: r.evidence === null || r.evidence_hypothesis === null ? null : { text: r.evidence, supports: r.evidence_hypothesis },
       decision: r.decision,
     }));
   });

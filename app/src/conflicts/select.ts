@@ -14,6 +14,8 @@ export interface ExistingPassage extends PromptDocument {
 export interface ConflictSelection {
   // 送出的新段落 id，依文件中的順序；第 i 個是編號 i + 1
   newPassages: string[];
+  // 送出的新段落的內容，與 newPassages 同順序（驗證證據逐字出現在原文中，docs/conflicts.md「驗證」）
+  newContents: string[];
   // 送出的既有段落；第 i 個是編號 i + 1
   existing: ExistingPassage[];
   // 有相關的既有段落，但放不下而沒有比對的新段落
@@ -75,6 +77,7 @@ export async function selectConflictPassages(
   const result = chosen.length > 0 ? build(chosen) : null;
   return {
     newPassages: result?.news.map((p) => p.id) ?? [],
+    newContents: result?.news.map((p) => p.content) ?? [],
     existing: result?.existing ?? [],
     unchecked: related.filter((p) => !taken.has(p.id)).map((p) => p.id),
     unrelated: input.passages.filter((p) => candidates.get(p.id)!.length === 0).map((p) => p.id),

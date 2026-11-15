@@ -32,7 +32,7 @@ async function setup(uploader: string, visibility = "internal") {
 }
 
 // 依送出的編號回覆：existing 以段落 id 指定，換成送出時的編號
-const replyFor = (state: ConflictState, pairs: { new: number; existing: string; summary: string }[]): AskEvent[] =>
+const replyFor = (state: ConflictState, pairs: ({ new: number; existing: string; summary: string } & Record<string, unknown>)[]): AskEvent[] =>
   answered(JSON.stringify({ conflicts: pairs.map((p) => ({ ...p, existing: state.selection.existing.findIndex((e) => e.id === p.existing) + 1 })) }));
 
 describe("planConflicts", { timeout: 30_000 }, () => {
@@ -88,9 +88,28 @@ describe("runConflicts", { timeout: 30_000 }, () => {
     await db.close();
   });
 
+  it("假設與證據（ADR 0012）：證據逐字出現在新段落時存下來；不合格時只留空，組合照常寫入", async () => {
+    const { db, upload, state } = await setup("staff");
+    const hypotheses = ["我覺得是後來改過", "我覺得是不同的情況"];
+    const transport = fakeTransport(() =>
+      replyFor(state, [
+        { new: 1, existing: BLUEWING, summary: "上市時間：第三季 → 第四季", hypotheses, evidence: { text: "延後至 2026 年第四季", supports: 1 } },
+        { new: 2, existing: BLUEWING, summary: "另一組", hypotheses, evidence: { text: "原文沒有這句", supports: 1 } },
+      ]),
+    );
+    const result = await runConflicts({ db, transport, config: clientConfig }, state);
+    expect(result).toMatchObject({ status: "done", found: 2, dropped: 0 });
+    const items = await readConflicts(db, "manager");
+    expect(items.map((c) => [c.newPassage.id, c.hypotheses, c.evidence])).toEqual([
+      [upload.passageIds[0], hypotheses, { text: "延後至 2026 年第四季", supports: 1 }],
+      [upload.passageIds[1], null, null],
+    ]);
+    await db.close();
+  });
+
   it("沒有要送出的段落時直接完成，不呼叫 /api/ask", async () => {
     const { db, state } = await setup("staff");
-    const empty: ConflictState = { ...state, status: "done", selection: { ...state.selection, newPassages: [], existing: [], user: null } };
+    const empty: ConflictState = { ...state, status: "done", selection: { ...state.selection, newPassages: [], newContents: [], existing: [], user: null } };
     const transport = fakeTransport();
     expect(await runConflicts({ db, transport, config: clientConfig }, empty)).toEqual(empty);
     expect(transport.bodies).toHaveLength(0);

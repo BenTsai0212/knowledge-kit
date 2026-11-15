@@ -82,7 +82,8 @@ export async function runConflicts(ctx: ConflictContext, initial: ConflictState,
 
   let parsed;
   try {
-    parsed = parseConflicts(result.text, selection.newPassages, selection.existing, state.documentId);
+    const news = selection.newPassages.map((id, i) => ({ id, content: selection.newContents[i] }));
+    parsed = parseConflicts(result.text, news, selection.existing, state.documentId);
   } catch (e) {
     if (!(e instanceof ConflictFormatError)) throw e;
     return update({ status: "failed", error: "format" });

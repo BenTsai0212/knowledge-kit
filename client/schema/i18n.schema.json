@@ -37,7 +37,7 @@
     "reviewGotoGraph", "reviewUndo", "reviewToastUndone", "reviewErrors", "reviewDecidedTab", "reviewDecidedEmpty", "conflictSection", "conflictNew",
     "conflictOld", "conflictDecisions", "conflictToast", "conflictMarks", "conflictTitle", "conflictWaiting",
     "conflictRunning", "conflictFound", "conflictFoundHint", "conflictDropped", "conflictUnchecked", "conflictUnrelated",
-    "conflictFailed", "conflictRetry",
+    "conflictFailed", "conflictRetry", "dialogueHypotheses",
     "reportButton", "reportCategory", "reportCategories", "reportNote", "reportSubmit", "reportCancel", "reportSent", "reportFailed", "reviewReportsTab", "reportsEmpty", "reportsEmptyReason", "reportRefusal", "reportAnswer", "reportMeta", "reportMarkNotError", "reportMarkRetracted", "reportRetractHint", "reportResolutions", "reportResult",
     "tabEvals", "evalSettings", "evalSetName", "evalTopK", "evalMinScore", "evalUseSetB",
     "evalModelGrading", "evalInvalidSettings", "evalUploaded", "evalStart", "evalPreparing", "evalStop",
@@ -407,6 +407,7 @@
     "conflictSection": { "$ref": "#/definitions/Text" },
     "conflictNew": { "$ref": "#/definitions/Text" },
     "conflictOld": { "$ref": "#/definitions/Text" },
+    "dialogueHypotheses": { "$ref": "#/definitions/Text" },
     "conflictDecisions": {
       "type": "object",
       "additionalProperties": false,

@@ -47,6 +47,7 @@ describe("selectConflictPassages", () => {
     const { retriever } = fakeRetriever({});
     expect(await selectConflictPassages(retriever, input(["甲", "乙"]), CONFIG)).toEqual({
       newPassages: [],
+      newContents: [],
       existing: [],
       unchecked: [],
       unrelated: ["n1", "n2"],
@@ -58,6 +59,7 @@ describe("selectConflictPassages", () => {
     const { retriever } = fakeRetriever({ 甲: [existing("o1", 0.3)], 乙: [], 丙: [existing("o2", 0.9), existing("o1", 0.2)] });
     const result = await selectConflictPassages(retriever, input(["甲", "乙", "丙"]), CONFIG);
     expect(result.newPassages).toEqual(["n1", "n3"]);
+    expect(result.newContents).toEqual(["甲", "丙"]);
     expect(result.existing.map((p) => p.id)).toEqual(["o2", "o1"]);
     expect(result.existing[0]).toEqual({ id: "o2", documentId: "o2-doc", title: "o2 的文件", date: "2026-05-15", content: "o2 的內容" });
     expect(result.unrelated).toEqual(["n2"]);

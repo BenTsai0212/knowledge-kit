@@ -63,8 +63,10 @@ Rules:
 2. Report a pair only when a new passage and an existing passage make claims about the same subject that cannot both be true, for example different dates, numbers, owners, or decisions. Different wording, extra detail, or a topic covered by only one side is not a conflict.
 3. Use only what the passages state. Do not use outside knowledge and do not guess.
 4. For each pair give the number of the new passage, the number of the existing passage, and a summary in {languageName} under 80 characters, written as "subject: old → new", for example "Launch: Q2 → Q3".
-5. Reply with one JSON object and nothing else, in this shape:
-{"conflicts":[{"new":1,"existing":2,"summary":"…"}]}
+5. For each pair also give "hypotheses": 2 or 3 neutral readings of how the two passages relate, each a short, complete, first-person sentence in {languageName} of at most 30 characters (about 12 characters in Chinese), for example "I think it was changed later" and "I think they describe different cases". Do not favor any of them and do not judge which passage is correct.
+6. For each pair also give "evidence": "text" is the one sentence or phrase, copied exactly from either passage, that best tells the hypotheses apart, and "supports" is the number of the hypothesis it supports, counting from 1.
+7. Reply with one JSON object and nothing else, in this shape:
+{"conflicts":[{"new":1,"existing":2,"summary":"…","hypotheses":["…","…"],"evidence":{"text":"…","supports":1}}]}
 If there are no conflicts, reply {"conflicts":[]}.
 ```
 
@@ -76,7 +78,9 @@ If there are no conflicts, reply {"conflicts":[]}.
 | 2 | 只回報不能同時成立的說法，減少主管要處理的組數 |
 | 3 | 只依段落判斷，主管才能以並列的兩段驗證 |
 | 4 | 以送出時的編號表示兩段，程式轉成段落 id；說明使用文件的語言，簡短到能在待審頁一眼看懂 |
-| 5 | 固定的 JSON 格式，解析失敗時可以重試 |
+| 5 | 問答時對使用者提問的選項（ADR 0012 決定 3）：多個中立的假設，不只給一個、不判斷對錯，避免把人帶走（[jakesch2023](references.md#jakesch2023)）；第一人稱的短句，讀起來是人在表態 |
+| 6 | 使用者選完之後才用（ADR 0012 決定 4）：選的假設和證據不合時，溫和地提出另一種可能；逐字引用，程式才能確認它真的出自原文 |
+| 7 | 固定的 JSON 格式，解析失敗時可以重試 |
 
 ### 段落編排（user 訊息）
 
@@ -112,8 +116,25 @@ If there are no conflicts, reply {"conflicts":[]}.
   | `duplicate` | 同一組合重複，只保留第一筆 |
   | `bad_summary` | `summary` 不是字串，或去掉前後空白後是空的、超過 200 字元 |
 
-- `summary` 只當成文字存入，畫面一律以文字節點顯示。
-- 寫入時資料庫也會檢查：新段落屬於新文件（複合外鍵）、既有段落上傳者看得到而且不在新文件中、說明 1～200 字、組合不重複（migration 0008）。
+- **假設與證據不合格時，只把這兩個欄位留空，組合照常保留**（#380 決定 2），該組在問答時退回固定範本；依原因計數（`fallback`，不算在 `dropped`）：
+
+  | 原因 | 規則 |
+  | --- | --- |
+  | `bad_hypotheses` | `hypotheses` 不是 2–3 個字串，或去掉前後空白後有空的、超過 30 字、互相重複 |
+  | `bad_evidence` | `evidence` 不是物件；`text` 去掉前後空白後是空的、超過 200 字，或沒有逐字出現在這一組的兩段之一；`supports` 不是 1 到假設個數之間的整數 |
+
+- `summary`、假設與證據只當成文字存入，畫面一律以文字節點顯示。
+- 字數以字（code point）計算，與資料庫的 `char_length` 相同。
+- 寫入時資料庫也會檢查：新段落屬於新文件（複合外鍵）、既有段落上傳者看得到而且不在新文件中、說明 1～200 字、組合不重複（migration 0008）；假設 2–3 個、沒有 NULL、每個 1～30 字、互不相同，證據 1～200 字，支持的假設是存在的位置，三個欄位同時有值或同時為 NULL（migration 0014）。「證據逐字出現在原文」只由程式檢查。
+
+## 假設與證據
+
+ADR 0012 決定 3：問答遇到已處理為「並存」的說法不同時，提問的選項用比對時存下來的假設，不在問答時另外呼叫模型。
+
+- 存在 `conflicts` 的同一列（`hypotheses`、`evidence`、`evidence_hypothesis`，migration 0014），跟著該組的可見範圍：兩段都看得到才讀得到，沒有 `canReview` 的身分只讀得到「並存」「取代」的組（見「權限」）。
+- `readConflicts()` 回傳 `hypotheses` 與 `evidence`（`{ text, supports }`）；不合格或在 0014 之前比對的組合兩者都是 `null`，問答用固定範本（ADR 0012 決定 3）。
+- 待審頁在每組的差異說明下方列出假設（只顯示，不加操作）。證據是 AI 的傾向，不在待審頁與提問時顯示，只在使用者選完、而且不合時才出現（ADR 0012 決定 4）。
+- 問答的提問、選後的回應與人的理解在之後的 PR 實作（ADR 0012「後續工作」）。
 
 ## 權限
 
@@ -143,7 +164,7 @@ If there are no conflicts, reply {"conflicts":[]}.
 
 **待審頁**（`ui/ReviewPage.tsx`）：
 - 每份文件多一個「說法不同」區塊，列出 `readConflicts()` 讀到的待處理組合。只有說法不同、沒有待審實體與關係的文件也會列出（`review-helpers.ts` 的 `reviewDocuments()`），這時不顯示批次核准的按鈕。
-- 每一組：模型的差異說明（純文字），新說法與既有說法左右並列（窄螢幕時上下排列），每一側先是說法的內容，下方是出處（文件標題、可見等級與專案的標籤、日期與「打開原文」）；三個處理按鈕在兩種說法的下方（#243）。
+- 每一組：模型的差異說明（純文字），有假設時在下方列出「可能的解讀」（見「假設與證據」），新說法與既有說法左右並列（窄螢幕時上下排列），每一側先是說法的內容，下方是出處（文件標題、可見等級與專案的標籤、日期與「打開原文」）；三個處理按鈕在兩種說法的下方（#243）。
 - 三個處理按鈕：「確實說法不同，兩者並存」「新說法取代舊說法」「不算說法不同」（`decideConflict()`）。與核准相同：以 ref 防止連點、處理中停用按鈕；資料庫的主鍵也只允許一組有一筆決定。處理後出現短提示「已標記：〈處理方式〉」（沿用 #48 的 `toastText()`），錯誤以提示框顯示在該文件的卡片上方。
 - 「兩者並存」與「新說法取代舊說法」先播完動畫才寫入（#243 PR 4，`review-motion.ts` 的 `conflictSettleDelay()`）：並存時兩卡之間畫出等號，兩邊依序標上與另一份文件的關聯（文字同下表的段落標示）；取代時舊說法變淡，刪除線由左畫到右。「不算說法不同」與減少動態效果時立即寫入；寫入失敗時回到原狀。
 - 「已處理的說法不同」分頁列出已處理的組合與決定。
@@ -167,9 +188,10 @@ If there are no conflicts, reply {"conflicts":[]}.
 
 - `app/src/conflicts/prompt.test.ts`：代入、規則、段落的編排與跳脫、與本文件同步。
 - `select.test.ts`：檢索的選項（上傳者、語言、排除新文件、筆數與門檻）、沒有相關段落、既有段落去重、預算與未比對的段落。
-- `output.test.ts`：格式錯誤與每一條捨棄規則。
+- `output.test.ts`：格式錯誤與每一條捨棄規則；假設與證據的每一條規則（不合格時只留空、組合保留）。
 - `app/tests/conflicts/run.test.ts`：以資料庫與假的 `/api/ask` 測試以上傳者的身分挑選（一般員工不會送出機密段落）、寫入待處理的組合、`max_tokens`／格式錯誤／邀請碼失效／`/api/ask` 的錯誤、重試送出相同的內容、寫入被拒絕、`shouldDetectConflicts()`。
 - `app/tests/conflicts/store.test.ts`：權限（見 docs/data-model.md）。
+- `app/tests/conflicts/hypotheses.test.ts`：假設與證據的 CHECK（migration 0014），以及跟著該組的可見範圍（看不到其中一段的身分讀不到）。
 - `app/src/qa/prompt.test.ts`、`app/tests/qa/supersede.test.ts`：問答的取代（見上方「問答的取代」）。
 - `app/tests/conflicts/marks.test.ts`：時間軸與原文面板的標示。每個身分（`guest`、`staff`、`manager`、`null`、`nobody`）每段的標示都與 `oracle.ts` 的 `expectedMarks()` 相同（滲漏 0、漏看 0）；**取代不外流**：主管以機密段落取代的公開段落，一般員工的時間軸與原文都沒有標示，也沒有機密文件的標題；以「忽略身分的資料層」做反向驗證。
 - `app/src/ui/review-helpers.test.ts`（`pendingCount()`、`reviewDocuments()`）、`client/i18n.test.ts`（標示的範本、`taskErrorMessage()`）。畫面本身以人工驗收。
@@ -189,8 +211,8 @@ If there are no conflicts, reply {"conflicts":[]}.
 
 | 項目 | 估計 |
 | --- | --- |
-| 輸入 | system 約 1,300 字元（約 300 token）＋段落最多約 14,700 字元（中文約 1 字 1 token），約 2,000～15,000 token，約 $0.008～0.06 |
-| 輸出 | JSON 每組約 40～60 token，通常 0～5 組；thinking 數百到 1,500 token。合計約 100～1,800 token，約 $0.002～0.04 |
-| 合計 | 約 $0.01～0.10，並計入一次每日次數 |
+| 輸入 | system 約 2,000 字元（約 450 token）＋段落最多約 14,700 字元（中文約 1 字 1 token），約 2,000～15,000 token，約 $0.008～0.06 |
+| 輸出 | JSON 每組約 100～150 token（含假設與證據，ADR 0012），通常 0～5 組；thinking 數百到 1,500 token。合計約 100～2,300 token，約 $0.002～0.05 |
+| 合計 | 約 $0.01～0.11，並計入一次每日次數 |
 
 token 數是以字元數推估；實際以 Claude Console 的用量為準，#51 的人工驗收時記錄。

@@ -631,6 +631,17 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
       <p className="conflict-summary" lang={c.newPassage.language}>
         {c.summary}
       </p>
+      {/* 比對時存下的中立假設（ADR 0012 決定 3）：只顯示，不加操作；證據是 AI 的傾向，不在這裡顯示 */}
+      {c.hypotheses !== null && (
+        <div className="conflict-hypotheses">
+          <span className="conflict-hypotheses__label">{s.dialogueHypotheses}</span>
+          <ul lang={c.newPassage.language}>
+            {c.hypotheses.map((h) => (
+              <li key={h}>{h}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       {c.decision !== null && <span className="badge">{s.conflictDecisions[c.decision]}</span>}
       {/* 並存：兩卡之間畫出等號、兩邊標上關聯；取代：舊說法變淡、劃掉（#243 PR 4） */}
       <div className="conflict-pair" data-settle={settling.get(c.id)}>

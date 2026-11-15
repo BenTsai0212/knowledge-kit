@@ -655,6 +655,8 @@ export interface UiStrings {
   conflictSection: string;
   conflictNew: string;
   conflictOld: string;
+  // 待審頁每組差異說明下方的假設（ADR 0012 決定 3）的小標
+  dialogueHypotheses: string;
   conflictDecisions: Record<ConflictDecision, string>;
   conflictToast: string;
   // 時間軸與原文面板的標示：{title} 換成另一段所屬文件的標題
