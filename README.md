@@ -8,7 +8,11 @@ A template for quickly building a "second brain" knowledge platform demo for an 
 
 The demo is a prototype for demonstration, not a production system.
 
-Video tour: (coming soon)
+Video tour: 
+
+https://github.com/user-attachments/assets/e5586f00-6f67-401e-b3fa-a42f824b2aa9
+
+
 
 ## Features
 
