@@ -19,7 +19,7 @@
 - **類型**：會議論文
 - **連結**：https://www.microsoft.com/en-us/research/publication/guidelines-for-human-ai-interaction/
 - **主張**：人機互動 18 條準則（G9 容易修正、G15 鼓勵細緻回饋）；作者強調不是勾選清單
-- **用在哪裡**：[ADR 0007](adr/0007-retraction-and-answer-reports.md)「背景」（撤回核准與回答錯誤回報）
+- **用在哪裡**：[ADR 0007](adr/0007-retraction-and-answer-reports.md)「背景」（撤回核准與回答錯誤回報）、[ADR 0011](adr/0011-seam-only-review.md)「設計依據」
 
 ### pair-errors
 
@@ -35,7 +35,7 @@
 - **類型**：期刊論文（連結是 arXiv 版本）
 - **連結**：https://arxiv.org/abs/2109.05067
 - **主張**：要求「人在迴路中審核」的政策常無法發揮效果，反而讓人承擔責任
-- **用在哪裡**：[ADR 0007](adr/0007-retraction-and-answer-reports.md)「背景」
+- **用在哪裡**：[ADR 0007](adr/0007-retraction-and-answer-reports.md)「背景」、[ADR 0011](adr/0011-seam-only-review.md)「背景」「設計依據」
 
 ### parasuraman2010
 
@@ -43,7 +43,15 @@
 - **類型**：期刊論文
 - **連結**：https://doi.org/10.1177/0018720810376055
 - **主張**：人在監督自動化時會自滿、偏向採信自動化，專家也一樣
-- **用在哪裡**：[ADR 0007](adr/0007-retraction-and-answer-reports.md)「背景」
+- **用在哪裡**：[ADR 0007](adr/0007-retraction-and-answer-reports.md)「背景」、[ADR 0011](adr/0011-seam-only-review.md)「背景」「設計依據」
+
+### bainbridge1983
+
+- **書目**：Bainbridge，Ironies of Automation，Automatica 19(6)，1983
+- **類型**：期刊論文
+- **連結**：https://doi.org/10.1016/0005-1098(83)90046-8
+- **主張**：自動化越完整，人越難在需要時接手
+- **用在哪裡**：[ADR 0011](adr/0011-seam-only-review.md)「背景」「設計依據」
 
 ## 研究主線參考
 
@@ -55,14 +63,6 @@
 - **類型**：會議論文
 - **連結**：https://www.microsoft.com/en-us/research/publication/principles-mixed-initiative-user-interfaces/
 - **主張**：AI 不確定時才主動介入，並衡量打擾的代價
-- **用在哪裡**：尚未使用
-
-### bainbridge1983
-
-- **書目**：Bainbridge，Ironies of Automation，Automatica 19(6)，1983
-- **類型**：期刊論文
-- **連結**：https://doi.org/10.1016/0005-1098(83)90046-8
-- **主張**：自動化越完整，人越難在需要時接手
 - **用在哪裡**：尚未使用
 
 ### jakesch2023
