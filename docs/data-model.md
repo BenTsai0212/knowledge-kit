@@ -210,7 +210,7 @@ policy 中的子查詢同樣受 RLS 限制，所以「段落看得到」已包�
 | `pending_entities`、`pending_relations` | `unsure`（`same_name`、`possible_typo`、`relation_wording`、`other` 或 NULL） | 不變（0006 的 `extract`） |
 
 - **CHECK**：`auto` 只能核准，不帶 `names` 與 `note`。`mode`、`reason`、`unsure` 的值與 `note` 的長度不符時拒絕。
-- **資料庫檢查的範圍**（#378 決定 1）：沒有 `unsure`、名稱沒有空白、合併對象看得到且類型相同、關係兩端都已核准。合併候選數（2 個以上是接縫）、與既有實體的編輯距離、名稱涵蓋 `client.json` 的所有 `languages` 由 `store.ts` 在同一個交易中重算（資料庫沒有候選與語言的資料；同 0004 的 `names`）。
+- **資料庫檢查的範圍**（#378 決定 1）：沒有 `unsure`、名稱沒有空白、合併對象看得到且類型相同、關係兩端都已核准。合併候選數（2 個以上是接縫）、與既有實體的編輯距離、名稱涵蓋 `client.json` 的所有 `languages` 由 `store.ts` 的 `autoApprove()` 在同一個交易中重算（資料庫沒有候選與語言的資料；同 0004 的 `names`），規則見 [docs/extraction.md](extraction.md)「直接收錄」，測試在 `app/tests/extraction/seam-approve.test.ts`。
 - **`manual` 仍要求 `can_review`**：沒有 `can_review` 的上傳者寫 `manual` 決定、替別人寫決定、依別人的決定寫入正式資料，都被拒絕。有 `can_review` 的上傳者也可以寫 `auto`；`auto` 永遠只限自己上傳的文件。
 - **撤回沿用 ADR 0007**：`auto` 決定的撤回與 `manual` 相同，由有 `can_review` 的人寫入，可附 `reason`；既有的撤回與連帶撤回為 NULL。
 - **可見範圍**：直接收錄後的正式資料沿用「權限規則」，與人核准的相同；待審資料表與決定的讀取不變（上傳者讀得到自己文件的 `auto` 決定，0011）。

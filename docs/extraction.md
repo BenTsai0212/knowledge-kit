@@ -1,6 +1,6 @@
 # 萃取實體與關係（`app/src/extraction/`）
 
-上傳文件後，以模型從段落中萃取實體與關係，放進待審區；有 `canReview` 的身分核准後才進入圖譜。決策紀錄見 #44。萃取結束後，與既有段落說法不同的比對（#51）見 [docs/conflicts.md](conflicts.md)。
+上傳文件後，以模型從段落中萃取實體與關係，放進待審區；有 `canReview` 的身分核准後才進入圖譜（`client.json` 的 `review.mode` 為 `seams` 時，系統有把握的項目直接收錄，見「直接收錄」）。決策紀錄見 #44。萃取結束後，與既有段落說法不同的比對（#51）見 [docs/conflicts.md](conflicts.md)。
 
 > 待審資料與上傳的文件一樣，只存在瀏覽器的記憶體資料庫，重新整理頁面就消失。
 
@@ -131,6 +131,27 @@ If nothing can be extracted, reply {"entities":[],"relations":[]}.
 - **合併時**：待審實體的出處加到既有實體上，既有實體的名稱不變（#44 決定 5）；核准前修改的名稱只用於建立新實體。
 - **合併後可見範圍變大**（#44 決定）：看得到新文件的人，也看得到被合併的實體，包含只在其他文件出現過的其他語言名稱（實體只要有一個看得到的出處就看得到）。合併選單會提示：「合併後，看得到這份文件的人也會看到此實體。」
 - 只能合併到核准者看得到、類型相同的實體，由 RLS 執行。
+
+## 直接收錄（`seams.ts`）
+
+`client.json` 的 `review.mode` 是 `"seams"` 時（[ADR 0011](adr/0011-seam-only-review.md)，預設 `"item"`），萃取完成（全部批次成功）後，`runExtraction()` 以上傳者的身分呼叫 `store.ts` 的 `autoApprove()`：在一個交易中依上傳者看得到的實體重算接縫，非接縫的項目寫入 `mode = 'auto'` 的核准決定並進入圖譜（實體先、關係後）；接縫留在待審，由有 `canReview` 的人判斷。`"item"` 時不呼叫，流程與以前相同。
+
+**接縫**（`planEntity()`、`planRelation()`，任一成立；不使用數值分數）：
+
+| 原因 | 條件 |
+| --- | --- |
+| `candidates` | 合併候選（「合併」的 `suggestMerge()`）2 個以上，例如兩位林志明 |
+| `missing_language` | `client.json` 的任一 `languages` 沒有名稱或名稱空白 |
+| `near_name` | 沒有合併候選，而且文件語言的名稱與看得到的同類型實體的任一名稱，依類型的 `aliasRules` 正規化後編輯距離是 1（例如「張雅亭／張雅婷」） |
+| `unsure` | 模型標示沒把握（`pending_entities`／`pending_relations` 的 `unsure`） |
+| `endpoint` | 關係的任一端是接縫，或端點沒有有效的核准（例如已由人退回） |
+
+- **只有一個候選的合併直接收錄**（ADR 0011 決定 2），不論 `mergeStrategy`；沒有候選時建立新實體。圖譜已有的關係只寫決定（同「合併」的 #189）。
+- **只處理從未有過決定的項目**：已由人決定、或直接收錄後被撤回的項目不再直接收錄。再執行一次不會重複收錄。
+- **資料庫另外檢查**上傳者、`unsure`、名稱與合併對象（migration 0013 的 `auto` policy，見 [docs/data-model.md](data-model.md)「直接收錄」）；任何一列被拒絕就整筆不寫入，項目全部留在待審。
+- **狀態**：`ExtractionState.autoApproved` 記錄 `done`（收錄的實體數、關係數與接縫數）或 `failed`；`failed` 或還沒執行時，下次 `runExtraction()` 在全部批次成功後再執行。有批次失敗時不直接收錄：之後的批次可能為已寫入的項目補上出處。
+- **撤回**沿用 ADR 0007，由有 `canReview` 的人撤回；`retract()` 可附理由（`name`、`relation`、`merge`、`exclude`、`other`），只記在人選的撤回，連帶撤回不記。
+- `readReview()` 的項目附上目前有效決定的 `mode`（`auto`／`manual`）與 `unsure`，供待審頁區分接縫與「已直接收錄」（畫面在 #378 PR 4）。
 
 ## 畫面
 

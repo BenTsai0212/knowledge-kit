@@ -35,6 +35,13 @@ export interface UploadFile {
   extractMaxBatches?: number;
 }
 
+// 待審的方式（ADR 0011 決定 7）：item 是逐筆核准，seams 是只審接縫、其餘直接收錄
+export type ReviewMode = "item" | "seams";
+
+export interface ReviewFile {
+  mode?: ReviewMode;
+}
+
 export interface ConflictsFile {
   enabled?: boolean;
   candidatesPerPassage?: number;
@@ -62,6 +69,7 @@ export interface ClientFile {
   retrieval?: RetrievalFile;
   upload?: UploadFile;
   conflicts?: ConflictsFile;
+  review?: ReviewFile;
 }
 
 export interface ThemeColors {
@@ -253,14 +261,16 @@ export interface EntityType extends Omit<EntityTypeFile, "mergeStrategy" | "icon
 export type RetrievalConfig = Required<RetrievalFile>;
 export type UploadConfig = Required<UploadFile>;
 export type ConflictsConfig = Required<ConflictsFile>;
+export type ReviewConfig = Required<ReviewFile>;
 export type EvalThresholds = Required<EvalThresholdsFile>;
 
 export interface ClientConfig extends Omit<ClientFiles, "client" | "knowledgeModel"> {
-  client: Omit<ClientFile, "evals" | "retrieval" | "upload" | "conflicts"> & {
+  client: Omit<ClientFile, "evals" | "retrieval" | "upload" | "conflicts" | "review"> & {
     evals: PathRef & { thresholds: EvalThresholds };
     retrieval: RetrievalConfig;
     upload: UploadConfig;
     conflicts: ConflictsConfig;
+    review: ReviewConfig;
   };
   knowledgeModel: {
     entityTypes: EntityType[];

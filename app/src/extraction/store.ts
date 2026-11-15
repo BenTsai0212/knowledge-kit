@@ -1,10 +1,11 @@
 // 萃取結果的資料層（docs/data-model.md「待審與核准」）：寫入待審、讀取待審區、核准、退回、撤回。
-// 一律經 withIdentity()；誰能寫入、看得到、核准與撤回什麼，完全交給 RLS（migration 0006、0009、0011）。只用 INSERT。
+// 一律經 withIdentity()；誰能寫入、看得到、核准與撤回什麼，完全交給 RLS（migration 0006、0009、0011、0013）。只用 INSERT。
 import type { Transaction } from "@electric-sql/pglite";
 import type { LanguageCode, LocalizedText } from "../client/types";
 import type { Database } from "../db/database";
 import type { SourcePassage } from "../graph/read";
 import { appearanceKey, byAppearance, type FirstSource } from "./review-order";
+import { planEntity, planRelation, type SeamContext, type SeamReason, type Unsure, type VisibleEntity } from "./seams";
 
 export interface PendingInput {
   entities: { id: string; type: string; names: LocalizedText; sources: string[] }[];
@@ -26,6 +27,10 @@ export interface ReviewEntity {
   decisionId: string | null;
   // 核准時合併到的既有實體
   mergedInto: string | null;
+  // 目前有效的決定是直接收錄（auto）或人做的（manual）；待審時省略（ADR 0011）
+  mode?: DecisionMode;
+  // 模型標示沒把握的原因（萃取寫入時才有）
+  unsure?: Unsure;
 }
 
 export interface ReviewRelation {
@@ -38,6 +43,8 @@ export interface ReviewRelation {
   decisionId: string | null;
   // 因兩端的實體被退回而一併退回（#44 決定 2）
   rejectedWithEntity: boolean;
+  mode?: DecisionMode;
+  unsure?: Unsure;
 }
 
 export interface ReviewDocument {
@@ -168,6 +175,12 @@ function group(rows: SourceRow[]): Map<string, SourcePassage[]> {
 
 const statusOf = (decision: string | null): ReviewStatus => (decision === null ? "pending" : decision === "approve" ? "approved" : "rejected");
 
+// 決定的方式與 unsure 只在有值時放進項目
+const optional = (row: { mode: DecisionMode | null; unsure: Unsure | null }): { mode?: DecisionMode; unsure?: Unsure } => ({
+  ...(row.mode === null ? {} : { mode: row.mode }),
+  ...(row.unsure === null ? {} : { unsure: row.unsure }),
+});
+
 // 未撤回的決定（每個項目最多一筆）
 const ACTIVE = (alias: string) => `NOT EXISTS (SELECT 1 FROM kk.review_retractions x WHERE x.decision_id = ${alias}.id)`;
 
@@ -218,9 +231,11 @@ async function pendingDocuments(tx: Transaction, ownOnly: boolean): Promise<Revi
       decision: string | null;
       decision_id: string | null;
       merge_into: string | null;
+      mode: DecisionMode | null;
+      unsure: Unsure | null;
     }>(
       `SELECT p.id, p.document_id, d.title, d.language, d.visibility_level_id AS visibility, d.project_id AS project,
-              d.uploaded_by, p.entity_type, p.names, r.decision, r.id AS decision_id, r.merge_into
+              d.uploaded_by, p.entity_type, p.names, p.unsure, r.decision, r.id AS decision_id, r.merge_into, r.mode
          FROM kk.pending_entities p JOIN kk.documents d ON d.id = p.document_id
          LEFT JOIN kk.review_decisions r ON r.item_id = p.id AND ${ACTIVE("r")}
         ${ownOnly ? "WHERE d.uploaded_by = kk.current_identity_id()" : ""}
@@ -236,8 +251,10 @@ async function pendingDocuments(tx: Transaction, ownOnly: boolean): Promise<Revi
       to_pending_id: string;
       decision: string | null;
       decision_id: string | null;
+      mode: DecisionMode | null;
+      unsure: Unsure | null;
     }>(
-      `SELECT p.id, p.document_id, p.relation_type, p.from_pending_id, p.to_pending_id, r.decision, r.id AS decision_id
+      `SELECT p.id, p.document_id, p.relation_type, p.from_pending_id, p.to_pending_id, p.unsure, r.decision, r.id AS decision_id, r.mode
          FROM kk.pending_relations p LEFT JOIN kk.review_decisions r ON r.item_id = p.id AND ${ACTIVE("r")}
         ORDER BY p.document_id, p.id`,
     )
@@ -267,6 +284,7 @@ async function pendingDocuments(tx: Transaction, ownOnly: boolean): Promise<Revi
       status: statusOf(e.decision),
       decisionId: e.decision_id,
       mergedInto: e.merge_into,
+      ...optional(e),
     });
     documents.set(e.document_id, doc);
   }
@@ -284,6 +302,7 @@ async function pendingDocuments(tx: Transaction, ownOnly: boolean): Promise<Revi
       status,
       decisionId: r.decision_id,
       rejectedWithEntity: status === "rejected" && endpoints.some((e) => e.status === "rejected"),
+      ...optional(r),
     });
   }
   // 依項目在文件中出現的順序排列（review-order.ts）：撤銷、重新讀取或重新萃取後順序不變（#243 PR 3 審查）
@@ -310,16 +329,73 @@ const EXISTING_RELATION = `
     JOIN kk.relations x ON x.relation_type = r.relation_type AND x.from_entity_id = ${FROM} AND x.to_entity_id = ${TO}
    WHERE r.id = $1 LIMIT 1`;
 
+// 決定的方式：manual 是人做的決定，auto 是直接收錄（migration 0013，ADR 0011 決定 4）
+export type DecisionMode = "manual" | "auto";
+
 // 寫入一筆決定，回傳決定的 id。項目已有有效的決定時是 conflict；round 由 policy 檢查，同時寫入由唯一鍵擋掉
-async function decide(tx: Transaction, itemId: string, decision: "approve" | "reject", extra: { names?: LocalizedText; mergeInto?: string } = {}): Promise<string> {
+async function decide(
+  tx: Transaction,
+  itemId: string,
+  decision: "approve" | "reject",
+  extra: { names?: LocalizedText; mergeInto?: string; mode?: DecisionMode } = {},
+): Promise<string> {
   const round = (await tx.query<{ n: number | null }>("SELECT kk.next_round($1) AS n", [itemId])).rows[0].n;
   if (round === null) throw new ReviewError("conflict");
   const inserted = await tx.query<{ id: string }>(
-    `INSERT INTO kk.review_decisions (item_id, round, decision, decided_by, names, merge_into)
-     VALUES ($1, $2, $3, kk.current_identity_id(), $4, $5) RETURNING id`,
-    [itemId, round, decision, extra.names ?? null, extra.mergeInto ?? null],
+    `INSERT INTO kk.review_decisions (item_id, round, decision, decided_by, names, merge_into, mode)
+     VALUES ($1, $2, $3, kk.current_identity_id(), $4, $5, $6) RETURNING id`,
+    [itemId, round, decision, extra.names ?? null, extra.mergeInto ?? null, extra.mode ?? "manual"],
   );
   return inserted.rows[0].id;
+}
+
+// 核准一個待審實體：寫決定，再建立新實體或把出處加到合併對象。回傳決定的 id
+async function approveEntity(tx: Transaction, e: EntityApproval, mode: DecisionMode, defaultLanguage: LanguageCode): Promise<string> {
+  const decisionId = await decide(tx, e.id, "approve", { names: e.names, mergeInto: e.mergeInto, mode });
+  if (e.mergeInto !== undefined) {
+    // 合併：既有實體的名稱不變，只加上出處（#44 決定 5）
+    await tx.query(
+      `INSERT INTO kk.entity_sources (entity_id, passage_id, decision_id)
+       SELECT $2, s.passage_id, $3 FROM kk.pending_entity_sources s WHERE s.pending_entity_id = $1`,
+      [e.id, e.mergeInto, decisionId],
+    );
+    return decisionId;
+  }
+  const pending = (await tx.query<{ entity_type: string; names: LocalizedText }>("SELECT entity_type, names FROM kk.pending_entities WHERE id = $1", [e.id]))
+    .rows[0];
+  if (pending === undefined) throw new ReviewError("denied");
+  const names = e.names ?? pending.names;
+  await tx.query("INSERT INTO kk.entities (id, entity_type, name, names) VALUES ($1, $2, $3, $4)", [
+    decisionId,
+    pending.entity_type,
+    names[defaultLanguage] ?? Object.values(names)[0],
+    names,
+  ]);
+  await tx.query(
+    `INSERT INTO kk.entity_sources (entity_id, passage_id, decision_id)
+     SELECT $2, s.passage_id, $2 FROM kk.pending_entity_sources s WHERE s.pending_entity_id = $1`,
+    [e.id, decisionId],
+  );
+  return decisionId;
+}
+
+// 核准一個兩端都已核准的待審關係：圖譜已有相同的關係時只寫決定（#189），否則建立關係與出處。回傳決定的 id
+async function approveRelation(tx: Transaction, id: string, mode: DecisionMode): Promise<string> {
+  const decisionId = await decide(tx, id, "approve", { mode });
+  if ((await tx.query(EXISTING_RELATION, [id])).rows.length > 0) return decisionId;
+  await tx.query(
+    `INSERT INTO kk.relations (id, relation_type, from_entity_id, to_entity_id)
+     SELECT $2, r.relation_type, ${FROM}, ${TO} FROM kk.pending_relations r ${ENDPOINTS} WHERE r.id = $1`,
+    [id, decisionId],
+  );
+  await tx.query(
+    `INSERT INTO kk.relation_sources (relation_id, passage_id, from_entity_id, to_entity_id, decision_id)
+     SELECT $2, s.passage_id, ${FROM}, ${TO}, $2
+       FROM kk.pending_relation_sources s JOIN kk.pending_relations r ON r.id = s.pending_relation_id ${ENDPOINTS}
+      WHERE s.pending_relation_id = $1`,
+    [id, decisionId],
+  );
+  return decisionId;
 }
 
 // 在一個交易中核准：先實體（寫決定，再建立新實體或把出處加到合併對象），再關係（兩端都已核准）。任何一列被拒絕就全部不寫入。
@@ -335,56 +411,85 @@ export async function approve(
   try {
     return await db.withIdentity(identityId, async (tx) => {
       const written: string[] = [];
-      for (const e of items.entities) {
-        const decisionId = await decide(tx, e.id, "approve", { names: e.names, mergeInto: e.mergeInto });
-        written.push(decisionId);
-        if (e.mergeInto !== undefined) {
-          // 合併：既有實體的名稱不變，只加上出處（#44 決定 5）
-          await tx.query(
-            `INSERT INTO kk.entity_sources (entity_id, passage_id, decision_id)
-             SELECT $2, s.passage_id, $3 FROM kk.pending_entity_sources s WHERE s.pending_entity_id = $1`,
-            [e.id, e.mergeInto, decisionId],
-          );
-          continue;
-        }
-        const pending = (await tx.query<{ entity_type: string; names: LocalizedText }>("SELECT entity_type, names FROM kk.pending_entities WHERE id = $1", [e.id]))
-          .rows[0];
-        if (pending === undefined) throw new ReviewError("denied");
-        const names = e.names ?? pending.names;
-        await tx.query("INSERT INTO kk.entities (id, entity_type, name, names) VALUES ($1, $2, $3, $4)", [
-          decisionId,
-          pending.entity_type,
-          names[options.defaultLanguage] ?? Object.values(names)[0],
-          names,
-        ]);
-        await tx.query(
-          `INSERT INTO kk.entity_sources (entity_id, passage_id, decision_id)
-           SELECT $2, s.passage_id, $2 FROM kk.pending_entity_sources s WHERE s.pending_entity_id = $1`,
-          [e.id, decisionId],
-        );
-      }
+      for (const e of items.entities) written.push(await approveEntity(tx, e, "manual", options.defaultLanguage));
       for (const id of items.existingRelations ?? []) {
         written.push(await decide(tx, id, "approve"));
         if ((await tx.query(EXISTING_RELATION, [id])).rows.length === 0) throw new ReviewError("conflict");
       }
-      for (const id of items.relations) {
-        const decisionId = await decide(tx, id, "approve");
-        written.push(decisionId);
-        if ((await tx.query(EXISTING_RELATION, [id])).rows.length > 0) continue;
-        await tx.query(
-          `INSERT INTO kk.relations (id, relation_type, from_entity_id, to_entity_id)
-           SELECT $2, r.relation_type, ${FROM}, ${TO} FROM kk.pending_relations r ${ENDPOINTS} WHERE r.id = $1`,
-          [id, decisionId],
-        );
-        await tx.query(
-          `INSERT INTO kk.relation_sources (relation_id, passage_id, from_entity_id, to_entity_id, decision_id)
-           SELECT $2, s.passage_id, ${FROM}, ${TO}, $2
-             FROM kk.pending_relation_sources s JOIN kk.pending_relations r ON r.id = s.pending_relation_id ${ENDPOINTS}
-            WHERE s.pending_relation_id = $1`,
-          [id, decisionId],
-        );
-      }
+      for (const id of items.relations) written.push(await approveRelation(tx, id, "manual"));
       return written;
+    });
+  } catch (e) {
+    mapError(e);
+  }
+}
+
+export interface AutoApproveResult {
+  // 直接收錄的實體與關係（待審 id）
+  entities: string[];
+  relations: string[];
+  // 留在待審的接縫：待審 id → 原因
+  seams: Record<string, SeamReason[]>;
+}
+
+// 從未有過決定的項目（已由人決定或已撤回的項目不再直接收錄）
+const UNDECIDED = (alias: string) => `NOT EXISTS (SELECT 1 FROM kk.review_decisions x WHERE x.item_id = ${alias}.id)`;
+
+// 直接收錄（ADR 0011 決定 1–4）：上傳者在一個交易中重算接縫，非接縫的項目寫入 auto 決定與正式資料（實體先、關係後）。
+// 合併候選與編輯距離依上傳者看得到的實體計算（seams.ts）；資料庫另以 auto policy 檢查上傳者、unsure、名稱與合併對象（0013）。
+// 任何一列被拒絕就全部不寫入，項目留在待審
+export async function autoApprove(
+  db: Database,
+  identityId: string,
+  documentId: string,
+  options: Omit<SeamContext, "documentLanguage"> & { defaultLanguage: LanguageCode },
+): Promise<AutoApproveResult> {
+  try {
+    return await db.withIdentity(identityId, async (tx) => {
+      const doc = (await tx.query<{ language: LanguageCode }>("SELECT language FROM kk.documents WHERE id = $1", [documentId])).rows[0];
+      if (doc === undefined) throw new ReviewError("denied");
+      const entities = (
+        await tx.query<{ id: string; type: string; names: LocalizedText; unsure: Unsure | null }>(
+          `SELECT p.id, p.entity_type AS type, p.names, p.unsure FROM kk.pending_entities p
+            WHERE p.document_id = $1 AND ${UNDECIDED("p")} ORDER BY p.id`,
+          [documentId],
+        )
+      ).rows;
+      const relations = (
+        await tx.query<{ id: string; from: string; to: string; unsure: Unsure | null }>(
+          `SELECT p.id, p.from_pending_id AS "from", p.to_pending_id AS "to", p.unsure FROM kk.pending_relations p
+            WHERE p.document_id = $1 AND ${UNDECIDED("p")} ORDER BY p.id`,
+          [documentId],
+        )
+      ).rows;
+      const visible = (await tx.query<VisibleEntity>("SELECT id, entity_type AS type, name, names FROM kk.entities ORDER BY id")).rows;
+      const ctx: SeamContext = { entityTypes: options.entityTypes, languages: options.languages, documentLanguage: doc.language };
+
+      const result: AutoApproveResult = { entities: [], relations: [], seams: {} };
+      const plans = new Map(entities.map((e) => [e.id, planEntity(e, visible, ctx)]));
+      for (const [id, plan] of plans) {
+        if (plan.seams.length > 0) {
+          result.seams[id] = plan.seams;
+          continue;
+        }
+        await approveEntity(tx, { id, mergeInto: plan.mergeInto }, "auto", options.defaultLanguage);
+        result.entities.push(id);
+      }
+      for (const r of relations) {
+        const seams = planRelation(r, plans);
+        // 端點是之前由人退回、或還沒核准的實體時，關係同樣留在待審
+        if (seams.length === 0) {
+          const { ok } = (await tx.query<{ ok: boolean }>("SELECT kk.is_approved($1) AND kk.is_approved($2) AS ok", [r.from, r.to])).rows[0];
+          if (!ok) seams.push("endpoint");
+        }
+        if (seams.length > 0) {
+          result.seams[r.id] = seams;
+          continue;
+        }
+        await approveRelation(tx, r.id, "auto");
+        result.relations.push(r.id);
+      }
+      return result;
     });
   } catch (e) {
     mapError(e);
@@ -437,7 +542,10 @@ async function cascaded(tx: Transaction, decisionId: string): Promise<string[]> 
 // 撤回決定（ADR 0007）：寫入撤回紀錄，項目回到待審，這個決定寫入的出處不再算數。
 // 撤回實體的核准時，同一份文件中端點是這個待審實體、已核准且未撤回的關係一併撤回（cascade_of 指向實體的撤回，#209 決定 6）。
 // 看不到或不存在的決定（參考情境與資料集的內容沒有決定）是 denied，已撤回的決定是 conflict；任何一筆失敗就全部不寫入
-export async function retract(db: Database, identityId: string | null, decisionIds: string[]): Promise<void> {
+// 撤回的理由：名稱錯了、關係用錯了、不該合併、不該收錄、其他（ADR 0011 決定 5）。只記在人選的撤回，連帶撤回不記
+export type RetractReason = "name" | "relation" | "merge" | "exclude" | "other";
+
+export async function retract(db: Database, identityId: string | null, decisionIds: string[], reason?: RetractReason): Promise<void> {
   try {
     await db.withIdentity(identityId, async (tx) => {
       // 同一個交易中已撤回的決定（例如「撤銷」全部核准時，連帶撤回的關係也在清單中），不再重複寫入
@@ -446,13 +554,13 @@ export async function retract(db: Database, identityId: string | null, decisionI
         if (retracted.has(id)) return;
         retracted.add(id);
         const inserted = await tx.query(
-          `INSERT INTO kk.review_retractions (decision_id, document_id, retracted_by, cascade_of)
-           SELECT d.id, coalesce(e.document_id, r.document_id), kk.current_identity_id(), $2
+          `INSERT INTO kk.review_retractions (decision_id, document_id, retracted_by, cascade_of, reason)
+           SELECT d.id, coalesce(e.document_id, r.document_id), kk.current_identity_id(), $2, $3
              FROM kk.review_decisions d
              LEFT JOIN kk.pending_entities e ON e.id = d.item_id
              LEFT JOIN kk.pending_relations r ON r.id = d.item_id
             WHERE d.id = $1`,
-          [id, cascadeOf],
+          [id, cascadeOf, cascadeOf === null ? (reason ?? null) : null],
         );
         if (inserted.affectedRows !== 1) throw new ReviewError("denied");
       };

@@ -7,7 +7,7 @@ import { planBatches } from "./batch";
 import { nameKeys } from "./merge";
 import { ExtractionFormatError, parseExtraction } from "./output";
 import { extractionSystemPrompt, extractionUserMessage, promptParts } from "./prompt";
-import { newPendingEntityId, newPendingRelationId, writePending, type PendingInput } from "./store";
+import { autoApprove, newPendingEntityId, newPendingRelationId, writePending, type PendingInput } from "./store";
 
 // /api/ask 的錯誤類型，或 format（輸出格式不符）、truncated（回應被 max_tokens 截斷）、write（寫入待審被拒絕）
 export type BatchStatus = "waiting" | "running" | "done" | "failed";
@@ -37,6 +37,9 @@ export interface ExtractionState {
   // 已寫入的待審實體與關係（正規化後的名稱或「類型＋兩端」→ 待審 id），供後面的批次去重
   entityKeys: Record<string, string>;
   relationKeys: Record<string, string>;
+  // 只審接縫（client.json 的 review.mode 為 seams，ADR 0011）：全部批次完成後的直接收錄。done 時記錄收錄與留在待審的項目數；
+  // failed 時項目全部留在待審，重試時再執行。逐筆核准時省略
+  autoApproved?: { status: "done"; entities: number; relations: number; seams: number } | { status: "failed" };
 }
 
 export interface ExtractionContext {
@@ -160,6 +163,18 @@ export async function runExtraction(
     }
     const dropped = Object.values(parsed.dropped).reduce((n, c) => n + (c ?? 0), 0);
     update(i, { status: "done", entities: input.entities.length, relations: input.relations.length, dropped, found: foundNames(input.entities, state.documentLanguage) }, { entityKeys, relationKeys });
+  }
+
+  // 萃取完成（全部批次成功）才直接收錄：之後的批次可能為已寫入的項目補上出處。已完成的不再執行
+  if (config.client.review.mode === "seams" && state.batches.every((b) => b.status === "done") && state.autoApproved?.status !== "done") {
+    const { languages, defaultLanguage } = config.client;
+    try {
+      const r = await autoApprove(ctx.db, state.uploader, state.documentId, { entityTypes: config.knowledgeModel.entityTypes, languages, defaultLanguage });
+      state = { ...state, autoApproved: { status: "done", entities: r.entities.length, relations: r.relations.length, seams: Object.keys(r.seams).length } };
+    } catch {
+      state = { ...state, autoApproved: { status: "failed" } };
+    }
+    onChange(state);
   }
   return state;
 }

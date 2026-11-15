@@ -6,7 +6,7 @@ import knowledgeModel from "@client/knowledge-model.json";
 import scenarios from "@client/scenarios.json";
 import theme from "@client/theme.json";
 import { withRetrievalDefaults } from "../retrieval/providers";
-import type { ClientConfig, ClientFiles, ConflictsConfig, EvalThresholds, UploadConfig } from "./types";
+import type { ClientConfig, ClientFiles, ConflictsConfig, EvalThresholds, ReviewConfig, UploadConfig } from "./types";
 
 // JSON import 的字串型別會放寬成 string，列舉值無法在編譯時比對；
 // 這裡比對其餘的形狀（缺欄位、型別不符時 typecheck 失敗），列舉值由 ajv 檢查。
@@ -23,6 +23,7 @@ const files: Widen<ClientFiles> = { client, theme, knowledgeModel, access, scena
 // 與 client.schema.json 的 default 相同（load.test.ts 比對）。retrieval 的預設值依 provider 而不同，在 retrieval/providers.ts 的 RETRIEVAL_DEFAULTS
 export const UPLOAD_DEFAULTS: UploadConfig = { passageMaxChars: 300, extractMaxBatches: 3 };
 export const CONFLICTS_DEFAULTS: ConflictsConfig = { enabled: false, candidatesPerPassage: 3, minScore: 0.15 };
+export const REVIEW_DEFAULTS: ReviewConfig = { mode: "item" };
 export const EVAL_THRESHOLDS_DEFAULTS: EvalThresholds = { citation: 0.9, answer: 0.8, refusal: 1 };
 
 export function normalizeClient(raw: ClientFiles): ClientConfig {
@@ -34,6 +35,7 @@ export function normalizeClient(raw: ClientFiles): ClientConfig {
       retrieval: withRetrievalDefaults(raw.client.retrieval),
       upload: { ...UPLOAD_DEFAULTS, ...raw.client.upload },
       conflicts: { ...CONFLICTS_DEFAULTS, ...raw.client.conflicts },
+      review: { ...REVIEW_DEFAULTS, ...raw.client.review },
     },
     knowledgeModel: {
       ...raw.knowledgeModel,

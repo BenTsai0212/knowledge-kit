@@ -60,6 +60,7 @@ npm run check:client
 | `retrieval` | 否 | 物件，見下表 | 檢索參數。省略整個物件或其中的欄位時使用預設值 |
 | `upload` | 否 | 物件，見下表 | 上傳文件的參數。省略整個物件或其中的欄位時使用預設值 |
 | `conflicts` | 否 | 物件，見下表 | 上傳文件與既有段落說法不同的比對。省略整個物件或其中的欄位時使用預設值 |
+| `review` | 否 | 物件，見下表 | 待審的方式。省略整個物件或其中的欄位時使用預設值 |
 
 `retrieval` 的欄位（運作方式見 [docs/retrieval.md](retrieval.md)）：
 
@@ -99,6 +100,12 @@ npm run check:client
 | `enabled` | 布林 | `false` | 萃取完成後是否比對說法不同（每份文件多一次 `/api/ask`，計入每日次數）。營運開關，預設關閉；範例客戶的 `client.json` 明確寫 `true` |
 | `candidatesPerPassage` | 整數，1～10 | 3 | 每個新段落最多比對幾段既有段落 |
 | `minScore` | 0～1 | 0.15 | 既有段落的最低檢索分數，低於此分數的段落不比對 |
+
+`review` 的欄位（[ADR 0011](adr/0011-seam-only-review.md)）：
+
+| 欄位 | 格式 | 預設值 | 說明 |
+| --- | --- | --- | --- |
+| `mode` | `item`、`seams` | `item` | `item`：逐筆核准（現行）。`seams`：只審接縫，萃取完成後其餘項目由上傳者直接收錄（[docs/extraction.md](extraction.md)「直接收錄」）。沒有 `canReview` 的上傳者也能讓內容進入圖譜（只限他能選的可見等級）；需要事前審核的組織用 `item`。待審頁的接縫區與「已直接收錄」區完成前（#378 PR 4），參考情境維持 `item` |
 
 ## `theme.json`
 

@@ -15,6 +15,7 @@ import type {
   RelationQuestions,
   RelationType,
   RetrievalFile,
+  ReviewFile,
   UploadFile,
   Role,
   Scenario,
@@ -55,6 +56,7 @@ export const manifests: ManifestEntry[] = [
       retrieval: "optional",
       upload: "optional",
       conflicts: "optional",
+      review: "optional",
     } satisfies KeyManifest<ClientFile>,
   },
   { schema: "client.schema.json", pointer: "/properties/dataset", keys: pathRef },
@@ -74,6 +76,7 @@ export const manifests: ManifestEntry[] = [
     pointer: "/properties/upload",
     keys: { passageMaxChars: "optional", extractMaxBatches: "optional" } satisfies KeyManifest<UploadFile>,
   },
+  { schema: "client.schema.json", pointer: "/properties/review", keys: { mode: "optional" } satisfies KeyManifest<ReviewFile> },
   {
     schema: "client.schema.json",
     pointer: "/properties/conflicts",

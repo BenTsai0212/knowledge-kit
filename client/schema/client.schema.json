@@ -97,6 +97,18 @@
         },
         "minScore": { "description": "既有段落的最低檢索分數，低於此分數的段落不比對", "type": "number", "minimum": 0, "maximum": 1, "default": 0.15 }
       }
+    },
+    "review": {
+      "description": "待審的方式（ADR 0011，docs/client-config.md）；省略的欄位使用預設值",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "description": "item：逐筆核准（現行）；seams：只審接縫，其餘由上傳者直接收錄",
+          "enum": ["item", "seams"],
+          "default": "item"
+        }
+      }
     }
   }
 }
