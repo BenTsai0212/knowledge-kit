@@ -77,3 +77,38 @@ export function refusalNextSteps({
 function generic(upload: RefusalSuggestion[]): RefusalSuggestion[] {
   return [{ kind: "step", step: "rephrase" }, { kind: "step", step: "askPerson" }, ...upload];
 }
+
+// 先確認要找的是哪一種（#377，docs/design.md「先確認要找的是哪一種」）：拒答後問一次，選了之後依選擇給一句下一步。
+// 依據與 refusalNextSteps() 相同（問題文字、上傳能力、送出當下身分的圖譜），實體與負責人沿用它產生的「在圖譜看」「問負責的人」：
+// 不讀檢索結果或拒答原因，「資料沒寫」與「沒有權限」相同（#247）。不保存、不呼叫模型；略過時顯示 refusalNextSteps() 的清單
+export const REFUSAL_CHOICES = ["policy", "personal", "people"] as const;
+export type RefusalChoice = (typeof REFUSAL_CHOICES)[number];
+
+export type RefusalOwner = Extract<RefusalSuggestion, { kind: "owner" }>;
+
+// upload：下方另有一行「有相關的文件時，上傳後再問一次」
+export type RefusalChoiceNext =
+  // 公司的規定或辦法：有負責人時改問他＋換詞，沒有時只給換詞
+  | { choice: "policy"; owner: RefusalOwner | null; upload: boolean }
+  // 我自己的情況：一律相同
+  | { choice: "personal"; upload: boolean }
+  // 某個人或部門的事：在圖譜看第一個實體、問第一位負責人；沒有看得到的實體時是通用的一句
+  | { choice: "people"; entity: GraphEntity | null; owner: RefusalOwner | null; upload: boolean }
+  // 略過：現行的「可以試試」清單（上傳已在清單中）
+  | { choice: "skip"; steps: RefusalSuggestion[] };
+
+export function refusalChoiceNext(choice: RefusalChoice | "skip", input: Parameters<typeof refusalNextSteps>[0]): RefusalChoiceNext {
+  const list = refusalNextSteps(input);
+  if (choice === "skip") return { choice, steps: list };
+  const owner = list.find((x): x is RefusalOwner => x.kind === "owner") ?? null;
+  const entity = list.find((x): x is Extract<RefusalSuggestion, { kind: "graph" }> => x.kind === "graph")?.entity ?? null;
+  const upload = input.canUpload;
+  switch (choice) {
+    case "policy":
+      return { choice, owner, upload };
+    case "personal":
+      return { choice, upload };
+    case "people":
+      return { choice, entity, owner, upload };
+  }
+}

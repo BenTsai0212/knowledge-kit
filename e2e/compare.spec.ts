@@ -74,9 +74,9 @@ test.describe("畫面", () => {
         await expect(column).toContainText(FAKE_ANSWER_LEAD);
         await expect(column.getByRole("button", { name: "1", exact: true })).toBeVisible();
       } else {
-        // 與一般拒答相同：拒答文字與「可以試試」，沒有引用
+        // 與一般拒答相同：拒答文字與「先確認要找的是哪一種」（#377），沒有引用
         await expect(column.locator(".refusal")).toContainText(s.refusal);
-        await expect(column.getByText(s.refusalNextTitle)).toBeVisible();
+        await expect(column.getByText(s.refusalClarifyQuestion)).toBeVisible();
         await expect(column.locator("button.citation")).toHaveCount(0);
       }
       // 每一欄只出現該身分看得到的段落

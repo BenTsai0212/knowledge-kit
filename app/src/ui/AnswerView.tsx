@@ -1,11 +1,20 @@
-import { Fragment, useEffect, useRef, useState, type CSSProperties, type Ref } from "react";
+import { Fragment, useEffect, useRef, useState, type CSSProperties, type ReactNode, type Ref } from "react";
 import { clientConfig } from "../client/load";
 import type { Graph, GraphEntity } from "../graph/read";
 import type { Answer } from "../qa/answer";
 import { errorMessage, fill, strings } from "../client/i18n";
 import { entityOptionLabel, entityTypeLabel } from "./graph-labels";
 import { MAX_REPORT_NOTE_CHARS, REPORT_CATEGORIES, type AnswerReport, type ReportCategory } from "../reports/store";
-import { refusalNextSteps, type RefusalStep, type RefusalSuggestion } from "./refusal-next-steps";
+import {
+  REFUSAL_CHOICES,
+  refusalChoiceNext,
+  refusalNextSteps,
+  type RefusalChoice,
+  type RefusalChoiceNext,
+  type RefusalOwner,
+  type RefusalStep,
+  type RefusalSuggestion,
+} from "./refusal-next-steps";
 import { canReport, defaultCategory } from "./report-helpers";
 import { answerDoneStep, answerSentences, sentenceStep, streamingSentences } from "./answer-motion";
 import { staggerIndex } from "./motion";
@@ -72,6 +81,8 @@ const typeColor = (type: string) => entityTypes.find((t) => t.id === type)?.colo
 
 // 回答完成後已播過動態的題目：切換頁籤回來重新掛載時不再播放（#227）
 const settled = new Set<string>();
+// 拒答後已選過的題目與選擇（#377）：每一題只問一次，重新掛載時沿用
+const clarified = new Map<string, RefusalChoice | "skip">();
 
 export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport, readReport, onRetry, retryDisabled, onShorten, onDraft, onViewInGraph, reportRequest = 0, heading }: Props) {
   const s = strings(language);
@@ -147,6 +158,21 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
   const retryable = incomplete || category === "transient";
   // 模型無法回答（upstream_refusal）比照拒答：虛線框與「可以試試」
   const refusalText = answer?.kind === "refusal" ? answer.text : answer?.kind === "error" && category === "modelRefusal" ? errorMessage(language, answer.error) : null;
+  // 拒答後的選擇（#377）：只留在這一題的畫面（切換頁籤回來仍在），不寫入資料庫
+  const nextInput = { canUpload, graph, question: state.question, language };
+  const [clarify, setClarify] = useState<RefusalChoice | "skip" | null>(() => clarified.get(id) ?? null);
+  // 略過後焦點移到「可以試試」，不留在已經消失的按鈕上
+  const skipped = useRef(false);
+  const choose = (choice: RefusalChoice | "skip") => {
+    clarified.set(id, choice);
+    skipped.current = choice === "skip";
+    setClarify(choice);
+  };
+  const focusSkipped = (el: HTMLDivElement | null) => {
+    if (el === null || !skipped.current) return;
+    skipped.current = false;
+    el.focus({ preventScroll: true });
+  };
   const classes = ["card", "answer", still && "still", incomplete && "incomplete"].filter(Boolean).join(" ");
   const doneStep = sentences === null ? 0 : answerDoneStep(sentences.length, streamed.current);
   // 「仍有疑問，再回報一次」：送出後換成新回報的結果
@@ -198,22 +224,35 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
         {refusalText !== null && (
           <div className="refusal">
             <p className="answer-text">{refusalText}</p>
-            {/* 下一步只依問題、上傳能力與看得到的圖譜決定，「資料沒寫」與「沒有權限」相同（docs/qa.md「拒答」、#285）；模型無法回答比照拒答（#280） */}
-            <div className="refusal-next">
-              <p className="muted">{s.refusalNextTitle}</p>
-              <ul>
-                {refusalNextSteps({ canUpload, graph, question: state.question, language }).map((x, i) => (
-                  <li key={suggestionKey(x)} className={x.kind === "step" && x.step === "upload" ? "refusal-next__upload" : undefined} style={{ "--i": staggerIndex(i) } as CSSProperties}>
-                    {/* 桌機是並排的卡片（#335，畫板 K-Answer）：小標與實體的類型色點只在桌機與手機顯示；上傳那一項是卡片下方的一行 */}
-                    {suggestionKind(x) !== null && <span className="refusal-kind">{suggestionKind(x)}</span>}
-                    <span className="refusal-step">
-                      {suggestionEntity(x) !== null && <span className="type-dot" style={{ "--type-color": typeColor(suggestionEntity(x)!.type) } as CSSProperties} aria-hidden="true" />}
-                      <span>{suggestion(x)}</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {/* 先確認要找的是哪一種（#377）：選了之後是使用者的泡泡＋一句下一步，略過時是現行的「可以試試」。
+                下一步只依問題、上傳能力與看得到的圖譜決定，「資料沒寫」與「沒有權限」相同（docs/qa.md「拒答」、#285、#247）；模型無法回答比照拒答（#280） */}
+            {clarify !== "skip" ? (
+              <RefusalClarify
+                language={language}
+                choice={clarify}
+                onChoose={choose}
+                next={clarify === null ? null : refusalChoiceNext(clarify, nextInput)}
+                name={name}
+                onGotoUpload={onGotoUpload}
+                onViewInGraph={onViewInGraph}
+              />
+            ) : (
+              <div className="refusal-next" ref={focusSkipped} tabIndex={-1}>
+                <p className="muted">{s.refusalNextTitle}</p>
+                <ul>
+                  {refusalNextSteps(nextInput).map((x, i) => (
+                    <li key={suggestionKey(x)} className={x.kind === "step" && x.step === "upload" ? "refusal-next__upload" : undefined} style={{ "--i": staggerIndex(i) } as CSSProperties}>
+                      {/* 桌機是並排的卡片（#335，畫板 K-Answer）：小標與實體的類型色點只在桌機與手機顯示；上傳那一項是卡片下方的一行 */}
+                      {suggestionKind(x) !== null && <span className="refusal-kind">{suggestionKind(x)}</span>}
+                      <span className="refusal-step">
+                        {suggestionEntity(x) !== null && <span className="type-dot" style={{ "--type-color": typeColor(suggestionEntity(x)!.type) } as CSSProperties} aria-hidden="true" />}
+                        <span>{suggestion(x)}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
         {/* 錯誤是中性的卡片，不用 danger（#280）；prompt_too_long 沒有送出，下一步是縮短問題 */}
@@ -289,6 +328,106 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
           ))}
       </div>
     </section>
+  );
+}
+
+// 模板中的 {鍵} 換成元素（可點的實體名稱）；沒有對應值的部分照原文
+function fillNodes(template: string, values: Record<string, ReactNode>): ReactNode {
+  return template.split(/(\{\w+\})/).map((part, i) => {
+    const key = /^\{(\w+)\}$/.exec(part)?.[1];
+    return <Fragment key={i}>{key !== undefined && key in values ? values[key] : part}</Fragment>;
+  });
+}
+
+// 先確認要找的是哪一種（#377，docs/design.md「先確認要找的是哪一種」）：AI 在問你的卡片（「?」圖示＋小標＋提問＋選項＋「輪到你」）；
+// 選了之後選項收起，選擇是右側的泡泡，下方接一句下一步。實體與負責人一律來自送出當下身分的圖譜（refusalChoiceNext）
+function RefusalClarify({
+  language,
+  choice,
+  next,
+  onChoose,
+  name,
+  onGotoUpload,
+  onViewInGraph,
+}: {
+  language: string;
+  choice: RefusalChoice | null;
+  next: RefusalChoiceNext | null;
+  onChoose(choice: RefusalChoice | "skip"): void;
+  name(entity: GraphEntity): string;
+  onGotoUpload(): void;
+  onViewInGraph(entityId: string): void;
+}) {
+  const s = strings(language);
+  const label: Record<RefusalChoice, string> = { policy: s.refusalClarifyPolicy, personal: s.refusalClarifyPersonal, people: s.refusalClarifyPeople };
+  // 選項收起後焦點移到下一步，不留在已經消失的按鈕上
+  const result = useRef<HTMLDivElement>(null);
+  const chose = useRef(false);
+  useEffect(() => {
+    if (!chose.current) return;
+    chose.current = false;
+    result.current?.focus({ preventScroll: true });
+  }, [choice]);
+  const pick = (c: RefusalChoice | "skip") => {
+    chose.current = true;
+    onChoose(c);
+  };
+  if (choice === null || next === null || next.choice === "skip") {
+    return (
+      <div className="refusal-ask" role="group" aria-label={s.refusalClarifyTitle}>
+        <span className="refusal-ask__icon" aria-hidden="true">
+          ?
+        </span>
+        <div className="refusal-ask__main">
+          <p className="refusal-ask__title">{s.refusalClarifyTitle}</p>
+          <p className="refusal-ask__question">{s.refusalClarifyQuestion}</p>
+          <div className="refusal-ask__options">
+            {REFUSAL_CHOICES.map((c) => (
+              <button key={c} type="button" onClick={() => pick(c)}>
+                {label[c]}
+              </button>
+            ))}
+            <button type="button" className="refusal-ask__skip" onClick={() => pick("skip")}>
+              {s.refusalClarifySkip}
+            </button>
+          </div>
+          <p className="refusal-ask__turn">{s.refusalClarifyYourTurn}</p>
+        </div>
+      </div>
+    );
+  }
+  const owner = (x: RefusalOwner) => fill(s.refusalClarifyOwnerName, { owner: name(x.owner), name: name(x.entity), role: x.role });
+  const entity = (e: GraphEntity) => (
+    <button type="button" className="link" onClick={() => onViewInGraph(e.id)}>
+      {name(e)}
+    </button>
+  );
+  const text =
+    next.choice === "personal"
+      ? s.refusalClarifyPersonalNext
+      : next.choice === "policy"
+        ? next.owner === null
+          ? s.refusalClarifyPolicyNext
+          : fill(s.refusalClarifyPolicyOwner, { owner: owner(next.owner) })
+        : next.entity === null
+          ? s.refusalClarifyPeopleNext
+          : fillNodes(next.owner === null ? s.refusalClarifyPeopleEntity : s.refusalClarifyPeopleOwner, {
+              name: entity(next.entity),
+              ...(next.owner !== null && { owner: owner(next.owner) }),
+            });
+  return (
+    <div className="refusal-chosen" ref={result} tabIndex={-1}>
+      <p className="refusal-chosen__choice">{label[choice]}</p>
+      <p className="refusal-chosen__next">{text}</p>
+      {next.upload && (
+        <p className="refusal-chosen__upload">
+          {s.refusalNextUpload}{" "}
+          <button type="button" onClick={onGotoUpload}>
+            {s.refusalGotoUpload}
+          </button>
+        </p>
+      )}
+    </div>
   );
 }
 

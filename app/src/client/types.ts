@@ -805,6 +805,23 @@ export interface UiStrings {
   refusalKindGraph: string;
   refusalKindPerson: string;
   refusalKindRephrase: string;
+  // 拒答時先確認要找的是哪一種（#377，docs/design.md「先確認要找的是哪一種」）：小標、提問、三個選項、略過、「輪到你」
+  refusalClarifyTitle: string;
+  refusalClarifyQuestion: string;
+  refusalClarifyPolicy: string;
+  refusalClarifyPersonal: string;
+  refusalClarifyPeople: string;
+  refusalClarifySkip: string;
+  refusalClarifyYourTurn: string;
+  // 選了之後的下一步：{owner} 是 refusalClarifyOwnerName 填好的負責人（{owner} 名稱、{name} 實體、{role} 稱呼），{name} 是可點的實體名稱；
+  // Owner／Entity 是問題中有看得到的實體時，Next 是沒有時。不提權限、等級、專案或身分
+  refusalClarifyPolicyOwner: string;
+  refusalClarifyPolicyNext: string;
+  refusalClarifyPersonalNext: string;
+  refusalClarifyPeopleOwner: string;
+  refusalClarifyPeopleEntity: string;
+  refusalClarifyPeopleNext: string;
+  refusalClarifyOwnerName: string;
   // 不是拒答、但沒有任何有效引用的回答
   uncited: string;
   // 串流中斷或被截斷，保留已收到的內容

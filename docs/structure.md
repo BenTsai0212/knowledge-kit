@@ -122,7 +122,7 @@
 - `PresentationBar.tsx`：展示模式登入後的頂端列（不論寬度都取代 `Sidebar`／`MobileNav`；畫板 `H-QA`、`H-Graph`，#349）；`VITE_DEMO_COMPARE` 開啟時有「身分對照」按鈕，見 `docs/qa.md`「展示模式」「身分對照」
 - `ProductIcon.tsx`：頁首的產品 icon（favicon 在 `app/public/favicon.svg`，見 `docs/design.md`「產品 icon（K 晶格）」）
 - `qa-errors.ts`：問答錯誤的五類（見 `docs/qa.md`「錯誤」）
-- `refusal-next-steps.ts`：拒答下方的下一步（見 `docs/qa.md`「拒答」）
+- `refusal-next-steps.ts`：拒答下方的下一步與先確認要找的是哪一種（見 `docs/qa.md`「拒答」）
 - `report-helpers.ts`：問答的「回報有錯」組成回報
 - `ReportList.tsx`：待審頁的「回報」分頁
 - `ReportResult.tsx`：回答下方與首頁的回報結果

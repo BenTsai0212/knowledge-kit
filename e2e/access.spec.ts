@@ -119,7 +119,7 @@ test("在評測台切換成沒有 canReview 的身分：回到問答，頁籤消
   await expect(tab(page, s.tabQa)).toHaveAttribute("aria-current", "page");
 });
 
-// 查不到時的下一步（#192）：「資料沒寫」與「看不到的資料」的拒答區塊完全相同，不透露是哪一種。
+// 查不到時的下一步（#192）：「資料沒寫」與「看不到的資料」的拒答區塊完全相同，不透露是哪一種；先確認要找的是哪一種（#377）的選項與選後的下一步也相同。
 // 下一步會從問題中看得到的實體產生（#285），所以「資料沒寫」的問題也放進同樣的看得到的實體名稱
 // 問答一律回拒答標記（app/src/qa/prompt.ts 的 REFUSAL_MARKER），檢索到看得到的段落而送出 /api/ask 時也拒答
 const REFUSAL_MARKER = "[[NO_ANSWER]]";
@@ -138,18 +138,25 @@ for (const role of lessPrivileged) {
 
     // 問答往下累積（#195），看最新一題
     const answer = page.locator("section.answer").last();
-    const ask = async (question: string) => {
+    // 拒答區塊：先確認要找的是哪一種（#377）的選項，與選了 choice 之後的下一步（略過時是「可以試試」）
+    const ask = async (question: string, choice: string) => {
       await page.getByPlaceholder(s.questionPlaceholder).fill(question);
       await page.getByRole("button", { name: s.askButton, exact: true }).click();
       await expect(answer.getByRole("heading", { name: question })).toBeVisible();
-      await expect(answer.locator(".refusal-next")).toBeVisible();
-      return answer.locator(".answer-text, .refusal-next").allInnerTexts();
+      await expect(answer.locator(".refusal-ask")).toBeVisible();
+      const asked = await answer.locator(".refusal").innerText();
+      await answer.locator(".refusal-ask").getByRole("button", { name: choice, exact: true }).click();
+      await expect(answer.locator(".refusal-chosen, .refusal-next")).toBeVisible();
+      return [asked, ...(await answer.locator(".refusal > .answer-text, .refusal-chosen, .refusal-next").allInnerTexts())];
     };
     // 資料沒寫：資料集中沒有的詞，加上段落開頭中看得到的實體名稱；看不到的資料：該身分看不到的段落開頭（問題本身含有這段文字，所以不做滲漏比對）
-    const notWritten = await ask(["E2E qzxv wkjp", ...visibleNamesIn(hidden.prefix, role)].join(" "));
-    const notVisible = await ask(hidden.prefix);
-    expect(notVisible).toEqual(notWritten);
-    expect(notWritten[0]).toBe(s.refusal);
+    // 同一個選項時，選項與選後的下一步完全相同；略過放在最後，下方檢查上傳
+    for (const choice of [s.refusalClarifyPolicy, s.refusalClarifyPersonal, s.refusalClarifyPeople, s.refusalClarifySkip]) {
+      const notWritten = await ask(["E2E qzxv wkjp", ...visibleNamesIn(hidden.prefix, role)].join(" "), choice);
+      const notVisible = await ask(hidden.prefix, choice);
+      expect(notVisible, choice).toEqual(notWritten);
+      expect(notWritten[1]).toBe(s.refusal);
+    }
 
     const canUpload = access.roles.find((r) => r.id === role)!.canUpload;
     const gotoUpload = answer.getByRole("button", { name: s.refusalGotoUpload });

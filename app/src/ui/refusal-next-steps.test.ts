@@ -3,7 +3,7 @@ import { clientConfig } from "../client/load";
 import { TRANSLATIONS } from "../client/i18n";
 import type { RelationType } from "../client/types";
 import type { Graph, GraphEntity } from "../graph/read";
-import { MAX_REFUSAL_ENTITIES, questionEntities, refusalNextSteps, type RefusalSuggestion } from "./refusal-next-steps";
+import { MAX_REFUSAL_ENTITIES, questionEntities, REFUSAL_CHOICES, refusalChoiceNext, refusalNextSteps, type RefusalChoiceNext, type RefusalSuggestion } from "./refusal-next-steps";
 
 const entity = (id: string, type: string, name: string, names: Record<string, string> = {}): GraphEntity => ({ id, type, name, names, sources: [] });
 const RELATION_TYPES: RelationType[] = [
@@ -95,5 +95,85 @@ describe("refusalNextSteps：從問題中看得到的實體產生（#285）", ()
     const hidden = { ...graph, entities: graph.entities.filter((e) => e.id !== "p1"), relations: [] };
     expect(summary(steps("甲專案的預算", "zh-TW", hidden))).toEqual(summary(steps("丙專案的預算", "zh-TW", hidden)));
     expect(summary(steps("甲專案的預算", "zh-TW", hidden))).toEqual(["rephrase", "askPerson"]);
+  });
+});
+
+describe("refusalChoiceNext：先確認要找的是哪一種（#377）", () => {
+  const next = (choice: Parameters<typeof refusalChoiceNext>[0], question: string, canUpload = false, g: Graph = graph) =>
+    refusalChoiceNext(choice, { canUpload, graph: g, question, language: "zh-TW", relationTypes: RELATION_TYPES });
+  // 實體以 id 表示，方便比對
+  const brief = (x: RefusalChoiceNext) => {
+    if (x.choice === "skip") return { choice: x.choice, steps: summary(x.steps) };
+    if (x.choice === "personal") return x;
+    return { ...x, owner: x.owner && `${x.owner.owner.id}:${x.owner.entity.id}:${x.owner.role}`, ...(x.choice === "people" && { entity: x.entity?.id ?? null }) };
+  };
+
+  it("公司的規定或辦法：有負責人時改問他（沿用「問負責的人」的實體與稱呼），沒有看得到的實體時只給換詞", () => {
+    expect(brief(next("policy", "甲專案的預算是多少？"))).toEqual({ choice: "policy", owner: "u1:p1:負責人", upload: false });
+    expect(brief(next("policy", "今年的預算是多少？"))).toEqual({ choice: "policy", owner: null, upload: false });
+    // 有實體但沒有負責人：同樣只給換詞
+    expect(brief(next("policy", "乙專案的預算"))).toEqual({ choice: "policy", owner: null, upload: false });
+  });
+
+  it("我自己的情況：有沒有看得到的實體都相同", () => {
+    expect(next("personal", "甲專案的預算是多少？")).toEqual({ choice: "personal", upload: false });
+    expect(next("personal", "今年的預算是多少？")).toEqual(next("personal", "甲專案的預算是多少？"));
+  });
+
+  it("某個人或部門的事：在圖譜看第一個實體、問它的負責人；沒有看得到的實體時是通用的一句", () => {
+    expect(brief(next("people", "甲專案的預算是多少？"))).toEqual({ choice: "people", entity: "p1", owner: "u1:p1:負責人", upload: false });
+    expect(brief(next("people", "乙專案的預算"))).toEqual({ choice: "people", entity: "p2", owner: null, upload: false });
+    expect(brief(next("people", "今年的預算是多少？"))).toEqual({ choice: "people", entity: null, owner: null, upload: false });
+  });
+
+  it("能上傳的身分，三種選擇下方都有上傳一行", () => {
+    for (const choice of REFUSAL_CHOICES) {
+      expect(next(choice, "甲專案的預算", true)).toMatchObject({ upload: true });
+      expect(next(choice, "今年的預算", false)).toMatchObject({ upload: false });
+    }
+  });
+
+  it("略過時等於現行的「可以試試」清單", () => {
+    for (const [question, canUpload] of [["甲專案的預算是多少？", true], ["今年的預算", false]] as const) {
+      expect(next("skip", question, canUpload)).toEqual({ choice: "skip", steps: steps(question, "zh-TW", graph, canUpload) });
+    }
+  });
+
+  it("看不到的實體不會出現：問題只提到它時，與資料不存在的問題相同；多傳拒答原因不影響結果", () => {
+    const hidden = { ...graph, entities: graph.entities.filter((e) => e.id !== "p1"), relations: [] };
+    for (const choice of [...REFUSAL_CHOICES, "skip"] as const) {
+      expect(next(choice, "甲專案的預算", true, hidden)).toEqual(next(choice, "丙專案的預算", true, hidden));
+      const extra = (reason: string) =>
+        ({ canUpload: true, graph, question: "甲專案", language: "zh-TW", relationTypes: RELATION_TYPES, reason }) as Parameters<typeof refusalNextSteps>[0];
+      expect(refusalChoiceNext(choice, extra("no_data"))).toEqual(refusalChoiceNext(choice, extra("no_permission")));
+    }
+  });
+
+  it("各語言的文字不提權限、等級、專案或身分", () => {
+    const { visibilityLevels, projects, roles } = clientConfig.access;
+    const labels = [...visibilityLevels, ...projects].flatMap((x) => Object.values(x.label));
+    const roleLabels = roles.flatMap((x) => Object.values(x.label));
+    for (const [language, s] of Object.entries(TRANSLATIONS)) {
+      const text = [
+        s.refusalClarifyTitle,
+        s.refusalClarifyQuestion,
+        s.refusalClarifyPolicy,
+        s.refusalClarifyPersonal,
+        s.refusalClarifyPeople,
+        s.refusalClarifySkip,
+        s.refusalClarifyYourTurn,
+        s.refusalClarifyPolicyOwner,
+        s.refusalClarifyPolicyNext,
+        s.refusalClarifyPeopleOwner,
+        s.refusalClarifyPeopleEntity,
+        s.refusalClarifyPeopleNext,
+        s.refusalClarifyOwnerName,
+      ].join("\n");
+      for (const label of [...labels, ...roleLabels]) expect(text, language).not.toContain(label);
+      expect(text, language).not.toMatch(/權限|権限|permission|access/i);
+      // 「我自己的情況」的下一步是規格指定的「問你的主管」：指的是使用者自己的上司，與身分無關；仍不提權限、等級與專案
+      for (const label of labels) expect(s.refusalClarifyPersonalNext, language).not.toContain(label);
+      expect(s.refusalClarifyPersonalNext, language).not.toMatch(/權限|権限|permission|access/i);
+    }
   });
 });

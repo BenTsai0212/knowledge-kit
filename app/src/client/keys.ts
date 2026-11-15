@@ -288,7 +288,9 @@ const uiStrings = {
   colon: "required", progress: "required",
   parenthetical: "required", refusal: "required", refusalNextTitle: "required", refusalNextRephrase: "required",
   refusalNextAskPerson: "required", refusalNextUpload: "required", refusalNextGraph: "required",
-  refusalNextOwner: "required", refusalNextRephraseWith: "required", refusalNextRephraseName: "required", refusalGotoUpload: "required", refusalKindGraph: "required", refusalKindPerson: "required", refusalKindRephrase: "required", uncited: "required", incomplete: "required", answerRetry: "required",
+  refusalNextOwner: "required", refusalNextRephraseWith: "required", refusalNextRephraseName: "required", refusalGotoUpload: "required", refusalKindGraph: "required", refusalKindPerson: "required", refusalKindRephrase: "required",
+  refusalClarifyTitle: "required", refusalClarifyQuestion: "required", refusalClarifyPolicy: "required", refusalClarifyPersonal: "required", refusalClarifyPeople: "required", refusalClarifySkip: "required", refusalClarifyYourTurn: "required", refusalClarifyPolicyOwner: "required", refusalClarifyPolicyNext: "required", refusalClarifyPersonalNext: "required", refusalClarifyPeopleOwner: "required", refusalClarifyPeopleEntity: "required", refusalClarifyPeopleNext: "required", refusalClarifyOwnerName: "required",
+  uncited: "required", incomplete: "required", answerRetry: "required",
   qaProblems: "required", errors: "required", unknownError: "required", home: "required", myUploads: "required", presentation: "required", reportResult: "required",
 } satisfies KeyManifest<UiStrings>;
 

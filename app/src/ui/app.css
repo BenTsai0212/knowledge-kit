@@ -861,6 +861,135 @@ button.citation[aria-pressed="true"] {
   animation: kRise var(--motion-base) var(--ease-enter) calc(var(--motion-base) + var(--i, 0) * var(--motion-stagger-list)) both;
 }
 
+/* 拒答後先確認要找的是哪一種（#377，docs/design.md「先確認要找的是哪一種」）：所有版面共用（平板與展示模式沿用桌機的元件）。
+   AI 在問你：白底、左側 mark 色粗邊、「?」圖示、小標；選項是 44px 高的中性按鈕（手機是可以換行的膠囊），下方灰字「輪到你」。
+   選了之後：使用者的選擇是右側的深色泡泡（與問題泡泡相同），下一步是一般內文、不用框 */
+.refusal-ask {
+  position: relative;
+  top: 0;
+  display: flex;
+  gap: 12px;
+  margin: 0.75rem 0;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-mark);
+  border-radius: 12px;
+  background: var(--color-surface);
+  animation: kRise var(--motion-base) var(--ease-enter) var(--motion-base) both;
+}
+
+.refusal-ask__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-mark);
+  color: var(--color-markText);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.refusal-ask__main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.refusal-ask__main > p {
+  margin: 0;
+}
+
+.refusal-ask__title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-textMuted);
+}
+
+.refusal-ask__question {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.refusal-ask__options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 360px;
+}
+
+.refusal-ask__options button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 14px;
+  text-align: start;
+}
+
+.refusal-ask__options button:hover {
+  background: var(--color-surfaceRaised);
+}
+
+.refusal-ask__options button.refusal-ask__skip {
+  color: var(--color-textMuted);
+}
+
+.refusal-ask__turn {
+  font-size: 12px;
+  color: var(--color-textMuted);
+}
+
+.app--phone .refusal-ask__options {
+  flex-flow: row wrap;
+  max-width: none;
+}
+
+.app--phone .refusal-ask__options button {
+  border-radius: 999px;
+  text-align: center;
+}
+
+.refusal-chosen {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0.75rem 0;
+  animation: kFade var(--motion-base) var(--ease-enter) both;
+}
+
+.refusal-chosen > p {
+  margin: 0;
+}
+
+.refusal-chosen__choice {
+  align-self: flex-end;
+  max-width: 80%;
+  padding: 10px 16px;
+  border-radius: 16px 16px 4px 16px;
+  background: var(--color-text);
+  color: var(--color-background);
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.refusal-chosen__next {
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.refusal-chosen__upload {
+  font-size: 13px;
+  color: var(--color-textMuted);
+}
+
 /* 回答中斷：已收到的文字變淡，不搖晃、不閃紅 */
 .answer-text {
   transition: opacity var(--motion-base) var(--ease-enter);
@@ -7200,6 +7329,11 @@ main.page:has(> .eval-page--desktop) {
   gap: 14px;
   padding: 0;
   border: none;
+}
+
+/* 先確認要找的是哪一種（#377）：間距由 .refusal 的 gap 決定 */
+:is(.app--desktop, .app--phone) .refusal > :is(.refusal-ask, .refusal-chosen) {
+  margin: 0;
 }
 
 :is(.app--desktop, .app--phone) .refusal > .answer-text {

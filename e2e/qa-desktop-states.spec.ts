@@ -44,6 +44,8 @@ test("拒答：回答卡片內「可以試試」，下一步是並排的 surface
   const body = answer.locator(".answer__body");
   await expect(body.locator(".refusal")).toContainText(s.refusal);
   await expect(body.locator(".refusal")).toHaveCSS("border-top-style", "none");
+  // 先確認要找的是哪一種（#377）：略過後是「可以試試」
+  await body.getByRole("button", { name: s.refusalClarifySkip, exact: true }).click();
   const cards = body.locator(".refusal-next li:not(.refusal-next__upload)");
   const count = await cards.count();
   expect(count).toBeGreaterThanOrEqual(2);
