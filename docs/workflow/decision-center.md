@@ -37,11 +37,12 @@ MCP 不能用時，見 [modules.md](modules.md#備援github-mcp-不能用時) �
 
 ## 3. 寫 Issue
 
-用 `.github/ISSUE_TEMPLATE/feature.md` 的結構：目標、驗收條件、範圍外、依賴。
+用 `.github/ISSUE_TEMPLATE/feature.md` 的結構：目標、驗收條件、範圍外、設計依據（選填）、依賴。
 
 - **先查證**：寫進驗收條件的檔案、指令、資料要先在 repo 或 GitHub 確認存在；不確定的寫成待確認，不要猜。
 - **範圍要精確**：「範圍外」只列具體項目，不寫「其他文件」這類模糊描述（agent 會因此不敢修改必要的檔案）。
 - **加 `plan-first`**：資料庫 schema、登入權限、金流；預估超過 400 行或跨多個模組；做法仍不確定。
+- **設計依據只摘要**：設計有研究、準則或試用支持時，填「設計依據」段落，每條寫依據與證據等級（文獻／自測／多人實測）；完整的依據寫在 ADR 或 `docs/design.md`，引用的文獻放在 [`docs/references.md`](../references.md)，Issue 只摘要並連過去。沒有依據時刪掉這一段。〔來源：#376 讓 agent 知道哪些設計有根據、不能隨意改｜不刪〕
 - **已知的 CI 需求寫進驗收條件**（例如新增資料庫時 CI 要有對應的服務）。
 - **不要求 agent 執行環境做不到的事**：對照專案的 runner 設定（sandbox、允許的網域、禁止指令），不把啟動瀏覽器、架設測量環境、連外部網站、docker 等寫成 agent 的驗收條件；這類驗證寫成人工待辦，由審查者處理。效能量測只要求本機直連，模擬延遲或壓力測試寫成人工待辦。〔來源：驗收條件要求了 runner 禁止的事，agent 只能跳過｜不刪〕
 - **`.claude/` 的變更是人工步驟**：agent 不能寫入 `.claude/`。Issue 要新增、修改或刪除命令檔（`.claude/commands/`）或設定（`.claude/settings.json`）時，列為人工待辦，不寫成 agent 的驗收條件。〔來源：升級 template 時 agent 無法寫入 `.claude/`，命令檔的變更只能由人處理｜可刪條件：agent 的執行環境可以寫入 `.claude/` 時〕
