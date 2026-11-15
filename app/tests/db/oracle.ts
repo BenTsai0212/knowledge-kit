@@ -150,6 +150,30 @@ export function canDecide(
   return true;
 }
 
+// 能否寫入直接收錄（auto）的決定（ADR 0011 決定 4，docs/data-model.md「直接收錄」）：有 canUpload、項目屬於自己上傳且看得到的文件、
+// 沒有有效的決定、不是接縫（item 的 unsure 與名稱有空白由呼叫端傳入）；合併對象看得到；關係的兩端都已核准。不要求 canReview
+export function canAutoDecide(
+  access: AccessFile,
+  data: Sample,
+  review: ReviewSample,
+  identityId: string | null,
+  item: { id: string; unsure?: boolean; blankName?: boolean; mergeInto?: string },
+): boolean {
+  const role = access.roles.find((r) => r.id === identityId);
+  if (!role?.canUpload) return false;
+  const pending = [...review.pendingEntities, ...review.pendingRelations].find((p) => p.id === item.id);
+  if (pending === undefined || review.uploads[pending.doc] !== role.id) return false;
+  if (!expectedVisible(access, data, identityId).documents.includes(pending.doc)) return false;
+  if (item.unsure === true || item.blankName === true || activeDecisions(review).has(item.id)) return false;
+  if (item.mergeInto !== undefined && !expectedVisible(access, approvedSample(data, review), identityId).entities.includes(item.mergeInto)) return false;
+  const relation = review.pendingRelations.find((r) => r.id === item.id);
+  if (relation) {
+    const approved = (id: string) => activeDecisions(review).get(id)?.decision === "approve";
+    return item.mergeInto === undefined && approved(relation.from) && approved(relation.to);
+  }
+  return true;
+}
+
 // docs/data-model.md「說法不同」的獨立實作（#51）。新段落只存在於上傳的文件中
 export interface ConflictSample {
   // 上傳的文件 → 上傳者

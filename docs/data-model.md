@@ -198,6 +198,24 @@ policy 中的子查詢同樣受 RLS 限制，所以「段落看得到」已包�
 - **既有資料的回填**：0009 依 `review_decisions` 回填出處的 `decision_id`（寫法同 0003）。migration 以 `kk_owner` 執行並受 FORCE RLS 限制，回填只在資料庫從 migration 重建、還沒有資料列時正確；改用持久化的資料庫前要重新檢討（AGENTS.md 第 5 節）。
 - `oracle.ts` 的 `ReviewSample.retractions`、`approvedSample()`（只算有效的決定）、`canRetract()` 是撤回規則的獨立實作；`review.test.ts` 以 oracle 比對撤回前後每個身分的圖譜，並測試連帶撤回、再核准、看不到文件或沒有 `can_review` 的身分不能撤回、偽造的撤回紀錄與 `UPDATE`／`DELETE`。
 
+### 直接收錄
+
+只審接縫（[ADR 0011](adr/0011-seam-only-review.md)，migration 0013）：系統有把握的項目由**上傳者**寫入 `mode = 'auto'` 的核准決定，再依該決定寫入正式資料；接縫（系統沒把握的項目）照舊留在待審。0013 只**新增**欄位與 permissive 的 INSERT policy `auto`，與既有的 policy 以 OR 合併；0009 的 `decide` 改成只接受 `mode = 'manual'`。讀取的 policy 都不變。
+
+| 資料表 | 新增的欄位 | 新增的寫入（`WITH CHECK`，與既有條件 OR） |
+| --- | --- | --- |
+| `review_decisions` | `mode`（`manual`、`auto`，預設 `manual`）、`note`（人寫的說明，1～500 字或 NULL） | `auto`：有 `can_upload`、`decided_by` 是自己、`round` 是下一筆，項目屬於自己上傳且看得到的文件。實體：沒有 `unsure`、`names` 至少一個且沒有空白，`merge_into` 為 NULL 或自己看得到、類型相同的實體。關係：沒有 `unsure`、不帶合併對象，兩端都已核准（人或直接收錄） |
+| `entities`、`relations`、兩張出處表 | — | `auto`：0009 的 `approve` 條件，把 `can_review` 換成「決定是自己寫的、未撤回的 `auto` 決定」；實體的 `names` 等於待審的 `names`（直接收錄不修改名稱） |
+| `review_retractions` | `reason`（`name`、`relation`、`merge`、`exclude`、`other` 或 NULL） | 不變（撤回仍要求 `can_review`） |
+| `pending_entities`、`pending_relations` | `unsure`（`same_name`、`possible_typo`、`relation_wording`、`other` 或 NULL） | 不變（0006 的 `extract`） |
+
+- **CHECK**：`auto` 只能核准，不帶 `names` 與 `note`。`mode`、`reason`、`unsure` 的值與 `note` 的長度不符時拒絕。
+- **資料庫檢查的範圍**（#378 決定 1）：沒有 `unsure`、名稱沒有空白、合併對象看得到且類型相同、關係兩端都已核准。合併候選數（2 個以上是接縫）、與既有實體的編輯距離、名稱涵蓋 `client.json` 的所有 `languages` 由 `store.ts` 在同一個交易中重算（資料庫沒有候選與語言的資料；同 0004 的 `names`）。
+- **`manual` 仍要求 `can_review`**：沒有 `can_review` 的上傳者寫 `manual` 決定、替別人寫決定、依別人的決定寫入正式資料，都被拒絕。有 `can_review` 的上傳者也可以寫 `auto`；`auto` 永遠只限自己上傳的文件。
+- **撤回沿用 ADR 0007**：`auto` 決定的撤回與 `manual` 相同，由有 `can_review` 的人寫入，可附 `reason`；既有的撤回與連帶撤回為 NULL。
+- **可見範圍**：直接收錄後的正式資料沿用「權限規則」，與人核准的相同；待審資料表與決定的讀取不變（上傳者讀得到自己文件的 `auto` 決定，0011）。
+- `oracle.ts` 的 `canAutoDecide()` 是上述規則的獨立實作（接縫與否由呼叫端傳入）；`app/tests/extraction/auto-review.test.ts` 以 oracle 比對每個身分 × 每個項目能否寫入 `auto` 決定（含只有一端核准的關係），比對直接收錄與撤回後每個身分的圖譜與待審資料表，並測試偽造的決定與正式資料寫入、新欄位的 CHECK。
+
 ## 說法不同
 
 上傳文件與既有段落說法不同之處（#51，migration 0008）：偵測結果寫入 `conflicts`，主管的處理寫入 `conflict_decisions`（每組一筆，主鍵保證只能處理一次）。**只用 INSERT**：「新說法取代舊說法」也只新增一筆決定，不修改、不隱藏舊段落；`kk_app` 仍然沒有任何 `UPDATE`、`DELETE`。寫入與讀取集中在 `app/src/conflicts/store.ts`，一律經 `withIdentity()`。
