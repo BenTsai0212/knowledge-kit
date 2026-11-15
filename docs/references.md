@@ -53,25 +53,13 @@
 - **主張**：自動化越完整，人越難在需要時接手
 - **用在哪裡**：[ADR 0011](adr/0011-seam-only-review.md)「背景」「設計依據」
 
-## 研究主線參考
-
-查證過、尚未用於設計；「用在哪裡」在設計採用時補上。
-
 ### horvitz1999
 
 - **書目**：Horvitz，Principles of Mixed-Initiative User Interfaces，CHI 1999
 - **類型**：會議論文
 - **連結**：https://www.microsoft.com/en-us/research/publication/principles-mixed-initiative-user-interfaces/
 - **主張**：AI 不確定時才主動介入，並衡量打擾的代價
-- **用在哪裡**：尚未使用
-
-### jakesch2023
-
-- **書目**：Jakesch 等，Co-Writing with Opinionated Language Models Affects Users' Views，CHI 2023
-- **類型**：會議論文（連結是康乃爾大學的新聞稿）
-- **連結**：https://news.cornell.edu/node/326526
-- **主張**：帶立場的 AI 建議會改變人的看法，多數人沒察覺
-- **用在哪裡**：尚未使用
+- **用在哪裡**：[ADR 0012](adr/0012-qa-seam-dialogue.md)「背景」「設計依據」（只在接縫開口）
 
 ### kim2024
 
@@ -79,7 +67,15 @@
 - **類型**：會議論文
 - **連結**：https://facctconference.org/static/papers24/facct24-56.pdf
 - **主張**：第一人稱的不確定語氣讓人對 AI 的信任更恰當
-- **用在哪裡**：尚未使用
+- **用在哪裡**：[ADR 0012](adr/0012-qa-seam-dialogue.md)「背景」「設計依據」（第一人稱、保留語氣）
+
+### jakesch2023
+
+- **書目**：Jakesch 等，Co-Writing with Opinionated Language Models Affects Users' Views，CHI 2023
+- **類型**：會議論文（連結是康乃爾大學的新聞稿）
+- **連結**：https://news.cornell.edu/node/326526
+- **主張**：帶立場的 AI 建議會改變人的看法，多數人沒察覺
+- **用在哪裡**：[ADR 0012](adr/0012-qa-seam-dialogue.md)「背景」、決定 4、「設計依據」（多個假設，證據只在選完之後出現）
 
 ### lee2025
 
@@ -87,7 +83,15 @@
 - **類型**：會議論文（連結是作者自存的版本）
 - **連結**：https://advait.org/files/lee_2025_ai_critical_thinking_survey.pdf
 - **主張**：越信任 AI 越少批判思考；工作轉向資訊驗證與整合
-- **用在哪裡**：尚未使用
+- **用在哪裡**：[ADR 0012](adr/0012-qa-seam-dialogue.md)「背景」
+
+### chiang2024
+
+- **書目**：Chiang 等，Enhancing AI-Assisted Group Decision Making through LLM-Powered Devil's Advocate，IUI 2024
+- **類型**：會議論文（連結是 arXiv 版本）
+- **連結**：https://arxiv.org/abs/2403.01791
+- **主張**：AI 當反方能促進思考，也可能帶偏人
+- **用在哪裡**：[ADR 0012](adr/0012-qa-seam-dialogue.md)「後果」「設計依據」（挑戰可能帶偏人）
 
 ### sarkar2024
 
@@ -95,7 +99,11 @@
 - **類型**：期刊論文（連結是 arXiv 版本）
 - **連結**：https://arxiv.org/abs/2411.02263
 - **主張**：AI 應該挑戰人的想法，而不是服從
-- **用在哪裡**：尚未使用
+- **用在哪裡**：[ADR 0012](adr/0012-qa-seam-dialogue.md)「設計依據」（溫和挑戰）
+
+## 研究主線參考
+
+查證過、尚未用於設計；「用在哪裡」在設計採用時補上。
 
 ### bucinca2021
 
@@ -135,14 +143,6 @@
 - **類型**：會議論文（連結是 dblp 的書目頁）
 - **連結**：https://dblp.uni-trier.de/rec/conf/ACMdis/HirschMNIA17.html
 - **主張**：人要能反駁、修正 AI 的判斷
-- **用在哪裡**：尚未使用
-
-### chiang2024
-
-- **書目**：Chiang 等，Enhancing AI-Assisted Group Decision Making through LLM-Powered Devil's Advocate，IUI 2024
-- **類型**：會議論文（連結是 arXiv 版本）
-- **連結**：https://arxiv.org/abs/2403.01791
-- **主張**：AI 當反方能促進思考，也可能帶偏人
 - **用在哪裡**：尚未使用
 
 ### wang2024
