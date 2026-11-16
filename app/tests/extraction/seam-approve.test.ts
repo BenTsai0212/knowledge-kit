@@ -41,21 +41,13 @@ async function setup() {
       { id: "pe-c", type: "person", names: { "zh-TW": "林志明", en: "Zhiming Lin" }, sources: [p] },
       { id: "pe-d", type: "person", names: { "zh-TW": "張雅亭", en: "Yating Zhang" }, sources: [p] },
       { id: "pe-e", type: "team", names: { "zh-TW": "測試小組", en: " " }, sources: [p] },
+      { id: "pe-f", type: "person", names: { "zh-TW": "測試顧問乙", en: "Test Advisor B" }, sources: [p], unsure: "same_name" },
     ],
     relations: [
       { id: "pr-a", type: "works-on", from: "pe-a", to: "pe-b", sources: [p] },
       { id: "pr-b", type: "leads", from: "pe-c", to: "pe-b", sources: [p] },
+      { id: "pr-c", type: "member-of", from: "pe-a", to: "pe-b", sources: [p], unsure: "relation_wording" },
     ],
-  });
-  // unsure 在 PR 3 才由萃取寫入，這裡由上傳者直接寫入待審
-  await db.withIdentity("staff", async (tx) => {
-    await tx.query(`INSERT INTO kk.pending_entities (id, document_id, entity_type, names, unsure) VALUES ('pe-f', $1, 'person', '{"zh-TW":"測試顧問乙","en":"Test Advisor B"}', 'same_name')`, [documentId]);
-    await tx.query(`INSERT INTO kk.pending_entity_sources (pending_entity_id, document_id, passage_id) VALUES ('pe-f', $1, $2)`, [documentId, p]);
-    await tx.query(
-      `INSERT INTO kk.pending_relations (id, document_id, relation_type, from_pending_id, to_pending_id, unsure) VALUES ('pr-c', $1, 'member-of', 'pe-a', 'pe-b', 'relation_wording')`,
-      [documentId],
-    );
-    await tx.query(`INSERT INTO kk.pending_relation_sources (pending_relation_id, document_id, passage_id) VALUES ('pr-c', $1, $2)`, [documentId, p]);
   });
   return w;
 }

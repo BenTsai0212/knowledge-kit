@@ -125,14 +125,15 @@ export async function runExtraction(
       const created = input.entities.find((x) => x.id === existing);
       if (existing === undefined) {
         const id = newPendingEntityId();
-        input.entities.push({ id, type: e.type, names: e.names, sources: e.sources });
+        input.entities.push({ id, type: e.type, names: e.names, sources: e.sources, unsure: e.unsure });
         idOfKey.set(e.key, id);
       } else if (created !== undefined) {
-        // 同一批中名稱相符：合併到這一批新建的那筆
+        // 同一批中名稱相符：合併到這一批新建的那筆；任一筆標示沒把握就保留第一個原因
         created.sources = [...new Set([...created.sources, ...e.sources])];
+        created.unsure ??= e.unsure;
         idOfKey.set(e.key, existing);
       } else {
-        // 前面的批次已寫入：只補上出處
+        // 前面的批次已寫入：只補上出處（待審只能新增，這一批的 unsure 不補寫，docs/extraction.md「去重」）
         input.addedSources.push({ entity: existing, passages: e.sources });
         idOfKey.set(e.key, existing);
       }
@@ -146,10 +147,11 @@ export async function runExtraction(
       const created = input.relations.find((x) => x.id === existing);
       if (existing === undefined) {
         const id = newPendingRelationId();
-        input.relations.push({ id, type: r.type, from, to, sources: r.sources });
+        input.relations.push({ id, type: r.type, from, to, sources: r.sources, unsure: r.unsure });
         relationKeys[key] = id;
       } else if (created !== undefined) {
         created.sources = [...new Set([...created.sources, ...r.sources])];
+        created.unsure ??= r.unsure;
       } else {
         input.addedSources.push({ relation: existing, passages: r.sources });
       }

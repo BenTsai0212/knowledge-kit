@@ -1,6 +1,7 @@
 // 解析並驗證模型的輸出（docs/extraction.md「驗證」）。格式錯誤時拋出 ExtractionFormatError（該批記為失敗，可以重試）；
 // 不符合規則的項目捨棄並依原因計數。
 import type { ClientConfig, LanguageCode, LocalizedText } from "../client/types";
+import { UNSURE, type Unsure } from "./seams";
 
 export type DropReason =
   | "no_sources" // 沒有出處，或出處都不是這一批的段落編號
@@ -16,6 +17,8 @@ export interface ParsedEntity {
   names: LocalizedText;
   // 段落 id
   sources: string[];
+  // 模型標示沒把握的原因（ADR 0011 決定 1）；沒標示時省略
+  unsure?: Unsure;
 }
 
 export interface ParsedRelation {
@@ -23,6 +26,7 @@ export interface ParsedRelation {
   from: string;
   to: string;
   sources: string[];
+  unsure?: Unsure;
 }
 
 export interface ParsedBatch {
@@ -38,6 +42,12 @@ export class ExtractionFormatError extends Error {
 }
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+
+// 選填的 unsure：省略或 null 表示有把握；其他不合法的值（未知的字串、數值分數、true 等）當作 other（ADR 0011 決定 1）
+export function unsureOf(v: unknown): { unsure?: Unsure } {
+  if (v === undefined || v === null) return {};
+  return { unsure: (UNSURE as readonly unknown[]).includes(v) ? (v as Unsure) : "other" };
+}
 
 // 開頭與結尾的 ``` 或 ```json 先去掉
 export function stripFence(text: string): string {
@@ -88,7 +98,7 @@ export function parseExtraction(
       drop("no_sources");
       continue;
     }
-    entities.push({ key: e.key, type: e.type, names, sources });
+    entities.push({ key: e.key, type: e.type, names, sources, ...unsureOf(e.unsure) });
   }
 
   const typeOf = new Map(entities.map((e) => [e.key, e.type]));
@@ -116,7 +126,7 @@ export function parseExtraction(
       drop("no_sources");
       continue;
     }
-    relations.push({ type: r.type, from: r.from, to: r.to, sources });
+    relations.push({ type: r.type, from: r.from, to: r.to, sources, ...unsureOf(r.unsure) });
   }
   return { entities, relations, dropped };
 }

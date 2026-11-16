@@ -59,6 +59,40 @@ describe("parseExtraction", () => {
     expect(result.dropped).toEqual({ bad_names: 2 });
   });
 
+  it("unsure（ADR 0011 決定 1）：合法的值照原值；省略或 null 表示有把握；其他不合法的值當作 other，項目不捨棄", () => {
+    const result = parse({
+      entities: [
+        person("e1", { unsure: "same_name" }),
+        person("e2", { unsure: "possible_typo" }),
+        person("e3", { unsure: null }),
+        person("e4"),
+        person("e5", { unsure: "maybe" }),
+        person("e6", { unsure: 0.4 }),
+        person("e7", { unsure: true }),
+        team("e8"),
+      ],
+      relations: [
+        { type: "member-of", from: "e1", to: "e8", sources: [1], unsure: "relation_wording" },
+        { type: "member-of", from: "e2", to: "e8", sources: [1], unsure: "other" },
+        { type: "member-of", from: "e3", to: "e8", sources: [1] },
+        { type: "member-of", from: "e4", to: "e8", sources: [1], unsure: ["same_name"] },
+      ],
+    });
+    expect(result.entities.map((e) => [e.key, e.unsure ?? null])).toEqual([
+      ["e1", "same_name"],
+      ["e2", "possible_typo"],
+      ["e3", null],
+      ["e4", null],
+      ["e5", "other"],
+      ["e6", "other"],
+      ["e7", "other"],
+      ["e8", null],
+    ]);
+    expect(result.entities.filter((e) => "unsure" in e).map((e) => e.key)).toEqual(["e1", "e2", "e5", "e6", "e7"]);
+    expect(result.relations.map((r) => r.unsure ?? null)).toEqual(["relation_wording", "other", null, "other"]);
+    expect(result.dropped).toEqual({});
+  });
+
   it("同一批中重複的 key 只保留第一筆", () => {
     expect(parse({ entities: [person("e1"), team("e1")], relations: [] }).dropped).toEqual({ duplicate_key: 1 });
   });

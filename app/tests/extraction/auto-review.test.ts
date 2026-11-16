@@ -27,7 +27,7 @@ interface World {
 }
 
 // 主管上傳一份機密文件、一般員工上傳一份青翼專案的內部文件（內容虛構）。一般員工的文件另有兩個接縫：
-// 模型標示沒把握的 pe-s3 與 pr-s3、英文名稱空白的 pe-s4（萃取在 PR 3 才寫入 unsure，這裡由上傳者直接寫入待審）
+// 模型標示沒把握的 pe-s3 與 pr-s3、英文名稱空白的 pe-s4（這裡由上傳者以 SQL 直接寫入待審，不經萃取）
 async function setup(): Promise<World> {
   const db = await openDatabase(clientConfig, { seed: (pg) => seedDataset(pg, clientConfig, dataset) });
   const dm = await uploadDocument(

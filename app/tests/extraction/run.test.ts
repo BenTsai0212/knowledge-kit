@@ -162,6 +162,48 @@ describe("runExtraction", { timeout: 30_000 }, () => {
     expect(doc.entities.map((e) => e.names["zh-TW"]).sort()).toEqual(["林志明", "林芷敏", "測試人員Ａ"].sort());
     await db.close();
   });
+
+  it("模型標示的 unsure 寫入待審；同一批中合成一筆時保留，後面批次的 unsure 不補寫（ADR 0011 決定 1）", async () => {
+    const passages = Array.from({ length: 40 }, (_, i) => `第 ${i + 1} 段虛構內容。`.padEnd(900, "測"));
+    const { db, upload, state } = await setup(passages, withBatches(2));
+    const advisor = { key: "e3", type: "person", names: { "zh-TW": "測試顧問乙", en: "Test Advisor B" }, sources: [1] };
+    let call = 0;
+    const transport = fakeTransport(() =>
+      ++call === 1
+        ? // 第 1 批：測試人員甲出現兩次，第二次標示沒把握；關係用詞不明確
+          reply([PERSON, PROJECT, { ...PERSON, key: "e4", unsure: "same_name" }], [{ ...WORKS_ON, unsure: "relation_wording" }])
+        : // 第 2 批：青翼專案已寫入，這一批的 unsure 不補寫；新的測試顧問乙以不合法的值標示
+          reply([{ ...PROJECT, unsure: "possible_typo" }, { ...advisor, unsure: 0.3 }]),
+    );
+    await runExtraction({ db, transport, config: withBatches(2) }, state);
+
+    const [doc] = (await readReview(db, "manager")).filter((d) => d.id === upload.documentId);
+    expect(doc.entities.map((e) => [e.names["zh-TW"], e.unsure ?? null]).sort()).toEqual(
+      [
+        ["測試人員甲", "same_name"],
+        ["青翼專案", null],
+        ["測試顧問乙", "other"],
+      ].sort(),
+    );
+    expect(doc.relations.map((r) => r.unsure ?? null)).toEqual(["relation_wording"]);
+    await db.close();
+  });
+
+  it("review.mode 為 seams 時，模型標示沒把握的項目留在待審，其餘直接收錄", async () => {
+    const seams: ClientConfig = { ...clientConfig, client: { ...clientConfig.client, review: { mode: "seams" } } };
+    const { db, upload, state } = await setup(["測試人員甲參與青翼專案的使用者測試。"], seams);
+    const advisor = { key: "e3", type: "person", names: { "zh-TW": "測試顧問乙", en: "Test Advisor B" }, sources: [1], unsure: "same_name" };
+    const transport = fakeTransport(() => reply([PERSON, PROJECT, advisor], [WORKS_ON, { ...WORKS_ON, from: "e3" }]));
+    const result = await runExtraction({ db, transport, config: seams }, state);
+
+    expect(result.autoApproved).toEqual({ status: "done", entities: 2, relations: 1, seams: 2 });
+    const [doc] = (await readReview(db, "manager")).filter((d) => d.id === upload.documentId);
+    const statusOf = (zh: string) => doc.entities.find((e) => e.names["zh-TW"] === zh)!;
+    expect([statusOf("測試人員甲").mode, statusOf("青翼專案").mode]).toEqual(["auto", "auto"]);
+    expect(statusOf("測試顧問乙")).toMatchObject({ status: "pending", unsure: "same_name" });
+    expect(doc.relations.map((r) => r.status).sort()).toEqual(["approved", "pending"]);
+    await db.close();
+  });
 });
 
 describe("foundNames", () => {

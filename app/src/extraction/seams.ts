@@ -4,7 +4,8 @@ import type { ClientConfig, LanguageCode, LocalizedText } from "../client/types"
 import { normalizeName, suggestMerge } from "./merge";
 
 // 模型標示沒把握的原因（萃取 JSON 的 unsure，migration 0013）
-export type Unsure = "same_name" | "possible_typo" | "relation_wording" | "other";
+export const UNSURE = ["same_name", "possible_typo", "relation_wording", "other"] as const;
+export type Unsure = (typeof UNSURE)[number];
 
 // 接縫的原因：合併候選 2 個以上、名稱缺少語言、與看得到的或同一份文件的同類型實體只差一個字、模型標示沒把握、關係的端點是接縫
 export type SeamReason = "candidates" | "missing_language" | "near_name" | "unsure" | "endpoint";

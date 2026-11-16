@@ -8,9 +8,10 @@ import { appearanceKey, byAppearance, type FirstSource } from "./review-order";
 import { planEntity, planRelation, type SeamContext, type SeamReason, type Unsure, type VisibleEntity } from "./seams";
 
 export interface PendingInput {
-  entities: { id: string; type: string; names: LocalizedText; sources: string[] }[];
+  // unsure：模型標示沒把握的原因（萃取 JSON 的 unsure，ADR 0011 決定 1）；省略時寫入 NULL
+  entities: { id: string; type: string; names: LocalizedText; sources: string[]; unsure?: Unsure }[];
   // from、to 是同一份文件的待審實體 id
-  relations: { id: string; type: string; from: string; to: string; sources: string[] }[];
+  relations: { id: string; type: string; from: string; to: string; sources: string[]; unsure?: Unsure }[];
   // 為前幾批已寫入的待審實體或關係補上出處（同一份文件中的去重，docs/extraction.md）
   addedSources?: { entity?: string; relation?: string; passages: string[] }[];
 }
@@ -92,11 +93,12 @@ export async function writePending(db: Database, identityId: string | null, docu
   try {
     await db.withIdentity(identityId, async (tx) => {
       for (const e of input.entities) {
-        await tx.query("INSERT INTO kk.pending_entities (id, document_id, entity_type, names) VALUES ($1, $2, $3, $4)", [
+        await tx.query("INSERT INTO kk.pending_entities (id, document_id, entity_type, names, unsure) VALUES ($1, $2, $3, $4, $5)", [
           e.id,
           documentId,
           e.type,
           e.names,
+          e.unsure ?? null,
         ]);
         for (const p of e.sources) {
           await tx.query("INSERT INTO kk.pending_entity_sources (pending_entity_id, document_id, passage_id) VALUES ($1, $2, $3)", [
@@ -124,8 +126,8 @@ export async function writePending(db: Database, identityId: string | null, docu
       }
       for (const r of input.relations) {
         await tx.query(
-          "INSERT INTO kk.pending_relations (id, document_id, relation_type, from_pending_id, to_pending_id) VALUES ($1, $2, $3, $4, $5)",
-          [r.id, documentId, r.type, r.from, r.to],
+          "INSERT INTO kk.pending_relations (id, document_id, relation_type, from_pending_id, to_pending_id, unsure) VALUES ($1, $2, $3, $4, $5, $6)",
+          [r.id, documentId, r.type, r.from, r.to, r.unsure ?? null],
         );
         for (const p of r.sources) {
           await tx.query("INSERT INTO kk.pending_relation_sources (pending_relation_id, document_id, passage_id) VALUES ($1, $2, $3)", [

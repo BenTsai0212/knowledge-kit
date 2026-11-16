@@ -53,8 +53,9 @@ Rules:
 5. Give each entity a short key (e1, e2, …), its type, its name in every one of these languages: {languages}, and the numbers of the passages that mention it.
 6. If a name appears in only one language, give the standard name in the other languages only if the passages or common usage make it clear. For people's names you are not sure about, repeat the original name; do not transliterate.
 7. Relations refer to entity keys and must list the numbers of the passages that state them.
-8. Keep the output compact: list each entity once and add no explanations.
-9. Reply with one JSON object and nothing else, in this shape:
+8. If you are not sure about an entity or relation, add "unsure" with one of these reasons: same_name (the name may refer to more than one entity), possible_typo (the name may be a typo of a similar name), relation_wording (the wording in the passages does not clearly match the relation type), other. Leave "unsure" out when you are sure; never add a number or score.
+9. Keep the output compact: list each entity once and add no explanations.
+10. Reply with one JSON object and nothing else, in this shape:
 {example}
 If nothing can be extracted, reply {"entities":[],"relations":[]}.
 ```
@@ -68,8 +69,9 @@ If nothing can be extracted, reply {"entities":[],"relations":[]}.
 | 3、4 | 類型由客戶的 `knowledge-model.json` 決定，不在程式中寫死；關係的方向寫明，減少反向的關係 |
 | 5、6 | 名稱要有每種介面語言（#44 決定 3）；人名沒有把握時重複原名，不自行音譯（#44 決定的補充 4），核准前可以修改 |
 | 7 | 以段落編號作為出處，程式轉成段落 id；prompt 中不放段落 id |
-| 8 | 輸出精簡，減少被 `max_tokens` 截斷的機會（Opus 5.5 的 thinking 也算在 `max_tokens` 內） |
-| 9 | 固定的 JSON 格式，解析失敗時該批可以重試 |
+| 8 | 模型對沒把握的項目附原因類別（[ADR 0011](adr/0011-seam-only-review.md) 決定 1），只用類別、不用數值分數（LLM 的自評信心校準不佳）；`review.mode` 為 `"seams"` 時，有 `unsure` 的項目是接縫，見「直接收錄」。範例不放 `unsure`，避免模型照抄 |
+| 9 | 輸出精簡，減少被 `max_tokens` 截斷的機會（Opus 5.5 的 thinking 也算在 `max_tokens` 內） |
+| 10 | 固定的 JSON 格式，解析失敗時該批可以重試 |
 
 ### 段落編排（user 訊息）
 
@@ -99,11 +101,14 @@ If nothing can be extracted, reply {"entities":[],"relations":[]}.
   | `type_mismatch` | 關係兩端的類型不符合關係類型的 `from`／`to` |
   | `duplicate_key` | 同一批中重複的實體 key，只保留第一筆 |
 
+- **`unsure`（選填）**：實體與關係都可以有。省略或 `null` 表示有把握；`same_name`、`possible_typo`、`relation_wording`、`other` 照原值；其他不合法的值（未知的字串、數值、`true` 等）當作 `other`，不捨棄項目（ADR 0011 決定 1）。`writePending()` 寫入 `pending_entities`／`pending_relations` 的 `unsure`（migration 0013），`review.mode` 是 `"item"` 時只記錄、不影響流程。
 - 待審資料寫入時，資料庫也會檢查：出處與兩端屬於同一份文件（複合外鍵），待審 id 的格式（`pe-`、`pr-` 開頭，migration 0007）。
 
 ## 去重
 
 同一份文件中，類型相同、而且**文件語言的名稱**依該類型的 `aliasRules` 正規化後相同的實體，合成一筆待審實體，出處取聯集。跨批次時，後面的批次沿用前面寫入的待審 id，只補上出處（`writePending()` 的 `addedSources`）。類型與兩端都相同的關係也一樣。
+
+- **`unsure`**：同一批中合成一筆時，任一筆標示沒把握就保留（取第一個原因）。後面的批次沿用前面寫入的待審項目時，待審只能新增、不能修改，所以後面批次的 `unsure` 不補寫（見「限制」）。
 
 - **只比對文件語言的名稱**（`ExtractionState.documentLanguage`，上傳時設定的語言，不是介面語言；#46 審查）：其他語言的名稱由模型補上（prompt 第 6 條），不同的中文人名常有相同的英文拼音（例如「林志明」與「林芷敏」都可能是「Zhiming Lin」）。若以所有語言比對，兩個人會在主管看到之前被合成一筆，主管只能整筆退回。
 - 文件語言的名稱只差大小寫、全形半形或空白（依 `aliasRules`）時，仍合成一筆。
@@ -243,6 +248,7 @@ If nothing can be extracted, reply {"entities":[],"relations":[]}.
 - 合併只比對名稱，不比對別名（`aliases` 不在資料庫中）。
 - 圖譜已有的關係只寫核准決定（#189 決定 1）：新文件的段落不會成為既有關係的出處。比對只看核准者看得到的關係，所以與核准者看不到的既有關係相同時，仍會建立一筆（核准者看不到，不算洩漏）。
 - 同一份文件中，文件語言的名稱相同的實體會合成一筆待審實體。若同一份文件提到兩位同名的人（例如兩位林志明），會被合成一筆，需要主管退回後另行處理。
+- `unsure` 由模型自行標示，沒有評測證明它能抓到哪些錯誤（ADR 0011「限制」）。跨批次合成一筆時，只有第一次寫入的批次的 `unsure` 會記錄；後面的批次才標示沒把握的項目不會因此成為接縫。
 
 ## 費用估算（每份文件）
 
