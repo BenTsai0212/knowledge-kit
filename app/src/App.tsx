@@ -33,7 +33,7 @@ import { EvalPage } from "./ui/EvalPage";
 import { GraphPage } from "./ui/GraphPage";
 import { mentionedEntities } from "./ui/mentions";
 import { MentionPanel } from "./ui/MentionPanel";
-import { Conversation, type Turn } from "./ui/Conversation";
+import { Conversation, type Chosen, type Turn } from "./ui/Conversation";
 import { QUESTION_INPUT_ID, QuestionPanel } from "./ui/QuestionPanel";
 import { AdminNotice } from "./ui/AdminNotice";
 import { Notice } from "./ui/Notice";
@@ -41,6 +41,7 @@ import { errorCategory, turnError } from "./ui/qa-errors";
 import { RetrievalNotice } from "./ui/RetrievalNotice";
 import { reportOf } from "./ui/report-helpers";
 import { PREPARING, sameDisplay, type ProviderStatus } from "./ui/retrieval-notice";
+import { sameNameAsk } from "./ui/same-name";
 import { ReviewPage } from "./ui/ReviewPage";
 import { rememberQuestion, rememberViewed, waitingSummary, type AskedQuestion, type WaitingSummary } from "./ui/home";
 import { HomePage } from "./ui/HomePage";
@@ -72,6 +73,8 @@ import { canSwitchIdentity, demoAccount, identityControl, type SignIn } from "./
 import { SignInPanel, type Rejected } from "./ui/SignInPanel";
 
 const { client, access } = clientConfig;
+// 討論版（ADR 0012 決定 7）：false 時問答與現行的查詢版完全相同
+const dialogue = client.qa.dialogue;
 
 // 問答、比對與評測台共用一個 VectorProvider：語意模型只下載、初始化一次。App 掛載時才開始準備，不在匯入時
 let sharedProvider: Promise<ActiveProvider> | null = null;
@@ -204,7 +207,8 @@ export function App() {
   const s = strings(language);
   const layout = useLayout();
   // 回答串流中：停用送出與預設問題，不以新提問中斷前一題（#195 決定 3）
-  const answering = turns.some((t) => t.answer === undefined);
+  // 同名的反問還沒選的題目沒有送出，不算回答中
+  const answering = turns.some((t) => t.answer === undefined && t.sameName === undefined);
 
   useEffect(() => {
     // StrictMode 在開發時會執行兩次；先結束的那次關閉自己開的資料庫
@@ -313,9 +317,9 @@ export function App() {
       setIdentityBump((last) => ({ role: item.role, count: (last?.count ?? 0) + 1 }));
     }
     setScriptCurrent(item.key);
-    // 身分對照打開時：這一題換成對照的題目（取消進行中的對照），不加進對話
+    // 身分對照打開時：這一題換成對照的題目（取消進行中的對照），不加進對話。劇本的題目不做同名的反問（#380 決定 3）
     if (compare !== null) void runCompare(item.text[language]);
-    else void onAsk(item.text[language], item.role);
+    else void onAsk(item.text[language], item.role, {});
   }
 
   // 回答提到的實體與拒答的「可以試試」（#285）：以送出的身分讀圖譜（RLS 篩選）；讀取失敗時不列實體，拒答只給通用建議
@@ -369,21 +373,36 @@ export function App() {
     );
   }
 
-  // owner：送出的身分。劇本先切換身分時，這次 render 的 identity 還是切換前的，所以由呼叫端傳入
-  async function onAsk(question: string, owner = identity) {
+  // owner：送出的身分。劇本先切換身分時，這次 render 的 identity 還是切換前的，所以由呼叫端傳入。
+  // chosen：同名的反問已經選好（或不反問，例如劇本與「重新提問」）時傳入；turnId：選了之後接著送出的那一題（不另加一題）
+  async function onAsk(question: string, owner = identity, chosen?: Chosen, turnId?: string) {
     if (retriever === null || accessCode === null || answering || limit !== null) return;
-    // 以送出當下的身分與語言提問；只送出這一題的文字
-    const ticket = questions.current.begin();
-    const id = `turn-${nextTurn.current++}`;
     const setTurns = (change: (all: readonly Turn[]) => readonly Turn[]) => setTurnsOf(owner, change);
+    const remember = () => setAsked((all) => ({ ...all, [owner]: rememberQuestion(all[owner] ?? [], question, new Date().toISOString()) }));
+    // 同名的反問（ADR 0012 決定 1，client.json 的 qa.dialogue）：以送出身分的圖譜（RLS 篩選）判斷，反問時不呼叫模型；讀取失敗時照常送出
+    if (dialogue && chosen === undefined && db !== null) {
+      const graph = await readGraph(db, owner).catch(() => null);
+      const sameName = graph === null ? null : sameNameAsk(graph, question, language);
+      if (sameName !== null) {
+        setTurns((all) => [...all, { id: `turn-${nextTurn.current++}`, question, streaming: "", sameName }]);
+        remember();
+        return;
+      }
+    }
+    // 以送出當下的身分與語言提問；只送出這一題的文字（同名選了之後是名稱換成選項的問題）
+    const ticket = questions.current.begin();
+    const id = turnId ?? `turn-${nextTurn.current++}`;
+    const base = { id, question, sent: chosen?.sent, note: chosen?.note };
     const update = (turn: Turn) => setTurns((all) => all.map((t) => (t.id === id ? turn : t)));
-    setTurns((all) => [...all, { id, question, streaming: "" }]);
-    setAsked((all) => ({ ...all, [owner]: rememberQuestion(all[owner] ?? [], question, new Date().toISOString()) }));
+    if (turnId === undefined) {
+      setTurns((all) => [...all, { ...base, streaming: "" }]);
+      remember();
+    } else update({ ...base, streaming: "" });
     const ctx = { retriever, transport: apiTransport({ accessCode }), model: client.model, displayName: client.displayName };
     const result = await ask(
       ctx,
-      { identityId: owner, text: question, language },
-      (streaming) => ticket.isCurrent() && update({ id, question, streaming }),
+      { identityId: owner, text: chosen?.sent ?? question, language },
+      (streaming) => ticket.isCurrent() && update({ ...base, streaming }),
       ticket.signal,
     );
     if (!ticket.isCurrent()) return;
@@ -406,7 +425,13 @@ export function App() {
     const mentions = await readMentions(result, owner);
     const conflicts = await readCitedConflicts(result, owner);
     if (!ticket.isCurrent()) return;
-    update({ id, question, streaming: "", answer: result, mentions, conflicts });
+    update({ ...base, streaming: "", answer: result, mentions, conflicts });
+  }
+
+  // 同名的反問選了之後（ADR 0012 決定 1）：同一題接著送出，問題泡泡保留原問題
+  function onChooseSameName(turnId: string, chosen: Chosen) {
+    const turn = turns.find((t) => t.id === turnId);
+    if (turn !== undefined) void onAsk(turn.question, identity, chosen, turnId);
   }
 
   // 以上傳時記錄的身分寫入待審；邀請碼用開始（或重試）當下的碼，沒有碼時記為失敗，輸入後可以重試
@@ -889,7 +914,8 @@ export function App() {
                   setReviewVersion((v) => v + 1);
                 }}
                 readReport={(reportId) => (db === null ? Promise.resolve(null) : readMyReport(db, identity, reportId))}
-                onAsk={onAsk}
+                onAsk={(question, chosen) => void onAsk(question, identity, chosen ?? {})}
+                onChooseSameName={onChooseSameName}
                 askDisabled={retriever === null || answering || limit !== null}
                 onViewInGraph={(id) => (setGraphFocus(id), setView("graph"))}
                 reportRequest={reportRequest}

@@ -42,6 +42,11 @@ export interface ReviewFile {
   mode?: ReviewMode;
 }
 
+// 問答的接縫提問（ADR 0012 決定 7）：true 是討論版，false 是現行的查詢版
+export interface QaFile {
+  dialogue?: boolean;
+}
+
 export interface ConflictsFile {
   enabled?: boolean;
   candidatesPerPassage?: number;
@@ -70,6 +75,7 @@ export interface ClientFile {
   upload?: UploadFile;
   conflicts?: ConflictsFile;
   review?: ReviewFile;
+  qa?: QaFile;
 }
 
 export interface ThemeColors {
@@ -262,15 +268,17 @@ export type RetrievalConfig = Required<RetrievalFile>;
 export type UploadConfig = Required<UploadFile>;
 export type ConflictsConfig = Required<ConflictsFile>;
 export type ReviewConfig = Required<ReviewFile>;
+export type QaConfig = Required<QaFile>;
 export type EvalThresholds = Required<EvalThresholdsFile>;
 
 export interface ClientConfig extends Omit<ClientFiles, "client" | "knowledgeModel"> {
-  client: Omit<ClientFile, "evals" | "retrieval" | "upload" | "conflicts" | "review"> & {
+  client: Omit<ClientFile, "evals" | "retrieval" | "upload" | "conflicts" | "review" | "qa"> & {
     evals: PathRef & { thresholds: EvalThresholds };
     retrieval: RetrievalConfig;
     upload: UploadConfig;
     conflicts: ConflictsConfig;
     review: ReviewConfig;
+    qa: QaConfig;
   };
   knowledgeModel: {
     entityTypes: EntityType[];
@@ -667,6 +675,11 @@ export interface UiStrings {
   conflictOld: string;
   // 待審頁每組差異說明下方的假設（ADR 0012 決定 3）的小標
   dialogueHypotheses: string;
+  // 同名的反問（ADR 0012 決定 1）
+  dialogueSameNameTitle: string;
+  dialogueSameNameAsk: string;
+  dialogueSameNameBoth: string;
+  dialogueSameNameNote: string;
   // 待審的接縫（ADR 0011 決定 8，docs/design.md「待審的接縫」）：區塊標題、AI 在問你的小標、各種提問與選項。
   // {name} 是項目的名稱（關係是「起點 —關係→ 終點」），{other} 是只差一個字的名稱，{count} 是候選數，{languages} 是缺少的語言
   seamSection: string;

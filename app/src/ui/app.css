@@ -996,6 +996,19 @@ button.citation[aria-pressed="true"] {
   margin: 0;
 }
 
+/* 問答的同名反問（ADR 0012 決定 1，畫板 S-QA）：問題泡泡下方直接是「問你」的卡片，不在回答卡片內；
+   選了之後，問題泡泡下方的 textMuted 小字是補上的說明（畫板的 .under） */
+.answer__note {
+  margin: 0;
+  color: var(--color-textMuted);
+  font-size: 12px;
+}
+
+:is(.app--desktop, .app--phone) .answer__note {
+  align-self: flex-end;
+  margin: -8px 4px 0;
+}
+
 .ask-card__explain {
   display: flex;
   flex-direction: column;

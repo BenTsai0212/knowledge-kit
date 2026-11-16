@@ -16,7 +16,7 @@ export function reportOf(state: AnswerState, category: ReportCategory, note: str
   return {
     category,
     note,
-    question: state.question,
+    question: state.sent ?? state.question,
     answer:
       answer.kind === "refusal"
         ? null

@@ -180,6 +180,14 @@ export const seams = client.review?.mode === "seams";
 export const acceptButton = (card: Locator) =>
   seams ? card.getByRole("button", { name: s.seamOptionKeep, exact: true }) : card.getByRole("button", { name: s.reviewApproveDocument });
 
+// 同名的反問（client.json 的 qa.dialogue，ADR 0012 決定 1）：answer 是剛送出的那一題。反問出現時選「都想知道」（照原問題送出），
+// 讓不是測同名的測試照常等回答；沒有反問時不做事
+export async function passSameName(answer: Locator): Promise<void> {
+  const card = answer.getByRole("group", { name: s.dialogueSameNameTitle });
+  await expect(card.or(answer.locator(".answer__body"))).toBeVisible();
+  if (await card.isVisible()) await card.getByRole("button").last().click();
+}
+
 // 上傳並等萃取的實體出現在待審（目前的身分要能上傳也能審查）
 export async function uploadAndReview(
   page: Page,

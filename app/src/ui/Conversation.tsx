@@ -1,14 +1,24 @@
 import { useEffect, useRef } from "react";
 import type { Graph } from "../graph/read";
-import { strings } from "../client/i18n";
+import { fill, strings } from "../client/i18n";
 import type { AnswerReport, ReportCategory } from "../reports/store";
 import { AnswerView, type AnswerState, type OpenEntity } from "./AnswerView";
+import { AskCard } from "./AskCard";
 import { focusPresets } from "./empty-state";
 import { EmptyState } from "./EmptyState";
+import type { SameNameAsk } from "./same-name";
 
 // 一題問答；id 也是畫面上的元素 id（左側「這次的問題」捲到該題）
 export interface Turn extends AnswerState {
   id: string;
+  // 同名的反問（ADR 0012 決定 1）：還沒選之前有值，這一題還沒送出；選了之後換成一般的一題
+  sameName?: SameNameAsk;
+}
+
+// 選了的區分：實際送出的問題與泡泡下方的說明；選「都想知道」時兩者都沒有
+export interface Chosen {
+  sent?: string;
+  note?: string;
 }
 
 interface Props {
@@ -27,8 +37,11 @@ interface Props {
   onReport?(turn: Turn, category: ReportCategory, note: string): Promise<void>;
   // 回答下方的回報結果（#286）
   readReport(reportId: string): Promise<AnswerReport | null>;
-  // 回答中斷時的「重新提問」（#227）：與輸入區送出相同；askDisabled 時不能按
-  onAsk(question: string): void;
+  // 回答中斷時的「重新提問」（#227）：與輸入區送出相同；askDisabled 時不能按。
+  // 同名的反問選了之後再問時沿用同一個選擇（chosen），不再反問
+  onAsk(question: string, chosen?: Chosen): void;
+  // 同名的反問選了一個選項（ADR 0012 決定 1）；askDisabled 時不能按
+  onChooseSameName(turnId: string, chosen: Chosen): void;
   askDisabled: boolean;
   // 問句填進輸入框，不送出：prompt_too_long 的「縮短問題」（#280）、拒答的「換個問法」（#285）
   onDraft(question: string): void;
@@ -39,7 +52,7 @@ interface Props {
 }
 
 // 問答依序往下累積（#195）；新的一題出現時捲到該題
-export function Conversation({ language, turns, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport, readReport, onAsk, askDisabled, onDraft, onViewInGraph, reportRequest = null }: Props) {
+export function Conversation({ language, turns, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport, readReport, onAsk, onChooseSameName, askDisabled, onDraft, onViewInGraph, reportRequest = null }: Props) {
   const s = strings(language);
   const latest = turns.at(-1)?.id;
   const latestRef = useRef<HTMLElement>(null);
@@ -59,29 +72,46 @@ export function Conversation({ language, turns, canUpload, onOpenSource, openPas
           actions={[{ label: s.emptyAnswerAction, onClick: focusPresets, disabled: askDisabled }]}
         />
       ) : (
-        turns.map((turn) => (
-          <AnswerView
-            key={turn.id}
-            ref={turn.id === latest ? latestRef : undefined}
-            id={turn.id}
-            language={language}
-            state={turn}
-            canUpload={canUpload}
-            onOpenSource={(passageId) => onOpenSource(passageId, turn.id)}
-            openPassage={openPassage}
-            onGotoUpload={onGotoUpload}
-            onOpenEntity={onOpenEntity}
-            openEntity={openEntity}
-            onReport={onReport && ((category, note) => onReport(turn, category, note))}
-            readReport={readReport}
-            onRetry={() => onAsk(turn.question)}
-            retryDisabled={askDisabled}
-            onShorten={() => onDraft(turn.question)}
-            onDraft={onDraft}
-            onViewInGraph={onViewInGraph}
-            reportRequest={reportRequest?.turn === turn.id ? reportRequest.count : 0}
-          />
-        ))
+        turns.map((turn) =>
+          turn.sameName !== undefined ? (
+            // 同名的反問：問題泡泡與「問你」的卡片（畫板 S-QA），選了之後才送出；不呼叫模型
+            <section key={turn.id} id={turn.id} ref={turn.id === latest ? latestRef : undefined} className="answer same-name-ask">
+              <h2>{turn.question}</h2>
+              <AskCard
+                language={language}
+                title={s.dialogueSameNameTitle}
+                question={fill(s.dialogueSameNameAsk, { count: turn.sameName.options.length, name: turn.sameName.name }, language)}
+                busy={askDisabled}
+                options={[
+                  ...turn.sameName.options.map((o) => ({ key: o.entityId, label: o.label, onChoose: () => onChooseSameName(turn.id, { sent: o.text, note: o.label }) })),
+                  { key: "all", label: fill(s.dialogueSameNameBoth, { count: turn.sameName.options.length }, language), onChoose: () => onChooseSameName(turn.id, {}) },
+                ]}
+              />
+            </section>
+          ) : (
+            <AnswerView
+              key={turn.id}
+              ref={turn.id === latest ? latestRef : undefined}
+              id={turn.id}
+              language={language}
+              state={turn}
+              canUpload={canUpload}
+              onOpenSource={(passageId) => onOpenSource(passageId, turn.id)}
+              openPassage={openPassage}
+              onGotoUpload={onGotoUpload}
+              onOpenEntity={onOpenEntity}
+              openEntity={openEntity}
+              onReport={onReport && ((category, note) => onReport(turn, category, note))}
+              readReport={readReport}
+              onRetry={() => onAsk(turn.question, { sent: turn.sent, note: turn.note })}
+              retryDisabled={askDisabled}
+              onShorten={() => onDraft(turn.question)}
+              onDraft={onDraft}
+              onViewInGraph={onViewInGraph}
+              reportRequest={reportRequest?.turn === turn.id ? reportRequest.count : 0}
+            />
+          ),
+        )
       )}
     </div>
   );

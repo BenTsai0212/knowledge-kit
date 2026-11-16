@@ -22,7 +22,12 @@ import { errorCategory } from "./qa-errors";
 import { ReportStatus } from "./ReportResult";
 
 export interface AnswerState {
+  // 問題泡泡顯示的問題
   question: string;
+  // 同名的反問選了之後（ADR 0012 決定 1）：實際送出的問題（名稱換成選項）與泡泡下方灰字的說明（選項的標籤）。
+  // 選「都想知道」與一般提問時沒有
+  sent?: string;
+  note?: string;
   // 串流中到目前為止的文字
   streaming: string;
   // 結束後的結果
@@ -196,6 +201,7 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
   return (
     <section id={id} ref={ref} className={classes} style={{ "--done": doneStep } as CSSProperties} aria-live="polite">
       <h2>{heading ?? state.question}</h2>
+      {state.note !== undefined && <p className="answer__note">{fill(s.dialogueSameNameNote, { label: state.note })}</p>}
       {/* 回答本體：桌機與手機是問題泡泡下方的回答卡片（#335 畫板 QA、#354 畫板 G-Mobile-QA）；平板與展示模式沒有自己的樣式，與直接放在 section 中相同 */}
       <div className="answer__body">
         {/* 依據：引用到的段落數，與原文欄「這次回答的出處」、手機「出處 N／M」的 M 相同（#322）；只在桌機與手機顯示 */}

@@ -109,6 +109,18 @@
           "default": "item"
         }
       }
+    },
+    "qa": {
+      "description": "問答的方式（ADR 0012，docs/client-config.md）；省略的欄位使用預設值",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dialogue": {
+          "description": "true：討論版（同名時先反問等接縫提問）；false：查詢版（現行）",
+          "type": "boolean",
+          "default": false
+        }
+      }
     }
   }
 }

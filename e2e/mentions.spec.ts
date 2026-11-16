@@ -1,7 +1,7 @@
 // 「回答提到」與右側的實體面板（#195，docs/qa.md「回答提到」）。/api/ask 一律是假的回應：
 // 問答的回答寫出資料集中所有實體的名稱（包括該身分看不到的），並引用 prompt 中的每一段，所以列出哪些實體只由權限與引用段落決定。
 import { expect, test, type Page } from "@playwright/test";
-import { language, openApp, s, switchIdentity, tab, type RoleId } from "./support/app";
+import { language, openApp, passSameName, s, switchIdentity, tab, type RoleId } from "./support/app";
 import { access, reviewer } from "./support/client";
 import { allEntityNames, entityNames } from "./support/dataset";
 import { clickableNode, neighborsOf, selectedNodes, waitForGraphIdle } from "./support/graph";
@@ -45,6 +45,8 @@ async function ask(page: Page, question: string): Promise<string[]> {
   await page.getByRole("button", { name: s.askButton, exact: true }).click();
   const answer = page.locator("section.answer").last();
   await expect(answer.getByRole("heading", { name: question })).toBeVisible();
+  // 問題中的名稱可能有同名（看不到的實體名稱也在問題中）：反問時照原問題送出
+  await passSameName(answer);
   await expect(answer.getByText(s.answering)).toHaveCount(0);
   return answer.getByRole("group", { name: s.answerMentions }).getByRole("button").allInnerTexts();
 }

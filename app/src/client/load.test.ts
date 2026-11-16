@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import clientSchema from "../../../client/schema/client.schema.json";
 import { RETRIEVAL_DEFAULTS } from "../retrieval/providers";
-import { clientConfig, CONFLICTS_DEFAULTS, EVAL_THRESHOLDS_DEFAULTS, normalizeClient, REVIEW_DEFAULTS, UPLOAD_DEFAULTS } from "./load";
+import { clientConfig, CONFLICTS_DEFAULTS, EVAL_THRESHOLDS_DEFAULTS, normalizeClient, QA_DEFAULTS, REVIEW_DEFAULTS, UPLOAD_DEFAULTS } from "./load";
 import type { ClientFiles } from "./types";
 
 describe("normalizeClient", () => {
@@ -83,6 +83,14 @@ describe("normalizeClient", () => {
     expect(normalizeClient(raw({ mode: "seams" })).client.review).toEqual({ mode: "seams" });
     expect(REVIEW_DEFAULTS).toEqual({ mode: clientSchema.properties.review.properties.mode.default });
     expect(REVIEW_DEFAULTS.mode).toBe("item");
+  });
+
+  it("qa 省略時是查詢版（dialogue: false），預設值與 Schema 的 default 相同（ADR 0012 決定 7）", () => {
+    const raw = (qa?: object) => ({ ...clientConfig, client: { ...clientConfig.client, qa } }) as unknown as ClientFiles;
+    expect(normalizeClient(raw()).client.qa).toEqual(QA_DEFAULTS);
+    expect(normalizeClient(raw({ dialogue: true })).client.qa).toEqual({ dialogue: true });
+    expect(QA_DEFAULTS).toEqual({ dialogue: clientSchema.properties.qa.properties.dialogue.default });
+    expect(QA_DEFAULTS.dialogue).toBe(false);
   });
 
   it("評測門檻省略時補上預設值，預設值與 Schema 的 default 相同", () => {

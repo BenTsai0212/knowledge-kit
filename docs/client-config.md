@@ -61,6 +61,7 @@ npm run check:client
 | `upload` | 否 | 物件，見下表 | 上傳文件的參數。省略整個物件或其中的欄位時使用預設值 |
 | `conflicts` | 否 | 物件，見下表 | 上傳文件與既有段落說法不同的比對。省略整個物件或其中的欄位時使用預設值 |
 | `review` | 否 | 物件，見下表 | 待審的方式。省略整個物件或其中的欄位時使用預設值 |
+| `qa` | 否 | 物件，見下表 | 問答的方式（查詢版或討論版）。省略整個物件或其中的欄位時使用預設值 |
 
 `retrieval` 的欄位（運作方式見 [docs/retrieval.md](retrieval.md)）：
 
@@ -106,6 +107,12 @@ npm run check:client
 | 欄位 | 格式 | 預設值 | 說明 |
 | --- | --- | --- | --- |
 | `mode` | `item`、`seams` | `item` | `item`：逐筆核准（現行）。`seams`：只審接縫，萃取完成後其餘項目由上傳者直接收錄（[docs/extraction.md](extraction.md)「直接收錄」）。沒有 `canReview` 的上傳者也能讓內容進入圖譜（只限他能選的可見等級）；需要事前審核的組織用 `item`。參考情境（`client/`）與線上 demo 用 `seams`（#378 PR 4c），`clients/` 的示範客戶用預設的 `item` |
+
+`qa` 的欄位（[ADR 0012](adr/0012-qa-seam-dialogue.md)）：
+
+| 欄位 | 格式 | 預設值 | 說明 |
+| --- | --- | --- | --- |
+| `dialogue` | 布林 | `false` | `true`：討論版，AI 只在接縫處開口（目前是同名的反問，見 [docs/qa.md](qa.md)「同名」）。`false`：查詢版，問答與現行完全相同。參考情境（`client/`）與線上 demo 用 `true`，`clients/` 的示範客戶用預設的 `false` |
 
 ## `theme.json`
 
@@ -337,7 +344,7 @@ JSON Schema 無法參照另一個檔的值，以下由 `scripts/check-client.mjs
 `app/src/client/load.ts` 在 build 時以 JSON import（`@client/…`，見[多客戶與切換](#多客戶與切換)）讀入 5 個設定檔，匯出型別為 `ClientConfig` 的 `clientConfig`。翻譯檔由 `app/src/client/i18n.ts` 讀入（見[翻譯檔](#翻譯檔clienti18n)）。
 
 - 執行時不做 ajv 驗證，ajv 不打包進前端；驗證只在 `npm run check:client` 與 CI 執行。
-- 省略的欄位在這裡補上預設值，讀取端拿到的型別一律是必填。目前有 `mergeStrategy`（省略時補成 `review`）、`icon`（省略時補成 `generic`）、`retrieval` 的各欄位（依 `provider` 而不同，在 `app/src/retrieval/providers.ts` 的 `RETRIEVAL_DEFAULTS`）、`upload` 的各欄位（`UPLOAD_DEFAULTS`）、`conflicts` 的各欄位（`CONFLICTS_DEFAULTS`）與 `evals.thresholds` 的各欄位（`EVAL_THRESHOLDS_DEFAULTS`）；預設值與 Schema 的 `default` 相同（`retrieval` 比對 `keyword-hash` 的列），由 `load.test.ts` 比對。
+- 省略的欄位在這裡補上預設值，讀取端拿到的型別一律是必填。目前有 `mergeStrategy`（省略時補成 `review`）、`icon`（省略時補成 `generic`）、`retrieval` 的各欄位（依 `provider` 而不同，在 `app/src/retrieval/providers.ts` 的 `RETRIEVAL_DEFAULTS`）、`upload` 的各欄位（`UPLOAD_DEFAULTS`）、`conflicts` 的各欄位（`CONFLICTS_DEFAULTS`）、`review` 的各欄位（`REVIEW_DEFAULTS`）、`qa` 的各欄位（`QA_DEFAULTS`）與 `evals.thresholds` 的各欄位（`EVAL_THRESHOLDS_DEFAULTS`）；預設值與 Schema 的 `default` 相同（`retrieval` 比對 `keyword-hash` 的列），由 `load.test.ts` 比對。
 
 ## 多客戶與切換
 

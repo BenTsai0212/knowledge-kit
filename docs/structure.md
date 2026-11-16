@@ -131,6 +131,7 @@
 - `requests.ts`：切換身分或語言時捨棄進行中的提問
 - `review-helpers.ts`：待審頁的核准計畫
 - `ReviewPage.tsx`：待審頁（含「說法不同」的並列與處理；桌機照畫板 `F-Review`、`F-Empty`，#345）
+- `same-name.ts`：問答的同名反問：問題提到的同類型、同顯示名稱的實體與選項（ADR 0012 決定 1，見 `docs/qa.md`「同名」）
 - `script.ts`：劇本的純函式（分組與順序、第 N／M 題、已問過、是否切換身分）
 - `ScriptPanel.tsx`：展示模式問答頁左欄的劇本（畫板 `H-QA`，#349），見 `docs/qa.md`「展示模式」
 - `seam-review.ts`：待審頁的接縫：哪些項目是接縫、提問與選項、選了之後要核准的內容、「已直接收錄」區的項目與隨機抽查（ADR 0011，見 `docs/extraction.md`「待審頁的接縫」）
