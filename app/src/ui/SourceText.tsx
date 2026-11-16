@@ -1,8 +1,10 @@
 // 原文紙面（#225）：文件中看得到的段落，引用段落以螢光標出；桌機的原文面板（SourcePanel）與手機的底部面板（SourceSheet，#256）共用。
-import { useEffect, useRef } from "react";
+import { Fragment, useEffect, useRef } from "react";
 import { fill, strings } from "../client/i18n";
 import type { SourceDocument } from "../sources/source";
 import { PassageMarks } from "./PassageMarks";
+import { pairKey, pairRecords } from "./seam-records";
+import { SeamRecords } from "./SeamRecords";
 
 interface Props {
   language: string;
@@ -38,13 +40,37 @@ export function SourceText({ language, source, onOpenSource, numbered = false }:
               {p.content} {marks}
             </p>
           );
-        if (!numbered) return text;
+        // 原文欄的「記錄」（ADR 0012 決定 6）：並存的段落下方，每一組一份（先作答或略過才看得到同事的理解）
+        const records = source.records;
+        const recordViews =
+          records === undefined
+            ? null
+            : p.marks
+                .filter((m) => m.kind === "conflict")
+                .map((m) => (
+                  <SeamRecords
+                    key={`record-${m.passageId}`}
+                    language={language}
+                    items={pairRecords(records.items, p.id, m.passageId)}
+                    skipped={records.skipped.includes(pairKey(p.id, m.passageId))}
+                    title={s.dialogueRecordSourceTitle}
+                    showLocked
+                  />
+                ));
+        if (!numbered)
+          return (
+            <Fragment key={p.id}>
+              {text}
+              {recordViews}
+            </Fragment>
+          );
         return (
           <div key={p.id} className="source-passage">
             <span className="source-passage__n" lang={language}>
               {fill(s.paragraphNumber, { n: i + 1 })}
             </span>
             {text}
+            {recordViews}
           </div>
         );
       })}

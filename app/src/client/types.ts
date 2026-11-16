@@ -701,6 +701,13 @@ export interface UiStrings {
   dialogueAltChange: string;
   dialogueAltKeep: string;
   dialogueAltTurn: string;
+  // 人的理解的顯示（ADR 0012 決定 5、6）：回答卡片與原文欄的小標、同事的理解、作者（{role} 是角色，{date} 是日期），以及先作答前的說明
+  dialogueRecordTitle: string;
+  dialogueRecordSourceTitle: string;
+  dialogueRecordPeers: string;
+  dialogueRecordMine: string;
+  dialogueRecordPeer: string;
+  dialogueRecordLocked: string;
   // 待審的接縫（ADR 0011 決定 8，docs/design.md「待審的接縫」）：區塊標題、AI 在問你的小標、各種提問與選項。
   // {name} 是項目的名稱（關係是「起點 —關係→ 終點」），{other} 是只差一個字的名稱，{count} 是候選數，{languages} 是缺少的語言
   seamSection: string;

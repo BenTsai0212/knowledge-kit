@@ -41,6 +41,8 @@ export interface AnswerState {
   conflicts?: Array<[number, number]>;
   // 說法不同的提問（ADR 0012 決定 1，client.json 的 qa.dialogue）：引用的組合中第一組還沒作答、沒略過的並存，回答結束後在卡片內問一次
   seam?: ConflictItem;
+  // seam 是之前已作答過的組合：不再提問，只顯示記錄（ADR 0012 決定 6）
+  seamAnswered?: boolean;
   // 這一題送出的回報（#286）：回答下方顯示處理結果；再回報一次時換成新的回報
   reportId?: string;
 }
@@ -298,7 +300,7 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
               </p>
             ))}
             {state.seam !== undefined && seamActions !== undefined && (
-              <SeamDialogue id={id} language={language} seam={state.seam} onOpenSource={onOpenSource} {...seamActions} />
+              <SeamDialogue id={id} language={language} seam={state.seam} answered={state.seamAnswered} onOpenSource={onOpenSource} {...seamActions} />
             )}
             {answer.uncited && <p className="badge warning">{s.uncited}</p>}
             {answer.incomplete && (

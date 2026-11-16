@@ -277,6 +277,8 @@ const uiStrings = {
   dialogueSkip: "required", dialogueSkipped: "required", dialogueExplainHint: "required", dialogueSupplement: "required", dialogueEvidence: "required",
   dialogueRecorded: "required", dialogueRecordFailed: "required", dialogueAltTitle: "required", dialogueAltEvidence: "required", dialogueAltDate: "required",
   dialogueAltCompare: "required", dialogueAltChange: "required", dialogueAltKeep: "required", dialogueAltTurn: "required",
+  dialogueRecordTitle: "required", dialogueRecordSourceTitle: "required", dialogueRecordPeers: "required", dialogueRecordMine: "required", dialogueRecordPeer: "required",
+  dialogueRecordLocked: "required",
   seamSection: "required", seamTitle: "required", seamAskCandidates: "required", seamAskNear: "required", seamAskNearDocument: "required",
   seamAskSameName: "required", seamAskTypo: "required", seamAskWording: "required", seamAskOther: "required", seamAskMissing: "required",
   seamOptionNew: "required", seamOptionSame: "required", seamOptionDifferent: "required", seamOptionKeep: "required", seamOptionFilled: "required",

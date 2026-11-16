@@ -1147,6 +1147,67 @@ button.citation[aria-pressed="true"] {
   font-weight: 600;
 }
 
+/* 記錄（人的理解，ADR 0012 決定 6，畫板 S-QA 的 .rec）：沒有框，上方虛線、textMuted 小標，附角色與日期；不用綠色或勾勾。
+   回答卡片與原文欄（並存段落的下方）共用；原文欄在亮色的 reading 紙面上，灰字改由 readingText 調淡 */
+.seam-record {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--color-textMuted);
+  font-size: 14px;
+  line-height: 1.6;
+  animation: kFade var(--motion-base) var(--ease-enter) both;
+}
+
+.seam-record .seam-record__label,
+.seam-record .seam-record__row {
+  margin: 0;
+}
+
+.seam-record__label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-textMuted);
+}
+
+.seam-record__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.seam-record__who {
+  font-size: 13px;
+  color: var(--color-textMuted);
+}
+
+.seam-record__locked {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.source-passage > .seam-record,
+.source-passage > .seam-record__locked {
+  grid-column: 2;
+}
+
+.source-text .seam-record {
+  margin-bottom: 16px;
+  border-top-color: color-mix(in srgb, var(--color-readingText) 45%, transparent);
+  color: var(--color-readingText);
+}
+
+.source-text .seam-record__label,
+.source-text .seam-record__who,
+.source-text .seam-record__locked {
+  color: color-mix(in srgb, var(--color-readingText) 70%, transparent);
+}
+
+.source-text .seam-record__locked {
+  margin: 0 0 16px;
+}
+
 /* 請上傳者確認（ADR 0011 決定 6，畫板 S-Review、S-Request）：已請求是膠囊與說明（.held、.pill）；
    上傳者的回答是 surfaceRaised 的區塊，時間與說明是 textMuted（.reply、.recw）；上傳者首頁的項目是一列（.item、.kind） */
 .ask-card__held {

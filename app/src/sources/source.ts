@@ -1,5 +1,6 @@
 // 引用跳回原文：讀取段落所屬的文件，以及其中目前身分看得到的段落。一律經 withIdentity()，權限交給 RLS。
 // 看不到的段落直接省略，不標示「有段落被隱藏」，避免透露其存在。
+import type { Interpretation } from "../conflicts/interpretations";
 import { readPassageMarks, type PassageMark } from "../conflicts/marks";
 import type { Database } from "../db/database";
 
@@ -14,6 +15,9 @@ export interface SourceDocument {
   passages: { id: string; content: string; marks: PassageMark[] }[];
   // 被引用的段落 id
   highlight: string;
+  // 原文欄的「記錄」（ADR 0012 決定 6，client.json 的 qa.dialogue）：目前身分看得到的人的理解，與本次工作階段略過的組合
+  // （ui/seam-records.ts 的 pairKey()）。由 App 在讀取後附上；沒有時不顯示
+  records?: { items: Interpretation[]; skipped: string[] };
 }
 
 // 看不到該段落（或段落不存在）時回 null

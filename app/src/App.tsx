@@ -12,6 +12,7 @@ import { planConflicts, runConflicts, shouldDetectConflicts, type ConflictState 
 import { citedConflicts, readPassageMarks } from "./conflicts/marks";
 import { readCoexistingPair, readConflicts, type ConflictItem } from "./conflicts/store";
 import { readInterpretations, writeInterpretation } from "./conflicts/interpretations";
+import { pairKey } from "./ui/seam-records";
 import { dataset } from "./dataset/load";
 import { seedDataset } from "./dataset/seed";
 import { openDatabase, type Database } from "./db/database";
@@ -90,7 +91,7 @@ const views = (canReview: boolean) => visibleViews(canReview, onlineDemo, presen
 // 沒有看過的實體時傳給首頁的空清單（固定同一個陣列，首頁不會因此重新讀取）
 const NONE: readonly string[] = [];
 // 略過的說法不同的鍵：身分與兩段（順序不拘）
-const seamKey = (identity: string, passages: readonly [string, string]) => [identity, ...[...passages].sort()].join("\u0000");
+const seamKey = (identity: string, passages: readonly [string, string]) => `${identity}\u0000${pairKey(...passages)}`;
 // 還沒有對話的身分（固定同一個陣列）
 const NO_TURNS: readonly Turn[] = [];
 
@@ -346,18 +347,21 @@ export function App() {
   }
 
   // 說法不同的提問（ADR 0012 決定 1、5，client.json 的 qa.dialogue）：引用的並存組合中，第一組這個身分還沒留下理解、也沒略過的；
-  // 以送出的身分讀（RLS：兩段都看得到才讀得到）。一個回答最多問一次；讀取失敗時不問
-  async function readSeam(result: Answer, owner: string, conflicts: AnswerState["conflicts"]): Promise<ConflictItem | undefined> {
-    if (!dialogue || db === null || result.kind !== "answer" || conflicts === undefined) return undefined;
+  // 以送出的身分讀（RLS：兩段都看得到才讀得到）。一個回答最多問一次；讀取失敗時不問。
+  // 都已作答過時，第一組已作答的只顯示記錄（seamAnswered，ADR 0012 決定 6）
+  async function readSeam(result: Answer, owner: string, conflicts: AnswerState["conflicts"]): Promise<Pick<AnswerState, "seam" | "seamAnswered">> {
+    if (!dialogue || db === null || result.kind !== "answer" || conflicts === undefined) return {};
+    let answeredSeam: ConflictItem | undefined;
     for (const [a, b] of conflicts) {
       const passages = [result.numbering[a - 1], result.numbering[b - 1]] as const;
       if (skippedSeams.current.has(seamKey(owner, passages))) continue;
       const item = await readCoexistingPair(db, owner, passages).catch(() => null);
       if (item === null) continue;
-      const answered = await readInterpretations(db, owner, passages).then((all) => all.some((i) => i.mine), () => true);
-      if (!answered) return item;
+      const answered = await readInterpretations(db, owner, passages).then((all) => all.some((i) => i.mine), () => null);
+      if (answered === false) return { seam: item };
+      if (answered === true) answeredSeam ??= item;
     }
-    return undefined;
+    return answeredSeam === undefined ? {} : { seam: answeredSeam, seamAnswered: true };
   }
 
   const closeCompare = () => (compares.current.cancel(), setCompare(null));
@@ -448,7 +452,7 @@ export function App() {
     const conflicts = await readCitedConflicts(result, owner);
     const seam = await readSeam(result, owner, conflicts);
     if (!ticket.isCurrent()) return;
-    update({ ...base, streaming: "", answer: result, mentions, conflicts, seam });
+    update({ ...base, streaming: "", answer: result, mentions, conflicts, ...seam });
   }
 
   // 同名的反問選了之後（ADR 0012 決定 1）：同一題接著送出，問題泡泡保留原問題
@@ -510,7 +514,16 @@ export function App() {
     if (db === null) return;
     const ticket = sources.current.begin();
     if (globalThis.document.activeElement?.matches("button.citation")) sourceOpener.current = globalThis.document.activeElement as HTMLElement;
-    const document = await readSource(db, owner, passageId);
+    const read = await readSource(db, owner, passageId);
+    // 原文欄的「記錄」（ADR 0012 決定 6）：有並存的段落時，以同一個身分讀人的理解與本次略過的組合；讀取失敗時不顯示
+    const records =
+      dialogue && read !== null && read.passages.some((p) => p.marks.some((m) => m.kind === "conflict"))
+        ? await readInterpretations(db, owner).then(
+            (items) => ({ items, skipped: [...skippedSeams.current].filter((k) => k.startsWith(`${owner}\u0000`)).map((k) => k.slice(owner.length + 1)) }),
+            () => undefined,
+          )
+        : undefined;
+    const document = read === null || records === undefined ? read : { ...read, records };
     const answer = turns.find((t) => t.id === turnId)?.answer;
     const cited =
       turnId === null || answer?.kind !== "answer"
@@ -521,6 +534,14 @@ export function App() {
           : { turn: turnId, items: await readCitedSources(db, owner, answer.numbering, answer.cited) };
     if (ticket.isCurrent()) (setEntity(null), setSource(document), setSourceTurn(document === null ? null : turnId), setCitedSources(cited));
   }
+
+  // 留下理解或略過後，原文欄開著時重新讀取，記錄跟著更新
+  const shownSource = useRef<{ source: SourceDocument | null; turn: string | null }>({ source: null, turn: null });
+  shownSource.current = { source, turn: sourceTurn };
+  const refreshSource = () => {
+    const { source: shown, turn } = shownSource.current;
+    if (shown !== null) void onOpenSource(shown.highlight, turn);
+  };
 
   const closeSource = () => (sources.current.cancel(), setSource(null));
   // 桌機原文欄的 ✕：焦點回到引用標號（還在畫面上時）
@@ -942,8 +963,18 @@ export function App() {
                 onRecordSeam={async (turn, x) => {
                   if (db === null || turn.seam === undefined) throw new Error("no seam");
                   await writeInterpretation(db, identity, { passages: [turn.seam.newPassage.id, turn.seam.oldPassage.id], ...x });
+                  refreshSource();
                 }}
-                onSkipSeam={(turn) => turn.seam && skippedSeams.current.add(seamKey(identity, [turn.seam.newPassage.id, turn.seam.oldPassage.id]))}
+                onSkipSeam={(turn) => {
+                  if (turn.seam === undefined) return;
+                  skippedSeams.current.add(seamKey(identity, [turn.seam.newPassage.id, turn.seam.oldPassage.id]));
+                  refreshSource();
+                }}
+                onReadSeam={(turn) =>
+                  db === null || turn.seam === undefined
+                    ? Promise.reject(new Error("no seam"))
+                    : readInterpretations(db, identity, [turn.seam.newPassage.id, turn.seam.oldPassage.id])
+                }
                 askDisabled={retriever === null || answering || limit !== null}
                 onViewInGraph={(id) => (setGraphFocus(id), setView("graph"))}
                 reportRequest={reportRequest}

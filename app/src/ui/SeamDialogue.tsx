@@ -1,13 +1,15 @@
 // 問答的說法不同提問（ADR 0012 決定 1、3、4，docs/qa.md「說法不同的提問」，畫板 S-QA 的 ③～⑧）：回答引用的兩段屬於一組
 // 已處理為「並存」的說法不同時，回答結束後在卡片內問一次。選項是存下來的假設（或固定範本），另有「都不是，我來說明」與「略過」。
 // 選了之後補一句證據，或以「另一種讀法」溫和地提出另一種可能一次；最後寫入人的理解（interpretations）。不改變回答與兩段原文。
-// 略過只記在本次工作階段（onSkip）。進度記在模組層級，切換頁籤重新掛載時沿用
-import { useState, type ReactNode } from "react";
+// 略過只記在本次工作階段（onSkip）。進度記在模組層級，切換頁籤重新掛載時沿用。
+// 留下理解或略過之後（或之前已對這一組作答，answered），卡片內顯示「記錄」：自己的與同事的理解（SeamRecords，ADR 0012 決定 6）
+import { useEffect, useState, type ReactNode } from "react";
 import { fill, strings } from "../client/i18n";
 import { byDate, monthsBetween, seamReply, usesTemplate } from "../conflicts/dialogue";
-import { OTHER_CHOICE } from "../conflicts/interpretations";
+import { OTHER_CHOICE, type Interpretation } from "../conflicts/interpretations";
 import type { ConflictItem } from "../conflicts/store";
 import { AskCard } from "./AskCard";
+import { SeamRecords } from "./SeamRecords";
 
 export interface SeamRecord {
   choice: string;
@@ -19,6 +21,8 @@ export interface SeamActions {
   // 寫入人的理解；失敗時 reject
   record(x: SeamRecord): Promise<void>;
   skip(): void;
+  // 這一組目前身分看得到的理解（RLS）；失敗時 reject
+  read(): Promise<Interpretation[]>;
 }
 
 interface Props extends SeamActions {
@@ -26,6 +30,8 @@ interface Props extends SeamActions {
   id: string;
   language: string;
   seam: ConflictItem;
+  // 之前已對這一組留下理解：不再提問，只顯示記錄
+  answered?: boolean;
   onOpenSource(passageId: string): void;
 }
 
@@ -34,14 +40,31 @@ type Progress =
   | { step: "ask" }
   | { step: "challenge"; first: number }
   | { step: "done"; first: number | "other"; note?: string; second?: "change" | "keep"; status: "saving" | "saved" | "failed" }
-  | { step: "skipped" };
+  | { step: "skipped" }
+  | { step: "answered" };
 
 const progressOf = new Map<string, Progress>();
 
-export function SeamDialogue({ id, language, seam, onOpenSource, record, skip }: Props) {
+export function SeamDialogue({ id, language, seam, answered = false, onOpenSource, record, skip, read }: Props) {
   const s = strings(language);
-  const [progress, setProgress] = useState<Progress>(() => progressOf.get(id) ?? { step: "ask" });
+  const [progress, setProgress] = useState<Progress>(() => progressOf.get(id) ?? { step: answered ? "answered" : "ask" });
   const save = (next: Progress) => (progressOf.set(id, next), setProgress(next));
+  // 記錄：寫入成功、略過或之前已作答後才讀（先作答才看得到同事的理解）
+  const unlocked = progress.step === "answered" || progress.step === "skipped" || (progress.step === "done" && progress.status === "saved");
+  const [records, setRecords] = useState<Interpretation[] | null>(null);
+  useEffect(() => {
+    if (!unlocked) return;
+    let live = true;
+    read().then(
+      (items) => void (live && setRecords(items)),
+      () => void (live && setRecords(null)),
+    );
+    return () => void (live = false);
+    // read 每次 render 都是新的函式；只在解鎖時讀一次
+  }, [unlocked]);
+  const recordView = records !== null && (
+    <SeamRecords language={language} items={records} skipped={progress.step === "skipped"} title={s.dialogueRecordTitle} showLocked={false} />
+  );
 
   const template = usesTemplate(seam);
   // 固定範本的選項依 TEMPLATE_CHOICES 的順序
@@ -63,7 +86,14 @@ export function SeamDialogue({ id, language, seam, onOpenSource, record, skip }:
     else write({ step: "done", first: i, status: "saving" }, { choice: labels[i], changedAfterChallenge: false, note: null });
   };
 
-  if (progress.step === "skipped") return <p className="muted seam-skipped">{s.dialogueSkipped}</p>;
+  if (progress.step === "skipped")
+    return (
+      <>
+        <p className="muted seam-skipped">{s.dialogueSkipped}</p>
+        {recordView}
+      </>
+    );
+  if (progress.step === "answered") return recordView || null;
 
   const first = progress.step === "ask" ? null : progress.first;
   const reply = typeof first === "number" ? seamReply(seam, first) : null;
@@ -101,7 +131,7 @@ export function SeamDialogue({ id, language, seam, onOpenSource, record, skip }:
           language={language}
           text={
             reply.kind === "challenge" ? (
-              <Marked template={fill(s.dialogueAltEvidence, { title: reply.passage.documentTitle, quote: "\u0000" })} quote={reply.quote} />
+              <Marked template={fill(s.dialogueAltEvidence, { choice: labels[reply.to], title: reply.passage.documentTitle, quote: "\u0000" })} quote={reply.quote} />
             ) : (
               fill(s.dialogueAltDate, { newer: newer.documentTitle, older: older.documentTitle, months: reply.months }, language)
             )
@@ -124,6 +154,7 @@ export function SeamDialogue({ id, language, seam, onOpenSource, record, skip }:
         <div className="refusal-chosen">{bubble(progress.second === "keep" ? s.dialogueAltKeep : fill(s.dialogueAltChange, { choice: labels[(reply as { to: number }).to] }))}</div>
       )}
       {recorded && reply?.kind !== "evidence" && supplement(recorded)}
+      {recordView}
     </div>
   );
 }

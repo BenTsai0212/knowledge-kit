@@ -39,7 +39,7 @@ const item = (extra: Partial<ConflictItem> = {}): ConflictItem => ({
 
 let n = 0;
 const render = (seam: ConflictItem) =>
-  renderToStaticMarkup(createElement(SeamDialogue, { id: `t-${n++}`, language, seam, onOpenSource: () => {}, record: async () => {}, skip: () => {} }));
+  renderToStaticMarkup(createElement(SeamDialogue, { id: `t-${n++}`, language, seam, onOpenSource: () => {}, record: async () => {}, skip: () => {}, read: async () => [] }));
 
 describe("說法不同的提問", () => {
   it("有假設時：固定的提問、假設、都不是與略過；不顯示證據", () => {
@@ -62,6 +62,23 @@ describe("說法不同的提問", () => {
     expect(noMonths).not.toContain("{");
     expect(noMonths).not.toBe(fill(s.dialogueConflictTemplate, { newer: "進度更新", older: "啟動會議紀錄", months: 3 }, language));
     expect(render(item({ hypotheses: null, evidence: null, oldPassage: passage("old", "啟動會議紀錄", null, "預計 Q2 上市。") }))).toContain(escape(noMonths));
+  });
+});
+
+describe("另一種讀法的內文", () => {
+  it("先說出證據支持的假設（引號引用原文，不改寫），再說證據", () => {
+    const text = fill(s.dialogueAltEvidence, { choice: "我覺得是後來改過", title: "進度更新", quote: "延後至 Q3" });
+    expect(text).toContain("我覺得是後來改過");
+    expect(text.indexOf("我覺得是後來改過")).toBeLessThan(text.indexOf("延後至 Q3"));
+    expect(text).not.toContain("{");
+  });
+
+  it("之前已作答過這一組時不再提問", () => {
+    const html = renderToStaticMarkup(
+      createElement(SeamDialogue, { id: `t-${n++}`, language, seam: item(), answered: true, onOpenSource: () => {}, record: async () => {}, skip: () => {}, read: async () => [] }),
+    );
+    expect(html).not.toContain(escape(s.dialogueConflictAsk));
+    expect(html).not.toContain("<button");
   });
 });
 
