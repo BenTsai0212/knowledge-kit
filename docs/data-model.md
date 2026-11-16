@@ -80,6 +80,7 @@ PGlite 的 session user 固定是 superuser `postgres`。以 `username: "kk_app"
 | `conflict_decisions` | `conflict_id` PK、`new_passage_id`、`old_passage_id`（以複合外鍵保證與 `conflicts` 一致）、`decision`（`coexist`／`supersede`／`not_conflict`）、`decided_by` | 主管的處理（#51） |
 | `answer_reports` | `id` PK（`ar-` 開頭）、`reported_by`、`reported_at`、`category`（6 類）、`note`（選填，1～1000 字）、`question`（1～500 字）、`answer`（拒答時 NULL）、`sent_passage_ids`、`cited_passage_ids`（`sent` 的子集）、`entity_ids`（三者都是 `text[]`） | 回答錯誤回報（ADR 0007，0010） |
 | `answer_report_resolutions` | `report_id` PK（每個回報處理一次）、`resolution`（`not_error`／`retracted`）、`resolved_by`、`resolved_at`、`note`（給回報的人的說明，選填，1～500 字，0012） | 回報的處理（ADR 0007，0010、0012） |
+| `interpretations` | `id` PK（`in-` 開頭）、`passage_a`、`passage_b`（一組說法不同的兩段，`passage_a < passage_b`）、`choice`（選的假設的文字，或 `other`；1～100 字）、`changed_after_challenge`（boolean）、`note`（只在 `choice = 'other'` 時，選填，1～500 字）、`created_by`、`created_at`；`(created_by, passage_a, passage_b)` 不重複 | 人的理解（ADR 0012，0015） |
 
 - id 一律 `text`；`client/` 的名單沿用設定中的 id。
 - `language` 以 CHECK 限制為語言代碼格式；「必須屬於 `client.json` 的 `languages`」由匯入程式檢查。
@@ -255,6 +256,22 @@ policy 中的子查詢同樣受 RLS 限制，所以「段落看得到」已包�
 - **處理每個回報一次**：主鍵是 `report_id`，已處理時回傳 `conflict`。policy 的參照方向是 `answer_report_resolutions → answer_reports → passages`，沒有循環。
 - 違反 CHECK、外鍵、沒有身分或被 RLS 拒絕時，`store.ts` 回傳 `denied`；不顯示資料庫的訊息。
 - `oracle.ts` 的 `expectedReportVisible()`（審核者 ∪ 回報者）、`canWriteReport()`、`canResolveReport()` 是上述規則的獨立實作；`app/tests/reports/store.test.ts` 以兩種設定（參考情境，以及一般員工也能審核）比對，並測試「沒有引用、但送出的段落看不到時看不到該回報」、回報者讀得到自己的回報與說明但讀不到別人的、送出的段落之後看不到時回報者讀不到、說明的長度與不能修改、偽造的回報與處理、`kk_app` 沒有 `UPDATE`／`DELETE`，以及「忽略身分的資料層」的反向驗證。
+
+## 人的理解
+
+問答中對一組說法不同的兩段留下的解讀（ADR 0012 決定 5、6，migration 0015）。**只用 INSERT**：理解不改變事實，問答、時間軸與原文照舊並列兩種說法。寫入與讀取集中在 `app/src/conflicts/interpretations.ts`（`writeInterpretation()`、`readInterpretations()`），一律經 `withIdentity()`。
+
+| 資料表 | 權限 | 寫入（`WITH CHECK`） | 讀取（`USING`） |
+| --- | --- | --- | --- |
+| `interpretations` | `SELECT`、`INSERT` | `created_by` 是自己、`created_at` 是現在、兩段都看得到 | 兩段都看得到（與 `conflict_decisions` 相同，不看作者） |
+
+- **以兩段表示一組，不參照 `conflicts`**：與 ADR 0012 決定 5 的欄位相同。policy 只查 `passages`，沒有循環；「該組是已處理為並存的說法不同」由畫面判斷（只在 `citedConflicts()` 的組提問）。
+- **兩段的順序固定**：CHECK `passage_a < passage_b`，同一組只有一種寫法。`writeInterpretation()` 以 `LEAST`、`GREATEST` 排序，與 CHECK 用資料庫的同一個 collation；`readInterpretations()` 指定兩段時順序不拘。
+- **同一個身分對同一組只留一筆**：`UNIQUE (created_by, passage_a, passage_b)`，第二次寫入回傳 `conflict`。身分是角色層級，同一角色共用一筆。「略過」記在本次工作階段，不寫入資料庫（ADR 0012 決定 5）。
+- **說明只用於「都不是，我來說明」**：`note` 不是 NULL 時 `choice` 必須是 `other`（CHECK）；空白視為沒有。
+- **先作答才看得到同事的理解**由畫面控制（ADR 0012 決定 6）：`readInterpretations()` 回傳每筆的 `mine`（作者是目前身分），畫面在自己還沒留下理解或略過前不顯示別人的；畫面只顯示角色與時間。
+- 違反 CHECK、外鍵、沒有身分或被 RLS 拒絕時回傳 `denied`；不顯示資料庫的訊息。
+- `oracle.ts` 的 `expectedInterpretationVisible()`、`canWriteInterpretation()` 是上述規則的獨立實作；`app/tests/conflicts/interpretations.test.ts` 比對每個身分看得到的列與能寫入的組合，並測試偽造的寫入（作者是別人、時間不是現在、順序相反）、欄位的限制、`kk_app` 沒有 `UPDATE`／`DELETE`，以及「忽略身分的資料層」的反向驗證。
 
 ## 越權測試（滲漏矩陣）
 

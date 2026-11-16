@@ -134,7 +134,8 @@ ADR 0012 決定 3：問答遇到已處理為「並存」的說法不同時，提
 - 存在 `conflicts` 的同一列（`hypotheses`、`evidence`、`evidence_hypothesis`，migration 0014），跟著該組的可見範圍：兩段都看得到才讀得到，沒有 `canReview` 的身分只讀得到「並存」「取代」的組（見「權限」）。
 - `readConflicts()` 回傳 `hypotheses` 與 `evidence`（`{ text, supports }`）；不合格或在 0014 之前比對的組合兩者都是 `null`，問答用固定範本（ADR 0012 決定 3）。
 - 待審頁在每組的差異說明下方列出假設（只顯示，不加操作）。證據是 AI 的傾向，不在待審頁與提問時顯示，只在使用者選完、而且不合時才出現（ADR 0012 決定 4）。
-- 問答的提問、選後的回應與人的理解在之後的 PR 實作（ADR 0012「後續工作」）。
+- 人的理解（使用者對一組的解讀）存在 `interpretations`（migration 0015），寫入與讀取在 `app/src/conflicts/interpretations.ts`；權限見 [docs/data-model.md](data-model.md)「人的理解」。
+- 問答的提問、選後的回應與人的理解的顯示在之後的 PR 實作（ADR 0012「後續工作」）。
 
 ## 權限
 

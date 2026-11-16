@@ -322,3 +322,33 @@ export function canResolveReport(access: AccessFile, data: Sample, reports: Repo
     !reports.resolutions.includes(report)
   );
 }
+
+// docs/data-model.md「人的理解」的獨立實作（ADR 0012 決定 5、6）。a、b 是兩段（順序不拘）；by 是作者
+export interface InterpretationSample {
+  interpretations: { id: string; by: string; a: string; b: string }[];
+}
+
+const samePair = (x: { a: string; b: string }, y: { a: string; b: string }) => (x.a === y.a && x.b === y.b) || (x.a === y.b && x.b === y.a);
+
+// 看得到的理解：兩段都看得到（不看作者，也不看該組是否有說法不同的紀錄）
+export function expectedInterpretationVisible(access: AccessFile, data: Sample, sample: InterpretationSample, identityId: string | null): Visible {
+  const passages = new Set(expectedVisible(access, data, identityId).passages);
+  return { interpretations: sample.interpretations.filter((x) => passages.has(x.a) && passages.has(x.b)).map((x) => x.id) };
+}
+
+export const INTERPRETATION_KEY_SQL: Record<string, string> = {
+  interpretations: "id",
+};
+
+// 能否寫入：身分存在、兩段不同而且都看得到、自己還沒有對這一組留下理解
+export function canWriteInterpretation(
+  access: AccessFile,
+  data: Sample,
+  sample: InterpretationSample,
+  identityId: string | null,
+  pair: { a: string; b: string },
+): boolean {
+  if (!access.roles.some((r) => r.id === identityId) || pair.a === pair.b) return false;
+  const passages = new Set(expectedVisible(access, data, identityId).passages);
+  return passages.has(pair.a) && passages.has(pair.b) && !sample.interpretations.some((x) => x.by === identityId && samePair(x, pair));
+}

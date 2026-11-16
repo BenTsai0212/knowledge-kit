@@ -179,6 +179,7 @@
 
 上傳文件與既有段落的說法不同（#51）；說明見 `docs/conflicts.md`。
 
+- `interpretations.ts`：經 `withIdentity()` 寫入與讀取人的理解（ADR 0012；只用 INSERT；規則由 RLS 執行，見 `docs/data-model.md`「人的理解」，測試在 `app/tests/conflicts/interpretations.test.ts`）
 - `marks.ts`：時間軸與原文面板的標示（在 `readTimeline()`、`readSource()` 的交易中讀取）；桌機回答卡片的說法不同提示（`citedConflicts()`：兩段都被引用的並存組合）
 - `output.ts`：解析與驗證
 - `prompt.ts`：prompt
