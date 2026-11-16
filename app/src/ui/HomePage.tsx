@@ -1,13 +1,16 @@
 // 首頁（#283，docs/design.md「日常工具」的「首頁」）：登入後的預設頁，展示模式不顯示。資料只在瀏覽器記憶體，重新整理就重來。
 // 所有數字與清單只算目前身分讀得到的（讀取經 withIdentity()，由 RLS 篩選；#247）。一般員工的「有更新」經 readMyUploads()（#284，ADR 0009）
-// 與 readReports()（回報已處理，#286，migration 0012）。
+// 與 readReports()（回報已處理，#286，migration 0012）。審核者請上傳者確認的接縫（ADR 0011 決定 6，畫板 S-Request）在「有更新」最上面，
+// 直接作答（RequestAsk.tsx），不計入三則的上限。
 // 桌機（wide）對齊畫板 docs/design/v1/boards/K-Home.dc.html（#331）：問候與提問框在上，下面是 auto-fit 的兩欄卡片。
 // 手機（phone）對齊畫板 docs/design/v1/boards/K-Mobile.dc.html 的首頁（#356）：單行提問框、主管的數字卡在最上、每則一列可以點；
 // 平板維持單欄。
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { clientConfig } from "../client/load";
 import type { Database } from "../db/database";
+import { readRequests } from "../extraction/requests";
 import { readMyUploads } from "../extraction/store";
+import { readGraph, type Graph } from "../graph/read";
 import { readReports, writeReport, type AnswerReport } from "../reports/store";
 import { readEntitiesByIds, readRecentDocuments, type RecentDocument, type RecentEntity } from "../graph/recent";
 import { fill, strings } from "../client/i18n";
@@ -34,6 +37,8 @@ import { reportAgainOf } from "./report-helpers";
 import { ReportResult } from "./ReportResult";
 import { statusLabel } from "./MyUploads";
 import { QuestionPanel } from "./QuestionPanel";
+import { RequestAsk } from "./RequestAsk";
+import { uploaderAsks, type UploaderAsk } from "./seam-review";
 
 interface Props {
   // 資料庫還在載入時為 null
@@ -83,22 +88,31 @@ function useRecent(db: Database | null, identity: string, language: string, view
   return recent;
 }
 
-// 一般員工的「有更新」：已處理的回報在前（處理時間新的在前），其次是自己上傳的文件，合計最多三則。
-// 切換身分或萃取狀態改變時重新讀取，之後才回來的舊結果忽略
-function useUpdates(db: Database | null, identity: string, extracting: ReadonlySet<string> | undefined) {
-  const [updates, setUpdates] = useState<{ reports: AnswerReport[]; uploads: UploadUpdate[] } | null>(null);
+// 一般員工的「有更新」：審核者的提問（請上傳者確認）在最前面；其次是已處理的回報（處理時間新的在前）與自己上傳的文件，合計最多三則。
+// 切換身分、萃取狀態改變或回答提問（version）時重新讀取，之後才回來的舊結果忽略
+type Updates = { asks: UploaderAsk[]; graph: Graph; reports: AnswerReport[]; uploads: UploadUpdate[] };
+
+function useUpdates(db: Database | null, identity: string, extracting: ReadonlySet<string> | undefined, version: number) {
+  const [updates, setUpdates] = useState<Updates | null>(null);
+  // 回答後重新讀取時不清空（卡片不閃成「讀取中」）
+  useEffect(() => {
+    setUpdates(null);
+  }, [db, identity, extracting]);
   useEffect(() => {
     if (db === null || extracting === undefined) return;
     let cancelled = false;
-    setUpdates(null);
-    void Promise.all([readReports(db, identity), readMyUploads(db, identity)]).then(([all, docs]) => {
-      const reports = reportUpdates(all, identity);
-      if (!cancelled) setUpdates({ reports, uploads: uploadUpdates(docs, extracting, MAX_UPDATES - reports.length) });
-    });
+    void Promise.all([readReports(db, identity), readMyUploads(db, identity), readRequests(db, identity), readGraph(db, identity)]).then(
+      ([all, docs, requests, graph]) => {
+        const reports = reportUpdates(all, identity);
+        const ctx = { entityTypes: clientConfig.knowledgeModel.entityTypes, languages: clientConfig.client.languages };
+        const asks = uploaderAsks(requests, docs, graph.entities, ctx);
+        if (!cancelled) setUpdates({ asks, graph, reports, uploads: uploadUpdates(docs, extracting, MAX_UPDATES - reports.length) });
+      },
+    );
     return () => {
       cancelled = true;
     };
-  }, [db, identity, extracting]);
+  }, [db, identity, extracting, version]);
   return updates;
 }
 
@@ -138,7 +152,8 @@ export function HomePage(props: Props) {
   const { db, language, identity, wide, phone = false, waiting, updates: updatesProps, asked, askDisabled, limit, draft, onDraft, onAsk, onStartReview, viewed, onOpenDocument, onOpenEntity } = props;
   const s = strings(language);
   const recent = useRecent(db, identity, language, viewed);
-  const updates = useUpdates(db, identity, updatesProps?.extracting);
+  const [updatesVersion, setUpdatesVersion] = useState(0);
+  const updates = useUpdates(db, identity, updatesProps?.extracting, updatesVersion);
   // 「看處理結果」展開的回報，與「仍有疑問，再回報一次」的回報
   const [openReport, setOpenReport] = useState<string | null>(null);
   const [againReport, setAgainReport] = useState<string | null>(null);
@@ -154,7 +169,7 @@ export function HomePage(props: Props) {
   const rows = waiting ? waitingRows(waiting) : [];
   // 手機的區塊不是卡片：background 上的標題與列（畫板 K-Mobile）
   const card = phone ? "home__card" : "card home__card";
-  const updateCount = updates === null ? 0 : updates.reports.length + updates.uploads.length;
+  const updateCount = updates === null ? 0 : updates.asks.length + updates.reports.length + updates.uploads.length;
 
   const waitingSection = waiting !== undefined && (
     <section className={`${card} home__waiting`} aria-labelledby="home-waiting">
@@ -233,6 +248,12 @@ export function HomePage(props: Props) {
         <EmptyState as="div" icon="upload" title={s.home.updatesEmptyTitle} reason={s.home.updatesEmpty} />
       ) : (
         <ul className="home__list">
+          {db !== null &&
+            updates.asks.map((a) => (
+              <li key={a.request.id}>
+                <RequestAsk db={db} identity={identity} language={language} graph={updates.graph} item={a} onReplied={() => setUpdatesVersion((v) => v + 1)} />
+              </li>
+            ))}
           {updates.reports.map((r) => (
             <li key={r.id}>
               <UpdateRow

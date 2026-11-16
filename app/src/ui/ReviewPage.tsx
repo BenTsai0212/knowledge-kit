@@ -14,6 +14,8 @@
 // 只審接縫（client.json 的 review.mode 為 seams，ADR 0011）：每份文件最上面是「需要你判斷」，接縫一項一張 AI 在問你的卡片
 // （AskCard.tsx，提問與選項在 seam-review.ts）；其他待審項目照上述的分組。最下方是「已直接收錄 N 項」（AutoApproved.tsx）：
 // 預設收合，可以隨機抽查或展開全部，撤回時選理由；只有直接收錄的文件也列出。
+// 請上傳者確認（ADR 0011 決定 6，畫板 S-Review）：上傳者不是自己時，接縫多一個出口「我不確定，請上傳者確認」；請求後項目保留、
+// 不顯示選項，也不計入待審數字；上傳者回答後卡片附上回答與時間，由審核者決定（extraction/requests.ts）
 // 桌機（#345，畫板 F-Review、F-Empty）：review-page--desktop 加上 h1「待審」、填滿內容區；文件標頭有上傳者與可見範圍的膠囊，
 // 萃取結果每組一列，「編輯名稱」「出處」「變更合併對象」「展開」是列內的次要按鈕（其他版面仍是底線連結）。樣式都在 app.css
 // 手機（#282）：review-page--phone；需要決定的組（sheetReason）與待處理的說法不同只畫一行摘要與「›」，點了以底部面板處理
@@ -37,14 +39,16 @@ import {
   type ReviewEntity,
   type ReviewRelation,
 } from "../extraction/store";
+import { readRequests, requestUploader, type ReviewRequest } from "../extraction/requests";
 import { readGraph, type Graph } from "../graph/read";
 import { readReports, type AnswerReport } from "../reports/store";
 import { AccessBadges } from "./AccessBadges";
-import { AskCard } from "./AskCard";
+import { AskCard, type AskOption } from "./AskCard";
 import { AutoApproved } from "./AutoApproved";
 import { BottomSheet } from "./BottomSheet";
 import { entityOptionLabel, entityTypeLabel, relationTypeLabel } from "./graph-labels";
-import { autoItems, relationSeamPlan, seamPartition, seamPlan, type AutoItem, type EntitySeam, type RelationSeam, type SeamOption } from "./seam-review";
+import { autoItems, heldItems, openRequests, relationSeamPlan, seamPartition, seamPlan, type AutoItem, type EntitySeam, type RelationSeam } from "./seam-review";
+import { relationQuestion, replyLabel, seamOptionLabel, seamQuestion } from "./seam-text";
 import { Notice } from "./Notice";
 import { EmptyState } from "./EmptyState";
 import { ReportList } from "./ReportList";
@@ -130,6 +134,8 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   const [docs, setDocs] = useState<ReviewDocument[] | null>(null);
   const [conflicts, setConflicts] = useState<ConflictItem[]>([]);
   const [reports, setReports] = useState<AnswerReport[]>([]);
+  // 請上傳者確認的請求與回答（ADR 0011 決定 6）
+  const [requestRows, setRequestRows] = useState<ReviewRequest[]>([]);
   const [graph, setGraph] = useState<Graph | null>(null);
   const [choices, setChoices] = useState<Record<string, EntityChoice>>({});
   // 核准或退回的錯誤、批次核准時因名稱不完整而略過的筆數；顯示在該文件的卡片上方（#48）
@@ -185,7 +191,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
 
   useEffect(() => {
     const ticket = reads.current.begin();
-    void Promise.all([readReview(db, identity), readGraph(db, identity), readConflicts(db, identity), readReports(db, identity)]).then(([d, g, c, r]) => {
+    void Promise.all([readReview(db, identity), readGraph(db, identity), readConflicts(db, identity), readReports(db, identity), readRequests(db, identity)]).then(([d, g, c, r, q]) => {
       if (!ticket.isCurrent()) return;
       setDocs(reviewDocuments(d, c));
       setLeaving(new Map());
@@ -193,6 +199,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
       setConflicts(c);
       setGraph(g);
       setReports(r);
+      setRequestRows(q);
     });
     return () => reads.current.cancel();
   }, [db, identity, version]);
@@ -230,7 +237,8 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
     setVersion((v) => v + 1);
     onChanged();
   };
-  const counts = reviewTabCounts(docs, conflicts, reports);
+  const requests = openRequests(requestRows);
+  const counts = reviewTabCounts(docs, conflicts, reports, heldItems(requestRows));
   const tabLabels: Record<Tab, string> = { pending: s.reviewPendingTab, rejected: s.reviewRejectedTab, decided: s.reviewDecidedTab, reports: s.reviewReportsTab };
   // 窄螢幕的分頁橫向捲動（#243）：選中的分頁捲進可見範圍
   const selectTab = (next: Tab) => {
@@ -694,42 +702,59 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   );
   // 待審的接縫（ADR 0011 決定 1、6、8，docs/design.md「待審的接縫」）：AI 在問你的卡片，一項一個提問；
   // 選了收錄的選項就核准（底下的關係跟著核准），「我覺得不該收錄」「都不是，我來說明」退回（說明記在決定的 note）
-  const seamLabel = (o: SeamOption, seam?: EntitySeam) => {
-    if (o.kind === "reject") return s.seamOptionExclude;
-    if (o.kind === "keep") return seam?.ask.kind === "missing" ? s.seamOptionFilled : s.seamOptionKeep;
-    if (o.kind === "new") return seam?.ask.kind === "near" ? s.seamOptionDifferent : s.seamOptionNew;
-    if (seam?.ask.kind === "near") return s.seamOptionSame;
-    const target = graph.entities.find((x) => x.id === o.target);
-    return target ? entityOptionLabel(graph, target, language) : o.target;
+  const askUploader = (docId: string, itemId: string) =>
+    void run(docId, () => requestUploader(db, identity, itemId).then(() => undefined), { text: s.seamHeld, graph: false });
+  const time = new Intl.DateTimeFormat(language, { dateStyle: "medium", timeStyle: "short" });
+  // 請上傳者確認（ADR 0011 決定 6）：還沒請求、上傳者不是自己時多一個出口；已請求、還沒回答時保留（不顯示選項）；
+  // 回答後附上上傳者的回答（選擇、說明、時間），選項照常
+  const requestOf = (doc: ReviewDocument, itemId: string, seam?: EntitySeam): { exits?: AskOption[]; held?: ReactNode; reply?: ReactNode } => {
+    const req = requests.get(itemId);
+    const uploader = doc.uploadedBy ?? null;
+    if (req === undefined)
+      return { exits: uploader === null || uploader === identity ? [] : [{ key: "request", label: s.seamRequest, onChoose: () => askUploader(doc.id, itemId) }] };
+    const name = roleLabel(uploader ?? req.requestedBy, language);
+    if (req.reply === null)
+      return {
+        held: (
+          <div className="ask-card__held">
+            <span className="ask-card__pill">{s.seamHeld}</span>
+            <span className="muted">{fill(s.seamHeldNote, { name }, language)}</span>
+          </div>
+        ),
+      };
+    const { reply } = req;
+    return {
+      reply: (
+        <div className="ask-card__reply">
+          <span className="ask-card__reply-meta">
+            {fill(s.seamReplyFrom, { name: roleLabel(reply.repliedBy, language), time: time.format(new Date(reply.repliedAt)) }, language)}
+          </span>
+          <span>{replyLabel(s, reply.choice, reply.mergeInto, graph, language, seam)}</span>
+          {reply.note !== null && <span className="ask-card__reply-meta">{reply.note}</span>}
+        </div>
+      ),
+    };
   };
-  const unsureAsk = { same_name: s.seamAskSameName, possible_typo: s.seamAskTypo, relation_wording: s.seamAskWording, other: s.seamAskOther };
   const seamCard = (doc: ReviewDocument, seam: EntitySeam) => {
     const e = seam.entity;
-    const name = pendingName(e, doc.language);
-    const { ask } = seam;
-    const question =
-      ask.kind === "candidates"
-        ? fill(s.seamAskCandidates, { count: ask.candidates.length, name }, language)
-        : ask.kind === "near"
-          ? fill(ask.target === null ? s.seamAskNearDocument : s.seamAskNear, { name, other: ask.other }, language)
-          : ask.kind === "unsure"
-            ? fill(ask.unsure === "relation_wording" ? s.seamAskOther : unsureAsk[ask.unsure], { name }, language)
-            : fill(s.seamAskMissing, { name, languages: ask.languages.map((l) => languageNames.of(l) ?? l).join(s.listSeparator) }, language);
     const names = choices[e.id]?.names;
     const missing = missingNameLanguages(names ?? e.names, client.languages);
+    const request = requestOf(doc, e.id, seam);
     return (
       <AskCard
         language={language}
         title={s.seamTitle}
-        question={question}
+        question={seamQuestion(s, seam, pendingName(e, doc.language), language)}
         busy={busy}
+        exits={request.exits}
+        held={request.held}
         explainHint={s.seamExplainHint}
         onExplain={(note) => void rejectItems(doc.id, { entities: [e.id], relations: [] }, note)}
         options={seam.options.map((o) => {
           const plan = seamPlan(doc, seam, o, names, graph, client.languages);
           return {
             key: o.kind === "merge" ? o.target : o.kind,
-            label: seamLabel(o, seam),
+            label: seamOptionLabel(s, o, graph, language, seam),
             disabled: o.kind !== "reject" && plan === null,
             onChoose: () =>
               o.kind === "reject" ? void rejectItems(doc.id, { entities: [e.id], relations: [] }) : plan && void approveItems(doc.id, plan, 0, [e.id]),
@@ -778,6 +803,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
             ))}
           </div>
         )}
+        {request.reply}
       </AskCard>
     );
   };
@@ -785,17 +811,20 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
     const r = seam.relation;
     const name = `${nameOf(doc, r.from)} —${relationTypeLabel(r.type, language)}→ ${nameOf(doc, r.to)}`;
     const plan = relationSeamPlan(doc, r, graph);
+    const request = requestOf(doc, r.id);
     return (
       <AskCard
         language={language}
         title={s.seamTitle}
-        question={fill(seam.unsure === "relation_wording" ? s.seamAskWording : s.seamAskOther, { name }, language)}
+        question={relationQuestion(s, seam.unsure, name, language)}
         busy={busy}
+        exits={request.exits}
+        held={request.held}
         explainHint={s.seamExplainHint}
         onExplain={(note) => void rejectItems(doc.id, { entities: [], relations: [r.id] }, note)}
         options={seam.options.map((o) => ({
           key: o.kind,
-          label: seamLabel(o),
+          label: seamOptionLabel(s, o, graph, language),
           disabled: o.kind !== "reject" && plan === null,
           onChoose: () =>
             o.kind === "reject" ? void rejectItems(doc.id, { entities: [], relations: [r.id] }) : plan && void approveItems(doc.id, plan, 0, [r.id]),
@@ -803,6 +832,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
       >
         <div className="review-row">{sourcesToggle(r.id, r.sources.length)}</div>
         {openSources.has(r.id) && sourceList(doc, r.id, r.sources, [r.from, r.to])}
+        {request.reply}
       </AskCard>
     );
   };

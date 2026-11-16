@@ -1035,6 +1035,71 @@ button.citation[aria-pressed="true"] {
   color: var(--color-textMuted);
 }
 
+/* 請上傳者確認（ADR 0011 決定 6，畫板 S-Review、S-Request）：已請求是膠囊與說明（.held、.pill）；
+   上傳者的回答是 surfaceRaised 的區塊，時間與說明是 textMuted（.reply、.recw）；上傳者首頁的項目是一列（.item、.kind） */
+.ask-card__held {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.ask-card__held .muted {
+  margin: 0;
+  font-size: 13px;
+}
+
+.ask-card__pill {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--color-surfaceRaised);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ask-card__reply {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--color-surfaceRaised);
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.ask-card__reply-meta {
+  font-size: 13px;
+  color: var(--color-textMuted);
+}
+
+p.ask-card__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--color-surfaceRaised);
+  font-size: 14px;
+}
+
+.ask-card__kind {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-surface);
+  font-size: 12px;
+}
+
 /* 回答中斷：已收到的文字變淡，不搖晃、不閃紅 */
 .answer-text {
   transition: opacity var(--motion-base) var(--ease-enter);

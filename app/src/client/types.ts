@@ -705,6 +705,13 @@ export interface UiStrings {
   seamReasonMerge: string;
   seamReasonExclude: string;
   seamReasonOther: string;
+  seamRequest: string;
+  seamHeld: string;
+  seamHeldNote: string;
+  seamReplyFrom: string;
+  seamRequestTitle: string;
+  seamRequestTurn: string;
+  seamRequestSent: string;
   // AI 在問你的共用文字（AskCard.tsx；ADR 0011、0012 共用）：「都不是，我來說明」、說明欄、複述（{note} 是人寫的說明）、「輪到你」
   commonExplain: string;
   commonExplainLabel: string;

@@ -234,13 +234,15 @@ export const relationReady = (doc: ReviewDocument, relationId: string) => {
   return r !== undefined && [r.from, r.to].every((id) => doc.entities.some((e) => e.id === id && e.status === "approved"));
 };
 
-// 待審筆數（#48）：目前身分看得到的待審實體與關係，加上待處理的說法不同（#51）與未處理的回答錯誤回報（#209）
+// 待審筆數（#48）：目前身分看得到的待審實體與關係，加上待處理的說法不同（#51）與未處理的回答錯誤回報（#209）。
+// held：已請上傳者確認、還沒回答的項目，不計入（ADR 0011 決定 6，seam-review.ts 的 heldItems()）
 export const pendingCount = (
   docs: readonly ReviewDocument[],
   conflicts: readonly Pick<ConflictItem, "decision">[] = [],
   reports: readonly Pick<AnswerReport, "resolution">[] = [],
+  held: ReadonlySet<string> = new Set(),
 ) =>
-  docs.reduce((n, d) => n + [...d.entities, ...d.relations].filter((x) => x.status === "pending").length, 0) +
+  docs.reduce((n, d) => n + [...d.entities, ...d.relations].filter((x) => x.status === "pending" && !held.has(x.id)).length, 0) +
   conflicts.filter((c) => c.decision === null).length +
   reports.filter((r) => r.resolution === null).length;
 
@@ -250,10 +252,11 @@ export function reviewTabCounts(
   docs: readonly ReviewDocument[],
   conflicts: readonly Pick<ConflictItem, "decision">[],
   reports: readonly Pick<AnswerReport, "resolution">[],
+  held: ReadonlySet<string> = new Set(),
 ): { pending: number; rejected: number; decided: number; reports: number } {
   const items = docs.flatMap((d) => [...d.entities, ...d.relations]);
   return {
-    pending: pendingCount(docs, conflicts),
+    pending: pendingCount(docs, conflicts, [], held),
     rejected: items.filter((x) => x.status === "rejected").length,
     decided: conflicts.filter((c) => c.decision !== null).length,
     reports: reports.filter((r) => r.resolution === null).length,

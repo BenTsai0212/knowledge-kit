@@ -46,6 +46,35 @@ describe("接縫卡片的選項（S-Review 的 .opt）", () => {
   });
 });
 
+describe("請上傳者確認（S-Review 的出口、.held、.reply，S-Request）", () => {
+  const card = (props: Partial<Parameters<typeof AskCard>[0]>) =>
+    renderToStaticMarkup(
+      createElement(AskCard, { language, title: s.seamTitle, question: "q", options: [{ key: "a", label: "A", onChoose: () => {} }], onExplain: () => {}, ...props }),
+    );
+
+  it("出口「我不確定，請上傳者確認」排在「都不是，我來說明」之後，同樣是 textMuted", () => {
+    const html = card({ exits: [{ key: "request", label: s.seamRequest, onChoose: () => {} }] });
+    const explain = `<button type="button" class="refusal-ask__skip">${s.commonExplain}</button>`;
+    const request = `<button type="button" class="refusal-ask__skip">${s.seamRequest}</button>`;
+    expect(html.indexOf(request)).toBeGreaterThan(html.indexOf(explain));
+  });
+
+  it("已請上傳者確認：不顯示選項與「輪到你」，改顯示膠囊與說明", () => {
+    const html = card({ held: createElement("span", { className: "ask-card__pill" }, s.seamHeld) });
+    expect(html).toContain(s.seamHeld);
+    expect(html).not.toContain("refusal-ask__options");
+    expect(html).not.toContain(s.commonYourTurn);
+    expect(rule(".ask-card__pill")).toMatchObject({ height: "26px", "border-radius": "999px", background: "var(--color-surfaceRaised)", "font-weight": "700" });
+    expect(rule(".ask-card__reply")).toMatchObject({ background: "var(--color-surfaceRaised)", "border-radius": "10px" });
+    expect(rule(".ask-card__reply-meta")).toMatchObject({ color: "var(--color-textMuted)" });
+  });
+
+  it("上傳者的「輪到你」說明回答只是說明", () => {
+    const turn = "turn-text";
+    expect(card({ turn })).toContain(`<p class="refusal-ask__turn">${turn}</p>`);
+  });
+});
+
 describe("跟著這一項一起決定的關係（S-Review 的 .rel）", () => {
   it("只有文字：小標 12px textMuted，關係 13px；沒有自己的按鈕", () => {
     expect(rule(".ask-card__rel")).toMatchObject({ display: "flex", "flex-direction": "column", "font-size": "13px" });

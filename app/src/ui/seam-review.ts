@@ -2,6 +2,7 @@
 // 待審的項目中哪些是接縫、要問什麼、給哪些選項。純函式；接縫的規則沿用 seams.ts，依目前身分（審核者）看得到的實體重算，
 // 所以提問與選項只用審核者看得到的內容（#247）。不是接縫的待審項目（例如直接收錄失敗）留在 rest，照逐筆核准的畫面處理
 import type { ClientConfig, LocalizedText } from "../client/types";
+import type { ReviewRequest } from "../extraction/requests";
 import { suggestMerge } from "../extraction/merge";
 import { nearMatch, planEntity, type SeamEntityInput, type Unsure, type VisibleEntity } from "../extraction/seams";
 import type { EntityApproval, ReviewDocument, ReviewEntity, ReviewRelation } from "../extraction/store";
@@ -148,4 +149,51 @@ export function sample<T>(items: readonly T[], n: number, random: () => number =
   }
   const picked = new Set(pool.slice(0, count));
   return items.filter((_, i) => picked.has(i));
+}
+
+// 請上傳者確認（ADR 0011 決定 6）：每個項目最新一個、項目還沒有決定的請求（readRequests() 的順序是舊的在前）。
+// 還沒回答的（reply 為 null）項目保留、不顯示選項，也不計入待審數字；回答後回到審核者，附上回答
+export function openRequests(requests: readonly ReviewRequest[]): Map<string, ReviewRequest> {
+  const latest = new Map<string, ReviewRequest>();
+  for (const r of requests) if (!r.decided) latest.set(r.itemId, r);
+  return latest;
+}
+
+// 已請上傳者確認、還沒回答的項目 id（待審數字不算這些）
+export const heldItems = (requests: readonly ReviewRequest[]): ReadonlySet<string> =>
+  new Set([...openRequests(requests).values()].filter((r) => r.reply === null).map((r) => r.itemId));
+
+export type RequestSeam = { kind: "entity"; seam: EntitySeam } | { kind: "relation"; seam: RelationSeam };
+
+// 上傳者首頁的提問：依上傳者看得到的實體（visible）重算這一項的接縫。看得到的實體與審核者不同、在上傳者看來不是接縫時，
+// 問「該不該收錄」（沒問題、不該收錄）；項目已不在待審時是 null
+export function requestSeam(doc: ReviewDocument, itemId: string, visible: VisibleEntity[], ctx: Context): RequestSeam | null {
+  const parts = seamPartition(doc, visible, ctx);
+  const entity = parts.entities.find((x) => x.entity.id === itemId);
+  if (entity !== undefined) return { kind: "entity", seam: entity };
+  const relation = parts.relations.find((x) => x.relation.id === itemId);
+  if (relation !== undefined) return { kind: "relation", seam: relation };
+  const options: SeamOption[] = [{ kind: "keep" }, { kind: "reject" }];
+  const e = doc.entities.find((x) => x.id === itemId && x.status === "pending");
+  if (e !== undefined) return { kind: "entity", seam: { entity: e, ask: { kind: "unsure", unsure: "other" }, options, keepInto: null, relations: [] } };
+  const r = doc.relations.find((x) => x.id === itemId && x.status === "pending");
+  return r === undefined ? null : { kind: "relation", seam: { relation: r, unsure: r.unsure ?? "other", options } };
+}
+
+export interface UploaderAsk {
+  request: ReviewRequest;
+  doc: ReviewDocument;
+  ask: RequestSeam;
+}
+
+// 上傳者首頁「有更新」的提問（畫板 S-Request）：自己上傳的文件中、項目還沒有決定的請求（每項最新一個，含已回答、等審核者決定的），
+// 依上傳者看得到的實體重算接縫。docs：readMyUploads() 的結果
+export function uploaderAsks(requests: readonly ReviewRequest[], docs: readonly ReviewDocument[], visible: VisibleEntity[], ctx: Context): UploaderAsk[] {
+  const asks: UploaderAsk[] = [];
+  for (const request of openRequests(requests).values()) {
+    const doc = docs.find((d) => d.id === request.documentId);
+    const ask = request.mine && doc !== undefined ? requestSeam(doc, request.itemId, visible, ctx) : null;
+    if (ask !== null) asks.push({ request, doc: doc!, ask });
+  }
+  return asks;
 }

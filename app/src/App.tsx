@@ -16,6 +16,7 @@ import { seedDataset } from "./dataset/seed";
 import { openDatabase, type Database } from "./db/database";
 import type { EvalRun } from "./evals/run";
 import { planExtraction, runExtraction, type ExtractionState } from "./extraction/run";
+import { readRequests } from "./extraction/requests";
 import { readReview } from "./extraction/store";
 import { readGraph, type Graph } from "./graph/read";
 import { ask, type Answer } from "./qa/answer";
@@ -47,6 +48,7 @@ import { HomePage } from "./ui/HomePage";
 import { createExtractionRunner } from "./ui/extraction-runner";
 import { defaultView, demoCompare, evalsMode, onlineDemo, presentationMode, visibleViews, type View } from "./ui/online-demo";
 import { createRequestGate } from "./ui/requests";
+import { heldItems } from "./ui/seam-review";
 import { SourcePanel } from "./ui/SourcePanel";
 import { SourceSheet } from "./ui/SourceSheet";
 import { SessionQuestions } from "./ui/SessionQuestions";
@@ -228,8 +230,8 @@ export function App() {
   useEffect(() => {
     if (db === null || !canReview) return;
     let cancelled = false;
-    void Promise.all([readReview(db, identity), readConflicts(db, identity), readReports(db, identity)]).then(([docs, conflicts, reports]) => {
-      const summary = waitingSummary(docs, conflicts, reports);
+    void Promise.all([readReview(db, identity), readConflicts(db, identity), readReports(db, identity), readRequests(db, identity)]).then(([docs, conflicts, reports, requests]) => {
+      const summary = waitingSummary(docs, conflicts, reports, heldItems(requests));
       if (!cancelled) setPending({ identity, count: summary.total, summary });
     });
     return () => {

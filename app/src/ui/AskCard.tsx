@@ -23,13 +23,19 @@ interface Props {
   onExplain?(note: string): void;
   // 說明的提示（例如記錄後會怎樣）
   explainHint?: string;
+  // 「都不是，我來說明」之後的其他出口（例如「我不確定，請上傳者確認」，ADR 0011 決定 6）：textMuted 字
+  exits?: AskOption[];
+  // 有值時不顯示選項與「輪到你」，改顯示這段內容（例如已請上傳者確認、上傳者已回答）
+  held?: ReactNode;
+  // 「輪到你」的文字（省略時是 commonYourTurn）
+  turn?: string;
   busy?: boolean;
 }
 
 // 說明的長度上限（與 review_decisions.note 的 CHECK 相同）
 const NOTE_MAX = 500;
 
-export function AskCard({ language, title, question, options, children, onExplain, explainHint, busy = false }: Props) {
+export function AskCard({ language, title, question, options, children, onExplain, explainHint, exits = [], held, turn, busy = false }: Props) {
   const s = strings(language);
   const [step, setStep] = useState<"ask" | "write" | "confirm">("ask");
   const [note, setNote] = useState("");
@@ -46,7 +52,8 @@ export function AskCard({ language, title, question, options, children, onExplai
         <p className="refusal-ask__title">{title}</p>
         <p className="refusal-ask__question">{question}</p>
         {children}
-        {step === "ask" && (
+        {held}
+        {held === undefined && step === "ask" && (
           <div className="refusal-ask__options">
             {options.map((o) => (
               <button key={o.key} type="button" disabled={busy || o.disabled} onClick={o.onChoose}>
@@ -58,9 +65,14 @@ export function AskCard({ language, title, question, options, children, onExplai
                 {s.commonExplain}
               </button>
             )}
+            {exits.map((o) => (
+              <button key={o.key} type="button" className="refusal-ask__skip" disabled={busy || o.disabled} onClick={o.onChoose}>
+                {o.label}
+              </button>
+            ))}
           </div>
         )}
-        {step === "write" && (
+        {held === undefined && step === "write" && (
           <div className="ask-card__explain">
             <p className="refusal-chosen__choice">{s.commonExplain}</p>
             <label>
@@ -75,7 +87,7 @@ export function AskCard({ language, title, question, options, children, onExplai
             </div>
           </div>
         )}
-        {step === "confirm" && (
+        {held === undefined && step === "confirm" && (
           <div className="ask-card__explain">
             <p className="refusal-chosen__choice">{note.trim()}</p>
             <p className="refusal-ask__question">{fill(s.commonRestate, { note: note.trim() }, language)}</p>
@@ -89,7 +101,7 @@ export function AskCard({ language, title, question, options, children, onExplai
             </div>
           </div>
         )}
-        <p className="refusal-ask__turn">{s.commonYourTurn}</p>
+        {held === undefined && <p className="refusal-ask__turn">{turn ?? s.commonYourTurn}</p>}
       </div>
     </div>
   );

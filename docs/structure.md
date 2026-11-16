@@ -128,12 +128,14 @@
 - `report-helpers.ts`：問答的「回報有錯」組成回報
 - `ReportList.tsx`：待審頁的「回報」分頁
 - `ReportResult.tsx`：回答下方與首頁的回報結果
+- `RequestAsk.tsx`：上傳者首頁「有更新」的請上傳者確認（提問、選項與回答；ADR 0011，見 `docs/extraction.md`「待審頁的接縫」）
 - `requests.ts`：切換身分或語言時捨棄進行中的提問
 - `review-helpers.ts`：待審頁的核准計畫
 - `ReviewPage.tsx`：待審頁（含「說法不同」的並列與處理；桌機照畫板 `F-Review`、`F-Empty`，#345）
 - `script.ts`：劇本的純函式（分組與順序、第 N／M 題、已問過、是否切換身分）
 - `ScriptPanel.tsx`：展示模式問答頁左欄的劇本（畫板 `H-QA`，#349），見 `docs/qa.md`「展示模式」
-- `seam-review.ts`：待審頁的接縫：哪些項目是接縫、提問與選項、選了之後要核准的內容、「已直接收錄」區的項目與隨機抽查（ADR 0011，見 `docs/extraction.md`「待審頁的接縫」）
+- `seam-review.ts`：待審頁的接縫：哪些項目是接縫、提問與選項、選了之後要核准的內容、「已直接收錄」區的項目與隨機抽查、請上傳者確認的請求與上傳者看到的提問（ADR 0011，見 `docs/extraction.md`「待審頁的接縫」）
+- `seam-text.ts`：接縫的提問、選項與上傳者回答的文字（待審頁與首頁共用）
 - `SessionQuestions.tsx`：手機與平板的「這次的問題（N）」按鈕，手機打開底部面板、平板打開滑出面板（#256、#333）
 - `Sidebar.tsx`：桌機的左側欄（客戶名稱、頁面項目、「虛構資料 · 展示用權限」、使用者卡與身分和語言選單，#330）
 - `source-steps.ts`：「出處 N／M」與「在圖譜中查看」目標的純函式

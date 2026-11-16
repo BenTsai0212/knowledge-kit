@@ -277,6 +277,8 @@ const uiStrings = {
   seamAutoMergedInto: "required", seamAutoRetract: "required", seamAutoReasonTitle: "required", seamAutoCancel: "required", seamAutoRetracted: "required",
   seamAutoToast: "required", seamReasonName: "required", seamReasonRelation: "required", seamReasonMerge: "required", seamReasonExclude: "required",
   seamReasonOther: "required",
+  seamRequest: "required", seamHeld: "required", seamHeldNote: "required", seamReplyFrom: "required", seamRequestTitle: "required",
+  seamRequestTurn: "required", seamRequestSent: "required",
   commonExplain: "required", commonExplainLabel: "required", commonExplainSubmit: "required", commonRestate: "required",
   commonRestateYes: "required", commonRestateEdit: "required", commonYourTurn: "required",
   reportButton: "required", reportCategory: "required", reportCategories: "required", reportNote: "required",

@@ -29,20 +29,22 @@ export interface WaitingSummary {
   total: number;
 }
 
-// 主管的「等你處理」：只用目前身分讀得到的待審、說法不同與回報（讀取時已經過 RLS）
+// 主管的「等你處理」：只用目前身分讀得到的待審、說法不同與回報（讀取時已經過 RLS）。
+// held：已請上傳者確認、還沒回答的項目，不算（ADR 0011 決定 6）
 export function waitingSummary(
   docs: readonly ReviewDocument[],
   conflicts: readonly Pick<ConflictItem, "decision">[],
   reports: readonly Pick<AnswerReport, "resolution" | "reportedAt">[],
+  held: ReadonlySet<string> = new Set(),
 ): WaitingSummary {
   const open = reports.filter((r) => r.resolution === null);
   const earliest = open.reduce<string | null>((min, r) => (min === null || Date.parse(r.reportedAt) < Date.parse(min) ? r.reportedAt : min), null);
   return {
-    documents: docs.filter((d) => [...d.entities, ...d.relations].some((x) => x.status === "pending")).length,
+    documents: docs.filter((d) => [...d.entities, ...d.relations].some((x) => x.status === "pending" && !held.has(x.id))).length,
     conflicts: conflicts.filter((c) => c.decision === null).length,
     reports: open.length,
     earliestReport: earliest,
-    total: pendingCount(docs, conflicts, reports),
+    total: pendingCount(docs, conflicts, reports, held),
   };
 }
 
