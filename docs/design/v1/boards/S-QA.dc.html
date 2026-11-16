@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>問答的接縫提問</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Sans+TC:wght@400;500;700;900&amp;family=Noto+Serif+TC:wght@400;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+.board{color:var(--text);font-family:Inter,'Noto Sans TC',sans-serif;background:var(--board)}
+.bh{display:flex;justify-content:space-between;align-items:flex-end;gap:24px}
+.kick{margin:0;font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:.1em;color:var(--primary)}
+.bt{margin:0;font-size:30px;font-weight:900;line-height:1.3}
+.bs{margin:0;font-size:14px;line-height:1.7;color:var(--muted);max-width:1500px}
+.ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.ctl-l{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);margin-right:4px}
+.sw{height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--text);font:600 13px Inter,'Noto Sans TC',sans-serif;cursor:pointer}
+.sw[aria-pressed="true"]{background:var(--ink);color:var(--inkFg);border-color:var(--ink)}
+.row{display:flex;gap:56px;align-items:flex-start}
+.fcol{display:flex;flex-direction:column;gap:12px}
+.cap{margin:0;font-size:13px;line-height:1.6;color:var(--muted);max-width:820px}
+.capb{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--primary)}
+.notes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.note{padding:16px 18px;border-radius:14px;background:var(--surface);border:1px dashed var(--dash);font-size:13.5px;line-height:1.7}
+.note b{display:block;font-size:14px;margin-bottom:4px}
+code{font-family:'JetBrains Mono',monospace;font-size:12px}
+
+/* 三種尺寸的外框 */
+.fd{position:relative;width:1280px;height:1180px;border-radius:14px;overflow:hidden;background:var(--bg);box-shadow:0 0 0 1px var(--line),0 24px 60px var(--shadow);display:flex}
+.ft{position:relative;width:820px;height:1180px;border-radius:28px;overflow:hidden;background:var(--bg);box-shadow:0 0 0 12px var(--bezel);display:flex}
+.fp{position:relative;width:390px;height:844px;border-radius:40px;overflow:hidden;background:var(--bg);box-shadow:0 0 0 10px var(--bezel);display:flex;flex-direction:column}
+.side{flex:none;width:220px;padding:20px 14px;display:flex;flex-direction:column;gap:4px;background:var(--surface);border-right:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px 16px;font-size:16px;font-weight:900}
+.nl{position:relative;display:flex;align-items:center;height:44px;padding:0 12px;border-radius:10px;color:var(--text);text-decoration:none;font-size:15px}
+.nl[aria-current="page"]{background:var(--ink);color:var(--inkFg);font-weight:700}
+.nb{margin-left:auto;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--primary);color:var(--onPrimary);font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.who{margin-top:auto;display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;background:var(--raised)}
+.av{flex:none;width:32px;height:32px;border-radius:999px;background:var(--ink);color:var(--inkFg);font-size:13px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.dmain{flex:1;min-width:0;overflow:auto;padding:32px 40px;display:flex;flex-direction:column;gap:18px}
+.daside{flex:none;width:380px;overflow:hidden;padding:28px 22px;display:flex;flex-direction:column;gap:14px;background:var(--surface);border-left:1px solid var(--line)}
+.rail{flex:none;width:72px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 0 20px;background:var(--surface);border-right:1px solid var(--line)}
+.ri{position:relative;width:60px;height:56px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;text-decoration:none;color:var(--muted)}
+.ri[aria-current="page"]{background:var(--primarySoft);color:var(--primary);font-weight:700}
+.rb{position:absolute;top:4px;right:6px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--primary);color:var(--onPrimary);font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.tmain{flex:1;min-width:0;overflow:auto;padding:32px 28px;display:flex;flex-direction:column;gap:16px}
+.ptop{flex:none;display:flex;align-items:center;gap:10px;height:56px;padding:8px 16px 0;font-size:17px;font-weight:900}
+.ptop .back{font-size:15px;font-weight:600;color:var(--primary)}
+.prole{margin-left:auto;height:32px;padding:0 12px;border-radius:999px;background:var(--ink);color:var(--inkFg);font-size:12px;font-weight:700;display:inline-flex;align-items:center}
+.pmain{flex:1;min-height:0;overflow:auto;padding:8px 16px 12px;display:flex;flex-direction:column;gap:12px}
+.ptabs{flex:none;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));height:72px;padding-bottom:12px;border-top:1px solid var(--line);background:var(--surface)}
+.pt{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--muted);text-decoration:none;font-size:11px}
+.pt[aria-current="page"]{color:var(--primary);font-weight:700}
+.pb{position:absolute;top:6px;left:50%;margin-left:6px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--primary);color:var(--onPrimary);font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.h2{margin:0;font-size:26px;font-weight:700}
+.fp .h2{font-size:20px}
+
+/* 問答 */
+.bubble{align-self:flex-end;max-width:70%;padding:12px 16px;border-radius:16px 16px 4px 16px;background:var(--text);color:var(--bg);font-size:15px;line-height:1.6}
+.under{align-self:flex-end;margin:-8px 4px 0;font-size:12px;color:var(--muted)}
+.card{display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
+.ans{margin:0;font-size:16px;line-height:1.8}
+.ans sup{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--primary)}
+.conf{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;background:var(--conflictSoft);color:var(--conflictText);font-size:14px;line-height:1.5}
+.conf b{font-size:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{height:32px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:var(--raised);color:var(--text);font:13px Inter,'Noto Sans TC',sans-serif;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.chip .n{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--primary)}
+.mine{align-self:flex-end;max-width:80%;margin:0;padding:10px 16px;border-radius:16px 16px 4px 16px;background:var(--text);color:var(--bg);font-size:15px;line-height:1.6}
+.add{margin:0;font-size:15px;line-height:1.7}
+.addl{margin-right:8px;font-size:12px;font-weight:700;color:var(--muted)}
+.lnk{color:var(--primary);text-decoration:underline;text-underline-offset:3px}
+.muted{margin:0;font-size:13px;line-height:1.6;color:var(--muted)}
+
+/* AI 在問你（AskCard／refusal-ask） */
+.ask{display:flex;gap:12px;padding:14px 16px;border-radius:12px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--mark)}
+.ai{flex:none;width:24px;height:24px;border-radius:50%;background:var(--mark);color:var(--markText);font-size:14px;font-weight:700;display:grid;place-items:center}
+.am{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.at{margin:0;font-size:12px;font-weight:700;color:var(--muted)}
+.aq{margin:0;font-size:15px;font-weight:600;line-height:1.6}
+.opts{display:flex;flex-direction:column;gap:8px;max-width:360px}
+.opt{min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--text);font:14px Inter,'Noto Sans TC',sans-serif;text-align:start;cursor:pointer}
+.opt.skip{color:var(--muted)}
+.turn{margin:0;font-size:12px;color:var(--muted)}
+.fp .opts{flex-flow:row wrap;max-width:none}
+.fp .opt{border-radius:999px;text-align:center}
+.expl{display:flex;flex-direction:column;gap:8px}
+.expl label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.expl textarea{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);font:14px/1.6 Inter,'Noto Sans TC',sans-serif;resize:none}
+
+/* 另一種讀法 */
+.alt{display:flex;gap:12px;padding:14px 16px;border-radius:12px;background:var(--markSoft);border:1px solid var(--markLine)}
+.alti{flex:none;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--markLine);color:var(--text);font-size:13px;font-weight:700;display:grid;place-items:center}
+.alt mark{padding:1px 4px;border-radius:4px;background:var(--mark);color:var(--markText)}
+.obtn{align-self:flex-start;height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--markLine);background:var(--surface);color:var(--text);font:600 13px Inter,'Noto Sans TC',sans-serif;cursor:pointer}
+
+/* 記錄 */
+.rec{display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px dashed var(--dash);font-size:14px;line-height:1.6}
+.recl{font-size:12px;font-weight:700;color:var(--muted)}
+.recr{display:flex;flex-wrap:wrap;gap:4px 8px}
+.recw{color:var(--muted);font-size:13px}
+
+/* 原文 */
+.src{display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:12px;background:var(--bg);border:1px solid var(--line)}
+.srch{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.srcn{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--primary)}
+.srcp{margin:0;font-family:'Noto Serif TC',Georgia,serif;font-size:15px;line-height:1.85}
+.srcp mark{padding:1px 3px;border-radius:3px;background:var(--mark);color:var(--markText)}
+.sover{position:absolute;inset:0;background:var(--overlay)}
+.spanel{position:absolute;top:0;right:0;bottom:0;width:420px;overflow:hidden;padding:24px 20px;display:flex;flex-direction:column;gap:12px;background:var(--surface);box-shadow:-12px 0 40px var(--shadow)}
+.ssheet{position:absolute;left:0;right:0;bottom:0;max-height:72%;overflow:hidden;padding:10px 16px 24px;border-radius:20px 20px 0 0;display:flex;flex-direction:column;gap:10px;background:var(--surface)}
+.grab{align-self:center;width:40px;height:5px;border-radius:999px;background:var(--line)}
+.ph{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700}
+.x{margin-left:auto;width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--text);font-size:16px;cursor:pointer}
+
+/* 待審 */
+.tabs{display:flex;gap:4px;padding:3px;border-radius:10px;background:var(--raised);align-self:flex-start}
+.tab{height:34px;padding:0 12px;border-radius:8px;font-size:13px;display:inline-flex;align-items:center;color:var(--text)}
+.tab.on{background:var(--surface);font-weight:700;box-shadow:0 1px 2px var(--shadow)}
+.doc{display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
+.fp .doc{padding:12px}
+.doch{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px}
+.doch b{font-size:17px}
+.grp{margin:4px 0 0;font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--muted)}
+.item{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:10px 12px;border-radius:10px;background:var(--raised);font-size:14px}
+.kind{height:24px;padding:0 8px;border-radius:6px;background:var(--surface);border:1px solid var(--line);font-size:12px;display:inline-flex;align-items:center;gap:6px}
+.dot{width:9px;height:9px;border-radius:999px;background:var(--eP)}
+.rel{display:flex;flex-direction:column;gap:4px;font-size:13px}
+.rel span{color:var(--muted);font-size:12px}
+.held{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.pill{height:26px;padding:0 10px;border-radius:999px;background:var(--raised);color:var(--text);font-size:12px;font-weight:700;display:inline-flex;align-items:center}
+.reply{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:10px;background:var(--raised);font-size:14px;line-height:1.6}
+.auto{display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:12px;border:1px solid var(--line)}
+.autoh{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.autoh b{font-size:15px}
+.sbtn{height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--text);font:600 13px Inter,'Noto Sans TC',sans-serif;cursor:pointer}
+.arow{display:flex;flex-direction:column;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
+.arow1{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:14px}
+.arow1 .t{flex:1;min-width:160px}
+.done{height:26px;padding:0 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);font-size:12px;font-weight:700;display:inline-flex;align-items:center}
+.rch{display:flex;flex-wrap:wrap;gap:6px}
+.rc{height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--text);font:13px Inter,'Noto Sans TC',sans-serif;cursor:pointer}
+.rc[aria-pressed="true"]{background:var(--ink);color:var(--inkFg);border-color:var(--ink)}
+.rin{height:40px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);font:14px Inter,'Noto Sans TC',sans-serif}
+
+/* 首頁 */
+.qbox{display:flex;gap:10px;padding:14px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
+.qin{flex:1;height:50px;padding:0 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--muted);font-size:15px;display:flex;align-items:center}
+.qgo{height:50px;padding:0 18px;border-radius:12px;background:var(--primary);color:var(--onPrimary);font-size:15px;font-weight:700;display:inline-flex;align-items:center}
+.upd{display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
+.fp .upd{padding:12px}
+.uitem{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 12px;border-radius:12px;background:var(--raised)}
+.udot{flex:none;width:8px;height:8px;border-radius:999px}
+.ut{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-size:14px;font-weight:600}
+.ut span{font-size:12px;font-weight:400;color:var(--muted)}
+
+/* 規格板 */
+.spec{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.sc{display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:16px;background:var(--bg);border:1px solid var(--line)}
+.sch{display:flex;align-items:baseline;gap:8px}
+.sch b{font-size:16px}
+.tok{font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.7;color:var(--muted)}
+.tbl{display:grid;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--surface);font-size:13.5px;line-height:1.55}
+.tbl>span{padding:9px 12px;border-top:1px solid var(--line)}
+.tbl>.th{background:var(--ink);color:var(--inkFg);font-weight:700;border-top:0}
+</style>
+</helmet>
+<div class="board" style="--board: {{t.board}}; --bg: {{t.bg}}; --surface: {{t.surface}}; --raised: {{t.raised}}; --text: {{t.text}}; --muted: {{t.muted}}; --line: {{t.line}}; --dash: {{t.dash}}; --bezel: {{t.bezel}}; --primary: {{t.primary}}; --primarySoft: {{t.primarySoft}}; --onPrimary: {{t.onPrimary}}; --evid: {{t.evid}}; --ink: {{t.inkBg}}; --inkFg: {{t.inkFg}}; --mark: {{t.mark}}; --markSoft: {{t.markSoft}}; --markText: {{t.markText}}; --markLine: {{t.markLine}}; --conflictSoft: {{t.conflictSoft}}; --conflictText: {{t.conflictText}}; --overlay: {{t.overlay}}; --shadow: {{t.shadow}}; --eP: {{t.eP}}; --eT: {{t.eT}}; --eJ: {{t.eJ}}; width: 2760px; height: 1720px; padding: 40px 56px; display: flex; flex-direction: column; gap: 28px">
+  <header class="bh">
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <p class="kick">ADR 0012 · 討論版</p>
+      <h1 class="bt">問答：同名先反問，說法不同在回答後問一次</h1>
+      <p class="bs">一般員工的身分。點狀態或直接點選項都可以往下走；三種尺寸同步。出處的小卡會打開原文（桌機在右欄，平板從右側滑出，手機是底部面板）。</p>
+    </div>
+  </header>
+  <div class="ctl"><span class="ctl-l">狀態</span>
+        <sc-for list="{{steps}}" as="s" hint-placeholder-count="6"><button type="button" class="sw" onClick="{{s.pick}}" aria-pressed="{{s.on}}">{{s.label}}</button></sc-for>
+        <button type="button" class="sw" onClick="{{toggleDark}}" aria-pressed="{{darkPressed}}" style="margin-left: 12px">{{modeLabel}}</button></div>
+  <div class="row">
+    <div class="fcol"><div class="fd">
+        <nav aria-label="頁面" class="side">
+          <div class="brand"><svg width="28" height="28" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="11" fill="{{t.raised}}"></rect><path d="M17 12v24M17 24 32 13.5M17 24l15 10.5" fill="none" stroke="{{t.text}}" stroke-width="4.5" stroke-linecap="round"></path><circle cx="32" cy="34.5" r="5" fill="{{t.primary}}"></circle><circle cx="32" cy="13.5" r="5" fill="{{t.evid}}"></circle></svg>範例公司</div>
+          <sc-for list="{{navD}}" as="n" hint-placeholder-count="6"><a href="#" class="nl" aria-current="{{n.current}}">{{n.label}}<sc-if value="{{n.badge}}"><span class="nb">{{n.badge}}</span></sc-if></a></sc-for>
+          <div class="who"><span class="av">{{who.init}}</span><span style="display: flex; flex-direction: column"><b style="font-size: 14px">{{who.name}}</b><span style="font-size: 12px; color: var(--muted)">{{who.role}}</span></span></div>
+        </nav>
+        <main class="dmain">
+<h2 class="h2">問答</h2>
+<sc-if value="{{sceneName}}">
+  <div class="bubble">林志明負責哪些專案？</div>
+  <sc-if value="{{n2}}"><p class="under">指的是 林志明（業務部）</p></sc-if>
+  <sc-if value="{{n1}}">
+    <div class="ask" role="group" aria-label="想確認你問的是誰"><span class="ai" aria-hidden="true">?</span><div class="am">
+      <p class="at">想確認你問的是誰</p>
+      <p class="aq">公司有兩位林志明，你問的是哪一位？</p>
+      <div class="opts"><sc-for list="{{nameOpts}}" as="o" hint-placeholder-count="3"><button type="button" class="opt" onClick="{{o.pick}}">{{o.label}}</button></sc-for></div>
+      <p class="turn">輪到你</p>
+    </div></div>
+    <p class="muted">回答前反問，不呼叫模型；選了之後才送出問題。</p>
+  </sc-if>
+  <sc-if value="{{n2}}">
+    <article class="card">
+      <p class="ans">林志明（業務部）負責北區客戶，也參與長堤專案的客戶導入<sup>[1]</sup>。</p>
+      <div class="chips"><button type="button" class="chip" onClick="{{openSrc}}"><span class="n">1</span>組織與主管名單</button></div>
+    </article>
+  </sc-if>
+</sc-if>
+<sc-if value="{{sceneConf}}">
+  <div class="bubble">青翼桌什麼時候上市？</div>
+  <article class="card">
+    <p class="ans">兩份文件的說法不同：〈青翼專案啟動會議紀錄〉寫預計 Q2 上市<sup>[1]</sup>，〈青翼專案進度更新〉寫延後至 Q3<sup>[2]</sup>。</p>
+    <div class="conf"><b>說法不同</b>出處 1 與 2 的上市時間不同</div>
+    <div class="chips"><button type="button" class="chip" onClick="{{openSrc}}"><span class="n">1</span>青翼專案啟動會議紀錄</button><button type="button" class="chip" onClick="{{openSrc}}"><span class="n">2</span>青翼專案進度更新</button></div>
+    <sc-if value="{{showAsk}}">
+      <div class="ask" role="group" aria-label="想聽你的判斷"><span class="ai" aria-hidden="true">?</span><div class="am">
+        <p class="at">想聽你的判斷</p>
+        <p class="aq">我不確定這兩段的關係，你怎麼看？</p>
+        <sc-if value="{{c1}}">
+          <div class="opts"><sc-for list="{{hypOpts}}" as="o" hint-placeholder-count="4"><button type="button" class="{{o.cls}}" onClick="{{o.pick}}">{{o.label}}</button></sc-for></div>
+          <p class="turn">輪到你</p>
+        </sc-if>
+        <sc-if value="{{c6}}">
+          <div class="expl">
+            <p class="mine">都不是，我來說明</p>
+            <p class="mine">兩份都對：Q2 是國內，Q3 是海外</p>
+            <p class="aq">我理解成：兩份都對：Q2 是國內，Q3 是海外，對嗎？</p>
+            <div class="opts"><button type="button" class="opt" onClick="{{toRecExplain}}">對，記錄下來</button><button type="button" class="opt skip">我再改改</button></div>
+            <p class="turn">輪到你</p>
+          </div>
+        </sc-if>
+      </div></div>
+    </sc-if>
+    <sc-if value="{{showB1}}"><p class="mine">{{b1}}</p></sc-if>
+    <sc-if value="{{showAdd}}"><p class="add"><span class="addl">補充</span>進度更新裡寫的是「延後至 Q3」。你的理解會記在這兩段旁。</p></sc-if>
+    <sc-if value="{{showAlt}}">
+      <div class="alt" role="group" aria-label="我想到另一種可能"><span class="alti" aria-hidden="true">↺</span><div class="am">
+        <p class="at" style="color: var(--text)">我想到另一種可能 · 一起再看看</p>
+        <p class="aq" style="font-weight: 500">進度更新裡寫的是「<mark>延後</mark>」，比較像同一個時程改過。你覺得呢？</p>
+        <button type="button" class="obtn" onClick="{{openSrc}}">對照原文</button>
+        <sc-if value="{{c3}}">
+          <div class="opts"><button type="button" class="opt" onClick="{{toChanged}}">改成「我覺得是後來改過」</button><button type="button" class="opt" onClick="{{toKept}}">我維持原本的想法</button></div>
+          <p class="turn">輪到你 · 維持原本的想法也完全可以</p>
+        </sc-if>
+      </div></div>
+    </sc-if>
+    <sc-if value="{{showB2}}"><p class="mine">{{b2}}</p></sc-if>
+    <sc-if value="{{showRec}}">
+      <div class="rec">
+        <span class="recl">記錄</span>
+        <div class="recr"><span>{{mine}}</span><span class="recw">你 · 一般員工 · 剛剛</span></div>
+        <span class="recl" style="margin-top: 4px">同事的理解</span>
+        <sc-for list="{{peers}}" as="p" hint-placeholder-count="2"><div class="recr"><span>{{p.text}}</span><span class="recw">{{p.who}}</span></div></sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{c5}}"><p class="muted">已略過：這一組這次不再問你。兩種說法照樣並列。</p></sc-if>
+  </article>
+</sc-if>
+</main><aside class="daside" aria-label="原文"><div class="ph">原文</div>
+<sc-if value="{{sceneConf}}">
+  <div class="conf"><b>說法不同</b>兩段的上市時間不同</div>
+  <div class="src"><div class="srch"><span class="srcn">1</span>青翼專案啟動會議紀錄 · 2026/02/10 · ¶3</div><p class="srcp">會議決議：青翼桌預計 Q2 上市，首批 500 張。</p></div>
+  <div class="src"><div class="srch"><span class="srcn">2</span>青翼專案進度更新 · 2026/05/15 · ¶2</div>
+    <sc-if value="{{hlEvid}}"><p class="srcp">青翼桌上市時間<mark>延後至 Q3</mark>。原因：馬達供應商交期延遲，首批數量不變。</p></sc-if>
+    <sc-if value="{{noEvid}}"><p class="srcp">青翼桌上市時間延後至 Q3。原因：馬達供應商交期延遲，首批數量不變。</p></sc-if>
+  </div>
+  <sc-if value="{{showRec}}">
+    <div class="rec"><span class="recl">記錄（人的理解）</span>
+      <div class="recr"><span>{{mine}}</span><span class="recw">你 · 一般員工 · 剛剛</span></div>
+      <sc-for list="{{peers}}" as="p" hint-placeholder-count="2"><div class="recr"><span>{{p.text}}</span><span class="recw">{{p.who}}</span></div></sc-for>
+    </div>
+  </sc-if>
+  <sc-if value="{{noRec}}"><p class="muted">先留下你的理解或略過，才看得到同事的理解。</p></sc-if>
+</sc-if>
+<sc-if value="{{sceneName}}">
+  <sc-if value="{{n2}}"><div class="src"><div class="srch"><span class="srcn">1</span>組織與主管名單 · 2026/01/12 · ¶3</div><p class="srcp">業務部由李佳穎擔任經理，業務代表<mark>林志明</mark>負責北區客戶，並參與長堤專案的客戶導入。</p></div></sc-if>
+  <sc-if value="{{n1}}"><p class="muted">回答後，引用的原文會出現在這裡。</p></sc-if>
+</sc-if>
+</aside>
+      </div><p class="cap"><span class="capb">桌機 · 1280</span>　左側導覽、中間問答、右欄原文。另一種讀法出現時，原文的依據句以螢光標出。</p></div>
+    <div class="fcol"><div class="ft">
+        <nav aria-label="頁面" class="rail"><svg width="36" height="36" style="margin-bottom: 14px" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="11" fill="{{t.raised}}"></rect><path d="M17 12v24M17 24 32 13.5M17 24l15 10.5" fill="none" stroke="{{t.text}}" stroke-width="4.5" stroke-linecap="round"></path><circle cx="32" cy="34.5" r="5" fill="{{t.primary}}"></circle><circle cx="32" cy="13.5" r="5" fill="{{t.evid}}"></circle></svg>
+          <sc-for list="{{navT}}" as="r" hint-placeholder-count="6"><a href="#" class="ri" aria-current="{{r.current}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{r.icon}}"></path></svg>{{r.label}}<sc-if value="{{r.badge}}"><span class="rb">{{r.badge}}</span></sc-if></a></sc-for>
+          <span class="av" style="margin-top: auto; width: 40px; height: 40px; font-size: 14px">{{who.init}}</span>
+        </nav>
+        <main class="tmain">
+<h2 class="h2">問答</h2>
+<sc-if value="{{sceneName}}">
+  <div class="bubble">林志明負責哪些專案？</div>
+  <sc-if value="{{n2}}"><p class="under">指的是 林志明（業務部）</p></sc-if>
+  <sc-if value="{{n1}}">
+    <div class="ask" role="group" aria-label="想確認你問的是誰"><span class="ai" aria-hidden="true">?</span><div class="am">
+      <p class="at">想確認你問的是誰</p>
+      <p class="aq">公司有兩位林志明，你問的是哪一位？</p>
+      <div class="opts"><sc-for list="{{nameOpts}}" as="o" hint-placeholder-count="3"><button type="button" class="opt" onClick="{{o.pick}}">{{o.label}}</button></sc-for></div>
+      <p class="turn">輪到你</p>
+    </div></div>
+    <p class="muted">回答前反問，不呼叫模型；選了之後才送出問題。</p>
+  </sc-if>
+  <sc-if value="{{n2}}">
+    <article class="card">
+      <p class="ans">林志明（業務部）負責北區客戶，也參與長堤專案的客戶導入<sup>[1]</sup>。</p>
+      <div class="chips"><button type="button" class="chip" onClick="{{openSrc}}"><span class="n">1</span>組織與主管名單</button></div>
+    </article>
+  </sc-if>
+</sc-if>
+<sc-if value="{{sceneConf}}">
+  <div class="bubble">青翼桌什麼時候上市？</div>
+  <article class="card">
+    <p class="ans">兩份文件的說法不同：〈青翼專案啟動會議紀錄〉寫預計 Q2 上市<sup>[1]</sup>，〈青翼專案進度更新〉寫延後至 Q3<sup>[2]</sup>。</p>
+    <div class="conf"><b>說法不同</b>出處 1 與 2 的上市時間不同</div>
+    <div class="chips"><button type="button" class="chip" onClick="{{openSrc}}"><span class="n">1</span>青翼專案啟動會議紀錄</button><button type="button" class="chip" onClick="{{openSrc}}"><span class="n">2</span>青翼專案進度更新</button></div>
+    <sc-if value="{{showAsk}}">
+      <div class="ask" role="group" aria-label="想聽你的判斷"><span class="ai" aria-hidden="true">?</span><div class="am">
+        <p class="at">想聽你的判斷</p>
+        <p class="aq">我不確定這兩段的關係，你怎麼看？</p>
+        <sc-if value="{{c1}}">
+          <div class="opts"><sc-for list="{{hypOpts}}" as="o" hint-placeholder-count="4"><button type="button" class="{{o.cls}}" onClick="{{o.pick}}">{{o.label}}</button></sc-for></div>
+          <p class="turn">輪到你</p>
+        </sc-if>
+        <sc-if value="{{c6}}">
+          <div class="expl">
+            <p class="mine">都不是，我來說明</p>
+            <p class="mine">兩份都對：Q2 是國內，Q3 是海外</p>
+            <p class="aq">我理解成：兩份都對：Q2 是國內，Q3 是海外，對嗎？</p>
+            <div class="opts"><button type="button" class="opt" onClick="{{toRecExplain}}">對，記錄下來</button><button type="button" class="opt skip">我再改改</button></div>
+            <p class="turn">輪到你</p>
+          </div>
+        </sc-if>
+      </div></div>
+    </sc-if>
+    <sc-if value="{{showB1}}"><p class="mine">{{b1}}</p></sc-if>
+    <sc-if value="{{showAdd}}"><p class="add"><span class="addl">補充</span>進度更新裡寫的是「延後至 Q3」。你的理解會記在這兩段旁。</p></sc-if>
+    <sc-if value="{{showAlt}}">
+      <div class="alt" role="group" aria-label="我想到另一種可能"><span class="alti" aria-hidden="true">↺</span><div class="am">
+        <p class="at" style="color: var(--text)">我想到另一種可能 · 一起再看看</p>
+        <p class="aq" style="font-weight: 500">進度更新裡寫的是「<mark>延後</mark>」，比較像同一個時程改過。你覺得呢？</p>
+        <button type="button" class="obtn" onClick="{{openSrc}}">對照原文</button>
+        <sc-if value="{{c3}}">
+          <div class="opts"><button type="button" class="opt" onClick="{{toChanged}}">改成「我覺得是後來改過」</button><button type="button" class="opt" onClick="{{toKept}}">我維持原本的想法</button></div>
+          <p class="turn">輪到你 · 維持原本的想法也完全可以</p>
+        </sc-if>
+      </div></div>
+    </sc-if>
+    <sc-if value="{{showB2}}"><p class="mine">{{b2}}</p></sc-if>
+    <sc-if value="{{showRec}}">
+      <div class="rec">
+        <span class="recl">記錄</span>
+        <div class="recr"><span>{{mine}}</span><span class="recw">你 · 一般員工 · 剛剛</span></div>
+        <span class="recl" style="margin-top: 4px">同事的理解</span>
+        <sc-for list="{{peers}}" as="p" hint-placeholder-count="2"><div class="recr"><span>{{p.text}}</span><span class="recw">{{p.who}}</span></div></sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{c5}}"><p class="muted">已略過：這一組這次不再問你。兩種說法照樣並列。</p></sc-if>
+  </article>
+</sc-if>
+</main><sc-if value="{{src}}"><div class="sover" onClick="{{closeSrc}}"></div><div class="spanel"><div class="ph">原文<button type="button" class="x" onClick="{{closeSrc}}" aria-label="關閉">×</button></div>
+<sc-if value="{{sceneConf}}">
+  <div class="conf"><b>說法不同</b>兩段的上市時間不同</div>
+  <div class="src"><div class="srch"><span class="srcn">1</span>青翼專案啟動會議紀錄 · 2026/02/10 · ¶3</div><p class="srcp">會議決議：青翼桌預計 Q2 上市，首批 500 張。</p></div>
+  <div class="src"><div class="srch"><span class="srcn">2</span>青翼專案進度更新 · 2026/05/15 · ¶2</div>
+    <sc-if value="{{hlEvid}}"><p class="srcp">青翼桌上市時間<mark>延後至 Q3</mark>。原因：馬達供應商交期延遲，首批數量不變。</p></sc-if>
+    <sc-if value="{{noEvid}}"><p class="srcp">青翼桌上市時間延後至 Q3。原因：馬達供應商交期延遲，首批數量不變。</p></sc-if>
+  </div>
+  <sc-if value="{{showRec}}">
+    <div class="rec"><span class="recl">記錄（人的理解）</span>
+      <div class="recr"><span>{{mine}}</span><span class="recw">你 · 一般員工 · 剛剛</span></div>
+      <sc-for list="{{peers}}" as="p" hint-placeholder-count="2"><div class="recr"><span>{{p.text}}</span><span class="recw">{{p.who}}</span></div></sc-for>
+    </div>
+  </sc-if>
+  <sc-if value="{{noRec}}"><p class="muted">先留下你的理解或略過，才看得到同事的理解。</p></sc-if>
+</sc-if>
+<sc-if value="{{sceneName}}">
+  <sc-if value="{{n2}}"><div class="src"><div class="srch"><span class="srcn">1</span>組織與主管名單 · 2026/01/12 · ¶3</div><p class="srcp">業務部由李佳穎擔任經理，業務代表<mark>林志明</mark>負責北區客戶，並參與長堤專案的客戶導入。</p></div></sc-if>
+  <sc-if value="{{n1}}"><p class="muted">回答後，引用的原文會出現在這裡。</p></sc-if>
+</sc-if>
+</div></sc-if>
+      </div><p class="cap"><span class="capb">平板直向 · 820</span>　72px 圖示導覽列；原文從右側滑出（最寬 420px，背後 overlay）。</p></div>
+    <div class="fcol"><div class="fp">
+        <div class="ptop">問答<span class="prole">{{who.role}}</span></div>
+        <div class="pmain">
+<h2 class="h2">問答</h2>
+<sc-if value="{{sceneName}}">
+  <div class="bubble">林志明負責哪些專案？</div>
+  <sc-if value="{{n2}}"><p class="under">指的是 林志明（業務部）</p></sc-if>
+  <sc-if value="{{n1}}">
+    <div class="ask" role="group" aria-label="想確認你問的是誰"><span class="ai" aria-hidden="true">?</span><div class="am">
+      <p class="at">想確認你問的是誰</p>
+      <p class="aq">公司有兩位林志明，你問的是哪一位？</p>
+      <div class="opts"><sc-for list="{{nameOpts}}" as="o" hint-placeholder-count="3"><button type="button" class="opt" onClick="{{o.pick}}">{{o.label}}</button></sc-for></div>
+      <p class="turn">輪到你</p>
+    </div></div>
+    <p class="muted">回答前反問，不呼叫模型；選了之後才送出問題。</p>
+  </sc-if>
+  <sc-if value="{{n2}}">
+    <article class="card">
+      <p class="ans">林志明（業務部）負責北區客戶，也參與長堤專案的客戶導入<sup>[1]</sup>。</p>
+      <div class="chips"><button type="button" class="chip" onClick="{{openSrc}}"><span class="n">1</span>組織與主管名單</button></div>
+    </article>
+  </sc-if>
+</sc-if>
+<sc-if value="{{sceneConf}}">
+  <div class="bubble">青翼桌什麼時候上市？</div>
+  <article class="card">
+    <p class="ans">兩份文件的說法不同：〈青翼專案啟動會議紀錄〉寫預計 Q2 上市<sup>[1]</sup>，〈青翼專案進度更新〉寫延後至 Q3<sup>[2]</sup>。</p>
+    <div class="conf"><b>說法不同</b>出處 1 與 2 的上市時間不同</div>
+    <div class="chips"><button type="button" class="chip" onClick="{{openSrc}}"><span class="n">1</span>青翼專案啟動會議紀錄</button><button type="button" class="chip" onClick="{{openSrc}}"><span class="n">2</span>青翼專案進度更新</button></div>
+    <sc-if value="{{showAsk}}">
+      <div class="ask" role="group" aria-label="想聽你的判斷"><span class="ai" aria-hidden="true">?</span><div class="am">
+        <p class="at">想聽你的判斷</p>
+        <p class="aq">我不確定這兩段的關係，你怎麼看？</p>
+        <sc-if value="{{c1}}">
+          <div class="opts"><sc-for list="{{hypOpts}}" as="o" hint-placeholder-count="4"><button type="button" class="{{o.cls}}" onClick="{{o.pick}}">{{o.label}}</button></sc-for></div>
+          <p class="turn">輪到你</p>
+        </sc-if>
+        <sc-if value="{{c6}}">
+          <div class="expl">
+            <p class="mine">都不是，我來說明</p>
+            <p class="mine">兩份都對：Q2 是國內，Q3 是海外</p>
+            <p class="aq">我理解成：兩份都對：Q2 是國內，Q3 是海外，對嗎？</p>
+            <div class="opts"><button type="button" class="opt" onClick="{{toRecExplain}}">對，記錄下來</button><button type="button" class="opt skip">我再改改</button></div>
+            <p class="turn">輪到你</p>
+          </div>
+        </sc-if>
+      </div></div>
+    </sc-if>
+    <sc-if value="{{showB1}}"><p class="mine">{{b1}}</p></sc-if>
+    <sc-if value="{{showAdd}}"><p class="add"><span class="addl">補充</span>進度更新裡寫的是「延後至 Q3」。你的理解會記在這兩段旁。</p></sc-if>
+    <sc-if value="{{showAlt}}">
+      <div class="alt" role="group" aria-label="我想到另一種可能"><span class="alti" aria-hidden="true">↺</span><div class="am">
+        <p class="at" style="color: var(--text)">我想到另一種可能 · 一起再看看</p>
+        <p class="aq" style="font-weight: 500">進度更新裡寫的是「<mark>延後</mark>」，比較像同一個時程改過。你覺得呢？</p>
+        <button type="button" class="obtn" onClick="{{openSrc}}">對照原文</button>
+        <sc-if value="{{c3}}">
+          <div class="opts"><button type="button" class="opt" onClick="{{toChanged}}">改成「我覺得是後來改過」</button><button type="button" class="opt" onClick="{{toKept}}">我維持原本的想法</button></div>
+          <p class="turn">輪到你 · 維持原本的想法也完全可以</p>
+        </sc-if>
+      </div></div>
+    </sc-if>
+    <sc-if value="{{showB2}}"><p class="mine">{{b2}}</p></sc-if>
+    <sc-if value="{{showRec}}">
+      <div class="rec">
+        <span class="recl">記錄</span>
+        <div class="recr"><span>{{mine}}</span><span class="recw">你 · 一般員工 · 剛剛</span></div>
+        <span class="recl" style="margin-top: 4px">同事的理解</span>
+        <sc-for list="{{peers}}" as="p" hint-placeholder-count="2"><div class="recr"><span>{{p.text}}</span><span class="recw">{{p.who}}</span></div></sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{c5}}"><p class="muted">已略過：這一組這次不再問你。兩種說法照樣並列。</p></sc-if>
+  </article>
+</sc-if>
+</div>
+        <nav aria-label="頁面" class="ptabs"><sc-for list="{{navP}}" as="tb" hint-placeholder-count="5"><a href="#" class="pt" aria-current="{{tb.current}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{tb.icon}}"></path></svg>{{tb.label}}<sc-if value="{{tb.badge}}"><span class="pb">{{tb.badge}}</span></sc-if></a></sc-for></nav><sc-if value="{{src}}"><div class="sover" onClick="{{closeSrc}}"></div><div class="ssheet"><span class="grab"></span><div class="ph">原文<button type="button" class="x" onClick="{{closeSrc}}" aria-label="關閉">×</button></div>
+<sc-if value="{{sceneConf}}">
+  <div class="conf"><b>說法不同</b>兩段的上市時間不同</div>
+  <div class="src"><div class="srch"><span class="srcn">1</span>青翼專案啟動會議紀錄 · 2026/02/10 · ¶3</div><p class="srcp">會議決議：青翼桌預計 Q2 上市，首批 500 張。</p></div>
+  <div class="src"><div class="srch"><span class="srcn">2</span>青翼專案進度更新 · 2026/05/15 · ¶2</div>
+    <sc-if value="{{hlEvid}}"><p class="srcp">青翼桌上市時間<mark>延後至 Q3</mark>。原因：馬達供應商交期延遲，首批數量不變。</p></sc-if>
+    <sc-if value="{{noEvid}}"><p class="srcp">青翼桌上市時間延後至 Q3。原因：馬達供應商交期延遲，首批數量不變。</p></sc-if>
+  </div>
+  <sc-if value="{{showRec}}">
+    <div class="rec"><span class="recl">記錄（人的理解）</span>
+      <div class="recr"><span>{{mine}}</span><span class="recw">你 · 一般員工 · 剛剛</span></div>
+      <sc-for list="{{peers}}" as="p" hint-placeholder-count="2"><div class="recr"><span>{{p.text}}</span><span class="recw">{{p.who}}</span></div></sc-for>
+    </div>
+  </sc-if>
+  <sc-if value="{{noRec}}"><p class="muted">先留下你的理解或略過，才看得到同事的理解。</p></sc-if>
+</sc-if>
+<sc-if value="{{sceneName}}">
+  <sc-if value="{{n2}}"><div class="src"><div class="srch"><span class="srcn">1</span>組織與主管名單 · 2026/01/12 · ¶3</div><p class="srcp">業務部由李佳穎擔任經理，業務代表<mark>林志明</mark>負責北區客戶，並參與長堤專案的客戶導入。</p></div></sc-if>
+  <sc-if value="{{n1}}"><p class="muted">回答後，引用的原文會出現在這裡。</p></sc-if>
+</sc-if>
+</div></sc-if>
+      </div><p class="cap" style="max-width: 390px"><span class="capb">手機 · 390</span>　選項是可換行的膠囊；原文是底部面板。</p></div>
+  </div>
+  <div class="notes">
+  <div class="note"><b>同名：回答前反問</b>問題提到的名稱對應到這個身分看得到的 2 個以上同類型實體時，先反問、不呼叫模型。選項用 <code>entityOptionLabel()</code> 的區分，加上「兩位都想知道」。選了之後問題泡泡保留原問題，下方灰字顯示補上的說明。</div>
+  <div class="note"><b>說法不同：回答後在卡片內問一次</b>選項是上傳比對時存下的 2–3 個假設（第一人稱短句），另有「都不是，我來說明」「略過」。證據（<code>evidence</code>）只在選完之後出現：選的和證據相合就補一句；不合就以「另一種讀法」的外觀提一次，維持原本的想法就照記錄、不再說服。</div>
+  <div class="note"><b>記錄與同事的理解</b>留下理解或略過之後，才顯示同事的理解，只顯示角色與時間。記錄是虛線加灰字，不用綠色或勾勾。原文欄（桌機右欄、平板右側滑出、手機底部面板）在兩段下方附同一份記錄。ADR 0012；開關 <code>qa.dialogue</code>。</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2760,"height":1720}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { dark: false, step: 'c1', src: false }; }
+  renderVals() {
+
+    const L = { board: '#EDEFEA', bg: '#F5F6F3', surface: '#FFFFFF', raised: '#EDEFF2', text: '#14171A', muted: '#5B6470', line: '#DDE1E4', dash: '#9AA3AE', bezel: '#14171A', primary: '#2340C8', primarySoft: '#E6EAFB', onPrimary: '#FFFFFF', evid: '#E8B800', inkBg: '#14171A', inkFg: '#FFFFFF', mark: '#FFE066', markSoft: '#FFF3BF', markText: '#14171A', markLine: '#E8B800', conflictSoft: '#FCE8F1', conflictText: '#7A1D50', overlay: 'rgba(20,23,26,0.45)', shadow: 'rgba(20,23,26,0.10)', eP: '#3D7AB8', eT: '#2E7D5B', eJ: '#7A52C7' };
+    const D = { board: '#05070B', bg: '#0A0D14', surface: '#111621', raised: '#182030', text: '#E7ECF5', muted: '#8B97AD', line: '#253044', dash: '#3B4A63', bezel: '#2A3548', primary: '#3EE6D2', primarySoft: '#16302E', onPrimary: '#04201D', evid: '#FFB547', inkBg: '#E7ECF5', inkFg: '#0A0D14', mark: '#FFB547', markSoft: '#3A2A0E', markText: '#1A1206', markLine: '#7A5A20', conflictSoft: '#2A1420', conflictText: '#FFD3E2', overlay: 'rgba(0,0,0,0.6)', shadow: 'rgba(0,0,0,0.5)', eP: '#7FB2EB', eT: '#5CC294', eJ: '#B89CF0' };
+    const I = {
+      home: 'M3 11l9-7 9 7M5 10v10h14V10',
+      chat: 'M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z',
+      graph: 'M6 8a2 2 0 1 0 0-.01M18 9a2 2 0 1 0 0-.01M10 19a2 2 0 1 0 0-.01M8 7l8 1.5M7 9l2 8M16.5 10.5l-5 7',
+      time: 'M4 12h16M8 8v8M16 6v12',
+      upload: 'M12 16V4M7 9l5-5 5 5M5 20h14',
+      review: 'M5 12l4 4L19 6',
+      evals: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
+      more: 'M5 12h.01M12 12h.01M19 12h.01'
+    };
+    const nav = (defs, active) => defs.map(([label, icon, badge]) => ({ label, icon, badge: badge || '', current: label === active ? 'page' : 'false' }));
+    const STAFF = [['首頁', I.home], ['問答', I.chat], ['圖譜', I.graph], ['時間軸', I.time], ['上傳', I.upload]];
+    const MANAGER = (n) => STAFF.concat([['待審', I.review, n], ['評測台', I.evals]]);
+    const PSTAFF = STAFF;
+    const PMANAGER = (n) => [['首頁', I.home], ['問答', I.chat], ['圖譜', I.graph], ['上傳', I.upload], ['更多', I.more, n]];
+    const staffWho = { init: '周', name: '周大衛', role: '一般員工' };
+    const mgrWho = { init: '張', name: '張雅婷', role: '主管' };
+    const d = this.state.dark, t = d ? D : L;
+    const stepsOf = (defs) => defs.map(([k, label]) => ({ label, on: this.state.step === k ? 'true' : 'false', pick: () => this.setState({ step: k, src: false, open: false }) }));
+    const go = (k, extra) => () => this.setState(Object.assign({ step: k }, extra || {}));
+    const dark = { modeLabel: d ? 'Dark' : 'Light', darkPressed: d ? 'true' : 'false', toggleDark: () => this.setState({ dark: !d }) };
+
+    const s = this.state.step;
+    const conf = s[0] === 'c';
+    const mineOf = { c2: '我覺得是後來改過', c4k: '我覺得是不同的版本', c4c: '我覺得是後來改過', c7: '兩份都對：Q2 是國內，Q3 是海外' };
+    const b1Of = { c2: '我覺得是後來改過', c3: '我覺得是不同的版本', c4k: '我覺得是不同的版本', c4c: '我覺得是不同的版本' };
+    const b2Of = { c4k: '我維持原本的想法', c4c: '改成「我覺得是後來改過」' };
+    const showRec = ['c2', 'c4k', 'c4c', 'c7'].indexOf(s) >= 0;
+    return Object.assign({
+      t, who: staffWho, navD: nav(STAFF, '問答'), navT: nav(STAFF, '問答'), navP: nav(PSTAFF, '問答'),
+      steps: stepsOf([['n1', '① 同名：回答前反問'], ['n2', '② 同名：選了之後'], ['c1', '③ 說法不同：提問'], ['c2', '④ 選了：補一句證據'], ['c3', '⑤ 不合：另一種讀法'], ['c4k', '⑥ 維持原本的想法'], ['c6', '⑦ 都不是：AI 複述'], ['c5', '⑧ 略過']]),
+      sceneName: !conf, sceneConf: conf, n1: s === 'n1', n2: s === 'n2',
+      nameOpts: ['林志明（產品研發部）', '林志明（業務部）', '兩位都想知道'].map((label) => ({ label, pick: go('n2') })),
+      showAsk: conf && s !== 'c5', c1: s === 'c1', c6: s === 'c6', c3: s === 'c3', c5: s === 'c5',
+      hypOpts: [['我覺得是後來改過', 'opt', go('c2')], ['我覺得是不同的版本', 'opt', go('c3')], ['都不是，我來說明', 'opt skip', go('c6')], ['略過', 'opt skip', go('c5')]].map(([label, cls, pick]) => ({ label, cls, pick })),
+      showB1: !!b1Of[s], b1: b1Of[s] || '', showAdd: s === 'c2',
+      showAlt: ['c3', 'c4k', 'c4c'].indexOf(s) >= 0, showB2: !!b2Of[s], b2: b2Of[s] || '',
+      toChanged: go('c4c'), toKept: go('c4k'), toRecExplain: go('c7'),
+      showRec, noRec: !showRec, mine: mineOf[s] || '',
+      peers: [{ text: '我覺得是後來改過', who: '主管 · 5/20' }, { text: '我覺得是後來改過', who: '一般員工 · 5/18' }],
+      hlEvid: ['c2', 'c3', 'c4k', 'c4c'].indexOf(s) >= 0, noEvid: ['c2', 'c3', 'c4k', 'c4c'].indexOf(s) < 0,
+      src: this.state.src, openSrc: () => this.setState({ src: true }), closeSrc: () => this.setState({ src: false })
+    }, dark);
+  }
+}
+</script>
+</body>
+</html>

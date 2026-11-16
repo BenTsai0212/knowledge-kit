@@ -322,7 +322,7 @@ Playwright 的端對端測試（`*.spec.ts`）；設定在根目錄的 `playwrig
 
 - `adr/`：決策紀錄
 - `deploy.md`：線上 demo 的部署步驟、驗收清單、回退與費用上限（部署由人執行；ADR 0005）
-- `design/v1/boards/`：設計畫布「畫面流程圖」引用的畫板原始碼（`*.dc.html`，原樣保存、以 sha256 核對）；視覺以畫板為準，只供參考，不被 `app/` import、不進 build（#329）
+- `design/v1/boards/`：設計畫布「畫面流程圖」引用的畫板原始碼與接縫與討論版的畫板（#392）（`*.dc.html`，原樣保存、以 sha256 核對）；視覺以畫板為準，只供參考，不被 `app/` import、不進 build（#329）
 - `design/v1/boards/README.md`：畫板與頁面的對照、顏色名稱與 token 的對照、不實作的內容與已知衝突
 - `playbook/`：方法與文件套件（需求確認清單、資料盤點表、資料安全說明、評測題庫建立步驟、驗收指標、落地新客戶步驟 `new-client-setup.md`）；入口是 [docs/playbook/README.md](playbook/README.md)，英文版在 `docs/playbook/en/`，兩份一起改
 - `references.md`：設計引用的文獻與業界準則（引用標記、書目、連結、主張、用在哪裡；ADR 與 `docs/design.md` 連到這裡）

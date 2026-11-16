@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>AI 發言的元件規格</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Noto+Sans+TC:wght@400;500;700;900&amp;family=Noto+Serif+TC:wght@400;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+.board{color:var(--text);font-family:Inter,'Noto Sans TC',sans-serif;background:var(--board)}
+.bh{display:flex;justify-content:space-between;align-items:flex-end;gap:24px}
+.kick{margin:0;font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:.1em;color:var(--primary)}
+.bt{margin:0;font-size:30px;font-weight:900;line-height:1.3}
+.bs{margin:0;font-size:14px;line-height:1.7;color:var(--muted);max-width:1500px}
+.ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.ctl-l{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);margin-right:4px}
+.sw{height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--text);font:600 13px Inter,'Noto Sans TC',sans-serif;cursor:pointer}
+.sw[aria-pressed="true"]{background:var(--ink);color:var(--inkFg);border-color:var(--ink)}
+.row{display:flex;gap:56px;align-items:flex-start}
+.fcol{display:flex;flex-direction:column;gap:12px}
+.cap{margin:0;font-size:13px;line-height:1.6;color:var(--muted);max-width:820px}
+.capb{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--primary)}
+.notes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.note{padding:16px 18px;border-radius:14px;background:var(--surface);border:1px dashed var(--dash);font-size:13.5px;line-height:1.7}
+.note b{display:block;font-size:14px;margin-bottom:4px}
+code{font-family:'JetBrains Mono',monospace;font-size:12px}
+
+/* 三種尺寸的外框 */
+.fd{position:relative;width:1280px;height:1180px;border-radius:14px;overflow:hidden;background:var(--bg);box-shadow:0 0 0 1px var(--line),0 24px 60px var(--shadow);display:flex}
+.ft{position:relative;width:820px;height:1180px;border-radius:28px;overflow:hidden;background:var(--bg);box-shadow:0 0 0 12px var(--bezel);display:flex}
+.fp{position:relative;width:390px;height:844px;border-radius:40px;overflow:hidden;background:var(--bg);box-shadow:0 0 0 10px var(--bezel);display:flex;flex-direction:column}
+.side{flex:none;width:220px;padding:20px 14px;display:flex;flex-direction:column;gap:4px;background:var(--surface);border-right:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px 16px;font-size:16px;font-weight:900}
+.nl{position:relative;display:flex;align-items:center;height:44px;padding:0 12px;border-radius:10px;color:var(--text);text-decoration:none;font-size:15px}
+.nl[aria-current="page"]{background:var(--ink);color:var(--inkFg);font-weight:700}
+.nb{margin-left:auto;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--primary);color:var(--onPrimary);font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.who{margin-top:auto;display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;background:var(--raised)}
+.av{flex:none;width:32px;height:32px;border-radius:999px;background:var(--ink);color:var(--inkFg);font-size:13px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.dmain{flex:1;min-width:0;overflow:auto;padding:32px 40px;display:flex;flex-direction:column;gap:18px}
+.daside{flex:none;width:380px;overflow:hidden;padding:28px 22px;display:flex;flex-direction:column;gap:14px;background:var(--surface);border-left:1px solid var(--line)}
+.rail{flex:none;width:72px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 0 20px;background:var(--surface);border-right:1px solid var(--line)}
+.ri{position:relative;width:60px;height:56px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;text-decoration:none;color:var(--muted)}
+.ri[aria-current="page"]{background:var(--primarySoft);color:var(--primary);font-weight:700}
+.rb{position:absolute;top:4px;right:6px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--primary);color:var(--onPrimary);font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.tmain{flex:1;min-width:0;overflow:auto;padding:32px 28px;display:flex;flex-direction:column;gap:16px}
+.ptop{flex:none;display:flex;align-items:center;gap:10px;height:56px;padding:8px 16px 0;font-size:17px;font-weight:900}
+.ptop .back{font-size:15px;font-weight:600;color:var(--primary)}
+.prole{margin-left:auto;height:32px;padding:0 12px;border-radius:999px;background:var(--ink);color:var(--inkFg);font-size:12px;font-weight:700;display:inline-flex;align-items:center}
+.pmain{flex:1;min-height:0;overflow:auto;padding:8px 16px 12px;display:flex;flex-direction:column;gap:12px}
+.ptabs{flex:none;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));height:72px;padding-bottom:12px;border-top:1px solid var(--line);background:var(--surface)}
+.pt{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--muted);text-decoration:none;font-size:11px}
+.pt[aria-current="page"]{color:var(--primary);font-weight:700}
+.pb{position:absolute;top:6px;left:50%;margin-left:6px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--primary);color:var(--onPrimary);font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.h2{margin:0;font-size:26px;font-weight:700}
+.fp .h2{font-size:20px}
+
+/* 問答 */
+.bubble{align-self:flex-end;max-width:70%;padding:12px 16px;border-radius:16px 16px 4px 16px;background:var(--text);color:var(--bg);font-size:15px;line-height:1.6}
+.under{align-self:flex-end;margin:-8px 4px 0;font-size:12px;color:var(--muted)}
+.card{display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
+.ans{margin:0;font-size:16px;line-height:1.8}
+.ans sup{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--primary)}
+.conf{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;background:var(--conflictSoft);color:var(--conflictText);font-size:14px;line-height:1.5}
+.conf b{font-size:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{height:32px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:var(--raised);color:var(--text);font:13px Inter,'Noto Sans TC',sans-serif;display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.chip .n{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--primary)}
+.mine{align-self:flex-end;max-width:80%;margin:0;padding:10px 16px;border-radius:16px 16px 4px 16px;background:var(--text);color:var(--bg);font-size:15px;line-height:1.6}
+.add{margin:0;font-size:15px;line-height:1.7}
+.addl{margin-right:8px;font-size:12px;font-weight:700;color:var(--muted)}
+.lnk{color:var(--primary);text-decoration:underline;text-underline-offset:3px}
+.muted{margin:0;font-size:13px;line-height:1.6;color:var(--muted)}
+
+/* AI 在問你（AskCard／refusal-ask） */
+.ask{display:flex;gap:12px;padding:14px 16px;border-radius:12px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--mark)}
+.ai{flex:none;width:24px;height:24px;border-radius:50%;background:var(--mark);color:var(--markText);font-size:14px;font-weight:700;display:grid;place-items:center}
+.am{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.at{margin:0;font-size:12px;font-weight:700;color:var(--muted)}
+.aq{margin:0;font-size:15px;font-weight:600;line-height:1.6}
+.opts{display:flex;flex-direction:column;gap:8px;max-width:360px}
+.opt{min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--text);font:14px Inter,'Noto Sans TC',sans-serif;text-align:start;cursor:pointer}
+.opt.skip{color:var(--muted)}
+.turn{margin:0;font-size:12px;color:var(--muted)}
+.fp .opts{flex-flow:row wrap;max-width:none}
+.fp .opt{border-radius:999px;text-align:center}
+.expl{display:flex;flex-direction:column;gap:8px}
+.expl label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.expl textarea{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);font:14px/1.6 Inter,'Noto Sans TC',sans-serif;resize:none}
+
+/* 另一種讀法 */
+.alt{display:flex;gap:12px;padding:14px 16px;border-radius:12px;background:var(--markSoft);border:1px solid var(--markLine)}
+.alti{flex:none;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--markLine);color:var(--text);font-size:13px;font-weight:700;display:grid;place-items:center}
+.alt mark{padding:1px 4px;border-radius:4px;background:var(--mark);color:var(--markText)}
+.obtn{align-self:flex-start;height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--markLine);background:var(--surface);color:var(--text);font:600 13px Inter,'Noto Sans TC',sans-serif;cursor:pointer}
+
+/* 記錄 */
+.rec{display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px dashed var(--dash);font-size:14px;line-height:1.6}
+.recl{font-size:12px;font-weight:700;color:var(--muted)}
+.recr{display:flex;flex-wrap:wrap;gap:4px 8px}
+.recw{color:var(--muted);font-size:13px}
+
+/* 原文 */
+.src{display:flex;flex-direction:column;gap:8px;padding:14px;border-radius:12px;background:var(--bg);border:1px solid var(--line)}
+.srch{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.srcn{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--primary)}
+.srcp{margin:0;font-family:'Noto Serif TC',Georgia,serif;font-size:15px;line-height:1.85}
+.srcp mark{padding:1px 3px;border-radius:3px;background:var(--mark);color:var(--markText)}
+.sover{position:absolute;inset:0;background:var(--overlay)}
+.spanel{position:absolute;top:0;right:0;bottom:0;width:420px;overflow:hidden;padding:24px 20px;display:flex;flex-direction:column;gap:12px;background:var(--surface);box-shadow:-12px 0 40px var(--shadow)}
+.ssheet{position:absolute;left:0;right:0;bottom:0;max-height:72%;overflow:hidden;padding:10px 16px 24px;border-radius:20px 20px 0 0;display:flex;flex-direction:column;gap:10px;background:var(--surface)}
+.grab{align-self:center;width:40px;height:5px;border-radius:999px;background:var(--line)}
+.ph{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700}
+.x{margin-left:auto;width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--text);font-size:16px;cursor:pointer}
+
+/* 待審 */
+.tabs{display:flex;gap:4px;padding:3px;border-radius:10px;background:var(--raised);align-self:flex-start}
+.tab{height:34px;padding:0 12px;border-radius:8px;font-size:13px;display:inline-flex;align-items:center;color:var(--text)}
+.tab.on{background:var(--surface);font-weight:700;box-shadow:0 1px 2px var(--shadow)}
+.doc{display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
+.fp .doc{padding:12px}
+.doch{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px}
+.doch b{font-size:17px}
+.grp{margin:4px 0 0;font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--muted)}
+.item{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:10px 12px;border-radius:10px;background:var(--raised);font-size:14px}
+.kind{height:24px;padding:0 8px;border-radius:6px;background:var(--surface);border:1px solid var(--line);font-size:12px;display:inline-flex;align-items:center;gap:6px}
+.dot{width:9px;height:9px;border-radius:999px;background:var(--eP)}
+.rel{display:flex;flex-direction:column;gap:4px;font-size:13px}
+.rel span{color:var(--muted);font-size:12px}
+.held{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.pill{height:26px;padding:0 10px;border-radius:999px;background:var(--raised);color:var(--text);font-size:12px;font-weight:700;display:inline-flex;align-items:center}
+.reply{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:10px;background:var(--raised);font-size:14px;line-height:1.6}
+.auto{display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:12px;border:1px solid var(--line)}
+.autoh{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.autoh b{font-size:15px}
+.sbtn{height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--text);font:600 13px Inter,'Noto Sans TC',sans-serif;cursor:pointer}
+.arow{display:flex;flex-direction:column;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
+.arow1{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:14px}
+.arow1 .t{flex:1;min-width:160px}
+.done{height:26px;padding:0 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);font-size:12px;font-weight:700;display:inline-flex;align-items:center}
+.rch{display:flex;flex-wrap:wrap;gap:6px}
+.rc{height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--text);font:13px Inter,'Noto Sans TC',sans-serif;cursor:pointer}
+.rc[aria-pressed="true"]{background:var(--ink);color:var(--inkFg);border-color:var(--ink)}
+.rin{height:40px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);font:14px Inter,'Noto Sans TC',sans-serif}
+
+/* 首頁 */
+.qbox{display:flex;gap:10px;padding:14px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
+.qin{flex:1;height:50px;padding:0 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--muted);font-size:15px;display:flex;align-items:center}
+.qgo{height:50px;padding:0 18px;border-radius:12px;background:var(--primary);color:var(--onPrimary);font-size:15px;font-weight:700;display:inline-flex;align-items:center}
+.upd{display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
+.fp .upd{padding:12px}
+.uitem{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 12px;border-radius:12px;background:var(--raised)}
+.udot{flex:none;width:8px;height:8px;border-radius:999px}
+.ut{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;font-size:14px;font-weight:600}
+.ut span{font-size:12px;font-weight:400;color:var(--muted)}
+
+/* 規格板 */
+.spec{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.sc{display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:16px;background:var(--bg);border:1px solid var(--line)}
+.sch{display:flex;align-items:baseline;gap:8px}
+.sch b{font-size:16px}
+.tok{font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.7;color:var(--muted)}
+.tbl{display:grid;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--surface);font-size:13.5px;line-height:1.55}
+.tbl>span{padding:9px 12px;border-top:1px solid var(--line)}
+.tbl>.th{background:var(--ink);color:var(--inkFg);font-weight:700;border-top:0}
+</style>
+</helmet>
+<div class="board" style="--board: {{t.board}}; --bg: {{t.bg}}; --surface: {{t.surface}}; --raised: {{t.raised}}; --text: {{t.text}}; --muted: {{t.muted}}; --line: {{t.line}}; --dash: {{t.dash}}; --bezel: {{t.bezel}}; --primary: {{t.primary}}; --primarySoft: {{t.primarySoft}}; --onPrimary: {{t.onPrimary}}; --evid: {{t.evid}}; --ink: {{t.inkBg}}; --inkFg: {{t.inkFg}}; --mark: {{t.mark}}; --markSoft: {{t.markSoft}}; --markText: {{t.markText}}; --markLine: {{t.markLine}}; --conflictSoft: {{t.conflictSoft}}; --conflictText: {{t.conflictText}}; --overlay: {{t.overlay}}; --shadow: {{t.shadow}}; --eP: {{t.eP}}; --eT: {{t.eT}}; --eJ: {{t.eJ}}; width: 1440px; height: 1500px; padding: 40px 56px; display: flex; flex-direction: column; gap: 28px">
+  <header class="bh">
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <p class="kick">docs/design.md「AI 發言的外觀」</p>
+      <h1 class="bt">AI 發言的六種外觀：每一種長得不一樣，提問不能像錯誤或「已通過」</h1>
+      <p class="bs">這一頁的四組畫面共用這些元件。數值對應 app.css 的 refusal-ask、ask-card 與設計 token；Light／Dark 可切換。</p>
+    </div>
+  </header>
+  <div class="ctl"><button type="button" class="sw" onClick="{{toggleDark}}" aria-pressed="{{darkPressed}}">{{modeLabel}}</button></div>
+  <div style="display: flex; flex-direction: column; gap: 24px; padding: 28px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line)">
+<div class="spec">
+  <div class="sc"><div class="sch"><b>問你</b><span class="muted">AskCard · refusal-ask</span></div>
+    <div class="ask"><span class="ai" aria-hidden="true">?</span><div class="am"><p class="at">想聽你的判斷</p><p class="aq">我不確定這兩段的關係，你怎麼看？</p><div class="opts"><button type="button" class="opt">我覺得是後來改過</button><button type="button" class="opt skip">都不是，我來說明</button></div><p class="turn">輪到你</p></div></div>
+    <span class="tok">surface 底 · 左 4px mark · 圓角 12 · padding 14/16<br>圖示 24px mark 底 markText 字<br>小標 12/700 textMuted · 提問 15/600<br>選項 min-height 44 · 桌機直排最寬 360 · 手機膠囊<br>出口選項 textMuted 字 · 「輪到你」12 textMuted</span></div>
+  <div class="sc"><div class="sch"><b>另一種讀法</b><span class="muted">只在選完、而且和證據不合時</span></div>
+    <div class="alt"><span class="alti" aria-hidden="true">↺</span><div class="am"><p class="at" style="color: var(--text)">我想到另一種可能 · 一起再看看</p><p class="aq" style="font-weight: 500">進度更新裡寫的是「<mark>延後</mark>」，比較像同一個時程改過。你覺得呢？</p><button type="button" class="obtn">對照原文</button></div></div>
+    <span class="tok">markSoft 底 · 1px markLine 邊 · 不用左粗邊<br>「↺」24px 外框圓 · 依據字句 mark 螢光<br>選項：改成「…」／我維持原本的想法<br>不用 danger、warning、橘紅色</span></div>
+  <div class="sc"><div class="sch"><b>補充</b><span class="muted">選的和證據相合時</span></div>
+    <p class="add"><span class="addl">補充</span>進度更新裡寫的是「延後至 Q3」。你的理解會記在這兩段旁。</p>
+    <span class="tok">一般內文 15/1.7 · 前置小標 12/700 textMuted<br>沒有框；AI 每次最多兩句</span></div>
+  <div class="sc"><div class="sch"><b>記錄</b><span class="muted">人的理解</span></div>
+    <div class="rec"><span class="recl">記錄</span><div class="recr"><span>我覺得是後來改過</span><span class="recw">你 · 一般員工 · 剛剛</span></div><span class="recl" style="margin-top: 4px">同事的理解</span><div class="recr"><span>我覺得是後來改過</span><span class="recw">主管 · 5/20</span></div></div>
+    <span class="tok">上方 1px dashed dash · 沒有框<br>只顯示角色與時間；先作答才看得到同事的<br>不用綠色或勾勾</span></div>
+  <div class="sc"><div class="sch"><b>說法不同</b><span class="muted">資料本身</span></div>
+    <div class="conf"><b>說法不同</b>出處 1 與 2 的上市時間不同</div>
+    <span class="tok">conflictSoft 底 · conflictText 字（沿用現行）<br>跟做對做錯無關，只提醒注意這兩段</span></div>
+  <div class="sc"><div class="sch"><b>人的回答</b><span class="muted">與問題泡泡相同</span></div>
+    <p class="mine">我覺得是後來改過</p>
+    <span class="tok">text 底 · background 字 · 圓角 16 16 4 16<br>靠右，最寬 80%；選完後選項收起<br>減少動態效果時直接到位</span></div>
+</div>
+<div style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px">
+  <div class="tbl" style="grid-template-columns: 200px repeat(4, minmax(0, 1fr))">
+    <span class="th">出現的地方</span><span class="th">問你</span><span class="th">另一種讀法</span><span class="th">補充</span><span class="th">記錄</span>
+    <span>問答 · 同名</span><span>回答前反問</span><span>—</span><span>—</span><span>—</span>
+    <span>問答 · 說法不同</span><span>回答後一次</span><span>不合時一次</span><span>相合時</span><span>卡片內與原文欄</span>
+    <span>問答 · 答不出來</span><span>拒答後一次</span><span>—</span><span>下一步一句</span><span>—（不保存）</span>
+    <span>待審 · 接縫</span><span>每個接縫</span><span>—</span><span>—</span><span>決定的 note</span>
+    <span>首頁 · 上傳者</span><span>請上傳者確認</span><span>—</span><span>—</span><span>回答給審核者</span>
+  </div>
+  <div class="tbl" style="grid-template-columns: 120px 1fr">
+    <span class="th">尺寸</span><span class="th">差異</span>
+    <span>桌機</span><span>選項直排、最寬 360px、文字靠左；原文在右欄</span>
+    <span>平板</span><span>同桌機；原文從右側滑出，最寬 420px，背後 overlay</span>
+    <span>手機</span><span>選項是可換行的膠囊（高 44px、置中）；原文是底部面板；待審從「更多」進入</span>
+    <span>Dark</span><span>同一份 token；mark 換成琥珀，markSoft 深底</span>
+  </div>
+</div>
+</div>
+  
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { dark: false, step: '' }; }
+  renderVals() {
+
+    const L = { board: '#EDEFEA', bg: '#F5F6F3', surface: '#FFFFFF', raised: '#EDEFF2', text: '#14171A', muted: '#5B6470', line: '#DDE1E4', dash: '#9AA3AE', bezel: '#14171A', primary: '#2340C8', primarySoft: '#E6EAFB', onPrimary: '#FFFFFF', evid: '#E8B800', inkBg: '#14171A', inkFg: '#FFFFFF', mark: '#FFE066', markSoft: '#FFF3BF', markText: '#14171A', markLine: '#E8B800', conflictSoft: '#FCE8F1', conflictText: '#7A1D50', overlay: 'rgba(20,23,26,0.45)', shadow: 'rgba(20,23,26,0.10)', eP: '#3D7AB8', eT: '#2E7D5B', eJ: '#7A52C7' };
+    const D = { board: '#05070B', bg: '#0A0D14', surface: '#111621', raised: '#182030', text: '#E7ECF5', muted: '#8B97AD', line: '#253044', dash: '#3B4A63', bezel: '#2A3548', primary: '#3EE6D2', primarySoft: '#16302E', onPrimary: '#04201D', evid: '#FFB547', inkBg: '#E7ECF5', inkFg: '#0A0D14', mark: '#FFB547', markSoft: '#3A2A0E', markText: '#1A1206', markLine: '#7A5A20', conflictSoft: '#2A1420', conflictText: '#FFD3E2', overlay: 'rgba(0,0,0,0.6)', shadow: 'rgba(0,0,0,0.5)', eP: '#7FB2EB', eT: '#5CC294', eJ: '#B89CF0' };
+    const I = {
+      home: 'M3 11l9-7 9 7M5 10v10h14V10',
+      chat: 'M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z',
+      graph: 'M6 8a2 2 0 1 0 0-.01M18 9a2 2 0 1 0 0-.01M10 19a2 2 0 1 0 0-.01M8 7l8 1.5M7 9l2 8M16.5 10.5l-5 7',
+      time: 'M4 12h16M8 8v8M16 6v12',
+      upload: 'M12 16V4M7 9l5-5 5 5M5 20h14',
+      review: 'M5 12l4 4L19 6',
+      evals: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
+      more: 'M5 12h.01M12 12h.01M19 12h.01'
+    };
+    const nav = (defs, active) => defs.map(([label, icon, badge]) => ({ label, icon, badge: badge || '', current: label === active ? 'page' : 'false' }));
+    const STAFF = [['首頁', I.home], ['問答', I.chat], ['圖譜', I.graph], ['時間軸', I.time], ['上傳', I.upload]];
+    const MANAGER = (n) => STAFF.concat([['待審', I.review, n], ['評測台', I.evals]]);
+    const PSTAFF = STAFF;
+    const PMANAGER = (n) => [['首頁', I.home], ['問答', I.chat], ['圖譜', I.graph], ['上傳', I.upload], ['更多', I.more, n]];
+    const staffWho = { init: '周', name: '周大衛', role: '一般員工' };
+    const mgrWho = { init: '張', name: '張雅婷', role: '主管' };
+    const d = this.state.dark, t = d ? D : L;
+    const stepsOf = (defs) => defs.map(([k, label]) => ({ label, on: this.state.step === k ? 'true' : 'false', pick: () => this.setState({ step: k, src: false, open: false }) }));
+    const go = (k, extra) => () => this.setState(Object.assign({ step: k }, extra || {}));
+    const dark = { modeLabel: d ? 'Dark' : 'Light', darkPressed: d ? 'true' : 'false', toggleDark: () => this.setState({ dark: !d }) };
+
+    return Object.assign({ t }, dark);
+  }
+}
+</script>
+</body>
+</html>
