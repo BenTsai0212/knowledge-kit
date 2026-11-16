@@ -990,6 +990,36 @@ button.citation[aria-pressed="true"] {
   color: var(--color-textMuted);
 }
 
+/* AI 在問你的共用卡片（AskCard.tsx：待審的接縫，ADR 0011）：外觀沿用 refusal-ask；
+   「都不是，我來說明」時人的說明是右側的深色泡泡（refusal-chosen__choice），說明欄佔滿卡片寬度 */
+.ask-card {
+  margin: 0;
+}
+
+.ask-card__explain {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ask-card__explain > p {
+  margin: 0;
+}
+
+.ask-card__explain label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--color-textMuted);
+}
+
+.ask-card__explain textarea {
+  width: 100%;
+  font: inherit;
+  color: var(--color-text);
+}
+
 /* 回答中斷：已收到的文字變淡，不搖晃、不閃紅 */
 .answer-text {
   transition: opacity var(--motion-base) var(--ease-enter);

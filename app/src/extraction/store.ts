@@ -339,14 +339,14 @@ async function decide(
   tx: Transaction,
   itemId: string,
   decision: "approve" | "reject",
-  extra: { names?: LocalizedText; mergeInto?: string; mode?: DecisionMode } = {},
+  extra: { names?: LocalizedText; mergeInto?: string; mode?: DecisionMode; note?: string } = {},
 ): Promise<string> {
   const round = (await tx.query<{ n: number | null }>("SELECT kk.next_round($1) AS n", [itemId])).rows[0].n;
   if (round === null) throw new ReviewError("conflict");
   const inserted = await tx.query<{ id: string }>(
-    `INSERT INTO kk.review_decisions (item_id, round, decision, decided_by, names, merge_into, mode)
-     VALUES ($1, $2, $3, kk.current_identity_id(), $4, $5, $6) RETURNING id`,
-    [itemId, round, decision, extra.names ?? null, extra.mergeInto ?? null, extra.mode ?? "manual"],
+    `INSERT INTO kk.review_decisions (item_id, round, decision, decided_by, names, merge_into, mode, note)
+     VALUES ($1, $2, $3, kk.current_identity_id(), $4, $5, $6, $7) RETURNING id`,
+    [itemId, round, decision, extra.names ?? null, extra.mergeInto ?? null, extra.mode ?? "manual", extra.note ?? null],
   );
   return inserted.rows[0].id;
 }
@@ -499,20 +499,27 @@ export async function autoApprove(
 }
 
 // 退回：寫 reject 決定。退回實體時，依附它、還沒有決定的待審關係一併退回（#44 決定 2）。
-// 回傳寫入的決定 id，含一併退回的關係（「撤銷」時全部交給 retract()，實體與關係才會一起回到待審）
-export async function reject(db: Database, identityId: string | null, items: { entities: string[]; relations: string[] }): Promise<string[]> {
+// 回傳寫入的決定 id，含一併退回的關係（「撤銷」時全部交給 retract()，實體與關係才會一起回到待審）。
+// note：接縫的「都不是，我來說明」寫的說明（ADR 0011 決定 6），只記在 items 列出的項目，一併退回的關係不記；空白視為沒有
+export async function reject(
+  db: Database,
+  identityId: string | null,
+  items: { entities: string[]; relations: string[] },
+  note?: string,
+): Promise<string[]> {
+  const explained = note?.trim() || undefined;
   try {
     return await db.withIdentity(identityId, async (tx) => {
       // 同一個交易中已退回的項目（例如依附實體而一併退回的關係），不再重複寫入
       const rejected = new Set<string>();
       const written: string[] = [];
-      const rejectOnce = async (id: string) => {
+      const rejectOnce = async (id: string, withNote = false) => {
         if (rejected.has(id)) return;
         rejected.add(id);
-        written.push(await decide(tx, id, "reject"));
+        written.push(await decide(tx, id, "reject", withNote ? { note: explained } : {}));
       };
       for (const id of items.entities) {
-        await rejectOnce(id);
+        await rejectOnce(id, true);
         // 沒有有效決定的關係（從未決定，或決定都已撤回）
         const dependents = await tx.query<{ id: string }>(
           "SELECT r.id FROM kk.pending_relations r WHERE (r.from_pending_id = $1 OR r.to_pending_id = $1) AND kk.next_round(r.id) IS NOT NULL",
@@ -520,7 +527,7 @@ export async function reject(db: Database, identityId: string | null, items: { e
         );
         for (const r of dependents.rows) await rejectOnce(r.id);
       }
-      for (const id of items.relations) await rejectOnce(id);
+      for (const id of items.relations) await rejectOnce(id, true);
       return written;
     });
   } catch (e) {

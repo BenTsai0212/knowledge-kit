@@ -64,16 +64,19 @@ const rulesOf = (type: string, ctx: SeamContext) =>
 // 新實體的文件語言名稱只差一個字（可能是錯字或同一人，例如「張雅亭／張雅婷」），依類型的 aliasRules 正規化後比對：
 // - 看得到的同類型實體的任一名稱
 // - 同一份文件中其他待審的同類型實體的文件語言名稱（兩個新實體都成立，都是接縫）
-function nearName(entity: SeamEntityInput, visible: VisibleEntity[], siblings: SeamEntityInput[], ctx: SeamContext): boolean {
+// 回傳第一個只差一個字的對象（待審頁的提問寫出它的名稱）；看得到的實體優先
+export type NearMatch = { kind: "visible"; entity: VisibleEntity } | { kind: "sibling"; entity: SeamEntityInput };
+
+export function nearMatch(entity: SeamEntityInput, visible: VisibleEntity[], siblings: SeamEntityInput[], ctx: SeamContext): NearMatch | null {
   const name = entity.names[ctx.documentLanguage];
-  if (blank(name)) return false;
+  if (blank(name)) return null;
   const rules = rulesOf(entity.type, ctx);
   const key = normalizeName(name!, rules);
   const near = (n: string | undefined) => n !== undefined && !blank(n) && editDistance(key, normalizeName(n, rules)) === 1;
-  return (
-    visible.filter((v) => v.type === entity.type).some((v) => [v.name, ...Object.values(v.names)].some(near)) ||
-    siblings.filter((s) => s.id !== entity.id && s.type === entity.type).some((s) => near(s.names[ctx.documentLanguage]))
-  );
+  const v = visible.find((x) => x.type === entity.type && [x.name, ...Object.values(x.names)].some(near));
+  if (v !== undefined) return { kind: "visible", entity: v };
+  const s = siblings.find((x) => x.id !== entity.id && x.type === entity.type && near(x.names[ctx.documentLanguage]));
+  return s === undefined ? null : { kind: "sibling", entity: s };
 }
 
 // siblings：同一份文件中其他待審的實體（可含 entity 本身，以 id 排除）
@@ -83,7 +86,7 @@ export function planEntity(entity: SeamEntityInput, visible: VisibleEntity[], ct
   const candidates = merge.mode === "new" ? [] : merge.mode === "auto" ? [merge.target] : merge.candidates;
   if (candidates.length >= 2) seams.push("candidates");
   if (ctx.languages.some((l) => blank(entity.names[l]))) seams.push("missing_language");
-  if (candidates.length === 0 && nearName(entity, visible, siblings, ctx)) seams.push("near_name");
+  if (candidates.length === 0 && nearMatch(entity, visible, siblings, ctx) !== null) seams.push("near_name");
   if (entity.unsure !== null) seams.push("unsure");
   // 只有一個候選的合併直接收錄（ADR 0011 決定 2），不論 mergeStrategy
   return seams.length === 0 && candidates.length === 1 ? { seams, mergeInto: candidates[0] } : { seams };

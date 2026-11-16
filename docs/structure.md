@@ -78,6 +78,7 @@
 - `access-code.ts`：邀請碼只放 `sessionStorage`
 - `AccessBadges.tsx`：可見等級與專案的標籤
 - `AdminNotice.tsx`：需要管理者的說明（見 `docs/qa.md`「錯誤」）
+- `AskCard.tsx`：AI 在問你的卡片（提問、選項、「都不是，我來說明」與複述），待審的接縫與問答的接縫提問共用（見 `docs/design.md`「AI 發言的外觀」）
 - `answer-motion.ts`：問答的逐句動態（見 `docs/qa.md`「畫面」的「動態」）
 - `app.css`：樣式（顏色與圓角只用 `theme.ts` 由 `client/theme.json` 設定的 CSS 變數，深色模式依 `prefers-color-scheme` 標上 `data-scheme` 後改用 `darkColors`，不寫死顏色；結構測試在 `theme.test.ts`）
 - `BottomSheet.tsx`：共用的底部面板（原生 `<dialog>`，關閉按鈕、Esc、點背景、往下拖關閉，焦點回到觸發的元件）；`expandable` 是 56%／全高，`side="right"` 是平板的右側滑出面板（原文、實體、身分與語言），`side="popover"` 是桌機左側欄旁的身分與語言選單
@@ -129,6 +130,7 @@
 - `requests.ts`：切換身分或語言時捨棄進行中的提問
 - `review-helpers.ts`：待審頁的核准計畫
 - `ReviewPage.tsx`：待審頁（含「說法不同」的並列與處理；桌機照畫板 `F-Review`、`F-Empty`，#345）
+- `seam-review.ts`：待審頁的接縫：哪些項目是接縫、提問與選項、選了之後要核准的內容（ADR 0011，見 `docs/extraction.md`「待審頁的接縫」）
 - `script.ts`：劇本的純函式（分組與順序、第 N／M 題、已問過、是否切換身分）
 - `ScriptPanel.tsx`：展示模式問答頁左欄的劇本（畫板 `H-QA`，#349），見 `docs/qa.md`「展示模式」
 - `SessionQuestions.tsx`：手機與平板的「這次的問題（N）」按鈕，手機打開底部面板、平板打開滑出面板（#256、#333）

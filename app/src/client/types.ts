@@ -667,6 +667,34 @@ export interface UiStrings {
   conflictOld: string;
   // 待審頁每組差異說明下方的假設（ADR 0012 決定 3）的小標
   dialogueHypotheses: string;
+  // 待審的接縫（ADR 0011 決定 8，docs/design.md「待審的接縫」）：區塊標題、AI 在問你的小標、各種提問與選項。
+  // {name} 是項目的名稱（關係是「起點 —關係→ 終點」），{other} 是只差一個字的名稱，{count} 是候選數，{languages} 是缺少的語言
+  seamSection: string;
+  seamTitle: string;
+  seamAskCandidates: string;
+  seamAskNear: string;
+  seamAskNearDocument: string;
+  seamAskSameName: string;
+  seamAskTypo: string;
+  seamAskWording: string;
+  seamAskOther: string;
+  seamAskMissing: string;
+  seamOptionNew: string;
+  seamOptionSame: string;
+  seamOptionDifferent: string;
+  seamOptionKeep: string;
+  seamOptionFilled: string;
+  seamOptionExclude: string;
+  seamRelations: string;
+  seamExplainHint: string;
+  // AI 在問你的共用文字（AskCard.tsx；ADR 0011、0012 共用）：「都不是，我來說明」、說明欄、複述（{note} 是人寫的說明）、「輪到你」
+  commonExplain: string;
+  commonExplainLabel: string;
+  commonExplainSubmit: string;
+  commonRestate: string;
+  commonRestateYes: string;
+  commonRestateEdit: string;
+  commonYourTurn: string;
   conflictDecisions: Record<ConflictDecision, string>;
   conflictToast: string;
   // 時間軸與原文面板的標示：{title} 換成另一段所屬文件的標題
