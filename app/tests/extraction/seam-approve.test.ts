@@ -16,6 +16,7 @@ import { uploadDocument } from "../../src/upload/write";
 const OPTIONS = { languages: clientConfig.client.languages };
 const AUTO = { entityTypes: clientConfig.knowledgeModel.entityTypes, languages: clientConfig.client.languages, defaultLanguage: clientConfig.client.defaultLanguage };
 const seams: ClientConfig = { ...clientConfig, client: { ...clientConfig.client, review: { mode: "seams" } } };
+const item: ClientConfig = { ...clientConfig, client: { ...clientConfig.client, review: { mode: "item" } } };
 
 async function upload(passages: string[]) {
   const db = await openDatabase(clientConfig, { seed: (pg) => seedDataset(pg, clientConfig, dataset) });
@@ -175,9 +176,8 @@ describe("runExtraction 的 review.mode", { timeout: 60_000 }, () => {
     return { db, documentId, state, ctx: { db, transport, config } };
   };
 
-  it("item（預設）：與現在相同，全部留在待審，不記錄直接收錄", async () => {
-    expect(clientConfig.client.review.mode).toBe("item");
-    const { db, documentId, state, ctx } = await run(clientConfig, [() => reply([PERSON, PROJECT], [WORKS_ON])]);
+  it("item：與現在相同，全部留在待審，不記錄直接收錄", async () => {
+    const { db, documentId, state, ctx } = await run(item, [() => reply([PERSON, PROJECT], [WORKS_ON])]);
     const result = await runExtraction(ctx, state);
     expect(result.autoApproved).toBeUndefined();
     const doc = (await readReview(db, "manager")).find((d) => d.id === documentId)!;

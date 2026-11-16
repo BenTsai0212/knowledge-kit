@@ -1,7 +1,7 @@
 // 首頁（#283，docs/design.md「日常工具」的「首頁」）：登入後的預設頁；常見問題依身分；問過的問題只存文字，「再問一次」重新回答；
 // 主管有「等你處理」，能上傳、不能審核的身分有「有更新」（#284）。展示模式不顯示首頁（presentation.spec.ts、sign-in.spec.ts）。/api/ask 一律是假的回應。
 import { expect, test, type Page } from "@playwright/test";
-import { ACCESS_CODE, blockModelDownload, language, openTab, presetQuestions, s, switchIdentity, tab, upload, waitForReview } from "./support/app";
+import { acceptButton, ACCESS_CODE, blockModelDownload, language, openTab, presetQuestions, s, switchIdentity, tab, upload, waitForReview } from "./support/app";
 import { access, NO_NON_REVIEWER, NO_NON_REVIEWING_UPLOADER, NO_REVIEWER, nonReviewer, nonReviewingUploader, reviewer } from "./support/client";
 import { FAKE_ANSWER_LEAD, FAKE_ENTITY_NAME, routeFakeAsk } from "./support/fake-ask";
 
@@ -92,11 +92,11 @@ test("有更新：一般員工上傳後是審核中，「查看進度」到我�
   await expect(page.getByRole("tab", { name: s.myUploads.tabMine })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("complementary", { name: title })).toBeVisible();
 
-  // 主管核准整份文件
+  // 主管核准整份文件（只審接縫時是接縫卡片的「我覺得沒問題」）
   await switchIdentity(page, reviewer!.id);
   await waitForReview(page);
   const card = page.locator("section.review-doc").filter({ hasText: FAKE_ENTITY_NAME });
-  await card.getByRole("button", { name: s.reviewApproveDocument }).click();
+  await acceptButton(card).click();
   await expect(card).toHaveCount(0);
 
   await switchIdentity(page, nonReviewingUploader!.id);

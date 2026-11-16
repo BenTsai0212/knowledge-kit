@@ -767,15 +767,16 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
           </span>
         )}
         {openSources.has(e.id) && sourceList(doc, e.id, e.sources, [e.id])}
+        {/* 跟著這一項一起決定的關係（畫板 S-Review 的 .rel）：只有文字，沒有自己的按鈕；上面的選擇一併決定它們 */}
         {seam.relations.length > 0 && (
-          <>
-            <p className="muted">{s.seamRelations}</p>
-            <ul className="review-rows">
-              {seam.relations.map((r) => (
-                <li key={r.id}>{relationRow(doc, r, {})}</li>
-              ))}
-            </ul>
-          </>
+          <div className="ask-card__rel">
+            <span className="ask-card__rel-title">{s.seamRelations}</span>
+            {seam.relations.map((r) => (
+              <span key={r.id}>
+                {nameOf(doc, r.from)} —{relationTypeLabel(r.type, language)}→ {nameOf(doc, r.to)}
+              </span>
+            ))}
+          </div>
         )}
       </AskCard>
     );

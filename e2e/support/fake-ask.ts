@@ -3,32 +3,30 @@
 import type { Page } from "@playwright/test";
 import { client, knowledgeModel } from "./client";
 
-// 萃取時回傳的實體（虛構）：類型是 knowledge-model.json 的第一個，每種語言用同一個名稱；待審頁以此找到上傳後的待審項目
+// 萃取時回傳的實體（虛構）：類型是 knowledge-model.json 的第一個，每種語言用同一個名稱；待審頁以此找到上傳後的待審項目。
+// 帶 unsure（模型標示沒把握）：review.mode 是 seams 時它是接縫、留在待審，「上傳 → 審核者決定」的測試在兩種模式下走同一條路
+// （item 時 unsure 只記錄，不影響畫面與流程，docs/extraction.md）
 export const FAKE_ENTITY_NAME = "E2E Tester";
 const FAKE_ENTITY_NAMES = Object.fromEntries(client.languages.map((l) => [l, FAKE_ENTITY_NAME]));
 // 問答的回答：引用 prompt 中的第 1 段，通過 citations.ts 的引用解析
 export const FAKE_ANSWER_LEAD = "這是測試用的回答";
 const FAKE_ANSWER = `${FAKE_ANSWER_LEAD} [1]。`;
 
-// 走查用的通知（#189，fixtures/walkthrough-notice.md，虛構）：萃取時回傳 5 個實體與 6 段關係（與 app/src/ui/review-helpers.test.ts 相同），
-// 以參考情境的知識模型與圖譜為準；只有參考情境（client/）上傳這份檔案
-export const WALKTHROUGH_TITLE = "長堤專案第二階段啟動通知";
-const walkthroughEntity = (key: string, type: string, zh: string, en: string) => ({ key, type, names: { "zh-TW": zh, en }, sources: [1] });
-const WALKTHROUGH = {
+// 只審接縫的試用紀錄（#378 PR 4c，fixtures/seam-notice.md，虛構；與 app/tests/extraction/seam-review.test.ts 相同的名稱）：
+// 測試人員甲、青翼專案與兩者的關係直接收錄；林志明（參考情境的圖譜有兩位）與張雅亭（與張雅婷只差一個字）是接縫，
+// 林志明負責青翼專案的關係跟著林志明。只有參考情境（client/）上傳這份檔案
+export const SEAM_TITLE = "青翼試用紀錄";
+const seamEntity = (key: string, type: string, zh: string, en: string) => ({ key, type, names: { "zh-TW": zh, en }, sources: [1] });
+const SEAM = {
   entities: [
-    walkthroughEntity("e1", "person", "張雅婷", "Yating Chang"),
-    walkthroughEntity("e2", "team", "營運部", "Operations"),
-    walkthroughEntity("e3", "project", "長堤專案", "Project Longpier"),
-    walkthroughEntity("e4", "person", "陳柏翰", "Bohan Chen"),
-    walkthroughEntity("e5", "person", "黃建宏", "Jianhong Huang"),
+    seamEntity("e1", "person", "測試人員甲", "Test Person A"),
+    seamEntity("e2", "project", "青翼專案", "Project Bluewing"),
+    seamEntity("e3", "person", "林志明", "Zhiming Lin"),
+    seamEntity("e4", "person", "張雅亭", "Yating Zhang"),
   ],
   relations: [
-    { type: "member-of", from: "e1", to: "e2", sources: [1] },
-    { type: "leads", from: "e1", to: "e2", sources: [1] },
-    { type: "member-of", from: "e4", to: "e2", sources: [1] },
-    { type: "leads", from: "e4", to: "e3", sources: [1] },
-    { type: "works-on", from: "e2", to: "e3", sources: [1] },
-    { type: "works-on", from: "e5", to: "e3", sources: [1] },
+    { type: "works-on", from: "e1", to: "e2", sources: [1] },
+    { type: "leads", from: "e3", to: "e2", sources: [1] },
   ],
 };
 
@@ -43,9 +41,9 @@ export function fakeReply(body: AskBody): string | null {
   if (system.startsWith("You answer questions")) return FAKE_ANSWER;
   if (system.startsWith("You extract entities")) {
     // 以段落的內容辨認（標題不一定在段落中）
-    if (body.messages?.some((m) => m.content.includes("長堤專案第二階段"))) return JSON.stringify(WALKTHROUGH);
+    if (body.messages?.some((m) => m.content.includes("青翼專案的試用"))) return JSON.stringify(SEAM);
     return JSON.stringify({
-      entities: [{ key: "e1", type: knowledgeModel.entityTypes[0].id, names: FAKE_ENTITY_NAMES, sources: [1] }],
+      entities: [{ key: "e1", type: knowledgeModel.entityTypes[0].id, names: FAKE_ENTITY_NAMES, sources: [1], unsure: "other" }],
       relations: [],
     });
   }

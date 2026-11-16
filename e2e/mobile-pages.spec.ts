@@ -2,7 +2,7 @@
 // 每一頁都檢查 375px 沒有橫向捲動、該頁新增的可點元件至少 44px（觸控目標）。橫向滑動的手感與 iOS 安全區由人在實機確認。
 // /api/ask 一律是假的回應（openApp）。
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { EVALS_PATH, field, gotoView, language, openApp, s, switchIdentity } from "./support/app";
+import { EVALS_PATH, field, gotoView, language, openApp, s, seams, switchIdentity } from "./support/app";
 import {
   client,
   NO_NON_REVIEWER,
@@ -125,7 +125,26 @@ test.describe("待審", () => {
   const candidate = reviewingUploader === undefined ? undefined : twoCandidateNames(reviewingUploader.id, client.languages, language);
   test.skip(candidate === undefined, "需要兩個看得到、類型相同的實體");
 
-  test("分段切換一行、橫向捲動；需要選擇合併對象的實體只顯示摘要與「›」，點了以底部面板處理；「核准這份文件的全部」固定在下方", async ({ page }) => {
+  // 只審接縫（參考情境，ADR 0011）：有兩個候選的實體是接縫，以 AI 在問你的卡片處理，沒有摘要列與底部面板；
+  // 選項是可以換行的膠囊、至少 44px，選了之後這份文件沒有遺留（其他檢查在 review.spec.ts）
+  async function expectSeamOnPhone(page: Page, name: string): Promise<void> {
+    const ask = page.locator(".review-page--phone .ask-card").filter({ hasText: name });
+    await expect(async () => {
+      await page.getByRole("button", { name: s.reviewRefresh }).first().click();
+      await expect(ask).toBeVisible({ timeout: 2_000 });
+    }).toPass();
+    const card = page.locator("section.review-doc").filter({ has: page.locator(".ask-card", { hasText: name }) });
+    await expect(card.locator("button.review-sheet-row")).toHaveCount(0);
+    const options = ask.locator(".refusal-ask__options button");
+    await expect(options.first()).toHaveCSS("border-radius", "999px");
+    await expectTouchTargets(options);
+    expect(await noHorizontalScroll(page)).toBe(true);
+    await ask.getByRole("button", { name: s.seamOptionNew, exact: true }).click();
+    await expect(page.locator(".toast-region")).toContainText(name);
+    await expect(card).toHaveCount(0);
+  }
+
+  test("分段切換一行、橫向捲動；需要選擇合併對象的實體只顯示摘要與「›」，點了以底部面板處理；「核准這份文件的全部」固定在下方（只審接縫時是提問卡片）", async ({ page }) => {
     const { type, names } = candidate!;
     const name = names[language];
     await openApp(page);
@@ -150,6 +169,7 @@ test.describe("待審", () => {
 
     // 萃取在背景執行：到待審頁按重新整理，直到摘要列出現
     expect(await gotoView(page, "review")).toBe(true);
+    if (seams) return expectSeamOnPhone(page, name);
     const row = page.locator(".review-page--phone button.review-sheet-row").filter({ hasText: name });
     await expect(async () => {
       await page.getByRole("button", { name: s.reviewRefresh }).first().click();

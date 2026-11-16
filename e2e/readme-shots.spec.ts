@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 import { EVALS_PATH, gotoView, openApp, switchIdentity, switchLanguage, uploadAndReview } from "./support/app";
 import { client, readClientJson, reviewingUploader, s as defaultStrings, scenarios } from "./support/client";
-import { WALKTHROUGH_TITLE, sseBody } from "./support/fake-ask";
+import { SEAM_TITLE, sseBody } from "./support/fake-ask";
 import { clickNodeOnce, waitForGraphIdle, type Cy } from "./support/graph";
 
 type Strings = typeof defaultStrings;
@@ -103,8 +103,8 @@ for (const lang of client.languages) {
       test("首頁、問答、圖譜、時間軸、我的上傳、待審", async ({ page }) => {
         test.setTimeout(300_000);
         const t = await start(page, lang);
-        // 先以預設語言上傳走查用的通知，待審、我的上傳與首頁的「等你處理」才有內容
-        await uploadAndReview(page, { file: "walkthrough-notice.md", title: WALKTHROUGH_TITLE, visibility: "internal", expected: "陳柏翰" });
+        // 先以預設語言上傳只審接縫的試用紀錄（兩個接縫與已直接收錄），待審、我的上傳與首頁的「等你處理」才有內容
+        await uploadAndReview(page, { file: "seam-notice.md", title: SEAM_TITLE, visibility: "internal", expected: "林志明" });
         await useLanguage(page, lang);
 
         await gotoView(page, "home");

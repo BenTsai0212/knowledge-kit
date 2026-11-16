@@ -7,5 +7,6 @@
   "evals": { "path": "evals/", "thresholds": { "citation": 0.9, "answer": 0.8, "refusal": 1 } },
   "retrieval": { "provider": "keyword-hash", "topK": 5, "minScore": 0.1 },
   "upload": { "passageMaxChars": 300, "extractMaxBatches": 3 },
-  "conflicts": { "enabled": true }
+  "conflicts": { "enabled": true },
+  "review": { "mode": "seams" }
 }

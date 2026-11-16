@@ -1,9 +1,10 @@
 // 桌機的待審頁（#345，畫板 docs/design/v1/boards/F-Review.dc.html、F-Empty.dc.html）：1440×900 時有 h1「待審」、
 // 空狀態照 F-Empty（主要的下一步是 primary 按鈕）；上傳後萃取結果每組一列（至少 56px），確認是 primary 按鈕、退回是外框，
 // 「編輯名稱」「出處」是列內的外框按鈕（不是底線連結），文件標頭有上傳者的膠囊；每一步都沒有橫向捲動，英文介面也不破版。
+// 只審接縫的客戶（參考情境，review.mode: seams）上傳的項目是接縫卡片，改檢查選項（S-Review 的 .opt）。
 // 平板寬度不套用桌機的版面。截圖附在測試報告（review-*.png）。萃取是假的 /api/ask（support/fake-ask.ts）
-import { expect, test, type Page, type TestInfo } from "@playwright/test";
-import { gotoView, openApp, s, switchIdentity, switchLanguage, uploadAndReview } from "./support/app";
+import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
+import { gotoView, openApp, s, seams, switchIdentity, switchLanguage, uploadAndReview } from "./support/app";
 import { client, NO_REVIEWING_UPLOADER, reviewer, reviewingUploader } from "./support/client";
 import { FAKE_ENTITY_NAME } from "./support/fake-ask";
 
@@ -51,17 +52,17 @@ test.describe("1440×900", () => {
     const uploaderName = reviewingUploader!.label[client.defaultLanguage];
     await expect(doc.locator(".review-uploader")).toHaveText(s.reviewUploadedBy.replace("{name}", uploaderName));
 
-    // 萃取結果列：至少 56px、surfaceRaised 底；確認是 primary、退回是外框
-    const row = doc.locator(".review-entity").filter({ hasText: FAKE_ENTITY_NAME }).first();
-    expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(56);
-    await expect(row).toHaveCSS("background-color", await tokenColor(page, "surfaceRaised"));
-    const confirm = row.getByRole("button", { name: new RegExp(`^${s.reviewConfirm}`) });
-    await expect(confirm).toHaveCSS("background-color", await tokenColor(page, "primary"));
-    await expect(row.getByRole("button", { name: s.reviewReject, exact: true })).toHaveCSS("border-top-color", await tokenColor(page, "border"));
-    // 編輯名稱、出處是外框按鈕，不是底線連結
-    for (const button of [row.getByRole("button", { name: s.reviewEditNames }), row.getByRole("button", { name: s.reviewSources.replace("{count}", "1") })]) {
-      await expect(button).toHaveCSS("text-decoration-line", "none");
-      await expect(button).toHaveCSS("border-top-style", "solid");
+    if (seams) {
+      // 只審接縫（參考情境）：上傳的項目是接縫卡片（畫板 S-Review），選項至少 44px、14px 一般字重，出口是 textMuted。
+      // 接縫與「已直接收錄」的其他檢查在 review.spec.ts
+      const ask = doc.locator(".ask-card").filter({ hasText: FAKE_ENTITY_NAME });
+      const keep = ask.getByRole("button", { name: s.seamOptionKeep, exact: true });
+      expect((await keep.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      await expect(keep).toHaveCSS("font-weight", "400");
+      await expect(keep).toHaveCSS("font-size", "14px");
+      await expect(ask.getByRole("button", { name: s.commonExplain })).toHaveCSS("color", await tokenColor(page, "textMuted"));
+    } else {
+      await checkItemRow(page, doc);
     }
     expect(await noHorizontalScroll(page)).toBe(true);
     await screenshot(page, testInfo, "review-1440px.png");
@@ -70,11 +71,25 @@ test.describe("1440×900", () => {
     test.skip(!client.languages.includes("en"), "client.json 的 languages 沒有 en");
     await switchLanguage(page, "en");
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
-    await expect(reviewPage.locator(".review-entity").filter({ hasText: FAKE_ENTITY_NAME }).first()).toBeVisible();
+    await expect(reviewPage.locator("section.review-doc").filter({ hasText: FAKE_ENTITY_NAME })).toBeVisible();
     expect(await noHorizontalScroll(page)).toBe(true);
     await screenshot(page, testInfo, "review-en-1440px.png");
   });
 });
+
+// 逐筆核准（item）的萃取結果列：至少 56px、surfaceRaised 底；確認是 primary、退回是外框，「編輯名稱」「出處」是外框按鈕
+async function checkItemRow(page: Page, doc: Locator): Promise<void> {
+  const row = doc.locator(".review-entity").filter({ hasText: FAKE_ENTITY_NAME }).first();
+  expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(56);
+  await expect(row).toHaveCSS("background-color", await tokenColor(page, "surfaceRaised"));
+  const confirm = row.getByRole("button", { name: new RegExp(`^${s.reviewConfirm}`) });
+  await expect(confirm).toHaveCSS("background-color", await tokenColor(page, "primary"));
+  await expect(row.getByRole("button", { name: s.reviewReject, exact: true })).toHaveCSS("border-top-color", await tokenColor(page, "border"));
+  for (const button of [row.getByRole("button", { name: s.reviewEditNames }), row.getByRole("button", { name: s.reviewSources.replace("{count}", "1") })]) {
+    await expect(button).toHaveCSS("text-decoration-line", "none");
+    await expect(button).toHaveCSS("border-top-style", "solid");
+  }
+}
 
 test.describe("平板 900px", () => {
   test.use({ viewport: { width: 900, height: 1000 } });

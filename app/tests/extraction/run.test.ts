@@ -12,10 +12,12 @@ import type { AskBody, AskEvent } from "../../src/qa/types";
 import { uploadDocument } from "../../src/upload/write";
 
 const OPTIONS = { languages: clientConfig.client.languages };
-const withBatches = (n: number): ClientConfig => ({ ...clientConfig, client: { ...clientConfig.client, upload: { ...clientConfig.client.upload, extractMaxBatches: n } } });
+// 萃取本身的測試用逐筆核准（item）：參考情境是 seams（#378 PR 4c），seams 的直接收錄另有測試
+const item: ClientConfig = { ...clientConfig, client: { ...clientConfig.client, review: { mode: "item" } } };
+const withBatches = (n: number): ClientConfig => ({ ...item, client: { ...item.client, upload: { ...item.client.upload, extractMaxBatches: n } } });
 
 // 一般員工上傳一份虛構文件；long 為 true 時每段很長，會分成多批
-async function setup(passages: string[], config: ClientConfig = clientConfig) {
+async function setup(passages: string[], config: ClientConfig = item) {
   const db = await openDatabase(config, { seed: (pg) => seedDataset(pg, config, dataset) });
   const upload = await uploadDocument(
     db,
@@ -43,7 +45,7 @@ describe("runExtraction", { timeout: 30_000 }, () => {
     const { db, upload, state } = await setup(["測試人員甲參與青翼專案的使用者測試。"]);
     const transport = fakeTransport(() => reply([PERSON, PROJECT], [WORKS_ON]));
     const states: ExtractionState[] = [];
-    const result = await runExtraction({ db, transport, config: clientConfig }, state, (s) => states.push(s));
+    const result = await runExtraction({ db, transport, config: item }, state, (s) => states.push(s));
 
     expect(transport.bodies).toHaveLength(1);
     expect(transport.bodies[0].system).toContain("knowledge graph");
@@ -157,7 +159,7 @@ describe("runExtraction", { timeout: 30_000 }, () => {
       // 全形 Ａ 與小寫 a：依 person 的 aliasRules（normalizeWidth、ignoreCase）視為相同；英文名稱不同不影響
       person("e4", "測試人員a", "Someone Else"),
     ];
-    await runExtraction({ db, transport: fakeTransport(() => reply(entities)), config: clientConfig }, state);
+    await runExtraction({ db, transport: fakeTransport(() => reply(entities)), config: item }, state);
     const [doc] = (await readReview(db, "manager")).filter((d) => d.id === upload.documentId);
     expect(doc.entities.map((e) => e.names["zh-TW"]).sort()).toEqual(["林志明", "林芷敏", "測試人員Ａ"].sort());
     await db.close();

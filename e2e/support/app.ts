@@ -1,6 +1,6 @@
 // 端對端測試共用的操作（#66）。畫面文字一律從選定客戶的 i18n 讀取，測試中不寫死；只用預設語言（client.json 的 defaultLanguage）。
 import { expect, type Locator, type Page } from "@playwright/test";
-import { access, language, s, scenarios } from "./client";
+import { access, client, language, s, scenarios } from "./client";
 import { FAKE_ENTITY_NAME, routeFakeAsk } from "./fake-ask";
 import { demoAccount } from "../../app/src/ui/sign-in";
 
@@ -172,6 +172,13 @@ export async function waitForReview(page: Page, expected = FAKE_ENTITY_NAME): Pr
     await expect(item).toBeVisible({ timeout: 2_000 });
   }).toPass();
 }
+
+// 只審接縫（client.json 的 review.mode 為 seams，ADR 0011）：上傳的 FAKE_ENTITY_NAME 是 AI 在問你的卡片（模型標示沒把握），不是逐筆核准的列
+export const seams = client.review?.mode === "seams";
+
+// 收錄 FAKE_ENTITY_NAME 那份文件的按鈕（card 是待審頁的文件卡片）：逐筆核准是「核准這份文件的全部」，只審接縫是卡片的「我覺得沒問題」
+export const acceptButton = (card: Locator) =>
+  seams ? card.getByRole("button", { name: s.seamOptionKeep, exact: true }) : card.getByRole("button", { name: s.reviewApproveDocument });
 
 // 上傳並等萃取的實體出現在待審（目前的身分要能上傳也能審查）
 export async function uploadAndReview(

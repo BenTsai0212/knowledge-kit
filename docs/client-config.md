@@ -105,7 +105,7 @@ npm run check:client
 
 | 欄位 | 格式 | 預設值 | 說明 |
 | --- | --- | --- | --- |
-| `mode` | `item`、`seams` | `item` | `item`：逐筆核准（現行）。`seams`：只審接縫，萃取完成後其餘項目由上傳者直接收錄（[docs/extraction.md](extraction.md)「直接收錄」）。沒有 `canReview` 的上傳者也能讓內容進入圖譜（只限他能選的可見等級）；需要事前審核的組織用 `item`。參考情境改成 `seams` 與對應的 E2E 在 #378 PR 4c，在那之前維持 `item` |
+| `mode` | `item`、`seams` | `item` | `item`：逐筆核准（現行）。`seams`：只審接縫，萃取完成後其餘項目由上傳者直接收錄（[docs/extraction.md](extraction.md)「直接收錄」）。沒有 `canReview` 的上傳者也能讓內容進入圖譜（只限他能選的可見等級）；需要事前審核的組織用 `item`。參考情境（`client/`）與線上 demo 用 `seams`（#378 PR 4c），`clients/` 的示範客戶用預設的 `item` |
 
 ## `theme.json`
 
