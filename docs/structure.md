@@ -175,6 +175,7 @@
 - `merge.ts`：合併比對
 - `output.ts`：解析與驗證
 - `prompt.ts`：prompt
+- `requests.ts`：經 `withIdentity()` 寫入與讀取「請上傳者確認」的請求與回答（ADR 0011；只用 INSERT；規則由 RLS 執行，見 `docs/data-model.md`「請上傳者確認」，測試在 `app/tests/extraction/requests.test.ts`）
 - `run.ts`：分批呼叫 `/api/ask`
 - `store.ts`：經 `withIdentity()` 寫入待審、讀取待審區與我的上傳（`readMyUploads()`，附文件日期與第一個看得到的段落）、核准與退回（只用 INSERT；規則由 RLS 執行，見 `docs/data-model.md`「待審與核准」，測試在 `app/tests/extraction/`）
 

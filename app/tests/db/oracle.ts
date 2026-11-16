@@ -352,3 +352,66 @@ export function canWriteInterpretation(
   const passages = new Set(expectedVisible(access, data, identityId).passages);
   return passages.has(pair.a) && passages.has(pair.b) && !sample.interpretations.some((x) => x.by === identityId && samePair(x, pair));
 }
+
+// docs/data-model.md「請上傳者確認」的獨立實作（ADR 0011 決定 6）。requests 的 by 是請求者；replies 的 mergeInto 是合併對象
+export interface RequestSample {
+  requests: { id: string; item: string; by: string }[];
+  replies: { request: string; mergeInto?: string }[];
+}
+
+const docOfItem = (review: ReviewSample, item: string) => [...review.pendingEntities, ...review.pendingRelations].find((x) => x.id === item)?.doc;
+
+// 看得到的請求：文件看得到，而且有 canReview 或是該文件的上傳者。回答：請求看得到，而且合併對象是自己看得到的實體
+export function expectedRequestVisible(access: AccessFile, data: Sample, review: ReviewSample, requests: RequestSample, identityId: string | null): Visible {
+  const role = access.roles.find((r) => r.id === identityId);
+  if (role === undefined) return { review_requests: [], review_request_replies: [] };
+  const docs = new Set(expectedVisible(access, data, identityId).documents);
+  const entities = new Set(expectedVisible(access, approvedSample(data, review), identityId).entities);
+  const ids = new Set(
+    requests.requests
+      .filter((q) => {
+        const doc = docOfItem(review, q.item)!;
+        return docs.has(doc) && (role.canReview || review.uploads[doc] === role.id);
+      })
+      .map((q) => q.id),
+  );
+  return {
+    review_requests: [...ids],
+    review_request_replies: requests.replies.filter((a) => ids.has(a.request) && (a.mergeInto === undefined || entities.has(a.mergeInto))).map((a) => a.request),
+  };
+}
+
+export const REQUEST_KEY_SQL: Record<string, string> = {
+  review_requests: "id",
+  review_request_replies: "request_id",
+};
+
+// 能否請上傳者確認：有 canReview、項目的文件看得到、文件有上傳者而且不是自己、項目沒有有效的決定，也沒有還沒回答的請求
+export function canRequest(access: AccessFile, data: Sample, review: ReviewSample, requests: RequestSample, identityId: string | null, item: string): boolean {
+  const role = access.roles.find((r) => r.id === identityId);
+  const doc = docOfItem(review, item);
+  if (!role?.canReview || doc === undefined || !expectedVisible(access, data, identityId).documents.includes(doc)) return false;
+  if (review.uploads[doc] === undefined || review.uploads[doc] === role.id) return false;
+  const answered = new Set(requests.replies.map((a) => a.request));
+  return !activeDecisions(review).has(item) && !requests.requests.some((q) => q.item === item && !answered.has(q.id));
+}
+
+// 能否回答：文件是自己上傳而且看得到、請求還沒回答、項目沒有有效的決定；合併只用於實體，對象是自己看得到、類型相同的實體
+export function canReply(
+  access: AccessFile,
+  data: Sample,
+  review: ReviewSample,
+  requests: RequestSample,
+  identityId: string | null,
+  request: string,
+  mergeInto?: { id: string; sameType: boolean },
+): boolean {
+  const q = requests.requests.find((x) => x.id === request);
+  if (q === undefined || identityId === null) return false;
+  const doc = docOfItem(review, q.item)!;
+  if (review.uploads[doc] !== identityId || !expectedVisible(access, data, identityId).documents.includes(doc)) return false;
+  if (requests.replies.some((a) => a.request === request) || activeDecisions(review).has(q.item)) return false;
+  if (mergeInto === undefined) return true;
+  const isEntity = review.pendingEntities.some((e) => e.id === q.item);
+  return isEntity && mergeInto.sameType && expectedVisible(access, approvedSample(data, review), identityId).entities.includes(mergeInto.id);
+}

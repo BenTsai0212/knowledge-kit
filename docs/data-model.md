@@ -81,6 +81,8 @@ PGlite 的 session user 固定是 superuser `postgres`。以 `username: "kk_app"
 | `answer_reports` | `id` PK（`ar-` 開頭）、`reported_by`、`reported_at`、`category`（6 類）、`note`（選填，1～1000 字）、`question`（1～500 字）、`answer`（拒答時 NULL）、`sent_passage_ids`、`cited_passage_ids`（`sent` 的子集）、`entity_ids`（三者都是 `text[]`） | 回答錯誤回報（ADR 0007，0010） |
 | `answer_report_resolutions` | `report_id` PK（每個回報處理一次）、`resolution`（`not_error`／`retracted`）、`resolved_by`、`resolved_at`、`note`（給回報的人的說明，選填，1～500 字，0012） | 回報的處理（ADR 0007，0010、0012） |
 | `interpretations` | `id` PK（`in-` 開頭）、`passage_a`、`passage_b`（一組說法不同的兩段，`passage_a < passage_b`）、`choice`（選的假設的文字，或 `other`；1～100 字）、`changed_after_challenge`（boolean）、`note`（只在 `choice = 'other'` 時，選填，1～500 字）、`created_by`、`created_at`；`(created_by, passage_a, passage_b)` 不重複 | 人的理解（ADR 0012，0015） |
+| `review_requests` | `id` PK（`rq-` 開頭）、`item_id`（待審實體或關係）、`document_id`（項目所屬的文件）、`requested_by`、`requested_at` | 請上傳者確認（ADR 0011，0016） |
+| `review_request_replies` | `request_id` PK（每個請求回答一次）、`replied_by`、`choice`（`merge`／`new`／`keep`／`reject`／`other`）、`merge_into`（只在 `merge` 時，參照 `entities`）、`note`（只在 `other` 時，選填，1～500 字）、`replied_at` | 上傳者的回答（ADR 0011，0016） |
 
 - id 一律 `text`；`client/` 的名單沿用設定中的 id。
 - `language` 以 CHECK 限制為語言代碼格式；「必須屬於 `client.json` 的 `languages`」由匯入程式檢查。
@@ -216,6 +218,24 @@ policy 中的子查詢同樣受 RLS 限制，所以「段落看得到」已包�
 - **撤回沿用 ADR 0007**：`auto` 決定的撤回與 `manual` 相同，由有 `can_review` 的人寫入，可附 `reason`；既有的撤回與連帶撤回為 NULL。
 - **可見範圍**：直接收錄後的正式資料沿用「權限規則」，與人核准的相同；待審資料表與決定的讀取不變（上傳者讀得到自己文件的 `auto` 決定，0011）。
 - `oracle.ts` 的 `canAutoDecide()` 是上述規則的獨立實作（接縫與否由呼叫端傳入）；`app/tests/extraction/auto-review.test.ts` 以 oracle 比對每個身分 × 每個項目能否寫入 `auto` 決定（含只有一端核准的關係），比對直接收錄與撤回後每個身分的圖譜與待審資料表，並測試偽造的決定與正式資料寫入、新欄位的 CHECK。
+
+### 請上傳者確認
+
+接縫的出口「我不確定，請上傳者確認」（[ADR 0011](adr/0011-seam-only-review.md) 決定 6，migration 0016）：審核者寫入請求，上傳者回答一次。上傳者沒有 `can_review`，**回答只是說明，不是決定**：回答後接縫回到審核者，由審核者照舊寫入 `review_decisions`。兩張表都**只用 INSERT**；寫入與讀取集中在 `app/src/extraction/requests.ts`（`requestUploader()`、`replyToRequest()`、`readRequests()`），一律經 `withIdentity()`。
+
+| 資料表 | 權限 | 寫入（`WITH CHECK`） | 讀取（`USING`） |
+| --- | --- | --- | --- |
+| `review_requests` | `SELECT`、`INSERT` | 有 `can_review`、`requested_by` 是自己、`requested_at` 是現在；文件看得到、有上傳者而且不是自己；項目屬於該文件、沒有有效的決定，也沒有還沒回答的請求 | 文件看得到，而且（有 `can_review`，或是該文件的上傳者） |
+| `review_request_replies` | `SELECT`、`INSERT` | `replied_by` 是自己、`replied_at` 是現在；請求看得到而且文件是自己上傳的；項目沒有有效的決定；`merge`、`new` 只用於實體，`merge_into` 是自己看得到、類型相同的實體 | 看得到該請求，而且 `merge_into` 為 NULL 或自己看得到的實體 |
+
+- **上傳者就是審核者時沒有這個出口**：請求的文件上傳者不能是請求者；資料集的文件沒有上傳者，也不能請求。
+- **一個項目同時只有一個沒回答的請求**：回答後可以再請求。檢查寫成 PL/pgSQL 的 `kk.request_open()`（同 `kk.next_round()`，避免 policy 查詢自己的資料表）。
+- **每個請求回答一次**：主鍵是 `request_id`，第二次回傳 `conflict`。項目已有有效的決定時，不能請求也不能回答（`readRequests()` 以 `decided` 標示）。
+- **回答的合併對象要讀者看得到**：實體 id 是有意義的代稱（#284 決定 2）。上傳者看得到、審核者看不到的實體（例如一般員工也能審核時，主管回答合併到機密實體），審核者讀得到請求但讀不到該回答（`reply` 是 `null`），對該審核者而言請求仍是沒回答，所以也不能再請求一次；項目仍可照常決定。
+- **`item_id` 不是外鍵**：待審實體與關係在兩張表，「項目屬於該文件」由 INSERT policy 檢查；`requestUploader()` 由項目帶入文件。
+- policy 的參照方向是 `review_request_replies → review_requests → documents`，沒有循環；`can_see`（讀取）不查待審資料表。
+- 違反 CHECK、外鍵、沒有身分或被 RLS 拒絕時回傳 `denied`；不顯示資料庫的訊息。
+- `oracle.ts` 的 `expectedRequestVisible()`、`canRequest()`、`canReply()` 是上述規則的獨立實作；`app/tests/extraction/requests.test.ts` 以兩種設定（參考情境，以及一般員工也能審核）比對每個身分 × 每個項目能否請求、每個身分 × 每個請求能否回答與看得到的列，並測試合併對象的類型與可見性、說明的限制、已決定的項目、偽造的寫入、`kk_app` 沒有 `UPDATE`／`DELETE`，以及「忽略身分的資料層」的反向驗證。
 
 ## 說法不同
 

@@ -44,4 +44,6 @@ export const KK_TABLES = [
   "answer_reports",
   "answer_report_resolutions",
   "interpretations",
+  "review_requests",
+  "review_request_replies",
 ] as const;
