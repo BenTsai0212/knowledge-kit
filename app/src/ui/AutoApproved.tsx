@@ -45,11 +45,11 @@ export function AutoApproved({ language, active, retracted, busy, row, detail, o
 
   return (
     <section className="review-auto" aria-labelledby={`${ids}-title`}>
-      <h3 className="review-group-title" id={`${ids}-title`}>
+      <h3 className="review-auto__title" id={`${ids}-title`}>
         {fill(s.seamAutoSection, { count: active.length }, language)}
-        {retracted.length > 0 && <span className="review-auto__retracted"> {fill(s.seamAutoRetractedCount, { count: retracted.length }, language)}</span>}
+        {retracted.length > 0 && <span className="review-auto__retracted">{fill(s.seamAutoRetractedCount, { count: retracted.length }, language)}</span>}
       </h3>
-      <p className="muted review-auto__hint">{s.seamAutoHint}</p>
+      <p className="review-auto__hint">{s.seamAutoHint}</p>
       <div className="review-auto__actions">
         <button
           type="button"
@@ -70,7 +70,7 @@ export function AutoApproved({ language, active, retracted, busy, row, detail, o
           {view.kind === "all" ? s.reviewCollapse : s.seamAutoShowAll}
         </button>
       </div>
-      <ul className="review-rows review-auto__list" id={listId}>
+      <ul className="review-auto__list" id={listId}>
         {shown.map((x) => {
           const item = x.item;
           const isActive = activeIds.has(item.id);
@@ -96,26 +96,32 @@ export function AutoApproved({ language, active, retracted, busy, row, detail, o
               </div>
               {detail(x)}
               {open && item.decisionId !== null && (
-                <fieldset className="review-auto__reasons" disabled={busy}>
-                  <legend>{s.seamAutoReasonTitle}</legend>
-                  {REASONS.map((r) => (
-                    <label key={r} className="review-auto__reason">
-                      <input
-                        type="radio"
-                        name={`${ids}-reason-${item.id}`}
-                        checked={retracting.reason === r}
-                        onChange={() => setRetracting({ id: item.id, reason: r })}
-                      />
-                      {reasonLabels[r]}
-                    </label>
-                  ))}
-                  <span className="review-actions">
-                    <button type="button" className="secondary" onClick={() => setRetracting(null)}>
+                <div className="review-auto__reasons">
+                  <span className="review-auto__reasons-title" id={`${ids}-reason-${item.id}`}>
+                    {s.seamAutoReasonTitle}
+                  </span>
+                  {/* 理由是膠囊（畫板 S-Review 的 .rc），一次只能選一個；選了才能按「撤回」 */}
+                  <div className="review-auto__chips" role="group" aria-labelledby={`${ids}-reason-${item.id}`}>
+                    {REASONS.map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        className="review-auto__reason"
+                        aria-pressed={retracting.reason === r}
+                        disabled={busy}
+                        onClick={() => setRetracting({ id: item.id, reason: r })}
+                      >
+                        {reasonLabels[r]}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="review-auto__confirm">
+                    <button type="button" className="secondary" disabled={busy} onClick={() => setRetracting(null)}>
                       {s.seamAutoCancel}
                     </button>
                     <button
                       type="button"
-                      disabled={retracting.reason === null}
+                      disabled={busy || retracting.reason === null}
                       onClick={() => {
                         if (retracting.reason === null || item.decisionId === null) return;
                         onRetract(item.decisionId, retracting.reason);
@@ -124,8 +130,8 @@ export function AutoApproved({ language, active, retracted, busy, row, detail, o
                     >
                       {s.seamAutoRetract}
                     </button>
-                  </span>
-                </fieldset>
+                  </div>
+                </div>
               )}
             </li>
           );

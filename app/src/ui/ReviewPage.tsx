@@ -995,6 +995,8 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
           const rejectedEntities = tab === "rejected" ? doc.entities.filter((e) => e.status === "rejected") : [];
           const rejectedRelations = tab === "rejected" ? doc.relations.filter((r) => r.status === "rejected") : [];
           const auto = autoOf(doc);
+          // 內容區有東西時才畫：只有直接收錄的文件沒有內容區，標頭與「已直接收錄」之間不留空白帶
+          const hasBody = seamCount > 0 || hasItems || rejectedEntities.length + rejectedRelations.length > 0 || docConflicts.length > 0;
           // 收合（#243）：只在待審分頁，沒有需要確認的組與待處理的說法不同時。只有直接收錄的文件沒有可以收合的內容
           const collapsible = tab === "pending" && hasItems && docCollapsible((g?.summary.toConfirm ?? 0) + seamCount, docConflicts.length);
           if (tab === "pending" && !firstOpen.current.has(doc.id)) firstOpen.current.set(doc.id, !collapsible);
@@ -1073,7 +1075,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
               </header>
               {decideLeft > 0 && <p className="muted review-decide-left">{fill(s.reviewDecideLeft, { count: decideLeft }, language)}</p>}
 
-              <div className="review-doc__body" id={bodyId} hidden={!open}>
+              <div className="review-doc__body" id={bodyId} hidden={!open || !hasBody}>
                 {seams !== null && seamCount > 0 && (
                   <>
                     <h3 className="review-group-title">{s.seamSection}</h3>
@@ -1180,21 +1182,23 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
 
                 {/* 說法不同（#51）：新舊段落左右並列，附模型的差異說明（純文字）；待審分頁有三個處理按鈕，已處理分頁顯示決定 */}
                 {docConflicts.length > 0 && <h3 className="review-group-title is-conflict">{s.conflictSection}</h3>}
-                <ul className="review-list">
-                  {docConflicts.map((c, i) => (
-                    <li key={c.id} {...itemProps(c.id, i)}>
-                      {phone && c.decision === null
-                        ? sheetRow(
-                            <span className="review-sheet-row__text" lang={c.newPassage.language}>
-                              {c.summary}
-                            </span>,
-                            s.conflictSection,
-                            () => setSheet({ docId: doc.id, kind: "conflict", id: c.id }),
-                          )
-                        : conflictBody(doc, c)}
-                    </li>
-                  ))}
-                </ul>
+                {docConflicts.length > 0 && (
+                  <ul className="review-list">
+                    {docConflicts.map((c, i) => (
+                      <li key={c.id} {...itemProps(c.id, i)}>
+                        {phone && c.decision === null
+                          ? sheetRow(
+                              <span className="review-sheet-row__text" lang={c.newPassage.language}>
+                                {c.summary}
+                              </span>,
+                              s.conflictSection,
+                              () => setSheet({ docId: doc.id, kind: "conflict", id: c.id }),
+                            )
+                          : conflictBody(doc, c)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
               {/* 已直接收錄（ADR 0011 決定 5）：在收合的內容之外，文件收合時也看得到；這個區塊本身預設收合 */}
               {auto.active.length + auto.retracted.length > 0 && (

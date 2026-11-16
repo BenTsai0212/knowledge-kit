@@ -4311,55 +4311,150 @@ label.inline {
 
 /* 已直接收錄（ADR 0011 決定 5，AutoApproved.tsx）：在文件卡片最下方，上方細線分隔；預設只有標題、說明與兩個次要按鈕。
    已撤回的項目明確標示（outline 的 textMuted 膠囊，不用綠色或勾勾），列本身變淡 */
-.review-auto {
-  margin-top: 1rem;
-  border-top: 1px solid var(--color-border);
+/* 已直接收錄（ADR 0011 決定 5，畫板 S-Review 的 .auto）：文件卡片內一個 border 細框的方塊，各種版面相同。
+   選擇器前加 .review-doc：蓋過桌機卡片內按鈕與標示的樣式（.review-page--desktop .review-doc button 等） */
+.review-doc .review-auto {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
 }
 
-.review-auto__hint {
-  margin: 0 0 0.5rem;
-  font-size: 0.875rem;
+/* 桌機的卡片沒有內距（標頭與內容區各自有）：方塊與卡片邊緣隔開 */
+.review-page--desktop .review-doc .review-auto {
+  margin: 0 20px 20px;
 }
 
-.review-auto__actions {
+.review-page--desktop .review-doc:has(> .review-doc__body:not([hidden])) .review-auto {
+  margin-top: 0;
+}
+
+.review-page--desktop .review-doc:has(> .review-doc__body[hidden]) .review-auto {
+  margin-top: 2px;
+}
+
+.review-auto__title {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0;
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.review-auto__retracted,
+.review-auto__hint,
+.review-auto__reasons-title {
+  margin: 0;
+  color: var(--color-textMuted);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.review-auto__actions,
+.review-auto__chips,
+.review-auto__confirm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.review-auto__chips {
+  gap: 6px;
+}
+
+/* 「隨機抽查 3 項」「展開全部」「取消」：40px 高的外框按鈕（畫板的 .sbtn） */
+.review-page .review-doc .review-auto button.secondary {
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.review-doc .review-auto .review-row button.secondary {
+  height: 36px;
+}
+
+.review-doc .review-auto .review-auto__confirm > button:not(.secondary) {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 13px;
 }
 
 .review-auto__list {
-  padding-left: 0;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .review-auto__list:empty {
   display: none;
 }
 
+/* 每一列上方 1px 分隔線（畫板的 .arow） */
+.review-auto__item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 0;
+  border-top: 1px solid var(--color-border);
+  font-size: 14px;
+}
+
 .review-auto__item.is-retracted > .review-row > :not(.review-mark) {
   opacity: 0.6;
 }
 
-.review-mark.is-retracted {
+/* 已撤回：border 細框的膠囊、textMuted 字（畫板的 .done）；不用綠色、勾勾或錯誤色 */
+.review-doc .review-auto .review-mark.is-retracted {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
   background: none;
-  box-shadow: inset 0 0 0 1px var(--color-textMuted);
+  box-shadow: none;
+  color: var(--color-textMuted);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .review-auto__reasons {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 1rem;
-  margin: 0.5rem 0 0;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-small);
-  padding: 0.5rem 0.75rem;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.review-auto__reason {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  min-height: 44px;
+/* 撤回理由的膠囊（畫板的 .rc）：選中時 text 底、surface 字 */
+.review-doc .review-auto button.review-auto__reason {
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.review-doc .review-auto button.review-auto__reason[aria-pressed="true"] {
+  border-color: var(--color-text);
+  background: var(--color-text);
+  color: var(--color-surface);
 }
 
 /* 名稱缺少語言的實體（#243）：整列 warning 細框（不做大面積底色），缺的欄位標示必填 */
