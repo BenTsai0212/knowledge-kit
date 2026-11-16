@@ -64,6 +64,25 @@ describe("planEntity（ADR 0011 決定 1、2）", () => {
     expect(planEntity(entity("person", "測試人員乙", "Yating Chan"), visible, en).seams).toEqual(["near_name"]);
   });
 
+  it("同一份文件中兩個新的同類型實體只差一個字：兩個都是接縫；類型不同或差兩個字時不是", () => {
+    const doc = (id: string, type: string, zh: string, en: string): SeamEntityInput => ({ id, type, names: { "zh-TW": zh, en }, unsure: null });
+    // 看得到的實體中沒有測試人員丙、丁
+    const a = doc("pe-1", "person", "測試人員丙", "Test Person C");
+    const b = doc("pe-2", "person", "測試人員丁", "Test Person D");
+    expect(planEntity(a, visible, ctx, [a, b]).seams).toEqual(["near_name"]);
+    expect(planEntity(b, visible, ctx, [a, b]).seams).toEqual(["near_name"]);
+    // 類型不同
+    const team = doc("pe-2", "team", "測試人員丁", "Test Team D");
+    expect(planEntity(a, visible, ctx, [a, team])).toEqual({ seams: [] });
+    expect(planEntity(team, visible, ctx, [a, team])).toEqual({ seams: [] });
+    // 只差兩個字
+    const c = doc("pe-2", "person", "測試組員丁", "Test Member D");
+    expect(planEntity(a, visible, ctx, [a, c])).toEqual({ seams: [] });
+    expect(planEntity(c, visible, ctx, [a, c])).toEqual({ seams: [] });
+    // 只有自己時不和自己比對
+    expect(planEntity(a, visible, ctx, [a])).toEqual({ seams: [] });
+  });
+
   it("模型標示沒把握是接縫；有多個原因時全部列出", () => {
     expect(planEntity(entity("person", "測試人員甲", "Test Person A", "possible_typo"), visible, ctx).seams).toEqual(["unsure"]);
     expect(planEntity(entity("person", "林志明", "", "same_name"), visible, ctx).seams).toEqual(["candidates", "missing_language", "unsure"]);

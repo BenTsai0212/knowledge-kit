@@ -49,7 +49,7 @@ async function setup() {
   });
   // unsure 在 PR 3 才由萃取寫入，這裡由上傳者直接寫入待審
   await db.withIdentity("staff", async (tx) => {
-    await tx.query(`INSERT INTO kk.pending_entities (id, document_id, entity_type, names, unsure) VALUES ('pe-f', $1, 'person', '{"zh-TW":"測試人員乙","en":"Test Person B"}', 'same_name')`, [documentId]);
+    await tx.query(`INSERT INTO kk.pending_entities (id, document_id, entity_type, names, unsure) VALUES ('pe-f', $1, 'person', '{"zh-TW":"測試顧問乙","en":"Test Advisor B"}', 'same_name')`, [documentId]);
     await tx.query(`INSERT INTO kk.pending_entity_sources (pending_entity_id, document_id, passage_id) VALUES ('pe-f', $1, $2)`, [documentId, p]);
     await tx.query(
       `INSERT INTO kk.pending_relations (id, document_id, relation_type, from_pending_id, to_pending_id, unsure) VALUES ('pr-c', $1, 'member-of', 'pe-a', 'pe-b', 'relation_wording')`,
@@ -133,6 +133,30 @@ describe("autoApprove（ADR 0011）", { timeout: 60_000 }, () => {
     const result = await autoApprove(db, "staff", documentId, AUTO);
     expect(result.entities).toEqual(["pe-a"]);
     expect(result.relations).toEqual([]);
+    await db.close();
+  });
+
+  it("同一份文件中兩個新實體只差一個字：兩個都留在待審，不寫入 auto 決定", async () => {
+    const { db, documentId, passage: p } = await upload(["測試人員丙與測試人員丁參與青翼專案的使用者測試。"]);
+    await writePending(db, "staff", documentId, {
+      entities: [
+        { id: "pe-x", type: "person", names: { "zh-TW": "測試人員丙", en: "Test Person C" }, sources: [p] },
+        { id: "pe-y", type: "person", names: { "zh-TW": "測試人員丁", en: "Test Person D" }, sources: [p] },
+      ],
+      relations: [],
+    });
+    expect(await autoApprove(db, "staff", documentId, AUTO)).toEqual({
+      entities: [],
+      relations: [],
+      seams: { "pe-x": ["near_name"], "pe-y": ["near_name"] },
+    });
+    const review = await reviewOf(db, "manager", documentId);
+    expect(review["pe-x"]).toEqual(["pending", null, null, null]);
+    expect(review["pe-y"]).toEqual(["pending", null, null, null]);
+    const decisions = await db.withIdentity("manager", async (tx) =>
+      (await tx.query("SELECT id FROM kk.review_decisions WHERE item_id IN ('pe-x', 'pe-y')")).rows,
+    );
+    expect(decisions).toEqual([]);
     await db.close();
   });
 

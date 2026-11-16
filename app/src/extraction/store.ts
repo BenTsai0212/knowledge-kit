@@ -436,7 +436,7 @@ export interface AutoApproveResult {
 const UNDECIDED = (alias: string) => `NOT EXISTS (SELECT 1 FROM kk.review_decisions x WHERE x.item_id = ${alias}.id)`;
 
 // 直接收錄（ADR 0011 決定 1–4）：上傳者在一個交易中重算接縫，非接縫的項目寫入 auto 決定與正式資料（實體先、關係後）。
-// 合併候選與編輯距離依上傳者看得到的實體計算（seams.ts）；資料庫另以 auto policy 檢查上傳者、unsure、名稱與合併對象（0013）。
+// 合併候選與編輯距離依上傳者看得到的實體與同一份文件的待審實體計算（seams.ts）；資料庫另以 auto policy 檢查上傳者、unsure、名稱與合併對象（0013）。
 // 任何一列被拒絕就全部不寫入，項目留在待審
 export async function autoApprove(
   db: Database,
@@ -466,7 +466,7 @@ export async function autoApprove(
       const ctx: SeamContext = { entityTypes: options.entityTypes, languages: options.languages, documentLanguage: doc.language };
 
       const result: AutoApproveResult = { entities: [], relations: [], seams: {} };
-      const plans = new Map(entities.map((e) => [e.id, planEntity(e, visible, ctx)]));
+      const plans = new Map(entities.map((e) => [e.id, planEntity(e, visible, ctx, entities)]));
       for (const [id, plan] of plans) {
         if (plan.seams.length > 0) {
           result.seams[id] = plan.seams;

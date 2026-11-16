@@ -6,7 +6,7 @@ import { normalizeName, suggestMerge } from "./merge";
 // 模型標示沒把握的原因（萃取 JSON 的 unsure，migration 0013）
 export type Unsure = "same_name" | "possible_typo" | "relation_wording" | "other";
 
-// 接縫的原因：合併候選 2 個以上、名稱缺少語言、與看得到的同類型實體只差一個字、模型標示沒把握、關係的端點是接縫
+// 接縫的原因：合併候選 2 個以上、名稱缺少語言、與看得到的或同一份文件的同類型實體只差一個字、模型標示沒把握、關係的端點是接縫
 export type SeamReason = "candidates" | "missing_language" | "near_name" | "unsure" | "endpoint";
 
 export interface SeamEntityInput {
@@ -57,24 +57,32 @@ export function editDistance(a: string, b: string): number {
 
 const blank = (name: string | undefined) => name === undefined || name.trim() === "";
 
-// 新實體的文件語言名稱，與看得到的同類型實體的任一名稱正規化後只差一個字（可能是錯字或同一人，例如「張雅亭／張雅婷」）
-function nearName(entity: SeamEntityInput, visible: VisibleEntity[], ctx: SeamContext): boolean {
+const rulesOf = (type: string, ctx: SeamContext) =>
+  ctx.entityTypes.find((t) => t.id === type)?.aliasRules ?? { normalizeWidth: false, ignoreCase: false, ignoreWhitespace: false };
+
+// 新實體的文件語言名稱只差一個字（可能是錯字或同一人，例如「張雅亭／張雅婷」），依類型的 aliasRules 正規化後比對：
+// - 看得到的同類型實體的任一名稱
+// - 同一份文件中其他待審的同類型實體的文件語言名稱（兩個新實體都成立，都是接縫）
+function nearName(entity: SeamEntityInput, visible: VisibleEntity[], siblings: SeamEntityInput[], ctx: SeamContext): boolean {
   const name = entity.names[ctx.documentLanguage];
   if (blank(name)) return false;
-  const rules = ctx.entityTypes.find((t) => t.id === entity.type)?.aliasRules ?? { normalizeWidth: false, ignoreCase: false, ignoreWhitespace: false };
+  const rules = rulesOf(entity.type, ctx);
   const key = normalizeName(name!, rules);
-  return visible
-    .filter((v) => v.type === entity.type)
-    .some((v) => [v.name, ...Object.values(v.names)].some((n) => n !== undefined && editDistance(key, normalizeName(n, rules)) === 1));
+  const near = (n: string | undefined) => n !== undefined && !blank(n) && editDistance(key, normalizeName(n, rules)) === 1;
+  return (
+    visible.filter((v) => v.type === entity.type).some((v) => [v.name, ...Object.values(v.names)].some(near)) ||
+    siblings.filter((s) => s.id !== entity.id && s.type === entity.type).some((s) => near(s.names[ctx.documentLanguage]))
+  );
 }
 
-export function planEntity(entity: SeamEntityInput, visible: VisibleEntity[], ctx: SeamContext): EntityPlan {
+// siblings：同一份文件中其他待審的實體（可含 entity 本身，以 id 排除）
+export function planEntity(entity: SeamEntityInput, visible: VisibleEntity[], ctx: SeamContext, siblings: SeamEntityInput[] = []): EntityPlan {
   const seams: SeamReason[] = [];
   const merge = suggestMerge(entity, visible, ctx.entityTypes);
   const candidates = merge.mode === "new" ? [] : merge.mode === "auto" ? [merge.target] : merge.candidates;
   if (candidates.length >= 2) seams.push("candidates");
   if (ctx.languages.some((l) => blank(entity.names[l]))) seams.push("missing_language");
-  if (candidates.length === 0 && nearName(entity, visible, ctx)) seams.push("near_name");
+  if (candidates.length === 0 && nearName(entity, visible, siblings, ctx)) seams.push("near_name");
   if (entity.unsure !== null) seams.push("unsure");
   // 只有一個候選的合併直接收錄（ADR 0011 決定 2），不論 mergeStrategy
   return seams.length === 0 && candidates.length === 1 ? { seams, mergeInto: candidates[0] } : { seams };

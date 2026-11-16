@@ -142,7 +142,7 @@ If nothing can be extracted, reply {"entities":[],"relations":[]}.
 | --- | --- |
 | `candidates` | 合併候選（「合併」的 `suggestMerge()`）2 個以上，例如兩位林志明 |
 | `missing_language` | `client.json` 的任一 `languages` 沒有名稱或名稱空白 |
-| `near_name` | 沒有合併候選，而且文件語言的名稱與看得到的同類型實體的任一名稱，依類型的 `aliasRules` 正規化後編輯距離是 1（例如「張雅亭／張雅婷」） |
+| `near_name` | 沒有合併候選，而且文件語言的名稱依類型的 `aliasRules` 正規化後，與下列任一名稱的編輯距離是 1（例如「張雅亭／張雅婷」）：看得到的同類型實體的任一名稱；同一份文件中其他待審的同類型實體的文件語言名稱（兩個都是接縫） |
 | `unsure` | 模型標示沒把握（`pending_entities`／`pending_relations` 的 `unsure`） |
 | `endpoint` | 關係的任一端是接縫，或端點沒有有效的核准（例如已由人退回） |
 
