@@ -32,6 +32,8 @@ export interface ReviewEntity {
   mode?: DecisionMode;
   // 模型標示沒把握的原因（萃取寫入時才有）
   unsure?: Unsure;
+  // 直接收錄後被撤回（ADR 0011 決定 5）：撤回的理由，連帶撤回時為 null。沒有被撤回的直接收錄時省略
+  autoRetracted?: { reason: RetractReason | null };
 }
 
 export interface ReviewRelation {
@@ -46,6 +48,7 @@ export interface ReviewRelation {
   rejectedWithEntity: boolean;
   mode?: DecisionMode;
   unsure?: Unsure;
+  autoRetracted?: { reason: RetractReason | null };
 }
 
 export interface ReviewDocument {
@@ -177,11 +180,20 @@ function group(rows: SourceRow[]): Map<string, SourcePassage[]> {
 
 const statusOf = (decision: string | null): ReviewStatus => (decision === null ? "pending" : decision === "approve" ? "approved" : "rejected");
 
-// 決定的方式與 unsure 只在有值時放進項目
-const optional = (row: { mode: DecisionMode | null; unsure: Unsure | null }): { mode?: DecisionMode; unsure?: Unsure } => ({
+// 決定的方式、unsure 與直接收錄的撤回只在有值時放進項目
+type OptionalRow = { mode: DecisionMode | null; unsure: Unsure | null; auto_retracted: boolean; auto_retract_reason: RetractReason | null };
+const optional = (row: OptionalRow): Pick<ReviewEntity, "mode" | "unsure" | "autoRetracted"> => ({
   ...(row.mode === null ? {} : { mode: row.mode }),
   ...(row.unsure === null ? {} : { unsure: row.unsure }),
+  ...(row.auto_retracted ? { autoRetracted: { reason: row.auto_retract_reason } } : {}),
 });
+
+// 被撤回的直接收錄與撤回的理由（每個項目最多一筆 auto 決定：只有從未決定的項目會直接收錄）
+const AUTO_RETRACTED = (alias: string) => `
+  EXISTS (SELECT 1 FROM kk.review_decisions a JOIN kk.review_retractions x ON x.decision_id = a.id
+           WHERE a.item_id = ${alias}.id AND a.mode = 'auto') AS auto_retracted,
+  (SELECT x.reason FROM kk.review_decisions a JOIN kk.review_retractions x ON x.decision_id = a.id
+    WHERE a.item_id = ${alias}.id AND a.mode = 'auto' LIMIT 1) AS auto_retract_reason`;
 
 // 未撤回的決定（每個項目最多一筆）
 const ACTIVE = (alias: string) => `NOT EXISTS (SELECT 1 FROM kk.review_retractions x WHERE x.decision_id = ${alias}.id)`;
@@ -233,11 +245,9 @@ async function pendingDocuments(tx: Transaction, ownOnly: boolean): Promise<Revi
       decision: string | null;
       decision_id: string | null;
       merge_into: string | null;
-      mode: DecisionMode | null;
-      unsure: Unsure | null;
-    }>(
+    } & OptionalRow>(
       `SELECT p.id, p.document_id, d.title, d.language, d.visibility_level_id AS visibility, d.project_id AS project,
-              d.uploaded_by, p.entity_type, p.names, p.unsure, r.decision, r.id AS decision_id, r.merge_into, r.mode
+              d.uploaded_by, p.entity_type, p.names, p.unsure, r.decision, r.id AS decision_id, r.merge_into, r.mode, ${AUTO_RETRACTED("p")}
          FROM kk.pending_entities p JOIN kk.documents d ON d.id = p.document_id
          LEFT JOIN kk.review_decisions r ON r.item_id = p.id AND ${ACTIVE("r")}
         ${ownOnly ? "WHERE d.uploaded_by = kk.current_identity_id()" : ""}
@@ -253,10 +263,9 @@ async function pendingDocuments(tx: Transaction, ownOnly: boolean): Promise<Revi
       to_pending_id: string;
       decision: string | null;
       decision_id: string | null;
-      mode: DecisionMode | null;
-      unsure: Unsure | null;
-    }>(
-      `SELECT p.id, p.document_id, p.relation_type, p.from_pending_id, p.to_pending_id, p.unsure, r.decision, r.id AS decision_id, r.mode
+    } & OptionalRow>(
+      `SELECT p.id, p.document_id, p.relation_type, p.from_pending_id, p.to_pending_id, p.unsure, r.decision, r.id AS decision_id, r.mode,
+              ${AUTO_RETRACTED("p")}
          FROM kk.pending_relations p LEFT JOIN kk.review_decisions r ON r.item_id = p.id AND ${ACTIVE("r")}
         ORDER BY p.document_id, p.id`,
     )

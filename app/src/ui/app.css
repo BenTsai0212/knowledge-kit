@@ -4309,6 +4309,59 @@ label.inline {
   margin-top: 0.75rem;
 }
 
+/* 已直接收錄（ADR 0011 決定 5，AutoApproved.tsx）：在文件卡片最下方，上方細線分隔；預設只有標題、說明與兩個次要按鈕。
+   已撤回的項目明確標示（outline 的 textMuted 膠囊，不用綠色或勾勾），列本身變淡 */
+.review-auto {
+  margin-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.review-auto__hint {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+}
+
+.review-auto__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.review-auto__list {
+  padding-left: 0;
+}
+
+.review-auto__list:empty {
+  display: none;
+}
+
+.review-auto__item.is-retracted > .review-row > :not(.review-mark) {
+  opacity: 0.6;
+}
+
+.review-mark.is-retracted {
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--color-textMuted);
+}
+
+.review-auto__reasons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin: 0.5rem 0 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  padding: 0.5rem 0.75rem;
+}
+
+.review-auto__reason {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 44px;
+}
+
 /* 名稱缺少語言的實體（#243）：整列 warning 細框（不做大面積底色），缺的欄位標示必填 */
 .review-entity.is-warning {
   border: 1px solid var(--color-warning);

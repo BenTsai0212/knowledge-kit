@@ -687,6 +687,24 @@ export interface UiStrings {
   seamOptionExclude: string;
   seamRelations: string;
   seamExplainHint: string;
+  // 「已直接收錄」區（ADR 0011 決定 5）：區塊標題（{count} 是直接收錄的項目數）、說明、已撤回的數量、隨機抽查（{count} 是抽查的項目數）、
+  // 展開全部、合併對象（{name}）、撤回與理由（名稱錯了、關係用錯了、不該合併、不該收錄、其他）、「已撤回」標示與撤回後的短提示
+  seamAutoSection: string;
+  seamAutoHint: string;
+  seamAutoRetractedCount: string;
+  seamAutoSample: string;
+  seamAutoShowAll: string;
+  seamAutoMergedInto: string;
+  seamAutoRetract: string;
+  seamAutoReasonTitle: string;
+  seamAutoCancel: string;
+  seamAutoRetracted: string;
+  seamAutoToast: string;
+  seamReasonName: string;
+  seamReasonRelation: string;
+  seamReasonMerge: string;
+  seamReasonExclude: string;
+  seamReasonOther: string;
   // AI 在問你的共用文字（AskCard.tsx；ADR 0011、0012 共用）：「都不是，我來說明」、說明欄、複述（{note} 是人寫的說明）、「輪到你」
   commonExplain: string;
   commonExplainLabel: string;

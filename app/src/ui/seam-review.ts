@@ -122,3 +122,30 @@ export function relationSeamPlan(doc: ReviewDocument, relation: ReviewRelation, 
   const existing = existingRelation(doc, relation, {}, graph) !== undefined;
   return { entities: [], relations: existing ? [] : [relation.id], existingRelations: existing ? [relation.id] : [] };
 }
+
+// 「已直接收錄」區（ADR 0011 決定 5，docs/design.md「待審的接縫」）：目前有效的決定是直接收錄的項目（可以撤回），
+// 以及直接收錄後被撤回的項目（標示「已撤回」；已回到待審或已由人重新決定）。依文件中的順序，實體在前
+export type AutoItem = { kind: "entity"; item: ReviewEntity } | { kind: "relation"; item: ReviewRelation };
+
+export function autoItems(doc: ReviewDocument): { active: AutoItem[]; retracted: AutoItem[] } {
+  const all: AutoItem[] = [
+    ...doc.entities.map((item): AutoItem => ({ kind: "entity", item })),
+    ...doc.relations.map((item): AutoItem => ({ kind: "relation", item })),
+  ];
+  return {
+    active: all.filter((x) => x.item.status === "approved" && x.item.mode === "auto"),
+    retracted: all.filter((x) => x.item.autoRetracted !== undefined),
+  };
+}
+
+// 隨機抽查：從 items 中不重複地抽 n 項（不足 n 項時全部），保留原本的順序。random 可注入（測試用）
+export function sample<T>(items: readonly T[], n: number, random: () => number = Math.random): T[] {
+  const pool = items.map((_, i) => i);
+  const count = Math.min(n, items.length);
+  for (let k = 0; k < count; k++) {
+    const j = k + Math.floor(random() * (pool.length - k));
+    [pool[k], pool[j]] = [pool[j], pool[k]];
+  }
+  const picked = new Set(pool.slice(0, count));
+  return items.filter((_, i) => picked.has(i));
+}

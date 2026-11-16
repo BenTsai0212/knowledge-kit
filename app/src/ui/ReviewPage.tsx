@@ -12,7 +12,8 @@
 // 每份文件另有「說法不同」區塊（#51）：新舊段落並列、三選一處理；已處理的在「已處理的說法不同」分頁。
 // 「回報」分頁是問答的回答錯誤回報（ADR 0007 決定 7，ReportList.tsx）。
 // 只審接縫（client.json 的 review.mode 為 seams，ADR 0011）：每份文件最上面是「需要你判斷」，接縫一項一張 AI 在問你的卡片
-// （AskCard.tsx，提問與選項在 seam-review.ts）；其他待審項目照上述的分組。
+// （AskCard.tsx，提問與選項在 seam-review.ts）；其他待審項目照上述的分組。最下方是「已直接收錄 N 項」（AutoApproved.tsx）：
+// 預設收合，可以隨機抽查或展開全部，撤回時選理由；只有直接收錄的文件也列出。
 // 桌機（#345，畫板 F-Review、F-Empty）：review-page--desktop 加上 h1「待審」、填滿內容區；文件標頭有上傳者與可見範圍的膠囊，
 // 萃取結果每組一列，「編輯名稱」「出處」「變更合併對象」「展開」是列內的次要按鈕（其他版面仍是底線連結）。樣式都在 app.css
 // 手機（#282）：review-page--phone；需要決定的組（sheetReason）與待處理的說法不同只畫一行摘要與「›」，點了以底部面板處理
@@ -24,14 +25,26 @@ import type { LocalizedText } from "../client/types";
 import { decideConflict, readConflicts, type ConflictDecision, type ConflictItem, type ConflictPassage } from "../conflicts/store";
 import type { Database } from "../db/database";
 import { suggestMerge, type MergeSuggestion } from "../extraction/merge";
-import { approve, readReview, reject, retract, ReviewError, type EntityApproval, type ReviewDocument, type ReviewEntity, type ReviewRelation } from "../extraction/store";
+import {
+  approve,
+  readReview,
+  reject,
+  retract,
+  ReviewError,
+  type EntityApproval,
+  type RetractReason,
+  type ReviewDocument,
+  type ReviewEntity,
+  type ReviewRelation,
+} from "../extraction/store";
 import { readGraph, type Graph } from "../graph/read";
 import { readReports, type AnswerReport } from "../reports/store";
 import { AccessBadges } from "./AccessBadges";
 import { AskCard } from "./AskCard";
+import { AutoApproved } from "./AutoApproved";
 import { BottomSheet } from "./BottomSheet";
 import { entityOptionLabel, entityTypeLabel, relationTypeLabel } from "./graph-labels";
-import { relationSeamPlan, seamPartition, seamPlan, type EntitySeam, type RelationSeam, type SeamOption } from "./seam-review";
+import { autoItems, relationSeamPlan, seamPartition, seamPlan, type AutoItem, type EntitySeam, type RelationSeam, type SeamOption } from "./seam-review";
 import { Notice } from "./Notice";
 import { EmptyState } from "./EmptyState";
 import { ReportList } from "./ReportList";
@@ -356,6 +369,9 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   // 撤銷：撤回剛寫入的每一筆決定（退回時含一併退回的關係），項目回到待審、列在原位重新展開；短提示原地換掉文字（#243）
   const undo = (target: UndoTarget) =>
     void run(target.docId, () => retract(db, identity, target.decisions), { text: s.reviewToastUndone, graph: false }, 0, { restore: target.items, inPlace: true });
+  // 撤回直接收錄的項目並記理由（ADR 0011 決定 5）：項目回到待審；撤回實體時，跟著它直接收錄的關係連帶撤回（不記理由）
+  const retractAuto = (docId: string, decisionId: string, reason: RetractReason) =>
+    void run(docId, () => retract(db, identity, [decisionId], reason), { text: s.seamAutoToast, graph: false });
   // 列（li）的 class 與依序出現的格數（#243）：逐列升起，第 7 列起不再延遲；--o 是往右離開的第幾個（#243 PR 4）
   const itemProps = (id: string, index: number) => ({
     className: rowClass(id, leaving, restored),
@@ -407,8 +423,12 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
   const conflictsOf = (docId: string) =>
     conflicts.filter((c) => c.documentId === docId && (tab === "pending" ? c.decision === null : tab === "decided" && c.decision !== null));
   const itemStatus = tab === "pending" ? "pending" : tab === "rejected" ? "rejected" : null;
+  // 只審接縫的待審分頁：每份文件的「已直接收錄」區（ADR 0011 決定 5）
+  const autoOf = (doc: ReviewDocument) => (tab === "pending" && client.review.mode === "seams" ? autoItems(doc) : { active: [], retracted: [] });
   // 回報分頁沒有文件：itemStatus 是 null，conflictsOf() 也是空的
-  const visibleDocs = docs.filter((d) => [...d.entities, ...d.relations].some((x) => x.status === itemStatus) || conflictsOf(d.id).length > 0);
+  const listedDocs = docs.filter((d) => [...d.entities, ...d.relations].some((x) => x.status === itemStatus) || conflictsOf(d.id).length > 0);
+  // 只有直接收錄、沒有待審項目的文件也列出（可以抽查與撤回），但不算在待審中：沒有其他文件時仍顯示「待審清空」
+  const visibleDocs = docs.filter((d) => listedDocs.includes(d) || autoOf(d).active.length + autoOf(d).retracted.length > 0);
   // 並存與取代先播完動畫才寫入（#243 PR 4）
   const decide = (docId: string, conflictId: string, decision: ConflictDecision) =>
     void run(
@@ -785,6 +805,39 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
       </AskCard>
     );
   };
+  // 「已直接收錄」區的一項（ADR 0011 決定 5）：實體是類型、各語言名稱與合併對象，關係是「起點 —關係→ 終點」；最後是出處的開關
+  const autoRow = (doc: ReviewDocument, x: AutoItem) => {
+    if (x.kind === "relation") {
+      const r = x.item;
+      return (
+        <>
+          <span>
+            {nameOf(doc, r.from)} <span className="review-relation__type">—{relationTypeLabel(r.type, language)}→</span> {nameOf(doc, r.to)}
+          </span>
+          {sourcesToggle(r.id, r.sources.length)}
+        </>
+      );
+    }
+    const e = x.item;
+    const target = e.mergedInto === null ? undefined : graph.entities.find((t) => t.id === e.mergedInto);
+    return (
+      <>
+        {typeBadge(e)}
+        <span className="review-names">
+          {client.languages.map((l, i) => (
+            <Fragment key={l}>
+              {i > 0 && " / "}
+              <span lang={l}>{e.names[l]}</span>
+            </Fragment>
+          ))}
+        </span>
+        {target !== undefined && <span className="review-mark">{fill(s.seamAutoMergedInto, { name: entityOptionLabel(graph, target, language) }, language)}</span>}
+        {sourcesToggle(e.id, e.sources.length)}
+      </>
+    );
+  };
+  const autoDetail = (doc: ReviewDocument, x: AutoItem) =>
+    openSources.has(x.item.id) && sourceList(doc, x.item.id, x.item.sources, x.kind === "entity" ? [x.item.id] : [x.item.from, x.item.to]);
   // 手機上需要決定的項目（#282）：一行摘要、要做的決定與「›」，點了打開底部面板處理
   // （包在 review-item__body 中：列收合、往左淡出的動態與其他列相同）
   const sheetRow = (label: ReactNode, reason: string, open: () => void) => (
@@ -906,7 +959,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
             onResolved={refresh}
           />
         )}
-        {tab !== "reports" && visibleDocs.length === 0 && (
+        {tab !== "reports" && listedDocs.length === 0 && (
           // 待審清空（#245）：到圖譜查看、再上傳一份；已退回與已處理的分頁只有標題
           <EmptyState
             icon="review"
@@ -941,8 +994,9 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
           const preparedMerges = g?.prepared.entities.some((e) => typeof allChoices[e.id].mergeInto === "string") ?? false;
           const rejectedEntities = tab === "rejected" ? doc.entities.filter((e) => e.status === "rejected") : [];
           const rejectedRelations = tab === "rejected" ? doc.relations.filter((r) => r.status === "rejected") : [];
-          // 收合（#243）：只在待審分頁，沒有需要確認的組與待處理的說法不同時
-          const collapsible = tab === "pending" && docCollapsible((g?.summary.toConfirm ?? 0) + seamCount, docConflicts.length);
+          const auto = autoOf(doc);
+          // 收合（#243）：只在待審分頁，沒有需要確認的組與待處理的說法不同時。只有直接收錄的文件沒有可以收合的內容
+          const collapsible = tab === "pending" && hasItems && docCollapsible((g?.summary.toConfirm ?? 0) + seamCount, docConflicts.length);
           if (tab === "pending" && !firstOpen.current.has(doc.id)) firstOpen.current.set(doc.id, !collapsible);
           const open = !collapsible || (openDocs[doc.id] ?? firstOpen.current.get(doc.id) ?? false);
           const bodyId = `${ids}-doc-${doc.id}`;
@@ -1142,6 +1196,18 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
                   ))}
                 </ul>
               </div>
+              {/* 已直接收錄（ADR 0011 決定 5）：在收合的內容之外，文件收合時也看得到；這個區塊本身預設收合 */}
+              {auto.active.length + auto.retracted.length > 0 && (
+                <AutoApproved
+                  language={language}
+                  active={auto.active}
+                  retracted={auto.retracted}
+                  busy={busy}
+                  row={(x) => autoRow(doc, x)}
+                  detail={(x) => autoDetail(doc, x)}
+                  onRetract={(decisionId, reason) => retractAuto(doc.id, decisionId, reason)}
+                />
+              )}
               {/* 手機（#282）：「核准這份文件的全部」固定在畫面下方（分頁列之上），捲到卡片底部時回到卡片內 */}
               {phone && g !== null && hasItems && <div className="review-doc__approve-all">{approveAllButton}</div>}
             </section>
