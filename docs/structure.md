@@ -135,6 +135,7 @@
 - `same-name.ts`：問答的同名反問：問題提到的同類型、同顯示名稱的實體與選項（ADR 0012 決定 1，見 `docs/qa.md`「同名」）
 - `script.ts`：劇本的純函式（分組與順序、第 N／M 題、已問過、是否切換身分）
 - `ScriptPanel.tsx`：展示模式問答頁左欄的劇本（畫板 `H-QA`，#349），見 `docs/qa.md`「展示模式」
+- `SeamDialogue.tsx`：回答卡片內的說法不同提問、補充與另一種讀法（ADR 0012，見 `docs/qa.md`「說法不同的提問」）
 - `seam-review.ts`：待審頁的接縫：哪些項目是接縫、提問與選項、選了之後要核准的內容、「已直接收錄」區的項目與隨機抽查、請上傳者確認的請求與上傳者看到的提問（ADR 0011，見 `docs/extraction.md`「待審頁的接縫」）
 - `seam-text.ts`：接縫的提問、選項與上傳者回答的文字（待審頁與首頁共用）
 - `SessionQuestions.tsx`：手機與平板的「這次的問題（N）」按鈕，手機打開底部面板、平板打開滑出面板（#256、#333）
@@ -186,6 +187,7 @@
 
 上傳文件與既有段落的說法不同（#51）；說明見 `docs/conflicts.md`。
 
+- `dialogue.ts`：問答的說法不同提問：固定範本的選項、文件的新舊與相差月數、選了之後的回應（純函式，ADR 0012，見 `docs/qa.md`「說法不同的提問」）
 - `interpretations.ts`：經 `withIdentity()` 寫入與讀取人的理解（ADR 0012；只用 INSERT；規則由 RLS 執行，見 `docs/data-model.md`「人的理解」，測試在 `app/tests/conflicts/interpretations.test.ts`）
 - `marks.ts`：時間軸與原文面板的標示（在 `readTimeline()`、`readSource()` 的交易中讀取）；桌機回答卡片的說法不同提示（`citedConflicts()`：兩段都被引用的並存組合）
 - `output.ts`：解析與驗證

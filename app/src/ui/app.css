@@ -1048,6 +1048,105 @@ button.citation[aria-pressed="true"] {
   color: var(--color-textMuted);
 }
 
+/* 問答的說法不同提問（ADR 0012 決定 4，畫板 S-QA 的 ③～⑧）：回答卡片內依序是「問你」、人的回答（右側泡泡）、
+   補充（一般內文，textMuted 小標，畫板的 .add）或另一種讀法（畫板的 .alt）；所有版面都顯示 */
+.seam-dialogue {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0.75rem 0;
+}
+
+.seam-dialogue > .refusal-chosen {
+  margin: 0;
+}
+
+.seam-skipped {
+  margin: 0.75rem 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.seam-add {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.7;
+  animation: kFade var(--motion-base) var(--ease-enter) both;
+}
+
+.seam-add__label {
+  margin-inline-end: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-textMuted);
+}
+
+/* 另一種讀法：markSoft 底、mark 色細邊（畫板的 markLine，以 mark 與 text 調深）、「↺」；證據以螢光標出。
+   不用 danger、warning（docs/design.md「AI 發言的外觀」） */
+.seam-alt {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--color-mark) 70%, var(--color-text));
+  border-radius: 12px;
+  background: var(--color-markSoft);
+  animation: kFade var(--motion-base) var(--ease-enter) both;
+}
+
+.seam-alt__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid color-mix(in srgb, var(--color-mark) 70%, var(--color-text));
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.seam-alt__main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.seam-alt__main > p {
+  margin: 0;
+}
+
+.seam-alt__title {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.seam-alt__text {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.seam-alt mark {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--color-mark);
+  color: var(--color-markText);
+}
+
+.seam-alt__compare {
+  align-self: flex-start;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, var(--color-mark) 70%, var(--color-text));
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 /* 請上傳者確認（ADR 0011 決定 6，畫板 S-Review、S-Request）：已請求是膠囊與說明（.held、.pill）；
    上傳者的回答是 surfaceRaised 的區塊，時間與說明是 textMuted（.reply、.recw）；上傳者首頁的項目是一列（.item、.kind） */
 .ask-card__held {

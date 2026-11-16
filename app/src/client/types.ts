@@ -680,6 +680,27 @@ export interface UiStrings {
   dialogueSameNameAsk: string;
   dialogueSameNameBoth: string;
   dialogueSameNameNote: string;
+  // 說法不同的提問（ADR 0012 決定 3、4）：提問、固定範本與它的三個選項、略過、選了之後的補充與另一種讀法。
+  // {newer}／{older}／{title} 是文件標題，{months} 是相差的月數（0 時不寫），{quote} 是證據，{choice} 是證據支持的假設
+  dialogueConflictAsk: string;
+  dialogueConflictTemplate: string;
+  dialogueChoiceChanged: string;
+  dialogueChoiceDifferent: string;
+  dialogueChoiceWrong: string;
+  dialogueSkip: string;
+  dialogueSkipped: string;
+  dialogueExplainHint: string;
+  dialogueSupplement: string;
+  dialogueEvidence: string;
+  dialogueRecorded: string;
+  dialogueRecordFailed: string;
+  dialogueAltTitle: string;
+  dialogueAltEvidence: string;
+  dialogueAltDate: string;
+  dialogueAltCompare: string;
+  dialogueAltChange: string;
+  dialogueAltKeep: string;
+  dialogueAltTurn: string;
   // 待審的接縫（ADR 0011 決定 8，docs/design.md「待審的接縫」）：區塊標題、AI 在問你的小標、各種提問與選項。
   // {name} 是項目的名稱（關係是「起點 —關係→ 終點」），{other} 是只差一個字的名稱，{count} 是候選數，{languages} 是缺少的語言
   seamSection: string;

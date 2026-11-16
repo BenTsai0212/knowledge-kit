@@ -20,6 +20,8 @@ import { answerDoneStep, answerSentences, sentenceStep, streamingSentences } fro
 import { staggerIndex } from "./motion";
 import { errorCategory } from "./qa-errors";
 import { ReportStatus } from "./ReportResult";
+import type { ConflictItem } from "../conflicts/store";
+import { SeamDialogue, type SeamActions } from "./SeamDialogue";
 
 export interface AnswerState {
   // 問題泡泡顯示的問題
@@ -37,6 +39,8 @@ export interface AnswerState {
   mentions?: { graph: Graph; entities: GraphEntity[] };
   // 引用到的段落中說法不同（並存）的組合：兩段的引用標號（conflicts/marks.ts 的 citedConflicts()，#335）；只在桌機與手機顯示（#354）
   conflicts?: Array<[number, number]>;
+  // 說法不同的提問（ADR 0012 決定 1，client.json 的 qa.dialogue）：引用的組合中第一組還沒作答、沒略過的並存，回答結束後在卡片內問一次
+  seam?: ConflictItem;
   // 這一題送出的回報（#286）：回答下方顯示處理結果；再回報一次時換成新的回報
   reportId?: string;
 }
@@ -77,6 +81,8 @@ interface Props {
   onViewInGraph(entityId: string): void;
   // 手機原文面板的「回報有錯」（#256）：每按一次加一，打開這一題的回報表單並捲到該題；0 是沒有要求
   reportRequest?: number;
+  // 說法不同的提問的寫入與略過；沒有時不提問（身分對照）
+  seamActions?: SeamActions;
   // 標題：預設是問題；身分對照的欄是該欄的身分（#261，問題在各欄上方只顯示一次）
   heading?: string;
 }
@@ -89,7 +95,7 @@ const settled = new Set<string>();
 // 拒答後已選過的題目與選擇（#377）：每一題只問一次，重新掛載時沿用
 const clarified = new Map<string, RefusalChoice | "skip">();
 
-export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport, readReport, onRetry, retryDisabled, onShorten, onDraft, onViewInGraph, reportRequest = 0, heading }: Props) {
+export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport, readReport, onRetry, retryDisabled, onShorten, onDraft, onViewInGraph, reportRequest = 0, seamActions, heading }: Props) {
   const s = strings(language);
   const { answer } = state;
   const stepText: Record<RefusalStep, string> = {
@@ -291,6 +297,9 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
                 <span>{fill(s.answerConflict, { a, b })}</span>
               </p>
             ))}
+            {state.seam !== undefined && seamActions !== undefined && (
+              <SeamDialogue id={id} language={language} seam={state.seam} onOpenSource={onOpenSource} {...seamActions} />
+            )}
             {answer.uncited && <p className="badge warning">{s.uncited}</p>}
             {answer.incomplete && (
               <p className="badge warning">

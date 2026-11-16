@@ -7,6 +7,7 @@ import { AskCard } from "./AskCard";
 import { focusPresets } from "./empty-state";
 import { EmptyState } from "./EmptyState";
 import type { SameNameAsk } from "./same-name";
+import type { SeamRecord } from "./SeamDialogue";
 
 // 一題問答；id 也是畫面上的元素 id（左側「這次的問題」捲到該題）
 export interface Turn extends AnswerState {
@@ -43,6 +44,9 @@ interface Props {
   // 同名的反問選了一個選項（ADR 0012 決定 1）；askDisabled 時不能按
   onChooseSameName(turnId: string, chosen: Chosen): void;
   askDisabled: boolean;
+  // 說法不同的提問（ADR 0012 決定 4、5）：寫入人的理解（失敗時 reject）與略過（只記在本次工作階段）
+  onRecordSeam(turn: Turn, x: SeamRecord): Promise<void>;
+  onSkipSeam(turn: Turn): void;
   // 問句填進輸入框，不送出：prompt_too_long 的「縮短問題」（#280）、拒答的「換個問法」（#285）
   onDraft(question: string): void;
   // 拒答的「在圖譜看它」（#285）
@@ -52,7 +56,7 @@ interface Props {
 }
 
 // 問答依序往下累積（#195）；新的一題出現時捲到該題
-export function Conversation({ language, turns, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport, readReport, onAsk, onChooseSameName, askDisabled, onDraft, onViewInGraph, reportRequest = null }: Props) {
+export function Conversation({ language, turns, canUpload, onOpenSource, openPassage, onGotoUpload, onOpenEntity, openEntity, onReport, readReport, onAsk, onChooseSameName, askDisabled, onRecordSeam, onSkipSeam, onDraft, onViewInGraph, reportRequest = null }: Props) {
   const s = strings(language);
   const latest = turns.at(-1)?.id;
   const latestRef = useRef<HTMLElement>(null);
@@ -109,6 +113,7 @@ export function Conversation({ language, turns, canUpload, onOpenSource, openPas
               onDraft={onDraft}
               onViewInGraph={onViewInGraph}
               reportRequest={reportRequest?.turn === turn.id ? reportRequest.count : 0}
+              seamActions={{ record: (x) => onRecordSeam(turn, x), skip: () => onSkipSeam(turn) }}
             />
           ),
         )

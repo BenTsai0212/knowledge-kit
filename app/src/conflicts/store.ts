@@ -81,6 +81,16 @@ const PASSAGE = (p: string, d: string) => `json_build_object(
 
 // 目前身分看得到的偵測結果與決定：核准者看得到兩段都可見的全部紀錄，其他身分只看得到兩段都可見的「並存」「取代」
 export function readConflicts(db: Database, identityId: string | null): Promise<ConflictItem[]> {
+  return queryConflicts(db, identityId, null);
+}
+
+// 問答的說法不同提問（ADR 0012 決定 1、3）：兩段（順序不拘）已處理為「並存」的那一組；看不到其中一段、沒有這一組或不是並存時為 null
+export async function readCoexistingPair(db: Database, identityId: string | null, passages: readonly [string, string]): Promise<ConflictItem | null> {
+  return (await queryConflicts(db, identityId, passages)).find((c) => c.decision === "coexist") ?? null;
+}
+
+// pair：只讀這兩段（順序不拘）的組合；null 時讀全部
+function queryConflicts(db: Database, identityId: string | null, pair: readonly [string, string] | null): Promise<ConflictItem[]> {
   return db.withIdentity(identityId, async (tx) => {
     const rows = (
       await tx.query<{
@@ -99,7 +109,9 @@ export function readConflicts(db: Database, identityId: string | null): Promise<
            JOIN kk.passages n ON n.id = c.new_passage_id JOIN kk.documents nd ON nd.id = n.document_id
            JOIN kk.passages o ON o.id = c.old_passage_id JOIN kk.documents od ON od.id = o.document_id
            LEFT JOIN kk.conflict_decisions r ON r.conflict_id = c.id
+          WHERE $1::text IS NULL OR (c.new_passage_id = $1 AND c.old_passage_id = $2) OR (c.new_passage_id = $2 AND c.old_passage_id = $1)
           ORDER BY c.document_id, n.ordinal, o.document_id, o.ordinal, c.id`,
+        [pair?.[0] ?? null, pair?.[1] ?? null],
       )
     ).rows;
     return rows.map((r) => ({
