@@ -2070,8 +2070,10 @@ main.qa > .source .source-text mark.entering {
   padding: 0;
 }
 
+/* 卡片是 <label>：蓋過全域 label 的 flex-wrap: wrap，說明較長時文字區塊仍在圓點右側、在自己的欄內換行（#415） */
 .role-card {
   display: flex;
+  flex-wrap: nowrap;
   align-items: flex-start;
   gap: 0.75rem;
   min-height: 44px;
@@ -4787,8 +4789,10 @@ label.inline {
   font-weight: 600;
 }
 
+/* 選項是 <label>：蓋過全域 label 的 flex-wrap: wrap，實體名稱較長時仍在圓點右側換行（#415） */
 .review-choice__option {
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 0.5rem;
   cursor: pointer;
