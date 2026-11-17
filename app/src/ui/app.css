@@ -1262,15 +1262,41 @@ p.ask-card__item {
   font-size: 14px;
 }
 
+/* 類型膠囊（S-Review、S-Request 的 .kind）：色點（形狀依類型，同 .entity-badge）＋類型名稱 */
 .ask-card__kind {
   display: inline-flex;
   align-items: center;
+  gap: 6px;
   height: 24px;
   padding: 0 8px;
   border: 1px solid var(--color-border);
   border-radius: 6px;
   background: var(--color-surface);
   font-size: 12px;
+}
+
+.ask-card__kind .type-dot {
+  width: 9px;
+  height: 9px;
+}
+
+.ask-card__kind.shape-block .type-dot {
+  border-radius: 0.15rem;
+}
+
+.ask-card__kind.shape-tile .type-dot {
+  border-radius: 0.05rem;
+}
+
+/* 其他語言的名稱與「出處（N）」文字連結（S-Review 的 .muted、.lnk） */
+.ask-card__other {
+  font-size: 13px;
+  color: var(--color-textMuted);
+}
+
+.ask-card__item button.ask-card__sources {
+  font-size: 13px;
+  text-underline-offset: 3px;
 }
 
 /* 回答中斷：已收到的文字變淡，不搖晃、不閃紅 */
@@ -2531,7 +2557,8 @@ main.qa > .source .source-text mark.entering {
 }
 
 :root[data-scheme="dark"] {
-  .entity-badge .type-dot {
+  .entity-badge .type-dot,
+  .ask-card__kind .type-dot {
     background: color-mix(in srgb, var(--type-color) 75%, var(--color-text));
   }
 
@@ -9715,7 +9742,8 @@ main.page:has(> .review-page--desktop) {
   font-size: 15px;
 }
 
-/* 類型只顯示色點（形狀依類型），類型名稱留給螢幕閱讀器 */
+/* 逐筆核准的實體列：類型只顯示色點（形狀依類型），類型名稱留給螢幕閱讀器。
+   「已直接收錄」的列維持類型名稱，不留下空膠囊（畫板 S-Review ⑥，#400）；接縫卡的類型膠囊在 .ask-card__kind */
 .review-page--desktop .review-entity .entity-badge {
   padding: 0;
   border: 0;
@@ -9727,7 +9755,7 @@ main.page:has(> .review-page--desktop) {
   height: 12px;
 }
 
-.review-page--desktop .entity-badge__label {
+.review-page--desktop .review-entity .entity-badge__label {
   position: absolute;
   width: 1px;
   height: 1px;

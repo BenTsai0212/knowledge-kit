@@ -9,8 +9,9 @@ import { replyToRequest, type RequestReply } from "../extraction/requests";
 import { ReviewError } from "../extraction/store";
 import type { Graph } from "../graph/read";
 import { AskCard } from "./AskCard";
-import { entityTypeLabel, relationTypeLabel } from "./graph-labels";
+import { relationTypeLabel } from "./graph-labels";
 import { roleLabel } from "./ReportResult";
+import { SeamItem } from "./SeamItem";
 import type { UploaderAsk } from "./seam-review";
 import { relationQuestion, replyLabel, replyOf, seamQuestion } from "./seam-text";
 
@@ -66,10 +67,7 @@ export function RequestAsk({ db, identity, language, graph, item, onReplied }: P
         )
       }
     >
-      <p className="ask-card__item">
-        {seam !== undefined && <span className="ask-card__kind">{entityTypeLabel(seam.entity.type, language)}</span>}
-        <strong lang={doc.language}>{itemName}</strong>
-      </p>
+      <SeamItem language={language} entityType={seam?.entity.type} name={itemName} nameLanguage={doc.language} />
       {error !== null && (
         <p className="error" role="alert">
           {error}

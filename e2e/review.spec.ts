@@ -60,6 +60,18 @@ for (const [label, width, height] of [["桌機 1440", 1440, 900], ["手機 390",
       await expect(rel).toContainText("林志明");
       await expect(rel.getByRole("button")).toHaveCount(0);
 
+      // 項目本身（S-Review ①，#400）：surfaceRaised 底的方塊，類型膠囊（色點＋類型名稱）、粗體名稱、「出處（N）」文字連結
+      const item = lin.locator(".ask-card__item");
+      await expect(item).toHaveCSS("background-color", await tokenColor(page, "surfaceRaised"));
+      await expect(item.locator(".ask-card__kind .type-dot")).toBeVisible();
+      await expect(item.locator(".ask-card__kind")).toHaveText(/\S/);
+      await expect(item.locator("strong")).toHaveText("林志明");
+      const sources = item.locator("button.ask-card__sources");
+      await expect(sources).toContainText(s.reviewSources.split("{count}")[0]);
+      await expect(sources).toHaveCSS("border-top-width", "0px");
+      await expect(sources).toHaveCSS("text-decoration-line", "underline");
+      await expect(sources).toHaveCSS("color", await tokenColor(page, "primary"));
+
       // 選項（兩個候選、我覺得是新的、都不是）：至少 44px、14px、一般字重；出口是 textMuted
       const options = lin.locator(".refusal-ask__options button");
       await expect(options).toHaveCount(4);
@@ -97,6 +109,8 @@ for (const [label, width, height] of [["桌機 1440", 1440, 900], ["手機 390",
       await auto.getByRole("button", { name: s.seamAutoShowAll }).click();
       await expect(auto.locator(".review-auto__item")).toHaveCount(3);
       await expect(auto.getByRole("button", { name: s.seamAutoRetract, exact: true })).toHaveCount(3);
+      // 實體的列顯示類型名稱，不留下空膠囊（S-Review ⑥，#400）
+      await expect(auto.locator(".entity-badge__label").first()).toBeVisible();
       expect(await noHorizontalScroll(page)).toBe(true);
       await screenshot(page, testInfo, `seam-auto-${width}px.png`);
     });
@@ -147,6 +161,10 @@ test("選了候選、寫了說明之後接縫消失；抽查 3 項，撤回關�
   for (const name of [s.seamOptionKeep, s.seamOptionExclude, s.commonExplain]) await expect(asks.getByRole("button", { name, exact: true })).toBeVisible();
   await expect(card.getByRole("button", { name: s.reviewReject, exact: true })).toHaveCount(0);
   await expect(card.getByRole("button", { name: s.reviewApproveDocument })).toHaveCount(0);
+  // 項目本身是關係的名稱與「出處（N）」文字連結，不是外框按鈕（S-Review ①）
+  const relationSources = asks.locator(".ask-card__item button.ask-card__sources");
+  await expect(relationSources).toHaveCSS("border-top-width", "0px");
+  await expect(relationSources).toHaveCSS("text-decoration-line", "underline");
   await asks.scrollIntoViewIfNeeded();
   await screenshot(page, testInfo, "seam-retracted-pending-1440px.png");
 

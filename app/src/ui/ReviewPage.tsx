@@ -48,6 +48,7 @@ import { AutoApproved } from "./AutoApproved";
 import { BottomSheet } from "./BottomSheet";
 import { entityOptionLabel, entityTypeLabel, relationTypeLabel } from "./graph-labels";
 import { autoItems, heldItems, openRequests, relationSeamPlan, seamPartition, seamPlan, type AutoItem, type EntitySeam, type RelationSeam } from "./seam-review";
+import { SeamItem } from "./SeamItem";
 import { relationQuestion, replyLabel, seamOptionLabel, seamQuestion } from "./seam-text";
 import { Notice } from "./Notice";
 import { EmptyState } from "./EmptyState";
@@ -735,6 +736,21 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
       ),
     };
   };
+  // 接縫卡的項目本身（畫板 S-Review ①，SeamItem.tsx）：類型膠囊、文件語言的名稱、其他語言的名稱、「出處（N）」文字連結
+  const seamItem = (itemId: string, count: number, name: string, nameLanguage: string, e?: ReviewEntity) => (
+    <SeamItem
+      language={language}
+      entityType={e?.type}
+      name={name}
+      nameLanguage={nameLanguage}
+      others={
+        e === undefined
+          ? []
+          : client.languages.filter((l) => l !== nameLanguage && e.names[l] && e.names[l] !== name).map((l) => ({ language: l, text: e.names[l] }))
+      }
+      sources={{ count, open: openSources.has(itemId), onToggle: () => setOpenSources((cur) => flip(cur, itemId)) }}
+    />
+  );
   const seamCard = (doc: ReviewDocument, seam: EntitySeam) => {
     const e = seam.entity;
     const names = choices[e.id]?.names;
@@ -761,18 +777,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
           };
         })}
       >
-        <div className="review-row">
-          {typeBadge(e)}
-          <span className="review-names">
-            {client.languages.map((l, i) => (
-              <Fragment key={l}>
-                {i > 0 && " / "}
-                <span lang={l}>{e.names[l]}</span>
-              </Fragment>
-            ))}
-          </span>
-          {sourcesToggle(e.id, e.sources.length)}
-        </div>
+        {seamItem(e.id, e.sources.length, pendingName(e, doc.language), doc.language, e)}
         {/* 名稱缺少語言時補上（建立新實體時才用，ADR 0011 決定 1） */}
         {missing.length > 0 && (
           <span className="review-names editing">
@@ -830,7 +835,7 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
             o.kind === "reject" ? void rejectItems(doc.id, { entities: [], relations: [r.id] }) : plan && void approveItems(doc.id, plan, 0, [r.id]),
         }))}
       >
-        <div className="review-row">{sourcesToggle(r.id, r.sources.length)}</div>
+        {seamItem(r.id, r.sources.length, name, doc.language)}
         {openSources.has(r.id) && sourceList(doc, r.id, r.sources, [r.from, r.to])}
         {request.reply}
       </AskCard>
