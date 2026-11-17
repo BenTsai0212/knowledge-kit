@@ -1,6 +1,6 @@
 // 首頁「以前答不出來，現在可能答得出來了」（#408，docs/design.md「首頁」）：桌機 1440×900 與手機 390×844 各走一次
-// 一般員工問一題被拒答 → 主管上傳相關文件並核准 → 一般員工回首頁看到 A1（問過的問題中那一題）與 A2（問候下方一句話＋時間線）
-// → 按「再問一次」得到回答，之後首頁不再提示；「知道了」兩處一起收起。
+// 一般員工問一題被拒答 → 主管上傳相關文件並核准 → 一般員工回首頁看到 A2（問候下方一句話＋時間線）；問過的問題中同一題
+// 只加小標示（#413）→ 按「再問一次」得到回答，之後首頁不再提示；按頂端的「知道了」，小標示一起消失。
 // 拒答：本機檢索找不到段落時不呼叫模型；找到時假的 /api/ask 在核准前回 REFUSAL_MARKER，所以各客戶走同一條路。
 // 主管的上傳與核准在桌機寬度進行（手機的待審收在「更多」）。展示模式不顯示首頁（presentation.spec.ts、sign-in.spec.ts）
 import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
@@ -90,12 +90,14 @@ for (const viewport of [DESKTOP, { width: 390, height: 844 }]) {
       await expect(recall).toContainText(QUESTION);
       await expect(recall.getByRole("list", { name: s.home.recallTimeline }).getByRole("listitem")).toHaveCount(3);
       await expect(recall.getByRole("button", { name: TITLE })).toBeVisible();
-      // A1：問過的問題中那一題，可點的文件標題與「知道了」
-      const row = asked.locator(".home__row--maybe");
-      await expect(row).toHaveCount(1);
-      await expect(row).toContainText(QUESTION);
-      await expect(row.getByRole("button", { name: TITLE })).toBeVisible();
-      await expect(row.getByRole("button", { name: `${s.home.acknowledge}${s.colon}${QUESTION}` })).toBeVisible();
+      await expect(recall.getByRole("button", { name: `${s.home.acknowledge}${s.colon}${QUESTION}` })).toBeVisible();
+      // 問過的問題中同一題不重複（#413）：一般的列只多小標示，沒有「那時候」與「知道了」
+      await expect(asked.locator(".home__row--maybe")).toHaveCount(0);
+      await expect(asked.locator(".home__maybe-badge")).toHaveCount(1);
+      await expect(asked.locator(".home__maybe-badge")).toHaveText(s.home.maybeBadge);
+      await expect(asked.getByText(s.home.maybeThen.split("{")[0])).toHaveCount(0);
+      await expect(asked.getByRole("button", { name: `${s.home.acknowledge}${s.colon}${QUESTION}` })).toHaveCount(0);
+      await expect(asked.getByRole("button", { name: `${s.home.askAgain}${s.colon}${QUESTION}` })).toBeVisible();
       expect(await noHorizontalScroll(page)).toBe(true);
       await screenshot(page, testInfo, `home-recheck-${viewport.width}`);
 
@@ -111,15 +113,16 @@ for (const viewport of [DESKTOP, { width: 390, height: 844 }]) {
       await openHome(page);
       await expect(asked.getByText(QUESTION)).toBeVisible();
       await expect(recall).toHaveCount(0);
-      await expect(asked.locator(".home__row--maybe")).toHaveCount(0);
+      await expect(asked.locator(".home__maybe-badge")).toHaveCount(0);
     });
 
-    test("「知道了」：按 A1 的「知道了」，A1 與 A2 一起收起；資料沒有變化時回到首頁也不再提示", async ({ page }) => {
+    test("「知道了」：按頂端的「知道了」，頂端與下方的小標示一起消失；資料沒有變化時回到首頁也不再提示", async ({ page }) => {
       const { recall, asked } = await refusedThenApproved(page, viewport);
-      const row = asked.locator(".home__row--maybe");
-      await row.getByRole("button", { name: `${s.home.acknowledge}${s.colon}${QUESTION}` }).click();
+      const badge = asked.locator(".home__maybe-badge");
+      await expect(badge).toHaveCount(1);
+      await recall.getByRole("button", { name: `${s.home.acknowledge}${s.colon}${QUESTION}` }).click();
       await expect(recall).toHaveCount(0);
-      await expect(row).toHaveCount(0);
+      await expect(badge).toHaveCount(0);
       expect(await gotoView(page, "qa")).toBe(true);
       await openHome(page);
       await expect(asked.getByText(QUESTION)).toBeVisible();

@@ -203,13 +203,27 @@ describe("可能答得出來了（#408）", () => {
     ["桌機", () => withMaybe(true)],
     ["手機", () => withMaybe(false, { phone: true })],
   ] as const) {
-    it(`${name}：A1 的列有「那時候」「現在」兩行、可點的文件標題、「再問一次」與「知道了」；其他題照舊`, () => {
+    it(`${name}：不在頂端的題目是 A1 的列，有「那時候」「現在」兩行、可點的文件標題、「再問一次」與「知道了」；其他題照舊`, () => {
       const out = html();
-      expect(count(out, 'class="home__row home__row--maybe"')).toBe(2);
+      expect(count(out, 'class="home__row home__row--maybe"')).toBe(1);
+      expect(out).toMatch(/class="home__row home__row--maybe"><span class="home__question" title="Q-old">/);
       expect(out).toContain('<button type="button" class="link home__doc-link" title="Doc-Old">Doc-Old</button>');
       expect(out).toContain(`aria-label="${s.home.acknowledge}${s.colon}Q-old"`);
       expect(out).toContain(`aria-label="${s.home.askAgain}${s.colon}Q-plain"`);
       expect(out).not.toContain(`aria-label="${s.home.acknowledge}${s.colon}Q-plain"`);
+    });
+
+    it(`${name}：與頂端同一題在問過的問題中是一般的列，只多小標示；不展開兩行、沒有「知道了」（#413）`, () => {
+      const out = html();
+      const list = out.slice(out.indexOf('aria-labelledby="home-asked"'));
+      const row = list.slice(list.lastIndexOf("<li", list.indexOf('title="Q-new"')), list.indexOf("</li>", list.indexOf('title="Q-new"')));
+      expect(row).toContain("home__row--line");
+      expect(row).not.toContain("home__row--maybe");
+      expect(count(row, `<span class="home__maybe-badge">${s.home.maybeBadge}</span>`)).toBe(1);
+      expect(row).toContain(`aria-label="${s.home.askAgain}${s.colon}Q-new"`);
+      expect(row).not.toContain(s.home.maybeThen.split("{")[0]);
+      expect(row).not.toContain(s.home.acknowledge);
+      expect(count(out, "home__maybe-badge")).toBe(1);
     });
 
     it(`${name}：A2 在問候下方、提問框上方，只顯示最近的一題，附三點時間線`, () => {
@@ -226,10 +240,35 @@ describe("可能答得出來了（#408）", () => {
     });
   }
 
+  it("只有一題可能答得出來時：頂端是那一題，下方是小標示，沒有 A1 的列（#413）", () => {
+    const out = withMaybe(true, { maybeAnswerable: maybeAnswerable.slice(0, 1) });
+    expect(count(out, `aria-label="${s.home.recallTitle}"`)).toBe(1);
+    expect(out).not.toContain("home__row--maybe");
+    expect(count(out, "home__maybe-badge")).toBe(1);
+    expect(count(out, `aria-label="${s.home.acknowledge}${s.colon}Q-old"`)).toBe(1);
+  });
+
+  it("按頂端的「知道了」後：頂端與小標示一起換成下一題，下一題在下方改成小標示（#413）", () => {
+    // 「知道了」由 App 把那一題從 maybeAnswerable 移除；畫面只依剩下的資料
+    const after = withMaybe(true, { maybeAnswerable: maybeAnswerable.filter((m) => m.question !== "Q-new") });
+    const recall = after.slice(after.indexOf(`aria-label="${s.home.recallTitle}"`), after.indexOf("</section>", after.indexOf(`aria-label="${s.home.recallTitle}"`)));
+    expect(recall).toContain("Q-old");
+    expect(recall).not.toContain("Q-new");
+    expect(after).not.toContain("home__row--maybe");
+    expect(count(after, "home__maybe-badge")).toBe(1);
+    expect(after).not.toContain(`aria-label="${s.home.acknowledge}${s.colon}Q-new"`);
+    expect(after).toContain(`aria-label="${s.home.askAgain}${s.colon}Q-new"`);
+    // 最後一題也「知道了」：頂端與小標示都消失
+    const none = withMaybe(true, { maybeAnswerable: [] });
+    expect(none).not.toContain("home__recall");
+    expect(none).not.toContain("home__maybe-badge");
+  });
+
   it("沒有可能答得出來的題目、或沒有「知道了」時不顯示 A1 與 A2", () => {
     for (const out of [render(true, { asked }), render(true, { asked, maybeAnswerable })]) {
       expect(out).not.toContain("home__row--maybe");
       expect(out).not.toContain("home__recall");
+      expect(out).not.toContain("home__maybe-badge");
     }
   });
 
@@ -249,7 +288,7 @@ describe("可能答得出來了（#408）", () => {
   // 措辭：只是檢索找到資料、還沒有回答，所以說「可能」；回顧的口吻，不用數字、分數或評量
   it.each(Object.keys(TRANSLATIONS))("措辭（%s）：不說已經答得出來，不用數字、分數或評量", (lang) => {
     const h = strings(lang).home;
-    for (const t of [h.recallTitle, h.recallText, h.recallTimeline, h.recallAsked, h.recallToday, h.maybeThen, h.maybeNow, h.acknowledge])
+    for (const t of [h.recallTitle, h.recallText, h.recallTimeline, h.recallAsked, h.recallToday, h.maybeThen, h.maybeNow, h.acknowledge, h.maybeBadge])
       expect(t, t).not.toMatch(/已經|already|\d|%|分數|score|學到|learn/i);
   });
 });

@@ -147,6 +147,8 @@ describe("頁面外層與清單的欄寬", () => {
     ".home__name, .home__question, .home__sub, .home__entity-name": [".home__list", ".home__cards", ".home--wide .home__cards", ".home", ...page],
     // 首頁「可能答得出來了」（#408）：A1 的兩行在 .home__maybe-lines（grid）；文件標題也在 A2 的時間線（.home__recall 是 grid）
     ".home__maybe-lines > span": [".home__maybe-lines", ".home__list", ".home__cards", ".home--wide .home__cards", ".home", ...page],
+    // 與頂端同一題的小標示（#413）：膠囊不換行，在問過的問題的列中
+    ".home__maybe-badge": [".home__list", ".home__cards", ".home--wide .home__cards", ".home", ...page],
     ".home__doc-link": [".home__maybe-lines", ".home__recall", ".home__list", ".home__cards", ".home--wide .home__cards", ".home", ...page],
     // 手機首頁的常見問題（#356）：一行、橫向滑動；提問框在 .home 的單欄
     ".home--phone .composer--compact .presets": [".app", ".home", ...page],

@@ -1013,6 +1013,8 @@ export interface UiStrings {
     maybeThen: string;
     maybeNow: string;
     acknowledge: string;
+    // 問過的問題中與頂端（A2）同一題的小標示（#413）
+    maybeBadge: string;
   };
   // 我的上傳（#284，docs/design.md「日常工具」的「我的上傳」）：上傳頁的兩段、每份的狀態（status*）、送出後的四步進度（step*）、
   // 每一項的結果與重新上傳修正版

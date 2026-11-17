@@ -740,7 +740,8 @@
     "recallToday": "今天",
     "maybeThen": "那時候：答不出來（{time}）",
     "maybeNow": "現在：可能答得出來了，多了{document}",
-    "acknowledge": "知道了"
+    "acknowledge": "知道了",
+    "maybeBadge": "可能答得出來了"
   },
   "myUploads": {
     "tabNew": "新增文件",

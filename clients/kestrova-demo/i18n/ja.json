@@ -740,7 +740,8 @@
     "recallToday": "今日",
     "maybeThen": "そのとき：答えられなかった（{time}）",
     "maybeNow": "いま：答えられるかもしれません。{document} が追加されました",
-    "acknowledge": "わかりました"
+    "acknowledge": "わかりました",
+    "maybeBadge": "答えられるかもしれません"
   },
   "myUploads": {
     "tabNew": "文書を追加",

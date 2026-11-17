@@ -6930,6 +6930,18 @@ main.page:has(> .eval-page--desktop) {
   font-weight: 600;
 }
 
+/* 問過的問題中與頂端（A2）同一題的小標示（#413）：primary 細框的膠囊，不展開兩行 */
+.home__maybe-badge {
+  flex: none;
+  padding: 1px 8px;
+  border: 1px solid var(--color-primary);
+  border-radius: 999px;
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .home__maybe-lines {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

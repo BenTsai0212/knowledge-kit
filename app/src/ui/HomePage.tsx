@@ -59,7 +59,7 @@ interface Props {
   // 問過的問題（問題文字與提問時間，最新的在前；不存回答）
   asked: readonly AskedQuestion[];
   // 「以前答不出來，現在可能答得出來了」（#408）：App 在背景以目前身分重查被拒答的問題的結果（重查中與沒有時是空的）；
-  // onAcknowledge 是「知道了」。問過的問題中那一題換成醒目的列（A1）；問候下方一句話與時間線（A2，只顯示最近的一題）
+  // onAcknowledge 是「知道了」。問候下方一句話與時間線（A2，只顯示最近的一題）；問過的問題中同一題只加小標示（#413），其他題換成醒目的列（A1）
   maybeAnswerable?: readonly MaybeAnswerable[];
   onAcknowledge?(item: MaybeAnswerable): void;
   askDisabled: boolean;
@@ -385,8 +385,10 @@ export function HomePage(props: Props) {
             const label = `${s.home.askAgain}${s.colon}${question}`;
             const disabled = askBlocked;
             const m = maybe.get(question);
-            // A1：可能答得出來了的那一題是 primary 細框的列，展開「那時候」「現在」兩行與「再問一次」「知道了」（桌機與手機相同）
-            if (m !== undefined)
+            // 頂端（A2）那一題不重複（#413）：維持一般的列，只多一個小標示，不展開兩行、沒有「知道了」
+            const onTop = m !== undefined && m.question === latest?.question;
+            // A1：其他可能答得出來了的題目是 primary 細框的列，展開「那時候」「現在」兩行與「再問一次」「知道了」（桌機與手機相同）
+            if (m !== undefined && !onTop)
               return (
                 <li key={question} className="home__row home__row--maybe">
                   <span className="home__question" title={question}>
@@ -409,6 +411,7 @@ export function HomePage(props: Props) {
                 <span className="home__question" title={question}>
                   {question}
                 </span>
+                {onTop && <span className="home__maybe-badge">{s.home.maybeBadge}</span>}
                 <time className="home__when" dateTime={at} title={time.format(new Date(at))}>
                   {ago(at)}
                 </time>

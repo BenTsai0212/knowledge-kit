@@ -740,7 +740,8 @@
     "recallToday": "Today",
     "maybeThen": "Then: no answer ({time})",
     "maybeNow": "Now: may have an answer, with {document} added",
-    "acknowledge": "Got it"
+    "acknowledge": "Got it",
+    "maybeBadge": "May have an answer"
   },
   "myUploads": {
     "tabNew": "Add a document",

@@ -367,6 +367,7 @@ export const i18nManifests: ManifestEntry[] = [
       maybeThen: "required",
       maybeNow: "required",
       acknowledge: "required",
+      maybeBadge: "required",
     } satisfies KeyManifest<UiStrings["home"]>,
   },
   {
