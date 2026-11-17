@@ -1,5 +1,5 @@
 // 萃取結果的資料層（docs/data-model.md「待審與核准」）：寫入待審、讀取待審區、核准、退回、撤回。
-// 一律經 withIdentity()；誰能寫入、看得到、核准與撤回什麼，完全交給 RLS（migration 0006、0009、0011、0013）。只用 INSERT。
+// 一律經 withIdentity()；誰能寫入、看得到、核准與撤回什麼，完全交給 RLS（migration 0006、0009、0011、0013、0017）。只用 INSERT。
 import type { Transaction } from "@electric-sql/pglite";
 import type { LanguageCode, LocalizedText } from "../client/types";
 import type { Database } from "../db/database";
@@ -12,8 +12,9 @@ export interface PendingInput {
   entities: { id: string; type: string; names: LocalizedText; sources: string[]; unsure?: Unsure }[];
   // from、to 是同一份文件的待審實體 id
   relations: { id: string; type: string; from: string; to: string; sources: string[]; unsure?: Unsure }[];
-  // 為前幾批已寫入的待審實體或關係補上出處（同一份文件中的去重，docs/extraction.md）
-  addedSources?: { entity?: string; relation?: string; passages: string[] }[];
+  // 為前幾批已寫入的待審實體或關係補上出處（同一份文件中的去重，docs/extraction.md）。
+  // unsure：這一批標示沒把握的原因，寫入 pending_*_unsure（0017）；項目已有標示時不變（保留第一個原因）
+  addedSources?: { entity?: string; relation?: string; passages: string[]; unsure?: Unsure }[];
 }
 
 export type ReviewStatus = "pending" | "approved" | "rejected";
@@ -126,6 +127,19 @@ export async function writePending(db: Database, identityId: string | null, docu
             );
           }
         }
+        if (added.unsure === undefined) continue;
+        if (added.entity !== undefined) {
+          await tx.query(
+            "INSERT INTO kk.pending_entity_unsure (pending_entity_id, document_id, unsure) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+            [added.entity, documentId, added.unsure],
+          );
+        }
+        if (added.relation !== undefined) {
+          await tx.query(
+            "INSERT INTO kk.pending_relation_unsure (pending_relation_id, document_id, unsure) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+            [added.relation, documentId, added.unsure],
+          );
+        }
       }
       for (const r of input.relations) {
         await tx.query(
@@ -188,6 +202,11 @@ const optional = (row: OptionalRow): Pick<ReviewEntity, "mode" | "unsure" | "aut
   ...(row.auto_retracted ? { autoRetracted: { reason: row.auto_retract_reason } } : {}),
 });
 
+// 有效的「沒把握」標示：第一次寫入時的 unsure，沒有時用後面批次補上的標示（0017）。
+// 待審區、我的上傳（請上傳者確認）與直接收錄都用這個片段，讀到同一個值
+const UNSURE = (alias: string, kind: "entity" | "relation") =>
+  `coalesce(${alias}.unsure, (SELECT u.unsure FROM kk.pending_${kind}_unsure u WHERE u.pending_${kind}_id = ${alias}.id))`;
+
 // 被撤回的直接收錄與撤回的理由（每個項目最多一筆 auto 決定：只有從未決定的項目會直接收錄）
 const AUTO_RETRACTED = (alias: string) => `
   EXISTS (SELECT 1 FROM kk.review_decisions a JOIN kk.review_retractions x ON x.decision_id = a.id
@@ -247,7 +266,7 @@ async function pendingDocuments(tx: Transaction, ownOnly: boolean): Promise<Revi
       merge_into: string | null;
     } & OptionalRow>(
       `SELECT p.id, p.document_id, d.title, d.language, d.visibility_level_id AS visibility, d.project_id AS project,
-              d.uploaded_by, p.entity_type, p.names, p.unsure, r.decision, r.id AS decision_id, r.merge_into, r.mode, ${AUTO_RETRACTED("p")}
+              d.uploaded_by, p.entity_type, p.names, ${UNSURE("p", "entity")} AS unsure, r.decision, r.id AS decision_id, r.merge_into, r.mode, ${AUTO_RETRACTED("p")}
          FROM kk.pending_entities p JOIN kk.documents d ON d.id = p.document_id
          LEFT JOIN kk.review_decisions r ON r.item_id = p.id AND ${ACTIVE("r")}
         ${ownOnly ? "WHERE d.uploaded_by = kk.current_identity_id()" : ""}
@@ -264,7 +283,7 @@ async function pendingDocuments(tx: Transaction, ownOnly: boolean): Promise<Revi
       decision: string | null;
       decision_id: string | null;
     } & OptionalRow>(
-      `SELECT p.id, p.document_id, p.relation_type, p.from_pending_id, p.to_pending_id, p.unsure, r.decision, r.id AS decision_id, r.mode,
+      `SELECT p.id, p.document_id, p.relation_type, p.from_pending_id, p.to_pending_id, ${UNSURE("p", "relation")} AS unsure, r.decision, r.id AS decision_id, r.mode,
               ${AUTO_RETRACTED("p")}
          FROM kk.pending_relations p LEFT JOIN kk.review_decisions r ON r.item_id = p.id AND ${ACTIVE("r")}
         ORDER BY p.document_id, p.id`,
@@ -447,7 +466,7 @@ export interface AutoApproveResult {
 const UNDECIDED = (alias: string) => `NOT EXISTS (SELECT 1 FROM kk.review_decisions x WHERE x.item_id = ${alias}.id)`;
 
 // 直接收錄（ADR 0011 決定 1–4）：上傳者在一個交易中重算接縫，非接縫的項目寫入 auto 決定與正式資料（實體先、關係後）。
-// 合併候選與編輯距離依上傳者看得到的實體與同一份文件的待審實體計算（seams.ts）；資料庫另以 auto policy 檢查上傳者、unsure、名稱與合併對象（0013）。
+// 合併候選與編輯距離依上傳者看得到的實體與同一份文件的待審實體計算（seams.ts）；資料庫另以 auto policy 檢查上傳者、unsure、名稱與合併對象（0013、0017）。
 // 任何一列被拒絕就全部不寫入，項目留在待審
 export async function autoApprove(
   db: Database,
@@ -461,14 +480,14 @@ export async function autoApprove(
       if (doc === undefined) throw new ReviewError("denied");
       const entities = (
         await tx.query<{ id: string; type: string; names: LocalizedText; unsure: Unsure | null }>(
-          `SELECT p.id, p.entity_type AS type, p.names, p.unsure FROM kk.pending_entities p
+          `SELECT p.id, p.entity_type AS type, p.names, ${UNSURE("p", "entity")} AS unsure FROM kk.pending_entities p
             WHERE p.document_id = $1 AND ${UNDECIDED("p")} ORDER BY p.id`,
           [documentId],
         )
       ).rows;
       const relations = (
         await tx.query<{ id: string; from: string; to: string; unsure: Unsure | null }>(
-          `SELECT p.id, p.from_pending_id AS "from", p.to_pending_id AS "to", p.unsure FROM kk.pending_relations p
+          `SELECT p.id, p.from_pending_id AS "from", p.to_pending_id AS "to", ${UNSURE("p", "relation")} AS unsure FROM kk.pending_relations p
             WHERE p.document_id = $1 AND ${UNDECIDED("p")} ORDER BY p.id`,
           [documentId],
         )

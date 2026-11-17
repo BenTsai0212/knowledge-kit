@@ -74,6 +74,7 @@ PGlite 的 session user 固定是 superuser `postgres`。以 `username: "kk_app"
 | `relations` | `id` PK、`relation_type`、`from_entity_id`、`to_entity_id` | 同上 |
 | `relation_sources` | `relation_id`、`passage_id`（出處）、`decision_id`（同上，三者不重複）、`from_entity_id`、`to_entity_id`（與關係的兩端相同，以複合外鍵參照 `relations (id, from_entity_id, to_entity_id)` 確保一致） | 同上 |
 | `pending_entities`、`pending_entity_sources`、`pending_relations`、`pending_relation_sources` | 待審的實體、關係與出處；每列帶 `document_id`，以複合外鍵保證出處與兩端屬於同一份文件 | 萃取（#44） |
+| `pending_entity_unsure`、`pending_relation_unsure` | 後面批次的沒把握標示：`pending_entity_id`／`pending_relation_id` PK（每個項目最多一列）、`document_id`（以複合外鍵保證與項目一致）、`unsure`（同 0013 的值）、`created_at` | 跨批次萃取（#404，0017） |
 | `review_decisions` | `id` PK（由 `round` 算出：第 1 次等於 `item_id`，之後是 `<item_id>~<round>`）、`item_id`（待審實體或關係）、`round`（`(item_id, round)` 不重複）、`decision`（`approve`／`reject`）、`decided_by`、`names`、`merge_into` | 核准與退回（#44）；撤回後可以再決定（0009） |
 | `review_retractions` | `decision_id` PK（每個決定最多撤回一次）、`document_id`（項目所屬的文件）、`retracted_by`、`retracted_at`、`cascade_of`（連帶撤回時指向實體的撤回） | 撤回（ADR 0007，0009） |
 | `conflicts` | `id` PK（`pc-` 開頭）、`document_id`（新文件）、`new_passage_id`（新文件的段落，以複合外鍵保證屬於新文件）、`old_passage_id`（既有段落）、`summary`（1～200 字）；`hypotheses`（`text[]`，2–3 個、每個 1～30 字、互不相同）、`evidence`（1～200 字）、`evidence_hypothesis`（證據支持的假設，1 起算），三者同時有值或同時為 NULL（0014）；`(new_passage_id, old_passage_id)` 不重複 | 說法不同的偵測（#51）；假設與證據（ADR 0012） |
@@ -212,12 +213,20 @@ policy 中的子查詢同樣受 RLS 限制，所以「段落看得到」已包�
 | `review_retractions` | `reason`（`name`、`relation`、`merge`、`exclude`、`other` 或 NULL） | 不變（撤回仍要求 `can_review`） |
 | `pending_entities`、`pending_relations` | `unsure`（`same_name`、`possible_typo`、`relation_wording`、`other` 或 NULL） | 不變（0006 的 `extract`） |
 
+**後面批次的標示**（#404，migration 0017）：跨批次合成一筆的項目，後面批次的 `unsure` 寫入新的 `pending_entity_unsure`／`pending_relation_unsure`（見 [docs/extraction.md](extraction.md)「去重」）。有效的標示是 `coalesce(pending_*.unsure, 新表的 unsure)`。
+
+| 資料表 | 權限 | 寫入（`WITH CHECK`） | 讀取（`USING`） |
+| --- | --- | --- | --- |
+| `pending_entity_unsure`、`pending_relation_unsure` | `SELECT`、`INSERT`（沒有 `UPDATE`、`DELETE`） | `extract`：同 0006（有 `can_upload`，且 `document_id` 是自己上傳的文件）；項目屬於同一份文件由外鍵保證 | `review`（0006）與 `own_upload`（0011）同待審資料表 |
+
+0017 另重建 `review_decisions` 的 `auto` policy：在 0013 的條件之外，實體與關係都要求新表沒有這個項目的列。上傳者以 `own_upload` 讀得到自己文件的標示，所以檢查看得到全部的列。
+
 - **CHECK**：`auto` 只能核准，不帶 `names` 與 `note`。`mode`、`reason`、`unsure` 的值與 `note` 的長度不符時拒絕。
-- **資料庫檢查的範圍**（#378 決定 1）：沒有 `unsure`、名稱沒有空白、合併對象看得到且類型相同、關係兩端都已核准。合併候選數（2 個以上是接縫）、與既有實體的編輯距離、名稱涵蓋 `client.json` 的所有 `languages` 由 `store.ts` 的 `autoApprove()` 在同一個交易中重算（資料庫沒有候選與語言的資料；同 0004 的 `names`），規則見 [docs/extraction.md](extraction.md)「直接收錄」，測試在 `app/tests/extraction/seam-approve.test.ts`。
+- **資料庫檢查的範圍**（#378 決定 1）：沒有 `unsure`（含後面批次的標示，0017）、名稱沒有空白、合併對象看得到且類型相同、關係兩端都已核准。合併候選數（2 個以上是接縫）、與既有實體的編輯距離、名稱涵蓋 `client.json` 的所有 `languages` 由 `store.ts` 的 `autoApprove()` 在同一個交易中重算（資料庫沒有候選與語言的資料；同 0004 的 `names`），規則見 [docs/extraction.md](extraction.md)「直接收錄」，測試在 `app/tests/extraction/seam-approve.test.ts`。
 - **`manual` 仍要求 `can_review`**：沒有 `can_review` 的上傳者寫 `manual` 決定、替別人寫決定、依別人的決定寫入正式資料，都被拒絕。有 `can_review` 的上傳者也可以寫 `auto`；`auto` 永遠只限自己上傳的文件。
 - **撤回沿用 ADR 0007**：`auto` 決定的撤回與 `manual` 相同，由有 `can_review` 的人寫入，可附 `reason`；既有的撤回與連帶撤回為 NULL。
 - **可見範圍**：直接收錄後的正式資料沿用「權限規則」，與人核准的相同；待審資料表與決定的讀取不變（上傳者讀得到自己文件的 `auto` 決定，0011）。
-- `oracle.ts` 的 `canAutoDecide()` 是上述規則的獨立實作（接縫與否由呼叫端傳入）；`app/tests/extraction/auto-review.test.ts` 以 oracle 比對每個身分 × 每個項目能否寫入 `auto` 決定（含只有一端核准的關係），比對直接收錄與撤回後每個身分的圖譜與待審資料表，並測試偽造的決定與正式資料寫入、新欄位的 CHECK。
+- `oracle.ts` 的 `canAutoDecide()` 是上述規則的獨立實作（接縫與否由呼叫端傳入）；`app/tests/extraction/auto-review.test.ts` 以 oracle 比對每個身分 × 每個項目能否寫入 `auto` 決定（含只有一端核准的關係），比對直接收錄與撤回後每個身分的圖譜與待審資料表，並測試偽造的決定與正式資料寫入、新欄位的 CHECK；後面批次的標示（0017）測試只能為自己文件的項目新增、不能修改或刪除、可見範圍等於 oracle（`ReviewSample` 的 `laterUnsure`），以及有標示的項目不能寫 `auto` 決定。
 
 ### 請上傳者確認
 

@@ -101,14 +101,18 @@ If nothing can be extracted, reply {"entities":[],"relations":[]}.
   | `type_mismatch` | 關係兩端的類型不符合關係類型的 `from`／`to` |
   | `duplicate_key` | 同一批中重複的實體 key，只保留第一筆 |
 
-- **`unsure`（選填）**：實體與關係都可以有。省略或 `null` 表示有把握；`same_name`、`possible_typo`、`relation_wording`、`other` 照原值；其他不合法的值（未知的字串、數值、`true` 等）當作 `other`，不捨棄項目（ADR 0011 決定 1）。`writePending()` 寫入 `pending_entities`／`pending_relations` 的 `unsure`（migration 0013），`review.mode` 是 `"item"` 時只記錄、不影響流程。
+- **`unsure`（選填）**：實體與關係都可以有。省略或 `null` 表示有把握；`same_name`、`possible_typo`、`relation_wording`、`other` 照原值；其他不合法的值（未知的字串、數值、`true` 等）當作 `other`，不捨棄項目（ADR 0011 決定 1）。`writePending()` 寫入 `pending_entities`／`pending_relations` 的 `unsure`（migration 0013）；後面的批次補上的標示寫入 `pending_entity_unsure`／`pending_relation_unsure`（migration 0017，見「去重」）。`review.mode` 是 `"item"` 時只記錄、不影響流程。
 - 待審資料寫入時，資料庫也會檢查：出處與兩端屬於同一份文件（複合外鍵），待審 id 的格式（`pe-`、`pr-` 開頭，migration 0007）。
 
 ## 去重
 
-同一份文件中，類型相同、而且**文件語言的名稱**依該類型的 `aliasRules` 正規化後相同的實體，合成一筆待審實體，出處取聯集。跨批次時，後面的批次沿用前面寫入的待審 id，只補上出處（`writePending()` 的 `addedSources`）。類型與兩端都相同的關係也一樣。
+同一份文件中，類型相同、而且**文件語言的名稱**依該類型的 `aliasRules` 正規化後相同的實體，合成一筆待審實體，出處取聯集。跨批次時，後面的批次沿用前面寫入的待審 id，補上出處與沒把握的標示（`writePending()` 的 `addedSources`）。類型與兩端都相同的關係也一樣。
 
-- **`unsure`**：同一批中合成一筆時，任一筆標示沒把握就保留（取第一個原因）。後面的批次沿用前面寫入的待審項目時，待審只能新增、不能修改，所以後面批次的 `unsure` 不補寫（見「限制」）。
+- **`unsure`**：同一批或跨批次合成一筆時，任一筆標示沒把握就保留，有多個原因時取第一個寫入的原因（#404）。
+  - 同一批中：寫入 `pending_entities`／`pending_relations` 的 `unsure`。
+  - 後面的批次：待審只能新增、不能修改，所以寫入只能新增的 `pending_entity_unsure`／`pending_relation_unsure`（migration 0017，每個項目最多一列，`ON CONFLICT DO NOTHING`）。
+  - **有效的標示**是 `coalesce(pending_*.unsure, pending_*_unsure.unsure)`：`readReview()`、`readMyUploads()`（待審頁的 `seamPartition()`、請上傳者確認）與 `autoApprove()` 共用 `store.ts` 的同一個 SQL 片段，讀到同一個值；資料庫的 `auto` policy 也拒絕這兩處任一有標示的項目。
+  - **重試**：`writePending()` 是單一交易，失敗的批次不留下標示；重試時重新寫入，已成功的批次不重送。重複寫入同一個項目的標示不新增列、不改變第一個原因。
 
 - **只比對文件語言的名稱**（`ExtractionState.documentLanguage`，上傳時設定的語言，不是介面語言；#46 審查）：其他語言的名稱由模型補上（prompt 第 6 條），不同的中文人名常有相同的英文拼音（例如「林志明」與「林芷敏」都可能是「Zhiming Lin」）。若以所有語言比對，兩個人會在主管看到之前被合成一筆，主管只能整筆退回。
 - 文件語言的名稱只差大小寫、全形半形或空白（依 `aliasRules`）時，仍合成一筆。
@@ -148,12 +152,12 @@ If nothing can be extracted, reply {"entities":[],"relations":[]}.
 | `candidates` | 合併候選（「合併」的 `suggestMerge()`）2 個以上，例如兩位林志明 |
 | `missing_language` | `client.json` 的任一 `languages` 沒有名稱或名稱空白 |
 | `near_name` | 沒有合併候選，而且文件語言的名稱依類型的 `aliasRules` 正規化後，與下列任一名稱的編輯距離是 1（例如「張雅亭／張雅婷」）：看得到的同類型實體的任一名稱；同一份文件中其他待審的同類型實體的文件語言名稱（兩個都是接縫） |
-| `unsure` | 模型標示沒把握（`pending_entities`／`pending_relations` 的 `unsure`） |
+| `unsure` | 模型標示沒把握（任一批的標示，見「去重」） |
 | `endpoint` | 關係的任一端是接縫，或端點沒有有效的核准（例如已由人退回） |
 
 - **只有一個候選的合併直接收錄**（ADR 0011 決定 2），不論 `mergeStrategy`；沒有候選時建立新實體。圖譜已有的關係只寫決定（同「合併」的 #189）。
 - **只處理從未有過決定的項目**：已由人決定、或直接收錄後被撤回的項目不再直接收錄。再執行一次不會重複收錄。
-- **資料庫另外檢查**上傳者、`unsure`、名稱與合併對象（migration 0013 的 `auto` policy，見 [docs/data-model.md](data-model.md)「直接收錄」）；任何一列被拒絕就整筆不寫入，項目全部留在待審。
+- **資料庫另外檢查**上傳者、`unsure`、名稱與合併對象（migration 0013、0017 的 `auto` policy，見 [docs/data-model.md](data-model.md)「直接收錄」）；任何一列被拒絕就整筆不寫入，項目全部留在待審。
 - **狀態**：`ExtractionState.autoApproved` 記錄 `done`（收錄的實體數、關係數與接縫數）或 `failed`；`failed` 或還沒執行時，下次 `runExtraction()` 在全部批次成功後再執行。有批次失敗時不直接收錄：之後的批次可能為已寫入的項目補上出處。
 - **撤回**沿用 ADR 0007，由有 `canReview` 的人撤回；`retract()` 可附理由（`name`、`relation`、`merge`、`exclude`、`other`），只記在人選的撤回，連帶撤回不記。
 - `readReview()` 的項目附上目前有效決定的 `mode`（`auto`／`manual`）與 `unsure`，供待審頁區分接縫與「已直接收錄」；直接收錄後被撤回的項目另附 `autoRetracted`（撤回的理由，連帶撤回時為 `null`）。每個項目最多一筆直接收錄的決定，所以撤回後再由人決定，仍標示為已撤回。
@@ -257,7 +261,7 @@ If nothing can be extracted, reply {"entities":[],"relations":[]}.
 - `batch.test.ts`：每批不超過預算、段落不跨批、批數上限與未萃取的段落。
 - `output.test.ts`：格式錯誤、出處、類型、關係方向、名稱語言、重複的 key。
 - `merge.test.ts`：`aliasRules` 的三個選項、`review`／`auto`、候選 0／1／多個、兩位林志明、只比對看得到的實體。
-- `app/tests/extraction/run.test.ts`：以資料庫與假的 `/api/ask` 測試寫入待審、分批與批數上限、`max_tokens`／格式錯誤／`/api/ask` 的錯誤、邀請碼失效時停止、重試只送出失敗的批次、跨批次去重。
+- `app/tests/extraction/run.test.ts`：以資料庫與假的 `/api/ask` 測試寫入待審、分批與批數上限、`max_tokens`／格式錯誤／`/api/ask` 的錯誤、邀請碼失效時停止、重試只送出失敗的批次、跨批次去重；跨批次的 `unsure`（任一批標示就是接縫、保留第一個原因、三處讀到的標示一致、重試不重複不遺失，#404）。
 - `app/tests/extraction/review.test.ts`：權限（見 docs/data-model.md）；圖譜已有的關係只寫決定、不重複建立（#189）；撤回、撤銷核准與退回（退回的撤銷含一併退回的關係）、`readRetractions()` 列出的決定與會消失的內容（ADR 0007）；待審區依文件中出現的順序排列，撤銷後不變（#243）。
 - `app/src/extraction/review-order.test.ts`：依出處段落與名稱位置排列、與 id 無關、位置相同時依 id。
 - `e2e/retract.spec.ts`：核准後「撤銷」、圖譜面板的「撤回此文件對它的核准」，撤回後圖譜搜尋不到、項目回到待審。
@@ -273,7 +277,7 @@ If nothing can be extracted, reply {"entities":[],"relations":[]}.
 - 合併只比對名稱，不比對別名（`aliases` 不在資料庫中）。
 - 圖譜已有的關係只寫核准決定（#189 決定 1）：新文件的段落不會成為既有關係的出處。比對只看核准者看得到的關係，所以與核准者看不到的既有關係相同時，仍會建立一筆（核准者看不到，不算洩漏）。
 - 同一份文件中，文件語言的名稱相同的實體會合成一筆待審實體。若同一份文件提到兩位同名的人（例如兩位林志明），會被合成一筆，需要主管退回後另行處理。
-- `unsure` 由模型自行標示，沒有評測證明它能抓到哪些錯誤（ADR 0011「限制」）。跨批次合成一筆時，只有第一次寫入的批次的 `unsure` 會記錄；後面的批次才標示沒把握的項目不會因此成為接縫。
+- `unsure` 由模型自行標示，沒有評測證明它能抓到哪些錯誤（ADR 0011「限制」）。
 
 ## 費用估算（每份文件）
 

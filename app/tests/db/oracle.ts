@@ -33,8 +33,9 @@ export function canWrite(access: AccessFile, identityId: string | null, level: s
 // uploads 是上傳的文件 → 上傳者（ADR 0009：上傳者讀得到自己上傳的文件的待審項目與決定）
 export interface ReviewSample {
   uploads: Record<string, string>;
-  pendingEntities: { id: string; doc: string; type: string; sources: string[] }[];
-  pendingRelations: { id: string; doc: string; from: string; to: string; sources: string[] }[];
+  // laterUnsure：後面的批次為這個項目寫入了沒把握的標示（pending_*_unsure，#404）
+  pendingEntities: { id: string; doc: string; type: string; sources: string[]; laterUnsure?: boolean }[];
+  pendingRelations: { id: string; doc: string; from: string; to: string; sources: string[]; laterUnsure?: boolean }[];
   decisions: { item: string; decision: "approve" | "reject"; mergeInto?: string }[];
   retractions: string[];
 }
@@ -79,6 +80,8 @@ export function expectedReviewVisible(access: AccessFile, data: Sample, review: 
     pending_entity_sources: entities.flatMap((e) => e.sources.map((s) => `${e.id}|${s}`)),
     pending_relations: relations.map((r) => r.id),
     pending_relation_sources: relations.flatMap((r) => r.sources.map((s) => `${r.id}|${s}`)),
+    pending_entity_unsure: entities.filter((e) => e.laterUnsure === true).map((e) => e.id),
+    pending_relation_unsure: relations.filter((r) => r.laterUnsure === true).map((r) => r.id),
     review_decisions: decisions.filter(decisionVisible).map((d) => d.id),
     review_retractions: decisions.filter((d) => review.retractions.includes(d.id) && visibleDocs.has(docOf.get(d.item)!)).map((d) => d.id),
   };
@@ -95,6 +98,8 @@ export const REVIEW_KEY_SQL: Record<string, string> = {
   pending_entity_sources: "pending_entity_id || '|' || passage_id",
   pending_relations: "id",
   pending_relation_sources: "pending_relation_id || '|' || passage_id",
+  pending_entity_unsure: "pending_entity_id",
+  pending_relation_unsure: "pending_relation_id",
   review_decisions: "id",
   review_retractions: "decision_id",
 };

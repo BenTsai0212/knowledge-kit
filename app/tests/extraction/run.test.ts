@@ -6,9 +6,11 @@ import { dataset } from "../../src/dataset/load";
 import { seedDataset } from "../../src/dataset/seed";
 import { openDatabase } from "../../src/db/database";
 import { foundNames, planExtraction, runExtraction, type ExtractionState } from "../../src/extraction/run";
-import { readReview } from "../../src/extraction/store";
+import { readMyUploads, readReview, writePending } from "../../src/extraction/store";
+import { readGraph } from "../../src/graph/read";
 import { answered, fakeTransport } from "../../src/qa/testing";
 import type { AskBody, AskEvent } from "../../src/qa/types";
+import { seamPartition } from "../../src/ui/seam-review";
 import { uploadDocument } from "../../src/upload/write";
 
 const OPTIONS = { languages: clientConfig.client.languages };
@@ -165,7 +167,7 @@ describe("runExtraction", { timeout: 30_000 }, () => {
     await db.close();
   });
 
-  it("模型標示的 unsure 寫入待審；同一批中合成一筆時保留，後面批次的 unsure 不補寫（ADR 0011 決定 1）", async () => {
+  it("模型標示的 unsure 寫入待審；同一批或跨批次合成一筆時保留第一個原因，後面批次的 unsure 也補上（ADR 0011 決定 1，#404）", async () => {
     const passages = Array.from({ length: 40 }, (_, i) => `第 ${i + 1} 段虛構內容。`.padEnd(900, "測"));
     const { db, upload, state } = await setup(passages, withBatches(2));
     const advisor = { key: "e3", type: "person", names: { "zh-TW": "測試顧問乙", en: "Test Advisor B" }, sources: [1] };
@@ -174,8 +176,8 @@ describe("runExtraction", { timeout: 30_000 }, () => {
       ++call === 1
         ? // 第 1 批：測試人員甲出現兩次，第二次標示沒把握；關係用詞不明確
           reply([PERSON, PROJECT, { ...PERSON, key: "e4", unsure: "same_name" }], [{ ...WORKS_ON, unsure: "relation_wording" }])
-        : // 第 2 批：青翼專案已寫入，這一批的 unsure 不補寫；新的測試顧問乙以不合法的值標示
-          reply([{ ...PROJECT, unsure: "possible_typo" }, { ...advisor, unsure: 0.3 }]),
+        : // 第 2 批：青翼專案已寫入，這一批的 unsure 補上；測試人員甲與關係已有標示，保留第一個；新的測試顧問乙以不合法的值標示
+          reply([{ ...PROJECT, unsure: "possible_typo" }, { ...PERSON, unsure: "possible_typo" }, { ...advisor, unsure: 0.3 }], [{ ...WORKS_ON, unsure: "other" }]),
     );
     await runExtraction({ db, transport, config: withBatches(2) }, state);
 
@@ -183,11 +185,92 @@ describe("runExtraction", { timeout: 30_000 }, () => {
     expect(doc.entities.map((e) => [e.names["zh-TW"], e.unsure ?? null]).sort()).toEqual(
       [
         ["測試人員甲", "same_name"],
-        ["青翼專案", null],
+        ["青翼專案", "possible_typo"],
         ["測試顧問乙", "other"],
       ].sort(),
     );
     expect(doc.relations.map((r) => r.unsure ?? null)).toEqual(["relation_wording"]);
+    await db.close();
+  });
+
+  it("跨批次合成一筆時，任一批標示 unsure 就是接縫、不直接收錄；保留第一個原因；待審區、我的上傳與接縫分組讀到同一個標示（#404）", async () => {
+    const passages = Array.from({ length: 40 }, (_, i) => `第 ${i + 1} 段虛構內容。`.padEnd(900, "測"));
+    const config: ClientConfig = { ...withBatches(3), client: { ...withBatches(3).client, review: { mode: "seams" } } };
+    const { db, upload, state } = await setup(passages, config);
+    expect(state.batches).toHaveLength(3);
+    const advisor = { key: "e3", type: "person", names: { "zh-TW": "測試顧問乙", en: "Test Advisor B" }, sources: [1] };
+    // 第 1 批沒有標示；第 2 批標示測試顧問乙與關係；第 3 批標示不同的原因
+    const marks = [{}, { e: "same_name", r: "relation_wording" }, { e: "possible_typo", r: "other" }] as { e?: string; r?: string }[];
+    let call = 0;
+    const transport = fakeTransport(() => {
+      const m = marks[call++];
+      return reply([PERSON, PROJECT, { ...advisor, unsure: m.e }], [{ ...WORKS_ON, unsure: m.r }]);
+    });
+    const result = await runExtraction({ db, transport, config }, state);
+
+    // 測試人員甲與青翼專案直接收錄；測試顧問乙與關係是接縫
+    expect(result.autoApproved).toEqual({ status: "done", entities: 2, relations: 0, seams: 2 });
+    const [doc] = (await readReview(db, "manager")).filter((d) => d.id === upload.documentId);
+    const advisorItem = doc.entities.find((e) => e.names["zh-TW"] === "測試顧問乙")!;
+    expect(advisorItem).toMatchObject({ status: "pending", unsure: "same_name" });
+    expect(doc.relations).toMatchObject([{ status: "pending", unsure: "relation_wording" }]);
+
+    const [mine] = (await readMyUploads(db, "staff")).filter((d) => d.id === upload.documentId);
+    expect(mine.entities.find((e) => e.id === advisorItem.id)!.unsure).toBe("same_name");
+    expect(mine.relations[0].unsure).toBe("relation_wording");
+
+    const { entityTypes } = config.knowledgeModel;
+    const part = seamPartition(mine, (await readGraph(db, "staff")).entities, { entityTypes, languages: config.client.languages });
+    expect(part.entities.map((x) => [x.entity.id, x.ask])).toEqual([[advisorItem.id, { kind: "unsure", unsure: "same_name" }]]);
+    expect(part.relations.map((x) => x.unsure)).toEqual(["relation_wording"]);
+
+    // 每個項目只有一列
+    const rows = await db.withIdentity("manager", async (tx) => [
+      ...(await tx.query<{ unsure: string }>("SELECT unsure FROM kk.pending_entity_unsure")).rows,
+      ...(await tx.query<{ unsure: string }>("SELECT unsure FROM kk.pending_relation_unsure")).rows,
+    ]);
+    expect(rows.map((r) => r.unsure).sort()).toEqual(["relation_wording", "same_name"]);
+    await db.close();
+  });
+
+  it("重試萃取時，後面批次的 unsure 不重複、不遺失；寫入失敗的批次整批不留下標示（#404）", async () => {
+    const passages = Array.from({ length: 40 }, (_, i) => `第 ${i + 1} 段虛構內容。`.padEnd(900, "測"));
+    const { db, upload, state } = await setup(passages, withBatches(3));
+    const replies: AskEvent[][] = [reply([PERSON]), answered("這不是 JSON"), reply([PERSON])];
+    let calls = 0;
+    const first = await runExtraction({ db, transport: fakeTransport(() => replies[calls++]), config: withBatches(3) }, state);
+    expect(first.batches.map((b) => b.status)).toEqual(["done", "failed", "done"]);
+
+    // 重試第 2 批：這次標示沒把握
+    const second = await runExtraction({ db, transport: fakeTransport(() => reply([{ ...PERSON, unsure: "same_name" }])), config: withBatches(3) }, first);
+    expect(second.batches.map((b) => b.status)).toEqual(["done", "done", "done"]);
+    const unsureRows = () =>
+      db.withIdentity("manager", async (tx) => (await tx.query<{ id: string; unsure: string }>("SELECT pending_entity_id AS id, unsure FROM kk.pending_entity_unsure")).rows);
+    const [doc] = (await readReview(db, "manager")).filter((d) => d.id === upload.documentId);
+    expect(doc.entities.map((e) => e.unsure)).toEqual(["same_name"]);
+    const id = doc.entities[0].id;
+    expect(await unsureRows()).toEqual([{ id, unsure: "same_name" }]);
+
+    // 已完成時再執行不重送；同一個標示重複寫入（或換原因）不新增列、不改變第一個原因
+    const third = fakeTransport(() => reply([]));
+    await runExtraction({ db, transport: third, config: withBatches(3) }, second);
+    expect(third.bodies).toHaveLength(0);
+    for (const unsure of ["same_name", "possible_typo"] as const) {
+      await writePending(db, "staff", upload.documentId, { entities: [], relations: [], addedSources: [{ entity: id, passages: [], unsure }] });
+    }
+    expect(await unsureRows()).toEqual([{ id, unsure: "same_name" }]);
+
+    // 同一批中有一列被拒絕時，整批回復，標示也不寫入
+    const other = await setup(["測試人員甲參與青翼專案的使用者測試。"]);
+    await runExtraction({ db: other.db, transport: fakeTransport(() => reply([PERSON])), config: item }, other.state);
+    const target = (await readReview(other.db, "staff"))[0].entities[0].id;
+    // 關係在標示之後寫入：id 格式不符被拒絕時，已寫入的標示一併回復
+    const bad = { id: "x-r1", type: "works-on", from: target, to: target, sources: [other.upload.passageIds[0]] };
+    await expect(
+      writePending(other.db, "staff", other.upload.documentId, { entities: [], relations: [bad], addedSources: [{ entity: target, passages: [], unsure: "other" }] }),
+    ).rejects.toMatchObject({ reason: "denied" });
+    expect((await readReview(other.db, "staff"))[0].entities.map((e) => e.unsure)).toEqual([undefined]);
+    await other.db.close();
     await db.close();
   });
 

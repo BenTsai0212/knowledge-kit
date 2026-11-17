@@ -217,6 +217,45 @@ describe("直接收錄的決定（ADR 0011 決定 4）", { timeout: 60_000 }, ()
     await w.db.close();
   });
 
+  it("後面批次的標示（0017）：上傳者只能為自己文件的待審項目新增，不能修改、刪除；有標示的項目不能直接收錄（#404）", async () => {
+    const w = await setup();
+    const mark = (id: string | null, doc: string, added: { entity?: string; relation?: string }) =>
+      writePending(w.db, id, doc, { entities: [], relations: [], addedSources: [{ ...added, passages: [], unsure: "same_name" }] });
+    // 別人的文件、別人的項目（文件不符由外鍵拒絕）、沒有身分 → 拒絕
+    await expect(mark("staff", w.dm, { entity: "pe-m1" })).rejects.toMatchObject({ reason: "denied" });
+    await expect(mark("staff", w.ds, { entity: "pe-m1" })).rejects.toMatchObject({ reason: "denied" });
+    await expect(mark("manager", w.ds, { entity: "pe-s1" })).rejects.toMatchObject({ reason: "denied" });
+    await expect(mark(null, w.ds, { entity: "pe-s1" })).rejects.toMatchObject({ reason: "denied" });
+    expect(await tryAuto(w.db, "staff", "pe-s2")).toBe(true);
+    expect(await tryAuto(w.db, "manager", "pe-m1")).toBe(true);
+
+    await mark("staff", w.ds, { entity: "pe-s2" });
+    await mark("staff", w.ds, { relation: "pr-s1" });
+    await mark("manager", w.dm, { entity: "pe-m1" });
+    w.review.pendingEntities.filter((e) => e.id === "pe-s2" || e.id === "pe-m1").forEach((e) => (e.laterUnsure = true));
+    w.review.pendingRelations.find((r) => r.id === "pr-s1")!.laterUnsure = true;
+    for (const id of IDENTITIES) {
+      expect(await queryReview(w.db, id), String(id)).toEqual(sorted(expectedReviewVisible(access, w.sample, w.review, id)));
+    }
+    expect(expectedReviewVisible(access, w.sample, w.review, "staff").pending_entity_unsure).toEqual(["pe-s2"]);
+
+    // 只能新增
+    for (const sql of ["UPDATE kk.pending_entity_unsure SET unsure = 'other'", "DELETE FROM kk.pending_entity_unsure", "DELETE FROM kk.pending_relation_unsure"]) {
+      await expect(w.db.withIdentity("staff", (tx) => tx.query(sql)), sql).rejects.toThrow(/permission denied/);
+    }
+
+    // 資料庫端的直接收錄檢查：有標示的實體與關係被拒絕（關係在兩端核准後仍被拒絕）
+    expect(await tryAuto(w.db, "staff", "pe-s2")).toBe(false);
+    expect(await tryAuto(w.db, "manager", "pe-m1")).toBe(false);
+    await autoEntity(w.db, "staff", "pe-s1");
+    await w.db.withIdentity("manager", async (tx) => {
+      await tx.query("INSERT INTO kk.review_decisions (item_id, round, decision, decided_by) VALUES ('pe-s2', kk.next_round('pe-s2'), 'approve', 'manager')");
+    });
+    expect(await tryAuto(w.db, "staff", "pr-s2")).toBe(true);
+    expect(await tryAuto(w.db, "staff", "pr-s1")).toBe(false);
+    await w.db.close();
+  });
+
   it("合併到類型不同的實體被拒絕；同一個項目不能有兩筆有效的決定", async () => {
     const w = await setup();
     expect(await tryAuto(w.db, "staff", "pe-s1", "team-rd")).toBe(false);

@@ -113,7 +113,7 @@ export async function runExtraction(
       continue;
     }
 
-    // 同一份文件中去重：文件語言的名稱相符的實體、類型與兩端相同的關係，沿用前面寫入的待審項目，只補上出處
+    // 同一份文件中去重：文件語言的名稱相符的實體、類型與兩端相同的關係，沿用前面寫入的待審項目，補上出處與沒把握的標示
     const entityKeys = { ...state.entityKeys };
     const relationKeys = { ...state.relationKeys };
     const input: Required<PendingInput> = { entities: [], relations: [], addedSources: [] };
@@ -133,8 +133,8 @@ export async function runExtraction(
         created.unsure ??= e.unsure;
         idOfKey.set(e.key, existing);
       } else {
-        // 前面的批次已寫入：只補上出處（待審只能新增，這一批的 unsure 不補寫，docs/extraction.md「去重」）
-        input.addedSources.push({ entity: existing, passages: e.sources });
+        // 前面的批次已寫入：補上出處與這一批的 unsure（寫入 pending_entity_unsure，已有標示時保留第一個，docs/extraction.md「去重」）
+        input.addedSources.push({ entity: existing, passages: e.sources, unsure: e.unsure });
         idOfKey.set(e.key, existing);
       }
       for (const k of keys) entityKeys[k] ??= idOfKey.get(e.key)!;
@@ -153,7 +153,7 @@ export async function runExtraction(
         created.sources = [...new Set([...created.sources, ...r.sources])];
         created.unsure ??= r.unsure;
       } else {
-        input.addedSources.push({ relation: existing, passages: r.sources });
+        input.addedSources.push({ relation: existing, passages: r.sources, unsure: r.unsure });
       }
     }
 
