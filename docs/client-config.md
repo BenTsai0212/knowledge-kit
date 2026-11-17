@@ -215,6 +215,7 @@ npm run check:client
 | `aliasRules.ignoreWhitespace` | 是 | boolean | 比對時忽略空白 |
 | `mergeStrategy` | 否 | `review`／`auto`，預設 `review` | 名稱或別名相符時：`review` 放進待審，由人確認後合併；`auto` 直接合併成同一個實體 |
 | `container` | 否 | boolean，預設 `false` | 容器類型（例如部門、專案）：可見節點數超過門檻時，圖譜以這類實體分群，其他實體歸入直接相連的容器；沒有任何容器類型時改用社群偵測（[docs/graph.md](graph.md)「大量節點時的分群」，#254） |
+| `nearName` | 否 | boolean，預設 `true` | 名稱只差一個字（編輯距離 1）時當成接縫、交給人判斷（[docs/extraction.md](extraction.md)「直接收錄」的 `near_name`，含同一份文件內的比對）。用來抓人名的同音錯字（張雅亭／張雅婷）；部門、專案、據點、產品型號等名稱字少或以編號區分的類型，差一字通常是不同的對象（總務部／業務部），設為 `false`（#411） |
 
 **為什麼預設 `review`**：名稱相符不代表是同一個實體。例如兩位同名的人員，自動合併會把他們合成同一個人，之後的關係、權限與引用都會跟著錯。只有名稱在客戶內部確定唯一的類型（例如部門），才改成 `auto`。
 
@@ -354,7 +355,7 @@ JSON Schema 無法參照另一個檔的值，以下由 `scripts/check-client.mjs
 `app/src/client/load.ts` 在 build 時以 JSON import（`@client/…`，見[多客戶與切換](#多客戶與切換)）讀入 5 個設定檔，匯出型別為 `ClientConfig` 的 `clientConfig`。翻譯檔由 `app/src/client/i18n.ts` 讀入（見[翻譯檔](#翻譯檔clienti18n)）。
 
 - 執行時不做 ajv 驗證，ajv 不打包進前端；驗證只在 `npm run check:client` 與 CI 執行。
-- 省略的欄位在這裡補上預設值，讀取端拿到的型別一律是必填。目前有 `mergeStrategy`（省略時補成 `review`）、`icon`（省略時補成 `generic`）、`retrieval` 的各欄位（依 `provider` 而不同，在 `app/src/retrieval/providers.ts` 的 `RETRIEVAL_DEFAULTS`）、`upload` 的各欄位（`UPLOAD_DEFAULTS`）、`conflicts` 的各欄位（`CONFLICTS_DEFAULTS`）、`review` 的各欄位（`REVIEW_DEFAULTS`）、`qa` 的各欄位（`QA_DEFAULTS`）與 `evals.thresholds` 的各欄位（`EVAL_THRESHOLDS_DEFAULTS`）；預設值與 Schema 的 `default` 相同（`retrieval` 比對 `keyword-hash` 的列），由 `load.test.ts` 比對。
+- 省略的欄位在這裡補上預設值，讀取端拿到的型別一律是必填。目前有 `mergeStrategy`（省略時補成 `review`）、`icon`（省略時補成 `generic`）、`nearName`（省略時補成 `true`）、`retrieval` 的各欄位（依 `provider` 而不同，在 `app/src/retrieval/providers.ts` 的 `RETRIEVAL_DEFAULTS`）、`upload` 的各欄位（`UPLOAD_DEFAULTS`）、`conflicts` 的各欄位（`CONFLICTS_DEFAULTS`）、`review` 的各欄位（`REVIEW_DEFAULTS`）、`qa` 的各欄位（`QA_DEFAULTS`）與 `evals.thresholds` 的各欄位（`EVAL_THRESHOLDS_DEFAULTS`）；預設值與 Schema 的 `default` 相同（`retrieval` 比對 `keyword-hash` 的列），由 `load.test.ts` 比對。
 
 ## 多客戶與切換
 

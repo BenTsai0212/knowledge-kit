@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { strings } from "../client/i18n";
 import { clientConfig } from "../client/load";
 import type { ConflictItem, ConflictPassage } from "../conflicts/store";
 import { dataset } from "../dataset/load";
@@ -24,6 +25,7 @@ import {
   namesInvalid,
   nextTab,
   pendingCount,
+  pendingEmptyText,
   relationReady,
   reviewDocuments,
   reviewGroups,
@@ -486,5 +488,19 @@ describe("sheetReason（#282 手機的底部面板）", () => {
     expect(sheetReason({ kind: "decide", entity: entity("a") }, LANGS)).toBe("choose");
     expect(sheetReason({ kind: "new", entity: { ...entity("b"), names: { "zh-TW": "乙", en: " " } } }, LANGS)).toBe("names");
     expect(sheetReason({ kind: "new", entity: entity("c") }, LANGS)).toBeNull();
+  });
+});
+
+describe("pendingEmptyText（#411）", () => {
+  it("沒有文件時維持「沒有待審的項目」；還有只剩已直接收錄的文件時改說沒有需要判斷的項目、下方可以抽查或撤回", () => {
+    expect(pendingEmptyText(false)).toEqual({ title: "reviewEmpty", reason: "reviewEmptyReason" });
+    expect(pendingEmptyText(true)).toEqual({ title: "reviewEmptyAuto", reason: "reviewEmptyAutoReason" });
+    for (const language of clientConfig.client.languages) {
+      const s = strings(language);
+      expect(s[pendingEmptyText(true).title]).not.toBe(s[pendingEmptyText(false).title]);
+      expect(s[pendingEmptyText(true).reason]).not.toBe(s[pendingEmptyText(false).reason]);
+    }
+    expect(strings("zh-TW").reviewEmptyAuto).toBe("沒有需要你判斷的項目。");
+    expect(strings("zh-TW").reviewEmptyAutoReason).toBe("下方是系統已直接收錄的項目，可以抽查或撤回。");
   });
 });

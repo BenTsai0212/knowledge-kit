@@ -6,6 +6,7 @@
       "color": "#0E7C86",
       "icon": "factory",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
+      "nearName": false,
       "mergeStrategy": "auto"
     },
     {
@@ -14,6 +15,7 @@
       "color": "#2E7D5B",
       "icon": "team",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
+      "nearName": false,
       "container": true,
       "mergeStrategy": "auto"
     },
@@ -31,6 +33,7 @@
       "color": "#3D7AB8",
       "icon": "box",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
+      "nearName": false,
       "mergeStrategy": "review"
     },
     {
@@ -39,6 +42,7 @@
       "color": "#B26A00",
       "icon": "folder",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": false },
+      "nearName": false,
       "container": true,
       "mergeStrategy": "review"
     },

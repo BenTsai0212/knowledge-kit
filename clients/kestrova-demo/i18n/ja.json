@@ -248,6 +248,8 @@
   "reviewRejectedTab": "却下済み",
   "reviewEmpty": "レビュー待ちの項目はありません。",
   "reviewEmptyReason": "新しくアップロードした文書の抽出が終わると、エンティティと関係がここで審査を待ちます。",
+  "reviewEmptyAuto": "あなたの判断が必要な項目はありません。",
+  "reviewEmptyAutoReason": "下にあるのはシステムが直接登録した項目です。抜き取りで確認したり、取り消したりできます。",
   "reviewUploadAnother": "もう1件アップロード",
   "reviewRejectedEmpty": "却下した項目はありません。",
   "reviewExtracting": "抽出中の文書があります。完了したら一覧を更新してください。",

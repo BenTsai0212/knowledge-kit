@@ -263,6 +263,12 @@ export function reviewTabCounts(
   };
 }
 
+// 待審分頁清空時的文字鍵（#245）：還有文件列出「已直接收錄」時（ADR 0011 決定 5），說明下方的文件卡是可以抽查或撤回的項目（#411）
+export const pendingEmptyText = (autoApprovedShown: boolean) =>
+  autoApprovedShown
+    ? ({ title: "reviewEmptyAuto", reason: "reviewEmptyAutoReason" } as const)
+    : ({ title: "reviewEmpty", reason: "reviewEmptyReason" } as const);
+
 // 分頁的鍵盤操作（#243，WAI-ARIA tabs）：左右鍵移到前後一個（頭尾相接），Home／End 移到第一個與最後一個；其他鍵回 null
 export function nextTab<T>(tabs: readonly T[], current: T, key: string): T | null {
   const i = tabs.indexOf(current);

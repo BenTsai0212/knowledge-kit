@@ -64,12 +64,13 @@ const rulesOf = (type: string, ctx: SeamContext) =>
 // 新實體的文件語言名稱只差一個字（可能是錯字或同一人，例如「張雅亭／張雅婷」），依類型的 aliasRules 正規化後比對：
 // - 看得到的同類型實體的任一名稱
 // - 同一份文件中其他待審的同類型實體的文件語言名稱（兩個新實體都成立，都是接縫）
-// 回傳第一個只差一個字的對象（待審頁的提問寫出它的名稱）；看得到的實體優先
+// 回傳第一個只差一個字的對象（待審頁的提問寫出它的名稱）；看得到的實體優先。
+// 類型的 nearName 是 false 時不比對（#411：部門、專案名稱字少，差一字通常是不同的單位）
 export type NearMatch = { kind: "visible"; entity: VisibleEntity } | { kind: "sibling"; entity: SeamEntityInput };
 
 export function nearMatch(entity: SeamEntityInput, visible: VisibleEntity[], siblings: SeamEntityInput[], ctx: SeamContext): NearMatch | null {
   const name = entity.names[ctx.documentLanguage];
-  if (blank(name)) return null;
+  if (blank(name) || ctx.entityTypes.find((t) => t.id === entity.type)?.nearName === false) return null;
   const rules = rulesOf(entity.type, ctx);
   const key = normalizeName(name!, rules);
   const near = (n: string | undefined) => n !== undefined && !blank(n) && editDistance(key, normalizeName(n, rules)) === 1;

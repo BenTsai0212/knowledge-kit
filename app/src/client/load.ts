@@ -45,6 +45,7 @@ export function normalizeClient(raw: ClientFiles): ClientConfig {
         ...t,
         icon: t.icon ?? "generic",
         mergeStrategy: t.mergeStrategy ?? "review",
+        nearName: t.nearName ?? true,
       })),
     },
   };

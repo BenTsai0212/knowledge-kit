@@ -6,6 +6,7 @@
       "color": "#3D7AB8",
       "icon": "person",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
+      "nearName": true,
       "mergeStrategy": "review"
     },
     {
@@ -14,6 +15,7 @@
       "color": "#2E7D5B",
       "icon": "team",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": true },
+      "nearName": false,
       "container": true,
       "mergeStrategy": "auto"
     },
@@ -23,6 +25,7 @@
       "color": "#7A52C7",
       "icon": "folder",
       "aliasRules": { "ignoreCase": true, "normalizeWidth": true, "ignoreWhitespace": false },
+      "nearName": false,
       "container": true
     }
   ],

@@ -258,6 +258,14 @@ describe("check-client", () => {
     expect(schema("knowledge-model.schema.json").properties.entityTypes.items.properties.mergeStrategy.default).toBe("review");
   });
 
+  it("近似名稱的開關（nearName）只接受 boolean，可省略（#411）", () => {
+    const files = example();
+    files["knowledge-model.json"].entityTypes[0].nearName = "off";
+    expect(validateClient(files).map((e) => e.path)).toEqual(["/entityTypes/0/nearName"]);
+    delete files["knowledge-model.json"].entityTypes[0].nearName;
+    expect(validateClient(files)).toEqual([]);
+  });
+
   it("實體類型的顏色必填，格式為 #RRGGBB", () => {
     const files = example();
     files["knowledge-model.json"].entityTypes[0].color = "blue";

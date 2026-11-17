@@ -14,7 +14,7 @@ const action = (label: string) => ({ label, onClick: () => {} });
 const NEW_KEYS = [
   "emptyAnswerReason", "emptyAnswerAction", "graphEmptyReason", "switchIdentity", "pathNotFoundReason", "pathChangeEnd",
   "timelineEmptyReason", "timelineFilterEmptyReason", "timelineShowAll", "uploadNotAllowedReason", "reviewEmptyReason",
-  "reviewUploadAnother", "reportsEmptyReason", "evalEmptyTitle", "evalEmptyReason", "evalEmptyAction",
+  "reviewEmptyAuto", "reviewEmptyAutoReason", "reviewUploadAnother", "reportsEmptyReason", "evalEmptyTitle", "evalEmptyReason", "evalEmptyAction",
 ] as const;
 
 // 與身分的可見範圍有關的標題與原因：不得暗示「有內容但你看不到」（#245 決定、docs/qa.md「不透露是否有看不到的文件」）

@@ -248,6 +248,8 @@
   "reviewRejectedTab": "Rejected",
   "reviewEmpty": "Nothing is waiting for review.",
   "reviewEmptyReason": "When a new upload finishes extracting, its entities and relations wait for review here.",
+  "reviewEmptyAuto": "Nothing needs your judgment.",
+  "reviewEmptyAutoReason": "Below are the items the system added directly. You can spot-check or retract them.",
   "reviewUploadAnother": "Upload another document",
   "reviewRejectedEmpty": "Nothing has been rejected.",
   "reviewExtracting": "Some documents are still being extracted. Refresh the list when they finish.",

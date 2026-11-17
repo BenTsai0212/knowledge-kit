@@ -125,6 +125,8 @@ export function App() {
   const turns = conversations[identity] ?? NO_TURNS;
   const setTurnsOf = (owner: string, change: (all: readonly Turn[]) => readonly Turn[]) =>
     setConversations((all) => ({ ...all, [owner]: change(all[owner] ?? NO_TURNS) }));
+  // 從首頁送出、回答完成前要捲到開頭的那一題（#411）
+  const [followTurn, setFollowTurn] = useState<string | null>(null);
   // 首頁的「問過的問題」（#283）：依身分分開，只存問題文字與提問時間（不存回答，#331）；切換身分或語言不清除，登出時清除
   const [asked, setAsked] = useState<Readonly<Record<string, readonly AskedQuestion[]>>>({});
   // 首頁「以前答不出來，現在可能答得出來了」（#408）：依身分的重查結果，與上次重查的快取鍵（資料與被拒答的題目都沒變時不重跑）
@@ -438,17 +440,21 @@ export function App() {
   }
 
   // owner：送出的身分。劇本先切換身分時，這次 render 的 identity 還是切換前的，所以由呼叫端傳入。
-  // chosen：同名的反問已經選好（或不反問，例如劇本與「重新提問」）時傳入；turnId：選了之後接著送出的那一題（不另加一題）
-  async function onAsk(question: string, owner = identity, chosen?: Chosen, turnId?: string) {
+  // chosen：同名的反問已經選好（或不反問，例如劇本與「重新提問」）時傳入；turnId：選了之後接著送出的那一題（不另加一題）；
+  // follow：從首頁送出時，回答完成前一直捲到這一題的開頭（#411）
+  async function onAsk(question: string, owner = identity, chosen?: Chosen, turnId?: string, follow = false) {
     if (retriever === null || accessCode === null || answering || limit !== null) return;
     const setTurns = (change: (all: readonly Turn[]) => readonly Turn[]) => setTurnsOf(owner, change);
+    const created = (id: string) => follow && setFollowTurn(id);
     const remember = () => setAsked((all) => ({ ...all, [owner]: rememberQuestion(all[owner] ?? [], question, new Date().toISOString()) }));
     // 同名的反問（ADR 0012 決定 1，client.json 的 qa.dialogue）：以送出身分的圖譜（RLS 篩選）判斷，反問時不呼叫模型；讀取失敗時照常送出
     if (dialogue && chosen === undefined && db !== null) {
       const graph = await readGraph(db, owner).catch(() => null);
       const sameName = graph === null ? null : sameNameAsk(graph, question, language);
       if (sameName !== null) {
-        setTurns((all) => [...all, { id: `turn-${nextTurn.current++}`, question, streaming: "", sameName }]);
+        const id = `turn-${nextTurn.current++}`;
+        setTurns((all) => [...all, { id, question, streaming: "", sameName }]);
+        created(id);
         remember();
         return;
       }
@@ -460,6 +466,7 @@ export function App() {
     const update = (turn: Turn) => setTurns((all) => all.map((t) => (t.id === id ? turn : t)));
     if (turnId === undefined) {
       setTurns((all) => [...all, { ...base, streaming: "" }]);
+      created(id);
       remember();
     } else update({ ...base, streaming: "" });
     const ctx = { retriever, transport: apiTransport({ accessCode }), model: client.model, displayName: client.displayName };
@@ -608,6 +615,16 @@ export function App() {
 
   // 「這次的問題」點一題：捲到該題（手機的底部面板；桌機的左側欄不放，#330 決定 3）
   const scrollToTurn = (id: string) => void document.getElementById(id)?.scrollIntoView({ block: "start" });
+
+  // 從首頁「再問一次」或提問切到問答頁時（#411）：Conversation 在新的一題出現時捲一次，但當時下方還沒有內容，
+  // 題目只能停在最下方，之後長出的回答會被輸入區擋住。所以回答完成前（或同名的反問出現時），每次更新都捲到這一題的開頭。
+  // 這一題不在目前的對話中（切換身分、今天用完了而移除）時停止
+  useEffect(() => {
+    if (followTurn === null) return;
+    const turn = turns.find((t) => t.id === followTurn);
+    if (turn !== undefined) scrollToTurn(turn.id);
+    if (turn === undefined || turn.answer !== undefined || turn.sameName !== undefined) setFollowTurn(null);
+  }, [followTurn, turns]);
 
   const Nav = layout === "phone" ? MobileNav : layout === "tablet" ? NavRail : Sidebar;
   // 展示模式登入後是頂端列（#260），不論寬度都取代 Nav（手機寬度的排列見 app.css），所以畫面上只有它的「問答｜圖譜」切換，
@@ -928,7 +945,7 @@ export function App() {
             draft={draft}
             onDraft={setDraft}
             // 提問與「再問一次」都切到問答頁，以現在的身分與看得到的資料回答
-            onAsk={(question) => (setView("qa"), void onAsk(question))}
+            onAsk={(question) => (setView("qa"), void onAsk(question, identity, undefined, undefined, true))}
             onStartReview={() => setView("review")}
             viewed={viewed[identity] ?? NONE}
             onOpenDocument={(id) => (setFocusDocument(id), setView("timeline"))}

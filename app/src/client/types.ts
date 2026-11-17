@@ -173,6 +173,8 @@ export interface EntityTypeFile {
   mergeStrategy?: MergeStrategy;
   // 容器類型（例如部門、專案）：大量節點時的圖譜以這類實體分群（#254）；省略時不是容器
   container?: boolean;
+  // 名稱只差一個字時當成接縫（seams.ts 的 near_name，#411）；省略時開啟。部門、專案等名稱字少的類型，差一字通常是不同的單位
+  nearName?: boolean;
 }
 
 export interface RelationType {
@@ -259,9 +261,10 @@ export interface ClientFiles {
 
 // app 讀取端拿到的形狀：省略的欄位已補上預設值
 
-export interface EntityType extends Omit<EntityTypeFile, "mergeStrategy" | "icon"> {
+export interface EntityType extends Omit<EntityTypeFile, "mergeStrategy" | "icon" | "nearName"> {
   icon: EntityIconName;
   mergeStrategy: MergeStrategy;
+  nearName: boolean;
 }
 
 export type RetrievalConfig = Required<RetrievalFile>;
@@ -599,6 +602,9 @@ export interface UiStrings {
   reviewRejectedTab: string;
   reviewEmpty: string;
   reviewEmptyReason: string;
+  // 待審沒有需要判斷的項目、但有文件有「已直接收錄」時（#411）：文件卡在下方
+  reviewEmptyAuto: string;
+  reviewEmptyAutoReason: string;
   reviewUploadAnother: string;
   reviewRejectedEmpty: string;
   reviewExtracting: string;

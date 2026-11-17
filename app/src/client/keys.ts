@@ -147,6 +147,7 @@ export const manifests: ManifestEntry[] = [
       aliasRules: "required",
       mergeStrategy: "optional",
       container: "optional",
+      nearName: "optional",
     } satisfies KeyManifest<EntityTypeFile>,
   },
   {
@@ -252,7 +253,7 @@ const uiStrings = {
   extractTitle: "required", extractRunning: "required", extractDone: "required", extractEntities: "required",
   extractRelations: "required", extractDropped: "required", extractSkipped: "required",
   extractFailed: "required", extractNotRun: "required", extractRetry: "required", extractErrors: "required",
-  tabReview: "required", reviewPendingTab: "required", reviewRejectedTab: "required", reviewEmpty: "required", reviewEmptyReason: "required", reviewUploadAnother: "required",
+  tabReview: "required", reviewPendingTab: "required", reviewRejectedTab: "required", reviewEmpty: "required", reviewEmptyReason: "required", reviewEmptyAuto: "required", reviewEmptyAutoReason: "required", reviewUploadAnother: "required",
   reviewRejectedEmpty: "required", reviewExtracting: "required", reviewRefresh: "required",
   reviewEntities: "required", reviewRelations: "required", reviewApproveDocument: "required", reviewApprove: "required",
   reviewReject: "required", reviewWorking: "required", reviewNeedsChoice: "required", reviewSheetChoose: "required", reviewSheetNames: "required", reviewChangeChoice: "required",

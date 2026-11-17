@@ -70,6 +70,7 @@ import {
   missingNameLanguages,
   nextTab,
   overflowsEnd,
+  pendingEmptyText,
   reviewDocuments,
   reviewGroups,
   reviewTabCounts,
@@ -996,11 +997,12 @@ export function ReviewPage({ db, identity, language, extracting, onOpenSource, o
           />
         )}
         {tab !== "reports" && listedDocs.length === 0 && (
-          // 待審清空（#245）：到圖譜查看、再上傳一份；已退回與已處理的分頁只有標題
+          // 待審清空（#245）：到圖譜查看、再上傳一份；已退回與已處理的分頁只有標題。
+          // 還有只剩「已直接收錄」的文件時，改說沒有需要判斷的項目、下方的文件卡可以抽查或撤回（#411）
           <EmptyState
             icon="review"
-            title={tab === "pending" ? s.reviewEmpty : tab === "rejected" ? s.reviewRejectedEmpty : s.reviewDecidedEmpty}
-            reason={tab === "pending" ? s.reviewEmptyReason : undefined}
+            title={tab === "pending" ? s[pendingEmptyText(visibleDocs.length > 0).title] : tab === "rejected" ? s.reviewRejectedEmpty : s.reviewDecidedEmpty}
+            reason={tab === "pending" ? s[pendingEmptyText(visibleDocs.length > 0).reason] : undefined}
             actions={
               tab === "pending"
                 ? [

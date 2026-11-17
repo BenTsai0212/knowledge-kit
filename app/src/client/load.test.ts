@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import clientSchema from "../../../client/schema/client.schema.json";
+import knowledgeModelSchema from "../../../client/schema/knowledge-model.schema.json";
 import { RETRIEVAL_DEFAULTS } from "../retrieval/providers";
 import { clientConfig, CONFLICTS_DEFAULTS, EVAL_THRESHOLDS_DEFAULTS, normalizeClient, QA_DEFAULTS, REVIEW_DEFAULTS, UPLOAD_DEFAULTS } from "./load";
 import type { ClientFiles } from "./types";
@@ -15,6 +16,10 @@ describe("normalizeClient", () => {
     expect(byId).toEqual({ person: "person", team: "team", project: "folder" });
   });
 
+  it("nearName 省略時開啟，預設值與 Schema 的 default 相同（#411）", () => {
+    expect(knowledgeModelSchema.properties.entityTypes.items.properties.nearName.default).toBe(true);
+  });
+
   it("不修改傳入的設定", () => {
     const raw = {
       client: { retrieval: { topK: 3 } },
@@ -26,6 +31,8 @@ describe("normalizeClient", () => {
     const config = normalizeClient(raw);
     expect(config.knowledgeModel.entityTypes[0].mergeStrategy).toBe("review");
     expect(config.knowledgeModel.entityTypes[0].icon).toBe("generic");
+    expect(config.knowledgeModel.entityTypes[0].nearName).toBe(true);
+    expect(raw.knowledgeModel.entityTypes[0]).not.toHaveProperty("nearName");
     expect(raw.knowledgeModel.entityTypes[0]).not.toHaveProperty("mergeStrategy");
     expect(raw.knowledgeModel.entityTypes[0]).not.toHaveProperty("icon");
     expect(raw.client.retrieval).toEqual({ topK: 3 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { clientConfig } from "../client/load";
-import { editDistance, planEntity, planRelation, type EntityPlan, type SeamContext, type SeamEntityInput, type VisibleEntity } from "./seams";
+import { editDistance, nearMatch, planEntity, planRelation, type EntityPlan, type SeamContext, type SeamEntityInput, type VisibleEntity } from "./seams";
 
 const ctx: SeamContext = { entityTypes: clientConfig.knowledgeModel.entityTypes, languages: ["zh-TW", "en"], documentLanguage: "zh-TW" };
 
@@ -81,6 +81,26 @@ describe("planEntity（ADR 0011 決定 1、2）", () => {
     expect(planEntity(c, visible, ctx, [a, c])).toEqual({ seams: [] });
     // 只有自己時不和自己比對
     expect(planEntity(a, visible, ctx, [a])).toEqual({ seams: [] });
+  });
+
+  it("類型的 nearName 是 false 時只差一個字也不是接縫，含同一份文件的比對；開啟或省略時照舊（#411）", () => {
+    // 參考情境：person 開啟，team、project 關閉
+    const byId = Object.fromEntries(ctx.entityTypes.map((t) => [t.id, t.nearName]));
+    expect(byId).toEqual({ person: true, team: false, project: false });
+    const doc = (id: string, zh: string, en: string): SeamEntityInput => ({ id, type: "team", names: { "zh-TW": zh, en }, unsure: null });
+    // 營運處與看得到的營運部只差一個字；總務部與業務部是同一份文件的兩個新部門
+    const ops = doc("pe-1", "營運處", "Operations Office");
+    const a = doc("pe-2", "總務部", "General Affairs");
+    const b = doc("pe-3", "業務部", "Sales");
+    const off = [ops, a, b].map((e) => planEntity(e, visible, ctx, [ops, a, b]));
+    expect(off).toEqual([{ seams: [] }, { seams: [] }, { seams: [] }]);
+    // 同樣的實體，team 開啟或省略 nearName 時是接縫
+    for (const nearName of [true, undefined]) {
+      const on: SeamContext = { ...ctx, entityTypes: ctx.entityTypes.map((t) => (t.id === "team" ? { ...t, nearName } : t)) as SeamContext["entityTypes"] };
+      expect([ops, a, b].map((e) => planEntity(e, visible, on, [ops, a, b]).seams)).toEqual([["near_name"], ["near_name"], ["near_name"]]);
+    }
+    // 關閉時 nearMatch 也不回傳對象（待審頁的提問依此）
+    expect(nearMatch(ops, visible, [ops, a, b], ctx)).toBeNull();
   });
 
   it("模型標示沒把握是接縫；有多個原因時全部列出", () => {

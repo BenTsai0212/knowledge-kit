@@ -133,6 +133,14 @@ test("選了候選、寫了說明之後接縫消失；抽查 3 項，撤回關�
   await yating.getByRole("button", { name: s.commonRestateYes }).click();
   await expect(asks).toHaveCount(0);
 
+  // 待審清空、但還有「已直接收錄」（#411）：空狀態說沒有需要判斷的項目、下方可以抽查或撤回，放在文件卡上方
+  const empty = page.locator(".review-panel .empty-state");
+  await expect(empty).toContainText(s.reviewEmptyAuto);
+  await expect(empty).toContainText(s.reviewEmptyAutoReason);
+  await expect(empty).not.toContainText(s.reviewEmpty);
+  expect((await empty.boundingBox())!.y).toBeLessThan((await card.boundingBox())!.y);
+  await screenshot(page, testInfo, "seam-review-empty-auto-1440px.png");
+
   // 抽查：直接收錄只有 3 項，全部列出
   await auto.getByRole("button", { name: fill(s.seamAutoSample, { count: 3 }) }).click();
   await expect(auto.locator(".review-auto__item")).toHaveCount(3);

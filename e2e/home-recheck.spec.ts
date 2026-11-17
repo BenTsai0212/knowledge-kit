@@ -13,6 +13,13 @@ const QUESTION = "員工停車證怎麼辦理？";
 const TITLE = "E2E 停車證辦理";
 const DESKTOP = { width: 1440, height: 900 };
 const noHorizontalScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+// 元素的中心點最上層是它自己（或它的子元素）：在可見範圍內、沒有被 sticky 的輸入區或頂端列蓋住
+const uncovered = (el: Locator) =>
+  el.evaluate((node) => {
+    const r = node.getBoundingClientRect();
+    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return hit !== null && node.contains(hit);
+  });
 
 async function screenshot(page: Page, testInfo: TestInfo, name: string): Promise<void> {
   await testInfo.attach(name, { body: await page.screenshot({ fullPage: true }), contentType: "image/png" });
@@ -96,6 +103,11 @@ for (const viewport of [DESKTOP, { width: 390, height: 844 }]) {
       await recall.getByRole("button", { name: `${s.home.askAgain}${s.colon}${QUESTION}` }).click();
       await expect(tab(page, s.tabQa)).toHaveAttribute("aria-current", "page");
       await expect(page.locator("section.answer").last()).toContainText(FAKE_ANSWER_LEAD);
+      // 捲到這一題的開頭（#411）：上方還有被拒答的那一題，新回答的標題在可見範圍內，不被輸入區或頂端列蓋住
+      const heading = page.locator("section.answer").last().locator("h2");
+      await expect(heading).toBeInViewport();
+      await expect.poll(() => uncovered(heading)).toBe(true);
+      await screenshot(page, testInfo, `home-recheck-again-${viewport.width}`);
       await openHome(page);
       await expect(asked.getByText(QUESTION)).toBeVisible();
       await expect(recall).toHaveCount(0);

@@ -46,6 +46,11 @@
             "description": "容器類型（例如部門、專案）：可見節點數超過門檻時，圖譜以這類實體分群，其他實體歸入直接相連的容器；沒有任何容器類型時改用社群偵測（docs/graph.md「大量節點時的分群」）",
             "type": "boolean",
             "default": false
+          },
+          "nearName": {
+            "description": "名稱只差一個字（編輯距離 1）時當成接縫、交給人判斷（docs/extraction.md「直接收錄」的 near_name）。用來抓人名的同音錯字；部門、專案等名稱字少的類型，差一字通常是不同的單位，可設為 false 關閉",
+            "type": "boolean",
+            "default": true
           }
         }
       }
