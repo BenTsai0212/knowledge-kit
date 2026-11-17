@@ -86,12 +86,16 @@ export function Conversation({ language, turns, canUpload, onOpenSource, openPas
               <h2>{turn.question}</h2>
               <AskCard
                 language={language}
-                title={s.dialogueSameNameTitle}
-                question={fill(s.dialogueSameNameAsk, { count: turn.sameName.options.length, name: turn.sameName.name }, language)}
+                title={turn.sameName.person ? s.dialogueSameNameTitlePerson : s.dialogueSameNameTitle}
+                question={fill(turn.sameName.person ? s.dialogueSameNameAskPerson : s.dialogueSameNameAsk, { count: turn.sameName.options.length, name: turn.sameName.name }, language)}
                 busy={askDisabled}
                 options={[
                   ...turn.sameName.options.map((o) => ({ key: o.entityId, label: o.label, onChoose: () => onChooseSameName(turn.id, { sent: o.text, note: o.label }) })),
-                  { key: "all", label: fill(s.dialogueSameNameBoth, { count: turn.sameName.options.length }, language), onChoose: () => onChooseSameName(turn.id, {}) },
+                  {
+                    key: "all",
+                    label: fill(turn.sameName.person ? s.dialogueSameNameBothPerson : s.dialogueSameNameBoth, { count: turn.sameName.options.length }, language),
+                    onChoose: () => onChooseSameName(turn.id, {}),
+                  },
                 ]}
               />
             </section>

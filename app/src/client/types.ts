@@ -675,10 +675,13 @@ export interface UiStrings {
   conflictOld: string;
   // 待審頁每組差異說明下方的假設（ADR 0012 決定 3）的小標
   dialogueHypotheses: string;
-  // 同名的反問（ADR 0012 決定 1）
+  // 同名的反問（ADR 0012 決定 1）；*Person 是同名的實體是人（類型的圖示是 person）時的寫法（「兩位」「哪一位」，#400）
   dialogueSameNameTitle: string;
   dialogueSameNameAsk: string;
   dialogueSameNameBoth: string;
+  dialogueSameNameTitlePerson: string;
+  dialogueSameNameAskPerson: string;
+  dialogueSameNameBothPerson: string;
   dialogueSameNameNote: string;
   // 說法不同的提問（ADR 0012 決定 3、4）：提問、固定範本與它的三個選項、略過、選了之後的補充與另一種讀法。
   // {newer}／{older}／{title} 是文件標題，{months} 是相差的月數（0 時不寫），{quote} 是證據，{choice} 是證據支持的假設
@@ -703,7 +706,6 @@ export interface UiStrings {
   dialogueAltTurn: string;
   // 人的理解的顯示（ADR 0012 決定 5、6）：回答卡片與原文欄的小標、同事的理解、作者（{role} 是角色，{date} 是日期），以及先作答前的說明
   dialogueRecordTitle: string;
-  dialogueRecordSourceTitle: string;
   dialogueRecordPeers: string;
   dialogueRecordMine: string;
   dialogueRecordPeer: string;

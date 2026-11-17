@@ -1,6 +1,7 @@
 // 待審頁的接縫（ADR 0011 決定 1、6、8，docs/design.md「待審的接縫」）：client.json 的 review.mode 為 seams 時，
 // 待審的項目中哪些是接縫、要問什麼、給哪些選項。純函式；接縫的規則沿用 seams.ts，依目前身分（審核者）看得到的實體重算，
-// 所以提問與選項只用審核者看得到的內容（#247）。不是接縫的待審項目（例如直接收錄失敗）留在 rest，照逐筆核准的畫面處理
+// 所以提問與選項只用審核者看得到的內容（#247）。直接收錄後被撤回的項目也用接縫的卡片（#400）；其他不是接縫的待審項目
+// （例如直接收錄失敗）留在 rest，照逐筆核准的畫面處理
 import type { ClientConfig, LocalizedText } from "../client/types";
 import type { ReviewRequest } from "../extraction/requests";
 import { suggestMerge } from "../extraction/merge";
@@ -70,22 +71,34 @@ function entityAsk(e: ReviewEntity, visible: VisibleEntity[], siblings: SeamEnti
   return { ...base, ask: { kind: "missing", languages }, options: [{ kind: "keep" }, { kind: "reject" }] };
 }
 
+// 直接收錄後被撤回、回到待審的實體（ADR 0011 決定 5）：依規則不是接縫時，同樣以「問你」的卡片問「該不該收錄」（#400）。
+// 有合併的候選時列出候選與「我覺得是新的」（撤回的理由可能是不該合併），否則是「沒問題」「不該收錄」
+function retractedAsk(e: ReviewEntity, visible: VisibleEntity[], ctx: Context): Omit<EntitySeam, "relations"> | null {
+  if (e.autoRetracted === undefined) return null;
+  const merge = suggestMerge(e, visible, ctx.entityTypes);
+  const candidates = merge.mode === "new" ? [] : merge.mode === "auto" ? [merge.target] : merge.candidates;
+  const options: SeamOption[] =
+    candidates.length > 0 ? [...candidates.map((target) => ({ kind: "merge", target }) as const), { kind: "new" }, { kind: "reject" }] : [{ kind: "keep" }, { kind: "reject" }];
+  return { entity: e, ask: { kind: "unsure", unsure: "other" }, options, keepInto: null };
+}
+
 // visible：目前身分看得到的實體（readGraph() 的結果）
 export function seamPartition(doc: ReviewDocument, visible: VisibleEntity[], ctx: Context): SeamPartition {
   const pending = doc.entities.filter((e) => e.status === "pending");
   const siblings = pending.map(input);
   const entities: EntitySeam[] = [];
   for (const e of pending) {
-    const ask = entityAsk(e, visible, siblings, ctx, doc.language);
+    const ask = entityAsk(e, visible, siblings, ctx, doc.language) ?? retractedAsk(e, visible, ctx);
     if (ask !== null) entities.push({ ...ask, relations: [] });
   }
   const relations: RelationSeam[] = [];
   const attached = new Set<string>();
   for (const r of doc.relations.filter((x) => x.status === "pending")) {
-    // 掛在第一個是接縫的端點底下；兩端都不是接縫、模型標示沒把握的關係自己是一個接縫
+    // 掛在第一個是接縫的端點底下；兩端都不是接縫、模型標示沒把握或直接收錄後被撤回的關係自己是一個接縫
     const owner = entities.find((x) => x.entity.id === r.from) ?? entities.find((x) => x.entity.id === r.to);
     if (owner !== undefined) owner.relations.push(r);
-    else if (r.unsure !== undefined) relations.push({ relation: r, unsure: r.unsure, options: [{ kind: "keep" }, { kind: "reject" }] });
+    else if (r.unsure !== undefined || r.autoRetracted !== undefined)
+      relations.push({ relation: r, unsure: r.unsure ?? "other", options: [{ kind: "keep" }, { kind: "reject" }] });
     else continue;
     attached.add(r.id);
   }

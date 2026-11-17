@@ -92,3 +92,12 @@ describe("「都不是，我來說明」的說明欄（S-Review 的 .expl label�
     expect(rule(".ask-card__explain label")).toMatchObject({ "flex-direction": "column", "align-items": "stretch" });
   });
 });
+
+describe("手機的接縫卡（S-Review 手機，#400）", () => {
+  it("手機：接縫的列沒有外框與內距；其他列與桌機、平板照舊", () => {
+    expect(rule(".review-page--phone .review-seams > li")).toMatchObject({ border: "0", padding: "0" });
+    expect(rule(".review-list > li")).toMatchObject({ border: "1px solid var(--color-border)" });
+    // 接縫的列在 review-seams 的列表中
+    expect(reviewPage).toContain(`<ul className="review-list review-seams">`);
+  });
+});

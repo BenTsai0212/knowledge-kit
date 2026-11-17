@@ -3,7 +3,7 @@
 // client.json 的 qa.dialogue 為 false 時與現行相同（直接回答）。桌機 1440×900、手機 390×844 各走一次，截圖附在測試報告。/api/ask 一律是假的回應
 import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
 import { escapeText } from "../app/src/qa/prompt";
-import { openApp, s, switchIdentity } from "./support/app";
+import { openApp, s, sameNameCard, switchIdentity } from "./support/app";
 import { access, client, language } from "./support/client";
 import { sameNameEntities } from "./support/dataset";
 import { FAKE_ANSWER_LEAD, sseBody } from "./support/fake-ask";
@@ -13,6 +13,8 @@ const dialogue = client.qa?.dialogue === true;
 const twins = access.roles.map((r) => ({ role: r.id, group: sameNameEntities(r.id, language)[0] })).find((x) => x.group !== undefined);
 const noHorizontalScroll = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
 const box = async (el: Locator) => (await el.boundingBox())!;
+// 單複數寫法中 =2 的那一個（同名的剛好兩個時的文字）
+const pickTwo = (template: string) => template.replace(/\{count, plural,\s*=2 \{([^{}]*)\}(?:\s*[=\w]+ \{[^{}]*\})*\s*\}/, "$1");
 
 async function screenshot(page: Page, testInfo: TestInfo, name: string): Promise<void> {
   await testInfo.attach(name, { body: await page.screenshot(), contentType: "image/png" });
@@ -58,17 +60,26 @@ for (const viewport of VIEWPORTS) {
       if (!dialogue) {
         // 查詢版：與現行相同，沒有反問，直接以原問題回答
         await expect(turn.getByText(FAKE_ANSWER_LEAD)).toBeVisible();
-        await expect(page.getByRole("group", { name: s.dialogueSameNameTitle })).toHaveCount(0);
+        await expect(sameNameCard(page)).toHaveCount(0);
         expect(sent).toEqual([escapeText(question)]);
         return;
       }
 
       // 反問：小標、提問（含名稱）、每個看得到的同名實體一個選項＋「都想知道」、「輪到你」；還沒有呼叫模型
-      const card = turn.getByRole("group", { name: s.dialogueSameNameTitle });
+      const card = sameNameCard(turn);
       await expect(card).toBeVisible();
       await expect(card.locator(".refusal-ask__question")).toContainText(group.name);
+      // 量詞依類型（#400，畫板 S-QA）：人是「想確認你問的是誰」「兩位」「哪一位」，其他類型是「兩個」「哪一個」
+      const [title, askText, both] = group.person
+        ? [s.dialogueSameNameTitlePerson, s.dialogueSameNameAskPerson, s.dialogueSameNameBothPerson]
+        : [s.dialogueSameNameTitle, s.dialogueSameNameAsk, s.dialogueSameNameBoth];
+      await expect(card).toHaveAttribute("aria-label", title);
       const options = card.getByRole("button");
       await expect(options).toHaveCount(group.ids.length + 1);
+      if (group.ids.length === 2) {
+        await expect(card.locator(".refusal-ask__question")).toHaveText(pickTwo(askText).replace("{name}", group.name));
+        await expect(options.last()).toHaveText(pickTwo(both));
+      }
       for (const option of (await options.all()).slice(0, -1)) await expect(option).toContainText(group.name);
       await expect(card.getByText(s.commonYourTurn)).toBeVisible();
       await expect(turn.locator("h2")).toHaveText(question);
@@ -81,7 +92,7 @@ for (const viewport of VIEWPORTS) {
       const label = (await options.first().textContent())!;
       await options.first().click();
       await expect(turn.getByText(FAKE_ANSWER_LEAD)).toBeVisible();
-      await expect(turn.getByRole("group", { name: s.dialogueSameNameTitle })).toHaveCount(0);
+      await expect(sameNameCard(turn)).toHaveCount(0);
       await expect(turn.locator("h2")).toHaveText(question);
       await expect(turn.locator(".answer__note")).toContainText(label);
       expect(sent).toEqual([escapeText(label)]);
@@ -90,7 +101,7 @@ for (const viewport of VIEWPORTS) {
 
       // 再問一次、選「都想知道」：照原問題送出，沒有灰字
       turn = await ask(page, question);
-      await turn.getByRole("group", { name: s.dialogueSameNameTitle }).getByRole("button").last().click();
+      await sameNameCard(turn).getByRole("button").last().click();
       await expect(turn.getByText(FAKE_ANSWER_LEAD)).toBeVisible();
       await expect(turn.locator(".answer__note")).toHaveCount(0);
       expect(sent).toEqual([escapeText(label), escapeText(question)]);

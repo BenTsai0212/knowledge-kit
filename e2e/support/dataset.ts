@@ -5,7 +5,7 @@ import type { DatasetDocument, EntitiesFile, RelationsFile } from "../../app/src
 import { datasetSample, expectedVisible } from "../../app/src/evals/oracle";
 import type { Graph } from "../../app/src/graph/read";
 import type { RoleId } from "./app";
-import { access, clientDir, readClientJson } from "./client";
+import { access, clientDir, knowledgeModel, readClientJson } from "./client";
 
 const DOCUMENTS_DIR = `${clientDir}/data/documents`;
 const PREFIX_LENGTH = 20;
@@ -91,11 +91,13 @@ export function visibleNamesIn(text: string, role: RoleId): string[] {
 }
 
 // 同名的實體（#198）：該身分看得到、顯示名稱相同的實體 id，每組至少兩個（參考情境是兩位林志明）
-export function sameNameEntities(role: RoleId, language: string): { name: string; ids: string[] }[] {
+// person：同名的是人（類型的圖示是 person，反問用「兩位」「哪一位」，#400）
+export function sameNameEntities(role: RoleId, language: string): { name: string; ids: string[]; person: boolean }[] {
   const seen = new Set(expectedVisible(access, sample, role).entities);
   const groups = new Map<string, string[]>();
   for (const e of entities.filter((x) => seen.has(x.id))) groups.set(displayName(e, language), [...(groups.get(displayName(e, language)) ?? []), e.id]);
-  return [...groups].filter(([, ids]) => ids.length > 1).map(([name, ids]) => ({ name, ids }));
+  const isPerson = (id: string) => knowledgeModel.entityTypes.find((t) => t.id === entities.find((e) => e.id === id)?.type)?.icon === "person";
+  return [...groups].filter(([, ids]) => ids.length > 1).map(([name, ids]) => ({ name, ids, person: isPerson(ids[0]) }));
 }
 
 // 待審的「選擇合併對象」用（#282）：萃取結果的名稱，文件語言取自一個看得到的實體、其他語言取自同類型的另一個，

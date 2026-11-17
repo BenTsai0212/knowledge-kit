@@ -128,7 +128,7 @@ for (const viewport of VIEWPORTS) {
     await expect(answer.getByRole("group", { name: s.seamTitle })).toBeVisible();
     await answer.locator("button.citation").first().click();
     await expect(page.getByText(s.dialogueRecordLocked).first()).toBeVisible();
-    await expect(page.getByRole("group", { name: s.dialogueRecordSourceTitle })).toHaveCount(0);
+    await expect(page.locator(".source-text").getByRole("group", { name: s.dialogueRecordTitle })).toHaveCount(0);
     await screenshot(page, testInfo, `seam-source-locked-${tag}.png`);
     await page.keyboard.press("Escape");
 
@@ -143,9 +143,10 @@ for (const viewport of VIEWPORTS) {
     await record.scrollIntoViewIfNeeded();
     await screenshot(page, testInfo, `seam-4-evidence-peers-${tag}.png`);
 
-    // 原文欄：並存段落的下方附同一份記錄
+    // 原文欄：並存段落的下方附同一份記錄，小標與回答卡片相同（畫板 S-Spec 的「記錄」，#400）
     await answer.locator("button.citation").first().click();
-    const sourceRecord = page.getByRole("group", { name: s.dialogueRecordSourceTitle }).first();
+    const sourceRecord = page.locator(".source-text").getByRole("group", { name: s.dialogueRecordTitle }).first();
+    await expect(sourceRecord.locator(".seam-record__label").first()).toHaveText(s.dialogueRecordTitle);
     await expect(sourceRecord).toContainText(HYPOTHESES[0]);
     await expect(sourceRecord).toContainText(HYPOTHESES[1]);
     await expect(page.getByText(s.dialogueRecordLocked)).toHaveCount(0);

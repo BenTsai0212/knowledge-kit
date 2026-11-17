@@ -1,5 +1,6 @@
 // 同名的反問（ADR 0012 決定 1，docs/qa.md「同名」）：問題提到的名稱對應到目前身分看得到的 2 個以上同類型、同顯示名稱的實體時，
 // 回答前先反問，不呼叫模型。輸入一律是送出身分的 readGraph() 結果（RLS 已篩選），看不到的那一位不會成為選項（#247）。
+import { clientConfig } from "../client/load";
 import type { Graph, GraphEntity } from "../graph/read";
 import { entityName, entityOptionLabel } from "./graph-labels";
 
@@ -14,6 +15,8 @@ export interface SameNameOption {
 export interface SameNameAsk {
   // 介面語言的顯示名稱
   name: string;
+  // 同名的實體是人：類型的圖示是 person 時（knowledge-model.json），提問用「兩位」「哪一位」（#400）。依類型判斷，不依名稱猜
+  person: boolean;
   options: SameNameOption[];
 }
 
@@ -59,5 +62,6 @@ export function sameNameAsk(graph: Graph, question: string, language: string): S
   const name = entityName(group[0].entity, language);
   if (new Set(options.map((o) => o.label)).size < options.length) return null;
   if (options.some((o) => o.label !== name && lower.includes(o.label.toLowerCase()))) return null;
-  return { name, options };
+  const type = group[0].entity.type;
+  return { name, person: clientConfig.knowledgeModel.entityTypes.find((t) => t.id === type)?.icon === "person", options };
 }

@@ -4453,6 +4453,12 @@ button.secondary {
   padding: 0.5rem 0.75rem;
 }
 
+/* 手機的接縫卡（畫板 S-Review 手機，#400）：卡片直接放在文件卡的列表中，外面不多一層框線與內距；桌機與平板不變 */
+.review-page--phone .review-seams > li {
+  border: 0;
+  padding: 0;
+}
+
 label.inline {
   display: inline-flex;
   margin-right: 0.5rem;

@@ -53,7 +53,7 @@ export function SourceText({ language, source, onOpenSource, numbered = false }:
                     language={language}
                     items={pairRecords(records.items, p.id, m.passageId)}
                     skipped={records.skipped.includes(pairKey(p.id, m.passageId))}
-                    title={s.dialogueRecordSourceTitle}
+                    title={s.dialogueRecordTitle}
                     showLocked
                   />
                 ));

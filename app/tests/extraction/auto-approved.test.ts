@@ -6,7 +6,8 @@ import { dataset } from "../../src/dataset/load";
 import { seedDataset } from "../../src/dataset/seed";
 import { openDatabase } from "../../src/db/database";
 import { approve, autoApprove, readMyUploads, readReview, retract, writePending } from "../../src/extraction/store";
-import { autoItems, sample } from "../../src/ui/seam-review";
+import { readGraph } from "../../src/graph/read";
+import { autoItems, sample, seamPartition, seamPlan } from "../../src/ui/seam-review";
 import { uploadDocument } from "../../src/upload/write";
 
 const { languages, defaultLanguage } = clientConfig.client;
@@ -69,6 +70,36 @@ describe("已直接收錄（autoItems）", { timeout: 60_000 }, () => {
       ["pe-a", "approved", "manual", { reason: "name" }],
       ["pr-a", "approved", "manual", { reason: null }],
     ]);
+    await db.close();
+  });
+
+  it("撤回後回到待審的項目是接縫的卡片（#400）：有候選時列出候選與「是新的」，關係跟著端點；沒有留在逐筆核准", async () => {
+    const { db, review } = await setup();
+    const ctx = { entityTypes, languages };
+    // pe-a（建立新實體）撤回時連帶撤回 pr-a；pe-b 合併到既有的青翼專案後撤回
+    let doc = await review();
+    await retract(db, "manager", [doc.entities.find((e) => e.id === "pe-a")!.decisionId!, doc.entities.find((e) => e.id === "pe-b")!.decisionId!], "merge");
+    doc = await review();
+    const graph = await readGraph(db, "manager");
+    const part = seamPartition(doc, graph.entities, ctx);
+    expect(part.entities.map((x) => [x.entity.id, x.ask, x.options, x.relations.map((r) => r.id)])).toEqual([
+      ["pe-a", { kind: "unsure", unsure: "other" }, [{ kind: "keep" }, { kind: "reject" }], ["pr-a"]],
+      ["pe-b", { kind: "unsure", unsure: "other" }, [{ kind: "merge", target: "project-bluewing" }, { kind: "new" }, { kind: "reject" }], []],
+      ["pe-f", { kind: "unsure", unsure: "same_name" }, [{ kind: "keep" }, { kind: "reject" }], []],
+    ]);
+    expect([...part.rest.entities, ...part.rest.relations].filter((x) => x.status === "pending")).toEqual([]);
+    // 「沒問題」建立新實體（另一端 pe-b 還在待審，關係先不核准）
+    const plan = seamPlan(doc, part.entities[0], { kind: "keep" }, undefined, graph, languages)!;
+    expect(plan).toEqual({ entities: [{ id: "pe-a" }], relations: [], existingRelations: [] });
+    await db.close();
+  });
+
+  it("撤回後只剩關係在待審時，關係自己是接縫", async () => {
+    const { db, review } = await setup();
+    await retract(db, "manager", [(await review()).relations.find((r) => r.id === "pr-a")!.decisionId!], "relation");
+    const part = seamPartition(await review(), (await readGraph(db, "manager")).entities, { entityTypes, languages });
+    expect(part.relations.map((x) => [x.relation.id, x.unsure, x.options])).toEqual([["pr-a", "other", [{ kind: "keep" }, { kind: "reject" }]]]);
+    expect(part.rest.relations.filter((r) => r.status === "pending")).toEqual([]);
     await db.close();
   });
 
