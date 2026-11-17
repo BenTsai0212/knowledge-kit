@@ -19,7 +19,7 @@ import {
   signInPanel,
   switchIdentity,
 } from "./support/app";
-import { access, client, language, NO_NON_REVIEWER, NO_REVIEWER, nonReviewer, readClientJson, reviewer } from "./support/client";
+import { access, client, language, NO_NON_REVIEWER, NO_REVIEWER, nonReviewer, reviewer, stringsFor } from "./support/client";
 import { routeFakeAsk } from "./support/fake-ask";
 
 test.use({ viewport: { width: 390, height: 844 } });
@@ -155,7 +155,7 @@ test("身分與語言面板：語言是分段切換，選中的語言 aria-press
   expect((await languageOption(sheet, language).boundingBox())!.height).toBeGreaterThanOrEqual(44);
   const other = client.languages.find((code) => code !== language);
   test.skip(other === undefined, "client.json 只有一種語言");
-  const t = readClientJson<typeof s>(`i18n/${other}.json`);
+  const t = stringsFor(other!);
   await languageOption(sheet, other!).click();
   await expect(sheet.getByRole("heading", { name: t.identityAndLanguage })).toBeVisible();
   await expect(sheet.getByRole("group", { name: t.language }).locator(`button[lang="${other}"]`)).toHaveAttribute("aria-pressed", "true");

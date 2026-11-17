@@ -57,6 +57,7 @@ PGlite 的 session user 固定是 superuser `postgres`。以 `username: "kk_app"
 - 檔案：`app/src/db/migrations/NNNN_<名稱>.sql`。以 Vite 的 `import.meta.glob(…, { query: "?raw" })` 打包成字串，瀏覽器與 Vitest（Node）共用，不需要 Node API。
 - 記錄：`migrate.ts` 把 version 與 SHA-256 checksum 寫入 `kk_meta.schema_migrations`。已記錄的 migration 內容不同時拋錯。
 - 規則（AGENTS.md 第 5 節）：不修改已合併的 migration，改動一律新增檔案。
+- 新增 migration 時，同步 `app/src/db/database.test.ts` 的 migration 清單；新增資料表時，同步 `app/src/db/test-fixtures.ts` 的 `KK_TABLES`（兩者漏改時 `npm test` 失敗，#405）。
 - 目前資料庫在記憶體中，每次載入頁面都從 migration 重建。
 
 ## 資料表（schema `kk`）

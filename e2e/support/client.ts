@@ -3,6 +3,7 @@
 import { readFileSync } from "node:fs";
 import type { AccessFile, ClientFile, KnowledgeModelFile, Role, ScenariosFile, ThemeFile, UiStrings } from "../../app/src/client/types";
 import { resolveClientDir } from "../../scripts/client-dir.mjs";
+import { mergedStrings } from "../../scripts/i18n-merge.mjs";
 
 // Playwright 在 repo 根目錄執行；build 時用同一個 KK_CLIENT（docs/testing.md）
 export const clientDir = resolveClientDir(process.env);
@@ -15,9 +16,12 @@ export const scenarios = readClientJson<ScenariosFile>("scenarios.json");
 export const theme = readClientJson<ThemeFile>("theme.json");
 export const knowledgeModel = readClientJson<KnowledgeModelFile>("knowledge-model.json");
 
-// 介面文字只用預設語言；鍵的型別以參考情境的翻譯檔為準（check:client 檢查各語言的鍵相同）
+// 介面文字與畫面相同，缺少的鍵退回參考情境（scripts/i18n-merge.mjs）；鍵的型別以參考情境的翻譯檔為準
+export type Strings = typeof import("@client/i18n/zh-TW.json");
+export const stringsFor = (lang: string): Strings => mergedStrings(clientDir, lang).strings as Strings;
+// 測試只用預設語言
 export const language = client.defaultLanguage;
-export const s = readClientJson<typeof import("@client/i18n/zh-TW.json")>(`i18n/${language}.json`);
+export const s = stringsFor(language);
 
 const rank = new Map(access.visibilityLevels.map((l) => [l.id, l.rank]));
 // 可見等級 rank 最高的一個；同分時取 access.json 中較前面的

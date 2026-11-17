@@ -1,10 +1,15 @@
 import { defineConfig } from "vitest/config";
 import { resolveClientDir } from "./scripts/client-dir.mjs";
+import { i18nMergePlugin } from "./scripts/i18n-merge.mjs";
+
+const clientDir = resolveClientDir();
 
 // 客戶檢查（scripts/check-clients.mjs）用：@client 指向 KK_CLIENT 選定的客戶，只跑與客戶無關的 target 測試（#77）。
 // target 測試也符合 *.test.ts，npm test（vitest.config.ts）會以參考情境 client/ 再跑一次。
 export default defineConfig({
-  resolve: { alias: { "@client": resolveClientDir() } },
+  // 翻譯檔與 build 相同，缺少的鍵退回參考情境（scripts/i18n-merge.mjs）
+  plugins: [i18nMergePlugin(clientDir)],
+  resolve: { alias: { "@client": clientDir } },
   test: {
     include: ["app/**/*.target.test.ts", "worker/**/*.target.test.ts"],
     environment: "node",

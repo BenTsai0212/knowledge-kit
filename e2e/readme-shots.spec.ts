@@ -5,7 +5,7 @@
 import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 import { EVALS_PATH, gotoView, openApp, switchIdentity, switchLanguage, uploadAndReview } from "./support/app";
-import { client, readClientJson, reviewingUploader, s as defaultStrings, scenarios } from "./support/client";
+import { client, reviewingUploader, s as defaultStrings, scenarios, stringsFor } from "./support/client";
 import { SEAM_TITLE, sseBody } from "./support/fake-ask";
 import { clickNodeOnce, waitForGraphIdle, type Cy } from "./support/graph";
 
@@ -46,7 +46,7 @@ async function start(page: Page, lang: string, path = "/"): Promise<Strings> {
   await openApp(page, path);
   await routeQuotingAnswer(page, lang);
   await switchIdentity(page, reviewingUploader!.id);
-  return lang === client.defaultLanguage ? defaultStrings : readClientJson<Strings>(`i18n/${lang}.json`);
+  return lang === client.defaultLanguage ? defaultStrings : stringsFor(lang);
 }
 
 async function useLanguage(page: Page, lang: string): Promise<void> {

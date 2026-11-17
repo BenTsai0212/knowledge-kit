@@ -487,9 +487,80 @@ describe("翻譯檔", () => {
         { file: "i18n/zh-TW.json", path: "/", message: "缺少翻譯檔" },
         { file: "i18n/fr.json", path: "/", message: "語言 fr 不在 client.json 的 languages 內" },
         { file: "i18n/en.json", path: "/", message: "不允許的欄位 logo" },
-        { file: "i18n/en.json", path: "/", message: "缺少必填欄位 loadFailed" },
       ]),
     );
+    // fixtures 不是參考情境：缺少的鍵退回 client/i18n/，不是錯誤（#406）
+    expect(errors.map((e) => e.message)).not.toContain("缺少必填欄位 loadFailed");
+  });
+});
+
+describe("翻譯檔的退回（#406）", () => {
+  const reference = () => ({ dir: "client", languages: ["zh-TW", "en"], defaultLanguage: "zh-TW", i18n: i18n() });
+  const withJa = () => {
+    const files = example();
+    files["client.json"].languages = ["zh-TW", "en", "ja"];
+    return files;
+  };
+  const check = (data, files = example(), warnings = []) => validateClient(files, undefined, data, undefined, warnings, reference());
+
+  it("客戶缺少的鍵退回同語言，不是錯誤也不警告；空物件 {} 也通過", () => {
+    const warnings = [];
+    expect(check({ "zh-TW": {}, en: { loading: "Hold on", errors: { daily_limit: "Come back tomorrow" } } }, example(), warnings)).toEqual([]);
+    expect(warnings).toEqual([]);
+  });
+
+  it("client/ 沒有的語言退回預設語言，每個語言一則警告並列出鍵名", () => {
+    const ja = structuredClone(i18n().en);
+    delete ja.loading;
+    delete ja.errors.daily_limit;
+    const warnings = [];
+    expect(check({ "zh-TW": {}, en: {}, ja }, withJa(), warnings)).toEqual([]);
+    expect(warnings).toEqual([
+      { file: "i18n/ja.json", path: "/", message: "2 個鍵沒有 ja 的翻譯，畫面上顯示參考情境 client/ 的 zh-TW：loading、errors.daily_limit" },
+    ]);
+  });
+
+  it("多餘的鍵（含巢狀）、參數不符、空白文字仍是錯誤，路徑指向客戶的翻譯檔", () => {
+    expect(
+      check({
+        "zh-TW": { logo: "標誌", errors: { extra: "多出來的" } },
+        en: { loading: " " },
+      }),
+    ).toEqual([
+      { file: "i18n/zh-TW.json", path: "/", message: "不允許的欄位 logo" },
+      { file: "i18n/zh-TW.json", path: "/errors", message: "不允許的欄位 extra" },
+      expect.objectContaining({ file: "i18n/en.json", path: "/loading" }),
+    ]);
+    expect(check({ "zh-TW": {}, en: { reviewToastApproved: "Approved" } })).toEqual([
+      { file: "i18n/en.json", path: "/reviewToastApproved", message: "參數 （無） 與 zh-TW 的 {count} 不同" },
+    ]);
+  });
+
+  it("缺少翻譯檔仍是錯誤", () => {
+    expect(check({ "zh-TW": {} })).toEqual([{ file: "i18n/en.json", path: "/", message: "缺少翻譯檔" }]);
+  });
+
+  it("參考情境 client/ 維持全部必填：checkClient 不合併", () => {
+    const dir = mkdtempSync(join(tmpdir(), "kk-client-"));
+    try {
+      cpSync(fileURLToPath(new URL("../client/", import.meta.url)), dir, { recursive: true });
+      writeFileSync(join(dir, "i18n", "en.json"), "{}");
+      const required = (errors) => errors.filter((e) => e.file === "i18n/en.json" && e.message === "缺少必填欄位 loading");
+      // 以這個資料夾為參考情境：缺鍵是錯誤
+      expect(required(checkClient(pathToFileURL(`${dir}/`), [], dir))).toHaveLength(1);
+      // 當成客戶（參考情境是 client/）：缺鍵退回，不是錯誤
+      expect(checkClient(pathToFileURL(`${dir}/`))).toEqual([]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("示範客戶的翻譯檔通過，kestrova-demo 的日文沒有退回的警告", () => {
+    for (const name of ["kestrova-demo", "medsupply-demo"]) {
+      const warnings = [];
+      expect(checkClient(new URL(`../clients/${name}/`, import.meta.url), warnings), name).toEqual([]);
+      expect(warnings.filter((w) => w.file.startsWith(I18N_DIR)), name).toEqual([]);
+    }
   });
 });
 

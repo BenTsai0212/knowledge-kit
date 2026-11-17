@@ -1,9 +1,11 @@
 // 以 client/schema/ 的 JSON Schema 驗證 client/ 的設定、翻譯檔、資料集與評測題庫，再檢查跨檔規則。
 // 用法：node scripts/check-client.mjs [設定資料夾，預設為 KK_CLIENT 選定的客戶，未設定時 client/]
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import Ajv from "ajv";
-import { resolveClientDir } from "./client-dir.mjs";
+import { REFERENCE_CLIENT_DIR, resolveClientDir } from "./client-dir.mjs";
+import { fallbackLanguage, mergeStrings, readReference } from "./i18n-merge.mjs";
 
 // Schema 是產品的一部分，固定用 client/schema/，不隨客戶切換（#77 決定 2）
 const SCHEMA_DIR = new URL("../client/schema/", import.meta.url);
@@ -56,9 +58,11 @@ const RELATIVE_PATH = new RegExp(readJson(new URL("common.schema.json", SCHEMA_D
 // dataset：{ root: dataset.path, files: { 相對於 root 的路徑: 解析後的 JSON } }；省略時不驗證資料集。
 // i18n：{ 語言代碼: 解析後的 JSON }（client/i18n/ 的檔名去掉 .json）；省略時不驗證翻譯檔。
 // evals：{ root: evals.path, files: { 相對於 root 的路徑: 解析後的 JSON } }；省略時不驗證評測題庫。
-// warnings：給定陣列時，把不讓檢查失敗的警告（entityColorWarnings）加進去。
+// warnings：給定陣列時，把不讓檢查失敗的警告（entityColorWarnings、翻譯退回別的語言）加進去。
+// reference：參考情境的翻譯檔（i18n-merge.mjs 的 readReference()）；給定時翻譯檔缺少的鍵退回參考情境（clients/ 的客戶），
+// 省略時全部必填（參考情境 client/）。
 // 回傳 [{ file, path, message }]，沒有錯誤時為空陣列。
-export function validateClient(files, dataset, i18n, evals, warnings) {
+export function validateClient(files, dataset, i18n, evals, warnings, reference) {
   const errors = [];
   const client = files["client.json"];
   const languages = Array.isArray(client?.languages) ? client.languages : null;
@@ -110,7 +114,7 @@ export function validateClient(files, dataset, i18n, evals, warnings) {
     errors.push({ file: "client.json", path: "/defaultLanguage", message: `${defaultLanguage} 不在 languages 內` });
   }
   if (dataset) errors.push(...validateDataset(ajv, dataset));
-  if (i18n && languages) errors.push(...validateI18n(ajv, i18n, languages, defaultLanguage));
+  if (i18n && languages) errors.push(...validateI18n(ajv, i18n, languages, defaultLanguage, reference, warnings));
   if (evals) errors.push(...validateEvals(ajv, evals, valid));
   warnings?.push(...entityColorWarnings(valid));
   return [...errors, ...checkReferences(valid), ...checkContrast(valid)];
@@ -192,9 +196,11 @@ function validateEvals(ajv, { root, files }, valid) {
 
 // 翻譯檔：languages 的每一種都要有，不能多；鍵由 i18n.schema.json 檢查（全部必填、不允許多餘的鍵）；
 // 通過 Schema 的檔再比對每個鍵的參數，以預設語言（沒有通過時用第一個通過的語言）為準。
-function validateI18n(ajv, i18n, languages, defaultLanguage) {
+// 有 reference 時先與參考情境合併（#406）：缺少的鍵不是錯誤，退回別的語言時每個語言一則警告，列出退回的鍵。
+function validateI18n(ajv, rawI18n, languages, defaultLanguage, reference, warnings) {
   const errors = [];
   const label = (language) => `${I18N_DIR}${language}.json`;
+  const i18n = reference ? mergeReference(rawI18n, languages, reference, label, warnings) : rawI18n;
   const validate = ajv.getSchema(I18N_SCHEMA);
   const valid = [];
   for (const language of languages) {
@@ -237,6 +243,24 @@ function validateI18n(ajv, i18n, languages, defaultLanguage) {
     }
   }
   return errors;
+}
+
+function mergeReference(i18n, languages, reference, label, warnings) {
+  return Object.fromEntries(
+    Object.entries(i18n).map(([language, data]) => {
+      const source = fallbackLanguage(language, reference.languages, reference.defaultLanguage);
+      if (!languages.includes(language) || !(source in reference.i18n)) return [language, data];
+      const { strings, fallback } = mergeStrings(reference.i18n[source], data);
+      if (source !== language && fallback.length > 0) {
+        warnings?.push({
+          file: label(language),
+          path: "/",
+          message: `${fallback.length} 個鍵沒有 ${language} 的翻譯，畫面上顯示參考情境 client/ 的 ${source}：${fallback.join("、")}`,
+        });
+      }
+      return [language, strings];
+    }),
+  );
 }
 
 // 「接著問」的問句範本（#198）：參數只有 {name}（必填）與 {type}，大括號要成對
@@ -522,8 +546,10 @@ function describe(e) {
 }
 
 // 讀取資料夾中所有頂層 .json 檔、翻譯檔、資料集與評測題庫再驗證；dataset.path、evals.path 必須存在。
-export function checkClient(dir = DEFAULT_CLIENT_DIR, warnings) {
+// 參考情境以外的資料夾（clients/ 的客戶、測試的 fixtures），翻譯檔缺少的鍵退回 referenceDir 的翻譯檔（#406）。
+export function checkClient(dir = DEFAULT_CLIENT_DIR, warnings, referenceDir = REFERENCE_CLIENT_DIR) {
   const base = new URL(dir.toString().endsWith("/") ? dir : `${dir}/`);
+  const isReference = resolve(fileURLToPath(base)) === resolve(referenceDir);
   const files = {};
   const errors = [];
   const read = (url, file, into, key) => {
@@ -566,7 +592,8 @@ export function checkClient(dir = DEFAULT_CLIENT_DIR, warnings) {
     }
     return out;
   });
-  return [...errors, ...validateClient(files, dataset, i18n, evals, warnings)];
+  const reference = isReference ? undefined : readReference(referenceDir);
+  return [...errors, ...validateClient(files, dataset, i18n, evals, warnings, reference)];
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

@@ -72,7 +72,8 @@ describe("示範客戶（clients/）的空狀態文字", () => {
 
   for (const [path, texts] of files) {
     it(`${path.replace("../../../", "")}：與可見範圍有關的標題與原因不暗示有看不到的內容`, () => {
-      for (const key of VISIBILITY_TEXTS) expect(texts[key], key).not.toMatch(HIDDEN_HINT);
+      // 客戶沒寫的鍵退回 client/i18n/（#406），由上方參考情境的測試檢查
+      for (const key of VISIBILITY_TEXTS) if (Object.hasOwn(texts, key)) expect(texts[key], key).not.toMatch(HIDDEN_HINT);
     });
   }
 });

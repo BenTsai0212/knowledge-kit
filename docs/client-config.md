@@ -305,6 +305,15 @@ npm run check:client
 
 **新增語言**：在 `languages` 加上語言代碼，複製一份既有的翻譯檔改名並翻譯全部的值。不用改程式：`app/src/client/i18n.ts` 以 `import.meta.glob` 讀入資料夾中的所有翻譯檔。
 
+### 客戶的翻譯檔（`clients/`）
+
+參考情境 `client/i18n/` 是每種文字的來源，全部必填。客戶的翻譯檔只寫**與參考情境不同**的文字（#406）：
+
+- **退回規則**：客戶缺少的鍵用 `client/i18n/<同語言>.json` 的值；`client/` 沒有這個語言時（例如 `kestrova-demo` 的 `ja`），用 `client/` 的預設語言（`client/client.json` 的 `defaultLanguage`）。巢狀的鍵（例如 `errors`）逐個子鍵退回。
+- `languages` 的每一種仍要有一份翻譯檔，沒有要改的文字時寫空物件 `{}`。
+- 合併在 build 前完成：Vite 外掛（`scripts/i18n-merge.mjs` 的 `i18nMergePlugin`）在載入 `@client/i18n/<語言>.json` 時換成合併後的 JSON，`npm run build` 與 `npm run dev` 相同，`i18n.ts` 不變。端對端測試（`e2e/support/client.ts`）與 `check:client` 用同一個合併函式。
+- 新增介面文字時只改 `client/i18n/`，客戶自動得到新的文字；`client/` 沒有的語言（例如日文）另外補，不補時畫面顯示預設語言的文字，`check:client` 列出警告。
+
 ### 格式
 
 - 鍵與 `app/src/client/types.ts` 的 `UiStrings` 相同，是巢狀的物件：大部分是頂層的字串，錯誤訊息等依類型分組（`errors`、`uploadErrors`、`extractErrors`、`reviewErrors`、`conflictDecisions`、`conflictMarks`、`reportCategories`、`reportResolutions`），例如 `errors.daily_limit`。鍵的正本是 `client/schema/i18n.schema.json`。
@@ -318,6 +327,7 @@ npm run check:client
 
 - `languages` 的每一種都要有翻譯檔，缺少就失敗；不在 `languages` 內的翻譯檔也失敗。
 - 依 `i18n.schema.json` 驗證：缺少的鍵、多出來的鍵（含巢狀物件中）、空字串都會失敗。
+- 參考情境以外的資料夾（`clients/<名稱>/`、`scripts/fixtures/`）先依[退回規則](#客戶的翻譯檔clients)與 `client/i18n/` 合併再驗證：缺少的鍵不是錯誤；多出來的鍵、空字串、參數不符仍是錯誤，指向客戶的翻譯檔。退回到別的語言時，每個語言一則警告並列出鍵名，例如 `警告：i18n/ja.json /：2 個鍵沒有 ja 的翻譯，畫面上顯示參考情境 client/ 的 zh-TW：loading、errors.daily_limit`。
 - 每個鍵的參數集合與預設語言（預設語言的檔有誤時，用第一個通過 Schema 的語言）相同，例如 `i18n/en.json /reviewToastApproved：參數 （無） 與 zh-TW 的 {count} 不同`。單複數寫法 `{count, plural, …}` 算作參數 `{count}`。
 - 單複數寫法缺少 `other`，或格式有誤（例如類別拼錯、少了大括號）會失敗。
 
@@ -395,14 +405,14 @@ JSON Schema 是唯一正本，型別在 `app/src/client/types.ts` 手寫。加�
 4. 有預設值的選填欄位：在 `load.ts` 補上預設值
 5. 範例設定、本文件，以及需要時 `scripts/check-client.mjs` 的跨檔規則與測試
 
-新增介面文字時，同樣改 `i18n.schema.json`、`types.ts` 的 `UiStrings`、`keys.ts` 的鍵清單，並在**每一份**翻譯檔加上該鍵。
+新增介面文字時，同樣改 `i18n.schema.json`、`types.ts` 的 `UiStrings`、`keys.ts` 的鍵清單，並在 `client/i18n/` 的每一份翻譯檔加上該鍵。`clients/` 的客戶不用改（缺少的鍵退回 `client/`，見[客戶的翻譯檔](#客戶的翻譯檔clients)）；`client/` 沒有的語言（例如 `kestrova-demo` 的日文）另外補，不補時 `check:client` 列出警告。
 
 漏改時會被擋下：
 
 - 型別與鍵清單不一致（多鍵、少鍵、必填標錯）→ `npm run typecheck` 失敗（`satisfies KeyManifest<T>`）
 - 鍵清單與 Schema 的 `properties`、`required` 不一致，或 Schema 中有物件沒有鍵清單 → `npm test` 失敗（`app/src/client/schema-sync.test.ts`）
 - 範例設定缺欄位或型別不符 → `npm run typecheck` 失敗（`load.ts`）
-- 範例設定不符合 Schema（含列舉值）、翻譯檔缺鍵或參數不一致 → `npm run check:client` 失敗
+- 範例設定不符合 Schema（含列舉值）、`client/` 的翻譯檔缺鍵或參數不一致 → `npm run check:client` 失敗
 
 ## 測試資料
 

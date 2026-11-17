@@ -310,6 +310,7 @@ Playwright 的端對端測試（`*.spec.ts`）；設定在根目錄的 `playwrig
 - `client-dir.mjs`：`KK_CLIENT` 對應的客戶資料夾（`vite.config.ts`、`vitest.config.ts`、`vitest.clients.config.ts` 與 `check-client.mjs` 共用）
 - `doc-commands.test.mjs`：Markdown 的 shell 指令區塊不加 `#` 註解，說明寫在區塊外
 - `fixtures/invalid-client/`：故意寫錯的測試資料
+- `i18n-merge.mjs`：客戶翻譯檔缺少的鍵退回參考情境 `client/i18n/`（#406）；Vite 外掛（`vite.config.ts`、`vitest.clients.config.ts`）、`e2e/support/client.ts` 與 `check-client.mjs` 共用
 - `ort-wasm.mjs`：語意向量 provider 的 ONNX Runtime WASM：build 時依客戶設定複製到 `dist/ort/` 並檢查單檔上限（`vite.config.ts` 使用）
 - `playbook.test.mjs`：`docs/playbook/` 繁中與英文的檔名、`##` 標題數量與相對連結
 - `structure-doc.test.mjs`：本文件的寫法（清單每行不超過 300 字、每個小節的清單依檔名排序）

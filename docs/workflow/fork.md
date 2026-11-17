@@ -11,7 +11,7 @@
 
 ## 新的組織
 
-- `clients/<名稱>/i18n/` 的每種語言都要有 `demoAccessCodeHint`、`demoQaNotice`、`demoUploadNotice` 三個鍵（只在線上 demo 顯示，見 `docs/qa.md`「線上 demo」）；`global_daily_limit` 的文字提到「線上試用」「本機執行」，依情境修改。步驟見 `docs/playbook/new-client-setup.md`。
+- `clients/<名稱>/i18n/` 的 `demoAccessCodeHint`、`demoQaNotice`、`demoUploadNotice` 三個鍵沒寫時用 `client/i18n/` 的文字（只在線上 demo 顯示，見 `docs/qa.md`「線上 demo」）；`global_daily_limit` 的文字提到「線上試用」「本機執行」，依情境修改。步驟見 `docs/playbook/new-client-setup.md`。
 
 ## 啟用自動化模組（runner）時
 

@@ -118,9 +118,9 @@ Ask a person to confirm that the content fits this client and the questions are 
 ## 6. Theme and interface text
 
 - **`theme.json`**: switch to brand colors only when the client agrees; otherwise keep the neutral defaults. Both light and dark must pass the `check:client` contrast check; if a brand color lacks contrast, adjust its lightness rather than turning the check off.
-- **`i18n/`**: usually unchanged. Change it only when the client has its own wording (for example "colleagues" instead of "employees"); keys and parameters must match in every language.
+- **`i18n/`**: usually unchanged. Change it only when the client has its own wording (for example "colleagues" instead of "employees"), and write only the keys you change: missing keys use the text from the reference scenario `client/i18n/` ("客戶的翻譯檔" in [docs/client-config.md](../../client-config.md)). Parameters must match the reference scenario; a language that `client/` lacks needs every key, otherwise the default language is shown with a warning.
   - The translation of the `global_daily_limit` error mentions the "online trial" and "running it locally"; adjust it to the client's situation.
-  - The three keys `demoAccessCodeHint`, `demoQaNotice`, and `demoUploadNotice` are required and are shown only in the online demo (`VITE_ONLINE_DEMO=1`; see "線上 demo" in [docs/qa.md](../../qa.md)).
+  - The three keys `demoAccessCodeHint`, `demoQaNotice`, and `demoUploadNotice` (falling back to the `client/` text when omitted) are shown only in the online demo (`VITE_ONLINE_DEMO=1`; see "線上 demo" in [docs/qa.md](../../qa.md)).
 
 **Acceptance**: `npm run check:clients <name>` passes.
 
