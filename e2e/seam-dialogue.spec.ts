@@ -59,7 +59,8 @@ async function ask(page: Page): Promise<Locator> {
   return answer;
 }
 
-// 主管上傳、等比對結果出現在待審，處理為並存（動畫播完才寫入，按鈕消失即已寫入）
+// 主管上傳、等比對結果出現在待審，處理為並存。並存先播動畫才寫入（exitThenWrite），按鈕消失時還沒寫入；
+// 寫入後才出現短提示「已標記：…」，等它出現再離開待審頁
 async function uploadAndCoexist(page: Page): Promise<void> {
   await upload(page, { file: "seam-conflict.md", visibility: "internal" });
   await page.getByRole("navigation", { name: s.views }).getByRole("button", { name: new RegExp(`^${s.tabReview}`) }).click();
@@ -69,7 +70,7 @@ async function uploadAndCoexist(page: Page): Promise<void> {
     await expect(coexist).toBeVisible({ timeout: 2_000 });
   }).toPass();
   await coexist.click();
-  await expect(coexist).toHaveCount(0);
+  await expect(page.locator(".toast-region")).toContainText(s.conflictToast.replace("{name}", s.conflictDecisions.coexist));
   await page.getByRole("navigation", { name: s.views }).getByRole("button", { name: new RegExp(`^${s.tabQa}`) }).click();
 }
 
