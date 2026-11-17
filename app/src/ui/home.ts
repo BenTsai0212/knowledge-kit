@@ -4,6 +4,7 @@ import type { AccessFile, ScenariosFile } from "../client/types";
 import type { ConflictItem } from "../conflicts/store";
 import type { ReviewDocument } from "../extraction/store";
 import type { AnswerReport } from "../reports/store";
+import type { RetrievedPassage } from "../retrieval/retrieve";
 import { myUploadStatus, reviewCounts, type MyUploadStatus } from "./my-uploads";
 import { pendingCount } from "./review-helpers";
 
@@ -86,17 +87,73 @@ export function reportUpdates(reports: readonly AnswerReport[], identity: string
 // 問過的問題最多保留的筆數
 export const MAX_ASKED = 20;
 
-// 問過的問題（#331）：問題文字與提問時間（ISO 字串），不存回答
+// 問過的問題（#331）：問題文字與提問時間（ISO 字串），不存回答。
+// 「答得出來了」（#408）另記這一題是否被拒答，與拒答當時（或按「知道了」時）檢索到的段落 id；只有 id，不存回答、引用或段落內容
 export interface AskedQuestion {
   question: string;
   at: string;
+  refused: boolean;
+  seen: readonly string[];
 }
 
-// 問過的問題：最新的在前；同一個問題只留最新的一次（時間更新為這次）
+// 問過的問題：最新的在前；同一個問題只留最新的一次（時間更新為這次）。
+// 再問一次時沿用上次的拒答與 seen，等這次的結果出來再以 rememberOutcome() 更新
 export function rememberQuestion(asked: readonly AskedQuestion[], question: string, at: string, max = MAX_ASKED): AskedQuestion[] {
   const text = question.trim();
   if (text === "") return [...asked];
-  return [{ question: text, at }, ...asked.filter((q) => q.question !== text)].slice(0, max);
+  const last = asked.find((q) => q.question === text);
+  return [{ question: text, at, refused: last?.refused ?? false, seen: last?.seen ?? [] }, ...asked.filter((q) => q.question !== text)].slice(0, max);
+}
+
+// 一題的結果（#408）：被拒答時記下這次檢索到的段落 id（換掉舊的）；得到回答時不再是拒答，之後不重查。
+// 錯誤（額度、連線等）不是結果，呼叫端不呼叫
+export type QuestionOutcome = { refused: true; retrieved: readonly string[] } | { refused: false };
+
+export function rememberOutcome(asked: readonly AskedQuestion[], question: string, outcome: QuestionOutcome): AskedQuestion[] {
+  const text = question.trim();
+  return asked.map((q) => (q.question !== text ? q : { ...q, refused: outcome.refused, seen: outcome.refused ? [...outcome.retrieved] : [] }));
+}
+
+// 「可能答得出來了」的一題（#408）：以目前身分重查時出現了 seen 以外的段落。
+// document 是分數最高的新段落所屬的文件（「帶來變化的文件」）；retrieved 是這次檢索到的全部段落 id，按「知道了」時併入 seen
+export interface MaybeAnswerable {
+  question: string;
+  at: string;
+  document: { id: string; title: string };
+  retrieved: string[];
+}
+
+// 重查用的檢索：呼叫端傳入以目前身分（withIdentity()）檢索的函式，只回傳達到 minScore 的段落（retrieve() 的預設）
+export type Recheck = (question: string) => Promise<readonly Pick<RetrievedPassage, "id" | "documentId" | "documentTitle" | "score">[]>;
+
+// 重查被拒答的問題（#408）：只查 refused 的題目，依序執行（不同時檢索多題）；signal 中止後不再查下一題。
+// 不呼叫模型、不用提問次數。看不到的段落不在 retrieve() 的結果中，所以帶來變化的文件一定是目前身分看得到的（#247）
+export async function recheckRefused(asked: readonly AskedQuestion[], retrieve: Recheck, signal?: AbortSignal): Promise<MaybeAnswerable[]> {
+  const found: MaybeAnswerable[] = [];
+  for (const q of asked) {
+    if (!q.refused) continue;
+    if (signal?.aborted) break;
+    const passages = await retrieve(q.question);
+    const seen = new Set(q.seen);
+    const top = passages.filter((p) => !seen.has(p.id)).reduce<(typeof passages)[number] | null>((best, p) => (best === null || p.score > best.score ? p : best), null);
+    if (top !== null) found.push({ question: q.question, at: q.at, document: { id: top.documentId, title: top.documentTitle }, retrieved: passages.map((p) => p.id) });
+  }
+  return found;
+}
+
+// 「知道了」（#408 決定 2）：這次檢索到的 id 併入 seen，之後只有再出現新的段落（通常是又有新的文件）才會再提示。不另存收起的狀態
+export function acknowledge(asked: readonly AskedQuestion[], question: string, retrieved: readonly string[]): AskedQuestion[] {
+  return asked.map((q) => (q.question !== question ? q : { ...q, seen: [...new Set([...q.seen, ...retrieved])] }));
+}
+
+// 首頁頂端一次只顯示最近（提問時間最新）的一題；沒有時為 null
+export function latestMaybeAnswerable(items: readonly MaybeAnswerable[]): MaybeAnswerable | null {
+  return items.reduce<MaybeAnswerable | null>((latest, x) => (latest === null || Date.parse(x.at) > Date.parse(latest.at) ? x : latest), null);
+}
+
+// 重查的快取鍵（#408 決定 4）：資料（目前身分看得到的段落，見 retrieve.ts 的 visiblePassagesKey()）與被拒答的題目都沒變時不重跑
+export function recheckKey(dataKey: string, asked: readonly AskedQuestion[]): string {
+  return JSON.stringify([dataKey, asked.filter((q) => q.refused).map((q) => [q.question, [...q.seen].sort()])]);
 }
 
 // 提問時間的相對說法（#331）：以本地日曆日計算；一週內以天、一個月內以週、之後以月。

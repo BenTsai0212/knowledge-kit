@@ -145,3 +145,12 @@ export function openRetriever(db: Database, config: RetrievalConfig, active: Pro
     active.then(({ options }) => options),
   );
 }
+
+// 首頁重查的快取鍵（#408 決定 4）：目前身分看得到的段落數與排序後 id 的雜湊。只讀 id，不讀內容；
+// 撤回一份、再新增一份時段落數可能不變，所以也比對 id。看得到的段落經 withIdentity() 由 RLS 決定
+export async function visiblePassagesKey(db: Database, identityId: string | null): Promise<string> {
+  const row = await db.withIdentity(identityId, async (tx) =>
+    (await tx.query<{ n: number; h: string }>(`SELECT count(*)::int AS n, md5(coalesce(string_agg(id, ',' ORDER BY id), '')) AS h FROM kk.passages`)).rows[0],
+  );
+  return `${row.n}:${row.h}`;
+}

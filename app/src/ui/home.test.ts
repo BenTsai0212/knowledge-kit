@@ -115,7 +115,7 @@ describe("uploadUpdates", () => {
 
 describe("rememberQuestion", () => {
   const at = "2026-11-13T09:00:00.000Z";
-  const q = (question: string, when = at): AskedQuestion => ({ question, at: when });
+  const q = (question: string, when = at): AskedQuestion => ({ question, at: when, refused: false, seen: [] });
   const questions = (asked: readonly AskedQuestion[]) => asked.map((x) => x.question);
 
   it("最新的在前，同一個問題只留最新的一次（時間換成這次）", () => {
@@ -124,10 +124,16 @@ describe("rememberQuestion", () => {
     expect(questions(rememberQuestion([q("b"), q("a")], "c", at))).toEqual(["c", "b", "a"]);
   });
 
-  it("只存問題文字與提問時間：去掉前後空白，空白的問題不記", () => {
+  it("只存問題文字、提問時間、是否被拒答與段落 id（#408）：去掉前後空白，空白的問題不記", () => {
     expect(rememberQuestion([q("a")], "  b \n", at)).toEqual([q("b"), q("a")]);
     expect(rememberQuestion([q("a")], "   ", at)).toEqual([q("a")]);
-    expect(Object.keys(rememberQuestion([], "a", at)[0]).sort()).toEqual(["at", "question"]);
+    expect(Object.keys(rememberQuestion([], "a", at)[0]).sort()).toEqual(["at", "question", "refused", "seen"]);
+  });
+
+  it("再問一次時沿用上次的拒答與 seen（#408），結果出來前不改", () => {
+    const later = "2026-11-13T10:00:00.000Z";
+    const refused: AskedQuestion = { question: "a", at, refused: true, seen: ["p1"] };
+    expect(rememberQuestion([q("b"), refused], "a", later)).toEqual([{ ...refused, at: later }, q("b")]);
   });
 
   it(`最多保留 ${MAX_ASKED} 筆`, () => {

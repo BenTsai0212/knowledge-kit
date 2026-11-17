@@ -26,7 +26,7 @@ import { askEach, canStartCompare } from "./qa/compare";
 import { apiTransport } from "./qa/api";
 import { readMyReport, readReports, writeReport } from "./reports/store";
 import { createProvider, preparesModel, PROVIDERS, type ActiveProvider, type ProgressListener } from "./retrieval/providers";
-import { openRetriever } from "./retrieval/retrieve";
+import { openRetriever, visiblePassagesKey } from "./retrieval/retrieve";
 import { readCitedSources, readSource, type CitedSource, type SourceDocument } from "./sources/source";
 import { clearAccessCode, loadAccessCode, saveAccessCode } from "./ui/access-code";
 import { crossFade } from "./ui/cross-fade";
@@ -46,7 +46,18 @@ import { reportOf } from "./ui/report-helpers";
 import { PREPARING, sameDisplay, type ProviderStatus } from "./ui/retrieval-notice";
 import { sameNameAsk } from "./ui/same-name";
 import { ReviewPage } from "./ui/ReviewPage";
-import { rememberQuestion, rememberViewed, waitingSummary, type AskedQuestion, type WaitingSummary } from "./ui/home";
+import {
+  acknowledge,
+  recheckKey,
+  recheckRefused,
+  rememberOutcome,
+  rememberQuestion,
+  rememberViewed,
+  waitingSummary,
+  type AskedQuestion,
+  type MaybeAnswerable,
+  type WaitingSummary,
+} from "./ui/home";
 import { HomePage } from "./ui/HomePage";
 import { createExtractionRunner } from "./ui/extraction-runner";
 import { defaultView, demoCompare, evalsMode, onlineDemo, presentationMode, visibleViews, type View } from "./ui/online-demo";
@@ -116,6 +127,9 @@ export function App() {
     setConversations((all) => ({ ...all, [owner]: change(all[owner] ?? NO_TURNS) }));
   // 首頁的「問過的問題」（#283）：依身分分開，只存問題文字與提問時間（不存回答，#331）；切換身分或語言不清除，登出時清除
   const [asked, setAsked] = useState<Readonly<Record<string, readonly AskedQuestion[]>>>({});
+  // 首頁「以前答不出來，現在可能答得出來了」（#408）：依身分的重查結果，與上次重查的快取鍵（資料與被拒答的題目都沒變時不重跑）
+  const [maybeAnswerable, setMaybeAnswerable] = useState<Readonly<Record<string, readonly MaybeAnswerable[]>>>({});
+  const recheckedKeys = useRef<Record<string, string>>({});
   // 首頁的「最近看過」（#283）：依身分分開，只存實體 id（圖譜選取的、問答右側面板打開的）；名稱與能否看到在首頁以目前身分讀取。登出時清除
   const [viewed, setViewed] = useState<Readonly<Record<string, readonly string[]>>>({});
   const onViewed = (id: string) => setViewed((all) => ({ ...all, [identity]: rememberViewed(all[identity] ?? [], id) }));
@@ -263,6 +277,30 @@ export function App() {
   }, []);
 
   const retriever = useMemo(() => (db === null ? null : openRetriever(db, client.retrieval, activeProvider())), [db]);
+
+  // 回到首頁時，以目前身分在背景重查被拒答的問題（#408）：只檢索、不呼叫模型；首頁不等它。
+  // 快取鍵是看得到的段落（visiblePassagesKey()）與被拒答的題目；切換身分、離開首頁時取消
+  useEffect(() => {
+    if (view !== "home" || db === null || retriever === null) return;
+    const owner = identity;
+    const list = asked[owner] ?? [];
+    const controller = new AbortController();
+    void (async () => {
+      const key = recheckKey(await visiblePassagesKey(db, owner), list);
+      if (controller.signal.aborted || recheckedKeys.current[owner] === key) return;
+      const items = await recheckRefused(list, (q) => retriever.retrieve(owner, q), controller.signal);
+      if (controller.signal.aborted) return;
+      recheckedKeys.current[owner] = key;
+      setMaybeAnswerable((all) => ({ ...all, [owner]: items }));
+    })().catch(() => {});
+    return () => controller.abort();
+  }, [view, identity, db, retriever, asked]);
+
+  // 「知道了」（#408 決定 2）：這次檢索到的 id 併入 seen；畫面先收起，之後的重查以新的 seen 判斷
+  const onAcknowledge = (item: MaybeAnswerable) => {
+    setMaybeAnswerable((all) => ({ ...all, [identity]: (all[identity] ?? []).filter((x) => x.question !== item.question) }));
+    setAsked((all) => ({ ...all, [identity]: acknowledge(all[identity] ?? [], item.question, item.retrieved) }));
+  };
 
   // 切換身分或語言：取消並移除進行中的回答（之後才到的結果一律忽略），清掉右側面板與輸入框（可能有「接著問」填入的實體名稱）。
   // 已完成的問答留在原本的身分（#303）；切換語言時另以 changeLanguage() 清掉
@@ -447,6 +485,12 @@ export function App() {
       return;
     }
     if (result.kind !== "error") setAdminError(null);
+    // 首頁的重查（#408）：記下這一題是否被拒答與當時檢索到的段落 id（不記回答）。
+    // 同名選了之後送出的是另一段文字，檢索結果與問題文字對不上，不記
+    if (result.kind !== "error" && chosen?.sent === undefined) {
+      const outcome = result.kind === "refusal" ? { refused: true as const, retrieved: result.retrieved ?? [] } : { refused: false as const };
+      setAsked((all) => ({ ...all, [owner]: rememberOutcome(all[owner] ?? [], question, outcome) }));
+    }
     // 以送出當下的身分讀圖譜，讀完才結束這一題，期間仍停用送出
     const mentions = await readMentions(result, owner);
     const conflicts = await readCitedConflicts(result, owner);
@@ -712,6 +756,8 @@ export function App() {
                   setSignIn(null);
                   setRejectedCode(null);
                   setAsked({});
+                  setMaybeAnswerable({});
+                  recheckedKeys.current = {};
                   setViewed({});
                 }
           }
@@ -875,6 +921,8 @@ export function App() {
             // 一般員工的「有更新」：不能審核的身分；自己上傳的文件（#284）與已處理的回報（#286）
             updates={!canReview ? { extracting: activeExtractions, onOpenUpload: (id) => (setUploadFocus(id), setView("upload")) } : undefined}
             asked={asked[identity] ?? []}
+            maybeAnswerable={maybeAnswerable[identity] ?? []}
+            onAcknowledge={onAcknowledge}
             askDisabled={retriever === null || answering}
             limit={limit}
             draft={draft}

@@ -63,7 +63,7 @@ describe("askEach", () => {
     const { retriever } = recordingRetriever((id) => id === "manager");
     const { ctx, transport } = context(retriever);
     const answers = await askEach(ctx, IDENTITIES, Q);
-    const refusal = { kind: "refusal", text: strings("zh-TW").refusal };
+    const refusal = { kind: "refusal", text: strings("zh-TW").refusal, retrieved: [] };
     expect(answers).toEqual([refusal, refusal, expect.objectContaining({ kind: "answer" })]);
     expect(transport.bodies).toHaveLength(1);
   });

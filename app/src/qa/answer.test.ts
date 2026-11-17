@@ -5,7 +5,7 @@ import { seedDataset } from "../dataset/seed";
 import { openDatabase, type Database } from "../db/database";
 import { openRetriever, type Retriever } from "../retrieval/retrieve";
 import { strings } from "../client/i18n";
-import { ask, type QaContext } from "./answer";
+import { ask, type Answer, type QaContext } from "./answer";
 import { escapeText, MAX_QUESTION_CHARS, REFUSAL_MARKER } from "./prompt";
 import { answered, fakeTransport } from "./testing";
 import type { AskEvent } from "./types";
@@ -68,7 +68,9 @@ describe("ask：流程", () => {
 });
 
 describe("ask：拒答", () => {
-  const refusal = { kind: "refusal", text: strings("zh-TW").refusal };
+  // retrieved（#408）依檢索結果而不同，另外檢查；畫面只用 kind 與 text
+  const refusal = expect.objectContaining({ kind: "refusal", text: strings("zh-TW").refusal });
+  const shown = (a: Answer) => (a.kind === "refusal" ? { kind: a.kind, text: a.text } : a);
 
   it("檢索沒有結果時在本機拒答，不呼叫 /api/ask", async () => {
     const { ctx, transport } = context();
@@ -93,13 +95,24 @@ describe("ask：拒答", () => {
     const noData = await ask(ctx, { identityId: "manager", text: "公司的停車位怎麼申請？", language: "zh-TW" });
     const local = await ask(ctx, { identityId: "guest", text: "xyzzy", language: "zh-TW" });
     expect(noPermission).toEqual(refusal);
-    expect(noData).toEqual(noPermission);
-    expect(local).toEqual(noPermission);
+    expect(shown(noData)).toEqual(shown(noPermission));
+    expect(shown(local)).toEqual(shown(noPermission));
+  });
+
+  it("拒答帶著這次檢索到的段落 id（#408）：本機拒答是空的，模型拒答是送出的段落", async () => {
+    const { ctx, transport } = context(() => answered(REFUSAL_MARKER));
+    expect(await ask(ctx, { ...LEAVE, text: "xyzzy" })).toEqual({ kind: "refusal", text: strings("zh-TW").refusal, retrieved: [] });
+    const refused = await ask(ctx, LEAVE);
+    const sent = [...transport.bodies[0].messages[0].content.matchAll(/<passage number="\d+" [^>]*>/g)].length;
+    if (refused.kind !== "refusal") throw new Error(refused.kind);
+    expect(refused.retrieved).toEqual((await retriever.retrieve("staff", LEAVE.text)).map((p) => p.id));
+    expect(refused.retrieved).toHaveLength(sent);
+    expect(sent).toBeGreaterThan(0);
   });
 
   it("拒答文字依介面語言", async () => {
     const { ctx } = context(() => answered(REFUSAL_MARKER));
-    expect(await ask(ctx, { ...LEAVE, language: "en" })).toEqual({ kind: "refusal", text: strings("en").refusal });
+    expect(await ask(ctx, { ...LEAVE, language: "en" })).toMatchObject({ kind: "refusal", text: strings("en").refusal });
   });
 
   it("模型沒有輸出任何文字時視為拒答", async () => {
@@ -136,7 +149,7 @@ describe("ask：引用", () => {
 });
 
 describe("ask：外層標籤（#237）", () => {
-  const refusal = { kind: "refusal", text: strings("zh-TW").refusal };
+  const refusal = expect.objectContaining({ kind: "refusal", text: strings("zh-TW").refusal });
 
   it("移除整段回答外層的標籤再解析引用，串流中不顯示標籤", async () => {
     const { ctx } = context(() => answered("<cita", "tion_response>一年", "有 7 天 [1]。</citation", "_response>"));

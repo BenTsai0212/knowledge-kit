@@ -193,6 +193,7 @@ const passages = await retriever.retrieve("staff", "到職滿一年有幾天年�
   - 新增段落：新的 id 會在下次檢索時自動計算，不需處理。
   - 修改段落內容：快取以 id 為鍵，不會發現內容變了，修改時必須一併清掉該段的快取（或改以內容雜湊為鍵）。
 - 快取不存進資料庫，所以不需要 migration。
+- **首頁重查的快取鍵**（#408）：`visiblePassagesKey()` 在目前身分的 `withIdentity()` 下回傳看得到的段落數與排序後 id 的 `md5`，只讀 id、不讀內容；與上次相同時首頁不重查被拒答的問題。撤回一份、新增一份時段落數可能不變，所以也比對 id（`app/tests/retrieval/recheck.test.ts`）。
 
 ## 限制
 

@@ -9,8 +9,9 @@ import type { AskEvent, AskTransport } from "./types";
 import { unwrapAnswer } from "./unwrap";
 
 export type Answer =
-  // 拒答文字固定，不區分本機或模型拒答，也不區分沒有資料或沒有權限
-  | { kind: "refusal"; text: string }
+  // 拒答文字固定，不區分本機或模型拒答，也不區分沒有資料或沒有權限。
+  // retrieved：這次以提問的身分檢索到的段落 id（本機拒答時是空的），首頁重查「答得出來了」用（#408）；畫面不顯示
+  | { kind: "refusal"; text: string; retrieved?: string[] }
   | {
       kind: "answer";
       text: string;
@@ -50,8 +51,8 @@ export async function ask(ctx: QaContext, q: Question, onText?: (text: string) =
   if (question === "") return { kind: "error", error: "empty_question" };
   if (question.length > MAX_QUESTION_CHARS) return { kind: "error", error: "question_too_long" };
 
-  const refusal: Answer = { kind: "refusal", text: strings(q.language).refusal };
   const passages = await ctx.retriever.retrieve(q.identityId, question);
+  const refusal: Answer = { kind: "refusal", text: strings(q.language).refusal, retrieved: passages.map((p) => p.id) };
   const prompt =
     passages.length > 0 ? buildPrompt(passages, question, { companyName: ctx.displayName[q.language], language: q.language }) : null;
   if (prompt === null) return refusal;

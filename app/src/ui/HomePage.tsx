@@ -29,6 +29,7 @@ import {
   visibleScope,
   waitingRows,
   type AskedQuestion,
+  type MaybeAnswerable,
   type UpdateDot,
   type UploadUpdate,
   type WaitingSummary,
@@ -56,6 +57,10 @@ interface Props {
   updates?: { extracting: ReadonlySet<string>; onOpenUpload(documentId: string): void };
   // 問過的問題（問題文字與提問時間，最新的在前；不存回答）
   asked: readonly AskedQuestion[];
+  // 「以前答不出來，現在可能答得出來了」（#408）：App 在背景以目前身分重查被拒答的問題的結果（重查中與沒有時是空的）；
+  // onAcknowledge 是「知道了」。畫面在 #408 的下一個 PR
+  maybeAnswerable?: readonly MaybeAnswerable[];
+  onAcknowledge?(item: MaybeAnswerable): void;
   askDisabled: boolean;
   limit: string | null;
   draft: string;

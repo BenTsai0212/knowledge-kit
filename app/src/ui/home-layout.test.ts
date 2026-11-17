@@ -31,7 +31,7 @@ const render = (wide: boolean, extra: Record<string, unknown> = {}) =>
       language,
       identity: role,
       wide,
-      asked: [{ question: "Q1", at: now }],
+      asked: [{ question: "Q1", at: now, refused: false, seen: [] }],
       askDisabled: false,
       limit: null,
       draft: "",
