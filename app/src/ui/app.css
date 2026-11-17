@@ -6920,6 +6920,119 @@ main.page:has(> .eval-page--desktop) {
   font-weight: 600;
 }
 
+/* 「以前答不出來，現在可能答得出來了」（#408）：醒目但不是成功，用 primary 細框，不用 success 或勾勾 */
+.home__row--maybe {
+  border: 1px solid var(--color-primary);
+}
+
+.home__row--maybe > .home__question {
+  flex: 1 1 100%;
+  font-weight: 600;
+}
+
+.home__maybe-lines {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  flex: 1 1 100%;
+  gap: 2px;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--color-textMuted);
+}
+
+.home__maybe-lines > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home__maybe-actions,
+.home__recall-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* 文件標題：開啟原文；長標題截斷，完整文字在 title */
+.home__doc-link {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.home__dismiss {
+  flex: none;
+  height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-textMuted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* A2：問候下方一句話、三點時間線與動作 */
+.home__recall {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-primary);
+  border-radius: 12px;
+}
+
+.home__recall-text {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.home__timeline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--color-textMuted);
+}
+
+.home__timeline > li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* 點：最後一個（今天）是 primary 實心；點之間是 1px 的線 */
+.home__timeline > li::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--color-primary);
+  border-radius: 50%;
+}
+
+.home__timeline > li:last-child::before {
+  background: var(--color-primary);
+}
+
+.home__timeline > li:not(:last-child)::after {
+  content: "";
+  flex: none;
+  width: 24px;
+  height: 1px;
+  background: var(--color-border);
+}
+
 /* 最近新增的文件：標題是打開時間軸的按鈕，右側是可見範圍（等級 · 專案）的中性標籤 */
 .home__documents button.home__name {
   flex: 1;
@@ -7217,6 +7330,20 @@ main.page:has(> .eval-page--desktop) {
 
 .home--phone .home__list {
   gap: 0;
+}
+
+/* 可能答得出來了（#408）：A1 的列在一行一行的清單中保留 primary 細框；A2 的時間線收成一行；動作的觸控目標至少 44px */
+.home--phone .home__row--maybe {
+  margin: 8px 0;
+  padding: 10px 12px;
+}
+
+.home--phone .home__timeline > li:not(:last-child)::after {
+  width: 12px;
+}
+
+.home--phone :is(.home__maybe-actions, .home__recall-actions) button {
+  height: 44px;
 }
 
 .home--phone .home__updates .home__list {

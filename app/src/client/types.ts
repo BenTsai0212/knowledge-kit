@@ -997,6 +997,16 @@ export interface UiStrings {
     updatesEmpty: string;
     updatesEmptyTitle: string;
     viewProgress: string;
+    // 「以前答不出來，現在可能答得出來了」（#408）：首頁頂端的一句話（{time} 提問的相對時間、{question} 問題）與三點時間線
+    // （你問了 → 帶來變化的文件 → 今天）；問過的問題中那一題的兩行（{document} 是可點的文件標題）與「知道了」
+    recallTitle: string;
+    recallText: string;
+    recallTimeline: string;
+    recallAsked: string;
+    recallToday: string;
+    maybeThen: string;
+    maybeNow: string;
+    acknowledge: string;
   };
   // 我的上傳（#284，docs/design.md「日常工具」的「我的上傳」）：上傳頁的兩段、每份的狀態（status*）、送出後的四步進度（step*）、
   // 每一項的結果與重新上傳修正版

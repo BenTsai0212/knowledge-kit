@@ -730,7 +730,15 @@
     "updatesTitle": "更新",
     "updatesEmpty": "アップロードした文書の審査結果や、報告への対応がここに表示されます。",
     "updatesEmptyTitle": "まだ更新はありません。",
-    "viewProgress": "進捗を見る"
+    "viewProgress": "進捗を見る",
+    "recallTitle": "以前は答えられなかった質問",
+    "recallText": "{time}の質問「{question}」に、今なら答えられるかもしれません",
+    "recallTimeline": "質問から今日まで",
+    "recallAsked": "質問した",
+    "recallToday": "今日",
+    "maybeThen": "そのとき：答えられなかった（{time}）",
+    "maybeNow": "いま：答えられるかもしれません。{document} が追加されました",
+    "acknowledge": "わかりました"
   },
   "myUploads": {
     "tabNew": "文書を追加",

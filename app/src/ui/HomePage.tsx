@@ -22,6 +22,7 @@ import {
   askedWhen,
   entityShape,
   greetingPeriod,
+  latestMaybeAnswerable,
   MAX_UPDATES,
   reportUpdates,
   UPLOAD_DOT,
@@ -58,7 +59,7 @@ interface Props {
   // 問過的問題（問題文字與提問時間，最新的在前；不存回答）
   asked: readonly AskedQuestion[];
   // 「以前答不出來，現在可能答得出來了」（#408）：App 在背景以目前身分重查被拒答的問題的結果（重查中與沒有時是空的）；
-  // onAcknowledge 是「知道了」。畫面在 #408 的下一個 PR
+  // onAcknowledge 是「知道了」。問過的問題中那一題換成醒目的列（A1）；問候下方一句話與時間線（A2，只顯示最近的一題）
   maybeAnswerable?: readonly MaybeAnswerable[];
   onAcknowledge?(item: MaybeAnswerable): void;
   askDisabled: boolean;
@@ -154,7 +155,7 @@ function scopeTag(visibility: string, project: string | null, language: string):
 }
 
 export function HomePage(props: Props) {
-  const { db, language, identity, wide, phone = false, waiting, updates: updatesProps, asked, askDisabled, limit, draft, onDraft, onAsk, onStartReview, viewed, onOpenDocument, onOpenEntity } = props;
+  const { db, language, identity, wide, phone = false, waiting, updates: updatesProps, asked, maybeAnswerable = [], onAcknowledge, askDisabled, limit, draft, onDraft, onAsk, onStartReview, viewed, onOpenDocument, onOpenEntity } = props;
   const s = strings(language);
   const recent = useRecent(db, identity, language, viewed);
   const [updatesVersion, setUpdatesVersion] = useState(0);
@@ -175,6 +176,45 @@ export function HomePage(props: Props) {
   // 手機的區塊不是卡片：background 上的標題與列（畫板 K-Mobile）
   const card = phone ? "home__card" : "card home__card";
   const updateCount = updates === null ? 0 : updates.asks.length + updates.reports.length + updates.uploads.length;
+
+  // 「以前答不出來，現在可能答得出來了」（#408）：只是檢索找到資料、還沒有回答，所以一律說「可能」；不用數字或分數。
+  // 「知道了」在 A1、A2 都有，兩處讀同一份 maybeAnswerable，按任一處兩處一起收起
+  const maybe = onAcknowledge === undefined ? new Map<string, MaybeAnswerable>() : new Map(maybeAnswerable.map((m) => [m.question, m]));
+  const latest = latestMaybeAnswerable([...maybe.values()]);
+  const askBlocked = askDisabled || limit !== null;
+  const documentLink = (m: MaybeAnswerable) => (
+    <button type="button" className="link home__doc-link" title={m.document.title} onClick={() => onOpenDocument(m.document.id)}>
+      {m.document.title}
+    </button>
+  );
+  const [nowBefore, nowAfter = ""] = s.home.maybeNow.split("{document}");
+  const maybeActions = (m: MaybeAnswerable, className: string) => (
+    <span className={className}>
+      <button type="button" className="home__again" disabled={askBlocked} aria-label={`${s.home.askAgain}${s.colon}${m.question}`} onClick={() => onAsk(m.question)}>
+        {s.home.askAgain}
+      </button>
+      <button type="button" className="home__dismiss" aria-label={`${s.home.acknowledge}${s.colon}${m.question}`} onClick={() => onAcknowledge?.(m)}>
+        {s.home.acknowledge}
+      </button>
+    </span>
+  );
+
+  // A2：問候下方一句話＋三點時間線（你問了 → 帶來變化的文件 → 今天）；手機的時間線收成一行
+  const recall = latest !== null && (
+    <section className="home__recall" aria-label={s.home.recallTitle}>
+      <p className="home__recall-text">{fill(s.home.recallText, { time: ago(latest.at), question: latest.question })}</p>
+      <ol className="home__timeline" aria-label={s.home.recallTimeline}>
+        <li>
+          <time dateTime={latest.at} title={time.format(new Date(latest.at))}>
+            {s.home.recallAsked}
+          </time>
+        </li>
+        <li>{documentLink(latest)}</li>
+        <li>{s.home.recallToday}</li>
+      </ol>
+      {maybeActions(latest, "home__recall-actions")}
+    </section>
+  );
 
   const waitingSection = waiting !== undefined && (
     <section className={`${card} home__waiting`} aria-labelledby="home-waiting">
@@ -343,7 +383,26 @@ export function HomePage(props: Props) {
         <ul className="home__list">
           {asked.map(({ question, at }) => {
             const label = `${s.home.askAgain}${s.colon}${question}`;
-            const disabled = askDisabled || limit !== null;
+            const disabled = askBlocked;
+            const m = maybe.get(question);
+            // A1：可能答得出來了的那一題是 primary 細框的列，展開「那時候」「現在」兩行與「再問一次」「知道了」（桌機與手機相同）
+            if (m !== undefined)
+              return (
+                <li key={question} className="home__row home__row--maybe">
+                  <span className="home__question" title={question}>
+                    {question}
+                  </span>
+                  <span className="home__maybe-lines">
+                    <span>{fill(s.home.maybeThen, { time: ago(at) })}</span>
+                    <span>
+                      {nowBefore}
+                      {documentLink(m)}
+                      {nowAfter}
+                    </span>
+                  </span>
+                  {maybeActions(m, "home__maybe-actions")}
+                </li>
+              );
             const parts = (
               <>
                 {/* 名稱可以截斷：完整文字放在 title（docs/design.md「英文版面」的排版規則） */}
@@ -457,6 +516,7 @@ export function HomePage(props: Props) {
           </p>
         )}
       </header>
+      {recall}
       {/* 手機的主管：待辦的數字放最上（畫板 K-Mobile） */}
       {phone && waitingSection}
       <QuestionPanel language={language} disabled={askDisabled} text={draft} onText={onDraft} onAsk={onAsk} limit={limit} role={identity} compact={wide || phone} />

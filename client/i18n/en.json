@@ -730,7 +730,15 @@
     "updatesTitle": "Updates",
     "updatesEmpty": "Review results for documents you upload and replies to your reports appear here.",
     "updatesEmptyTitle": "No updates yet.",
-    "viewProgress": "View progress"
+    "viewProgress": "View progress",
+    "recallTitle": "A question from before",
+    "recallText": "You asked “{question}” {time}. It may have an answer now.",
+    "recallTimeline": "From your question to today",
+    "recallAsked": "You asked",
+    "recallToday": "Today",
+    "maybeThen": "Then: no answer ({time})",
+    "maybeNow": "Now: may have an answer, with {document} added",
+    "acknowledge": "Got it"
   },
   "myUploads": {
     "tabNew": "Add a document",

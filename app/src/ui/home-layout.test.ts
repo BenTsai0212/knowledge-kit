@@ -4,7 +4,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { strings } from "../client/i18n";
+import { strings, TRANSLATIONS } from "../client/i18n";
 import { clientConfig } from "../client/load";
 import css from "./app.css?raw";
 import { HomePage } from "./HomePage";
@@ -180,5 +180,76 @@ describe("手機（#356，畫板 K-Mobile 的首頁）", () => {
   it("列：有更新至少 60px、surface 底；問過的問題與文件是下方 1px 的線、至少 44px", () => {
     expect(rule(".home--phone .home__row--raised")).toMatchObject({ "min-height": "60px", background: "var(--color-surface)" });
     expect(rule(".home--phone .home__row--line")).toMatchObject({ "min-height": "44px", border: "none", "border-bottom": "1px solid var(--color-border)" });
+  });
+});
+
+// 「以前答不出來，現在可能答得出來了」（#408）：A1（問過的問題中那一題）與 A2（問候下方一句話＋三點時間線）
+describe("可能答得出來了（#408）", () => {
+  const earlier = "2026-11-10T09:00:00.000Z";
+  const later = "2026-11-12T09:00:00.000Z";
+  const asked = [
+    { question: "Q-new", at: later, refused: true, seen: [] },
+    { question: "Q-old", at: earlier, refused: true, seen: [] },
+    { question: "Q-plain", at: earlier, refused: false, seen: [] },
+  ];
+  const maybeAnswerable = [
+    { question: "Q-old", at: earlier, document: { id: "d1", title: "Doc-Old" }, retrieved: ["p1"] },
+    { question: "Q-new", at: later, document: { id: "d2", title: "Doc-New" }, retrieved: ["p2"] },
+  ];
+  const withMaybe = (wide: boolean, extra: Record<string, unknown> = {}) => render(wide, { asked, maybeAnswerable, onAcknowledge: () => {}, ...extra });
+  const count = (html: string, text: string) => html.split(text).length - 1;
+
+  for (const [name, html] of [
+    ["桌機", () => withMaybe(true)],
+    ["手機", () => withMaybe(false, { phone: true })],
+  ] as const) {
+    it(`${name}：A1 的列有「那時候」「現在」兩行、可點的文件標題、「再問一次」與「知道了」；其他題照舊`, () => {
+      const out = html();
+      expect(count(out, 'class="home__row home__row--maybe"')).toBe(2);
+      expect(out).toContain('<button type="button" class="link home__doc-link" title="Doc-Old">Doc-Old</button>');
+      expect(out).toContain(`aria-label="${s.home.acknowledge}${s.colon}Q-old"`);
+      expect(out).toContain(`aria-label="${s.home.askAgain}${s.colon}Q-plain"`);
+      expect(out).not.toContain(`aria-label="${s.home.acknowledge}${s.colon}Q-plain"`);
+    });
+
+    it(`${name}：A2 在問候下方、提問框上方，只顯示最近的一題，附三點時間線`, () => {
+      const out = html();
+      const recall = out.indexOf(`aria-label="${s.home.recallTitle}"`);
+      expect(recall).toBeGreaterThan(out.indexOf("</h2>"));
+      expect(recall).toBeLessThan(out.indexOf("free-question"));
+      expect(count(out, `aria-label="${s.home.recallTitle}"`)).toBe(1);
+      const section = out.slice(recall, out.indexOf("</section>", recall));
+      expect(section).toContain("Q-new");
+      expect(section).not.toContain("Q-old");
+      expect(section.match(/<ol class="home__timeline"[^>]*>(.*?)<\/ol>/)?.[1].match(/<li>/g)).toHaveLength(3);
+      expect(section).toContain(`aria-label="${s.home.acknowledge}${s.colon}Q-new"`);
+    });
+  }
+
+  it("沒有可能答得出來的題目、或沒有「知道了」時不顯示 A1 與 A2", () => {
+    for (const out of [render(true, { asked }), render(true, { asked, maybeAnswerable })]) {
+      expect(out).not.toContain("home__row--maybe");
+      expect(out).not.toContain("home__recall");
+    }
+  });
+
+  it("醒目但不是成功：primary 細框，不用 success 或勾勾", () => {
+    expect(rule(".home__row--maybe")).toMatchObject({ border: "1px solid var(--color-primary)" });
+    expect(rule(".home__recall")).toMatchObject({ border: "1px solid var(--color-primary)" });
+    const blocks = cssText.match(/\.home__(?:row--maybe|maybe-|recall|timeline|dismiss)[^{]*\{[^}]*\}/g) ?? [];
+    expect(blocks.length).toBeGreaterThan(0);
+    expect(blocks.join("\n")).not.toContain("success");
+    expect(withMaybe(true)).not.toMatch(/[✓✔]/);
+  });
+
+  it("手機：動作的觸控目標 44px", () => {
+    expect(rule(".home--phone :is(.home__maybe-actions, .home__recall-actions) button")).toMatchObject({ height: "44px" });
+  });
+
+  // 措辭：只是檢索找到資料、還沒有回答，所以說「可能」；回顧的口吻，不用數字、分數或評量
+  it.each(Object.keys(TRANSLATIONS))("措辭（%s）：不說已經答得出來，不用數字、分數或評量", (lang) => {
+    const h = strings(lang).home;
+    for (const t of [h.recallTitle, h.recallText, h.recallTimeline, h.recallAsked, h.recallToday, h.maybeThen, h.maybeNow, h.acknowledge])
+      expect(t, t).not.toMatch(/已經|already|\d|%|分數|score|學到|learn/i);
   });
 });

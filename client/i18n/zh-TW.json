@@ -730,7 +730,15 @@
     "updatesTitle": "有更新",
     "updatesEmpty": "你上傳的文件有審核結果、你的回報處理完時，會列在這裡。",
     "updatesEmptyTitle": "目前沒有更新。",
-    "viewProgress": "查看進度"
+    "viewProgress": "查看進度",
+    "recallTitle": "以前答不出來的問題",
+    "recallText": "你{time}問的「{question}」，現在可能答得出來了",
+    "recallTimeline": "從提問到今天",
+    "recallAsked": "你問了",
+    "recallToday": "今天",
+    "maybeThen": "那時候：答不出來（{time}）",
+    "maybeNow": "現在：可能答得出來了，多了{document}",
+    "acknowledge": "知道了"
   },
   "myUploads": {
     "tabNew": "新增文件",
