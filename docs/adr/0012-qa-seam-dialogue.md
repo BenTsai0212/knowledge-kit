@@ -1,6 +1,6 @@
 # ADR 0012：問答的接縫提問與人的理解（討論版）
 
-- 狀態：Proposed
+- 狀態：Accepted
 - 日期：2026-11-15
 - 決定者：@BenTsai0212
 - 相關：ADR 0011（只審接縫）、#247、[docs/qa.md](../qa.md)「說法不同」「回答提到」、[docs/conflicts.md](../conflicts.md)、#377（拒答先確認）

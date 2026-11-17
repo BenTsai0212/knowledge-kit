@@ -1,6 +1,6 @@
 # ADR 0011：只審接縫（有把握的直接收錄）
 
-- 狀態：Proposed
+- 狀態：Accepted
 - 日期：2026-11-15
 - 決定者：@BenTsai0212
 - 相關：ADR 0007 決定 8（「有把握的直接收錄」另寫 ADR）、#189（系統先判斷）、#44（待審與核准）、[docs/extraction.md](../extraction.md)「合併」「畫面」、#247
