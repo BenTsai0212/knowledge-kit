@@ -1,4 +1,4 @@
-// 原文面板的來源確認（ADR 0013 決定 8、9，#417 PR 3）：能確認的身分才看到按鈕；已確認時只顯示角色與日期；
+// 原文面板的來源確認（ADR 0013 決定 8、9，#417 PR 3）：能確認的身分才看到按鈕，「確認這段」只在標示的出處段落；已確認時只顯示角色與日期；
 // 失效時顯示說明與打開另一段的連結；措辭是「這段原文已確認」，外觀不用 success 綠或勾勾
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -74,7 +74,8 @@ describe("SourceConfirmation", () => {
 });
 
 describe("SourceText 的來源確認", () => {
-  const source = (confirmable: boolean): SourceDocument => ({
+  // 第 1 段已確認，第 2、3 段未確認；highlight 是這次打開的出處段落（螢光標示）
+  const source = (confirmable: boolean, highlight: string): SourceDocument => ({
     id: "doc",
     title: "文件",
     language,
@@ -83,27 +84,55 @@ describe("SourceText 的來源確認", () => {
     passages: [
       { id: "p-1", content: "第一段", marks: [], confirmation: confirmed({ kind: "valid" }) },
       { id: "p-2", content: "第二段", marks: [] },
+      { id: "p-3", content: "第三段", marks: [] },
     ],
-    highlight: "p-1",
+    highlight,
     ...(confirmable ? { confirmable } : {}),
   });
-  const html = (confirmable: boolean, numbered: boolean) =>
-    renderToStaticMarkup(createElement(SourceText, { language, source: source(confirmable), onOpenSource: noop, numbered, onConfirm: write }));
+  const html = (confirmable: boolean, numbered: boolean, highlight: string) =>
+    renderToStaticMarkup(createElement(SourceText, { language, source: source(confirmable, highlight), onOpenSource: noop, numbered, onConfirm: write }));
+  const button = (text: string) => `>${escape(text)}<`;
+  const count = (out: string, text: string) => out.split(button(text)).length - 1;
 
   it("不能確認時：只顯示已確認的段落，沒有任何按鈕", () => {
     for (const numbered of [false, true]) {
-      const out = html(false, numbered);
+      const out = html(false, numbered, "p-2");
       expect(out.split(escape(s.sourceConfirmed)).length - 1).toBe(1);
-      expect(out).not.toContain(escape(s.sourceConfirm) + "<");
+      expect(count(out, s.sourceConfirm)).toBe(0);
       expect(out).not.toContain(escape(s.sourceConfirmRevoke));
     }
   });
 
-  it("能確認時：已確認的段落有「撤銷確認」，未確認的段落有「確認這段」", () => {
+  it("能確認時：「確認這段」只在標示的段落下方，換出處時跟著走；沒有標示的段落沒有", () => {
     for (const numbered of [false, true]) {
-      const out = html(true, numbered);
-      expect(out).toContain(escape(s.sourceConfirmRevoke));
-      expect(out).toContain(`>${escape(s.sourceConfirm)}<`);
+      for (const [highlight, own, next] of [
+        ["p-2", "第二段", "第三段"],
+        ["p-3", "第三段", null],
+      ] as const) {
+        const out = html(true, numbered, highlight);
+        expect(count(out, s.sourceConfirm), `${highlight} numbered=${numbered}`).toBe(1);
+        const at = out.indexOf(button(s.sourceConfirm));
+        expect(at).toBeGreaterThan(out.indexOf(own));
+        if (next !== null) expect(at).toBeLessThan(out.indexOf(next));
+      }
+    }
+  });
+
+  it("能確認時：沒有標示但已確認的段落仍顯示確認紀錄與「撤銷確認」", () => {
+    for (const numbered of [false, true]) {
+      const out = html(true, numbered, "p-2");
+      expect(out).toContain(escape(s.sourceConfirmed));
+      expect(count(out, s.sourceConfirmRevoke)).toBe(1);
+      // 第 1 段的下方（第二段之前）
+      expect(out.indexOf(button(s.sourceConfirmRevoke))).toBeLessThan(out.indexOf("第二段"));
+    }
+  });
+
+  it("標示的段落已確認時：沒有「確認這段」，只有「撤銷確認」", () => {
+    for (const numbered of [false, true]) {
+      const out = html(true, numbered, "p-1");
+      expect(count(out, s.sourceConfirm)).toBe(0);
+      expect(count(out, s.sourceConfirmRevoke)).toBe(1);
     }
   });
 });
