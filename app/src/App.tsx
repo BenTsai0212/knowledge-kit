@@ -27,6 +27,7 @@ import { apiTransport } from "./qa/api";
 import { readMyReport, readReports, writeReport } from "./reports/store";
 import { createProvider, preparesModel, PROVIDERS, type ActiveProvider, type ProgressListener } from "./retrieval/providers";
 import { openRetriever, visiblePassagesKey } from "./retrieval/retrieve";
+import { writeConfirmation, type ConfirmationAction } from "./sources/confirmations";
 import { readCitedSources, readSource, type CitedSource, type SourceDocument } from "./sources/source";
 import { clearAccessCode, loadAccessCode, saveAccessCode } from "./ui/access-code";
 import { crossFade } from "./ui/cross-fade";
@@ -574,7 +575,9 @@ export function App() {
             () => undefined,
           )
         : undefined;
-    const document = read === null || records === undefined ? read : { ...read, records };
+    // 來源確認（ADR 0013 決定 3）：canReview 的身分才能確認、撤銷確認；身分對照的欄（owner 不是目前的身分）不能
+    const confirmable = owner === identity && canReview;
+    const document = read === null ? read : { ...read, ...(records === undefined ? {} : { records }), ...(confirmable ? { confirmable } : {}) };
     const answer = turns.find((t) => t.id === turnId)?.answer;
     const cited =
       turnId === null || answer?.kind !== "answer"
@@ -593,6 +596,14 @@ export function App() {
     const { source: shown, turn } = shownSource.current;
     if (shown !== null) void onOpenSource(shown.highlight, turn);
   };
+
+  // 確認、撤銷確認一段後重新讀取原文（狀態與「〈角色〉於〈日期〉確認」跟著更新）；寫入失敗時由原文面板顯示
+  async function onConfirm(passageId: string, action: ConfirmationAction) {
+    if (db === null) throw new Error("no database");
+    await writeConfirmation(db, identity, passageId, action);
+    const { source: shown, turn } = shownSource.current;
+    if (shown !== null) await onOpenSource(shown.highlight, turn);
+  }
 
   const closeSource = () => (sources.current.cancel(), setSource(null));
   // 桌機原文欄的 ✕：焦點回到引用標號（還在畫面上時）
@@ -695,6 +706,7 @@ export function App() {
         }
         onClose={closeSource}
         side={side}
+        onConfirm={onConfirm}
       />
     );
   };
@@ -707,6 +719,7 @@ export function App() {
         onOpenSource={(passageId) => void onOpenSource(passageId, sourceTurn)}
         cited={sourceTurn !== null && citedSources?.turn === sourceTurn ? citedSources.items : null}
         onClose={closeSourcePanel}
+        onConfirm={onConfirm}
       />
     );
   const mentionPanel = (inSheet: boolean) =>

@@ -3,6 +3,7 @@
 import type { Interpretation } from "../conflicts/interpretations";
 import { readPassageMarks, type PassageMark } from "../conflicts/marks";
 import type { Database } from "../db/database";
+import { readPassageConfirmations, type PassageConfirmation } from "./confirmations";
 
 export interface SourceDocument {
   id: string;
@@ -11,13 +12,15 @@ export interface SourceDocument {
   // 文件的可見等級與專案（畫面上的標籤）
   visibility: string;
   project: string | null;
-  // marks：已處理的說法不同與取代（只有看得到另一段時才有）
-  passages: { id: string; content: string; marks: PassageMark[] }[];
+  // marks：已處理的說法不同與取代（只有看得到另一段時才有）；confirmation：目前已確認時才有（ADR 0013，失效依看得到的說法不同判斷）
+  passages: { id: string; content: string; marks: PassageMark[]; confirmation?: PassageConfirmation }[];
   // 被引用的段落 id
   highlight: string;
   // 原文欄的「記錄」（ADR 0012 決定 6，client.json 的 qa.dialogue）：目前身分看得到的人的理解，與本次工作階段略過的組合
   // （ui/seam-records.ts 的 pairKey()）。由 App 在讀取後附上；沒有時不顯示
   records?: { items: Interpretation[]; skipped: string[] };
+  // 可以確認、撤銷確認這份文件的段落（ADR 0013 決定 3：canReview，而且是目前的身分，不是身分對照的欄）。由 App 附上；沒有時不顯示按鈕
+  confirmable?: boolean;
 }
 
 // 看不到該段落（或段落不存在）時回 null
@@ -35,7 +38,15 @@ export function readSource(db: Database, identityId: string | null, passageId: s
       await tx.query<{ id: string; content: string }>("SELECT id, content FROM kk.passages WHERE document_id = $1 ORDER BY ordinal", [doc.id])
     ).rows;
     const marks = await readPassageMarks(tx);
-    return { ...doc, passages: passages.map((p) => ({ ...p, marks: marks.get(p.id) ?? [] })), highlight: passageId };
+    const confirmations = await readPassageConfirmations(tx);
+    return {
+      ...doc,
+      passages: passages.map((p) => {
+        const confirmation = confirmations.get(p.id);
+        return { ...p, marks: marks.get(p.id) ?? [], ...(confirmation === undefined ? {} : { confirmation }) };
+      }),
+      highlight: passageId,
+    };
   });
 }
 

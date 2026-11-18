@@ -7,6 +7,7 @@ import { dataset } from "../../src/dataset/load";
 import { seedDataset } from "../../src/dataset/seed";
 import { openDatabase, type Database } from "../../src/db/database";
 import { readConfirmations, writeConfirmation, type ConfirmationAction } from "../../src/sources/confirmations";
+import { readSource } from "../../src/sources/source";
 import { uploadDocument } from "../../src/upload/write";
 import { datasetSample } from "../db/dataset-sample";
 import { canWriteConfirmation, CONFIRMATION_KEY_SQL, expectedConfirmationVisible, expectedConfirmed, type ConfirmationSample } from "../db/oracle";
@@ -71,6 +72,28 @@ describe("確認紀錄的可見範圍", { timeout: 30_000 }, () => {
       expect(await query(ignoring, id), String(id)).not.toEqual(sorted(expectedConfirmationVisible(access, datasetSample, w.sample, id)));
       expect(await confirmedBy(ignoring, id), String(id)).not.toEqual(Object.fromEntries(expectedConfirmed(access, datasetSample, w.sample, id)));
     }
+    await w.db.close();
+  });
+
+  it("原文面板（readSource()，#417 PR 3）：每一段的確認正好等於 oracle 的已確認段落；看不到那一段時不回傳文件", async () => {
+    const w = await setup();
+    for (const id of IDENTITIES) {
+      const expected = expectedConfirmed(access, datasetSample, w.sample, id);
+      for (const passage of ALL) {
+        const source = await readSource(w.db, id, passage);
+        if (source === null) {
+          expect(expected.has(passage), `${id} ${passage}`).toBe(false);
+          continue;
+        }
+        const shown = source.passages.find((p) => p.id === passage)!;
+        expect(shown.confirmation?.confirmedBy, `${id} ${passage}`).toBe(expected.get(passage));
+        // 文件中其他看得到的段落：沒有確認紀錄的不帶 confirmation
+        for (const p of source.passages) if (!expected.has(p.id)) expect(p.confirmation, `${id} ${p.id}`).toBeUndefined();
+      }
+    }
+    // 防止以全部看不到而通過：一般員工打開青翼的段落時看得到主管的確認，訪客打不開
+    expect((await readSource(w.db, "staff", BLUEWING))?.passages[0].confirmation?.confirmedBy).toBe("manager");
+    expect(await readSource(w.db, "guest", BLUEWING)).toBeNull();
     await w.db.close();
   });
 });

@@ -2,6 +2,7 @@
 // 標題列是「原文 · 出處 N／M」小字（平板是「出處 N／M」）與上一個、下一個出處（44px）；原文在 reading 紙面、引用段落用 markReading、
 // 其他段落 textMuted（SourceText，與桌機相同，#354）；下方是並排的「在圖譜中查看」與「回報有錯」（畫板 G-Mobile-QA）。不是從某一題的引用打開時（段落旁的標示、其他頁面）只顯示「原文」。
 import { fill, strings } from "../client/i18n";
+import type { ConfirmationAction } from "../sources/confirmations";
 import type { SourceDocument } from "../sources/source";
 import { AccessBadges } from "./AccessBadges";
 import { BottomSheet } from "./BottomSheet";
@@ -24,9 +25,11 @@ interface Props {
   onClose(): void;
   // 平板是右側的滑出面板（#255）
   side?: "bottom" | "right";
+  // 確認、撤銷確認一段（ADR 0013）：source.confirmable 時才顯示按鈕
+  onConfirm?(passageId: string, action: ConfirmationAction): Promise<void>;
 }
 
-export function SourceSheet({ language, source, steps, onStep, onOpenSource, onViewInGraph, onReport, onClose, side }: Props) {
+export function SourceSheet({ language, source, steps, onStep, onOpenSource, onViewInGraph, onReport, onClose, side, onConfirm }: Props) {
   const s = strings(language);
   const step = (label: string, target: string | null, glyph: string) => (
     <button type="button" className="secondary source-step" aria-label={label} disabled={target === null} onClick={() => target !== null && onStep(target)}>
@@ -53,7 +56,7 @@ export function SourceSheet({ language, source, steps, onStep, onOpenSource, onV
       <p className="source-sheet__title">
         {source.title} <AccessBadges visibility={source.visibility} project={source.project} language={language} />
       </p>
-      <SourceText language={language} source={source} onOpenSource={onOpenSource} />
+      <SourceText language={language} source={source} onOpenSource={onOpenSource} onConfirm={onConfirm} />
       {(onViewInGraph !== undefined || onReport !== undefined) && (
         <p className="source-sheet__actions">
           {onViewInGraph !== undefined && (

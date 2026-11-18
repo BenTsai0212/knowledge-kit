@@ -1,10 +1,12 @@
 // 原文紙面（#225）：文件中看得到的段落，引用段落以螢光標出；桌機的原文面板（SourcePanel）與手機的底部面板（SourceSheet，#256）共用。
 import { Fragment, useEffect, useRef } from "react";
 import { fill, strings } from "../client/i18n";
+import type { ConfirmationAction } from "../sources/confirmations";
 import type { SourceDocument } from "../sources/source";
 import { PassageMarks } from "./PassageMarks";
 import { pairKey, pairRecords } from "./seam-records";
 import { SeamRecords } from "./SeamRecords";
+import { SourceConfirmation } from "./SourceConfirmation";
 
 interface Props {
   language: string;
@@ -13,9 +15,11 @@ interface Props {
   onOpenSource(passageId: string): void;
   // 桌機的原文欄（#335）：段落前加「¶N」（N 是這個身分看得到的段落的順序，不透露看不到的段落）
   numbered?: boolean;
+  // 確認、撤銷確認一段（ADR 0013）：source.confirmable 時才顯示按鈕；寫入並重新讀取原文後 resolve
+  onConfirm?(passageId: string, action: ConfirmationAction): Promise<void>;
 }
 
-export function SourceText({ language, source, onOpenSource, numbered = false }: Props) {
+export function SourceText({ language, source, onOpenSource, numbered = false, onConfirm }: Props) {
   const s = strings(language);
   const highlighted = useRef<HTMLParagraphElement>(null);
   // 面板打開時的段落：螢光等面板進場後才刷過；面板已開著時換段落，標號變實心後就刷過（#227）
@@ -40,6 +44,15 @@ export function SourceText({ language, source, onOpenSource, numbered = false }:
               {p.content} {marks}
             </p>
           );
+        // 來源確認（ADR 0013 決定 8）：段落下方，與「記錄」同一區
+        const confirmation = (
+          <SourceConfirmation
+            language={language}
+            confirmation={p.confirmation}
+            onConfirm={source.confirmable && onConfirm !== undefined ? (action) => onConfirm(p.id, action) : undefined}
+            onOpenSource={onOpenSource}
+          />
+        );
         // 原文欄的「記錄」（ADR 0012 決定 6）：並存的段落下方，每一組一份（先作答或略過才看得到同事的理解）
         const records = source.records;
         const recordViews =
@@ -61,6 +74,7 @@ export function SourceText({ language, source, onOpenSource, numbered = false }:
           return (
             <Fragment key={p.id}>
               {text}
+              {confirmation}
               {recordViews}
             </Fragment>
           );
@@ -70,6 +84,7 @@ export function SourceText({ language, source, onOpenSource, numbered = false }:
               {fill(s.paragraphNumber, { n: i + 1 })}
             </span>
             {text}
+            {confirmation}
             {recordViews}
           </div>
         );

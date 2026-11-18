@@ -413,6 +413,18 @@ export interface UiStrings {
   sourceNext: string;
   // 桌機原文欄的「這次回答的出處」清單與段落編號「¶N」（#335）
   sourceCitedList: string;
+  // 來源確認（ADR 0013 決定 8、9）：原文面板的「確認這段」「撤銷確認」、區塊的名稱、目前的狀態（有效、被取代、有不同說法）、
+  // 「〈角色〉於〈日期〉確認」（{role}、{date}）、失效時打開另一段的連結與寫入失敗。一律說「這段原文已確認」，不說「答案已確認」「已驗證」
+  sourceConfirm: string;
+  sourceConfirmRevoke: string;
+  sourceConfirmGroup: string;
+  sourceConfirmed: string;
+  sourceConfirmedSuperseded: string;
+  sourceConfirmedDisputed: string;
+  sourceConfirmedBy: string;
+  sourceConfirmOpenNewer: string;
+  sourceConfirmOpenOther: string;
+  sourceConfirmFailed: string;
   paragraphNumber: string;
   views: string;
   tabQa: string;

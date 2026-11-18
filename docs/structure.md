@@ -144,6 +144,7 @@
 - `SessionQuestions.tsx`：手機與平板的「這次的問題（N）」按鈕，手機打開底部面板、平板打開滑出面板（#256、#333）
 - `Sidebar.tsx`：桌機的左側欄（客戶名稱、頁面項目、「虛構資料 · 展示用權限」、使用者卡與身分和語言選單，#330）
 - `source-steps.ts`：「出處 N／M」與「在圖譜中查看」目標的純函式
+- `SourceConfirmation.tsx`：原文欄每一段下方的來源確認：「確認這段」「撤銷確認」、「〈角色〉於〈日期〉確認」與失效的說明（ADR 0013，見 `docs/design.md`「來源確認」）
 - `SourcePanel.tsx`：桌機的原文欄（段落編號、「這次回答的出處」，#335）；展示模式是浮動的原文卡片（#349）
 - `SourceSheet.tsx`：手機的原文面板（底部面板，標題「原文 · 出處 N／M」，#354）與平板的滑出面板
 - `SourceText.tsx`：原文紙面，桌機與手機共用
@@ -225,7 +226,7 @@
 引用跳回原文。
 
 - `confirmations.ts`：經 `withIdentity()` 確認、撤銷確認與讀取段落的目前狀態；失效判斷的純函式 `confirmationStatus()`（ADR 0013；只用 INSERT；規則由 RLS 執行，見 `docs/data-model.md`「來源確認」，測試在 `app/tests/sources/confirmations.test.ts`）
-- `source.ts`：`readSource()` 經 `withIdentity()` 讀取段落所屬文件中看得到的段落；`readCitedSources()` 讀取一題回答引用到的段落的文件標題與段落編號
+- `source.ts`：`readSource()` 經 `withIdentity()` 讀取段落所屬文件中看得到的段落（含說法不同的標示與目前已確認的段落）；`readCitedSources()` 讀取一題回答引用到的段落的文件標題與段落編號
 
 ### `app/src/db/`
 

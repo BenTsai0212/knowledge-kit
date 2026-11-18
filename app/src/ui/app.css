@@ -1208,6 +1208,46 @@ button.citation[aria-pressed="true"] {
   margin: 0 0 16px;
 }
 
+/* 來源確認（ADR 0013 決定 8，docs/design.md「來源確認」）：與「記錄」同一區（.seam-record 的虛線與小字）；
+   「確認這段」「撤銷確認」與打開另一段是紙面上的小字連結。不用 success 綠、不用勾勾：確認的是原文，不是 AI 的回答 */
+.source-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.source-text p.source-confirm {
+  margin: -8px 0 16px;
+}
+
+.source-text .seam-record p.source-confirm {
+  margin: 0;
+}
+
+.source-passage > .source-confirm,
+.source-passage > .source-confirmation {
+  grid-column: 2;
+}
+
+.source-text .source-confirm button.link {
+  min-height: 24px;
+  color: var(--color-readingText);
+  font-size: 13px;
+}
+
+.source-confirm button.link:disabled {
+  opacity: 0.6;
+}
+
+/* 紙面在 Dark 也是亮色，danger 的對比不足，改用紙面文字加粗 */
+.source-confirm__error {
+  color: var(--color-readingText);
+  font-weight: 600;
+}
+
 /* 請上傳者確認（ADR 0011 決定 6，畫板 S-Review、S-Request）：已請求是膠囊與說明（.held、.pill）；
    上傳者的回答是 surfaceRaised 的區塊，時間與說明是 textMuted（.reply、.recw）；上傳者首頁的項目是一列（.item、.kind） */
 .ask-card__held {
