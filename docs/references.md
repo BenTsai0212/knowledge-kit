@@ -83,7 +83,7 @@
 - **類型**：會議論文（連結是作者自存的版本）
 - **連結**：https://advait.org/files/lee_2025_ai_critical_thinking_survey.pdf
 - **主張**：越信任 AI 越少批判思考；工作轉向資訊驗證與整合
-- **用在哪裡**：[ADR 0012](adr/0012-qa-seam-dialogue.md)「背景」
+- **用在哪裡**：[ADR 0012](adr/0012-qa-seam-dialogue.md)「背景」、[ADR 0013](adr/0013-source-confirmation.md)「背景」「設計依據」（確認原文而不是回答）
 
 ### chiang2024
 
