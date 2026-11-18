@@ -420,3 +420,32 @@ export function canReply(
   const isEntity = review.pendingEntities.some((e) => e.id === q.item);
   return isEntity && mergeInto.sameType && expectedVisible(access, approvedSample(data, review), identityId).entities.includes(mergeInto.id);
 }
+
+// docs/data-model.md「來源確認」的獨立實作（ADR 0013 決定 2～5）。confirmations 依寫入順序列出；by 是作者
+export interface ConfirmationSample {
+  confirmations: { id: string; by: string; passage: string; action: "confirm" | "revoke" }[];
+}
+
+// 看得到的確認紀錄：那一段看得到（不看作者）
+export function expectedConfirmationVisible(access: AccessFile, data: Sample, sample: ConfirmationSample, identityId: string | null): Visible {
+  const passages = new Set(expectedVisible(access, data, identityId).passages);
+  return { passage_confirmations: sample.confirmations.filter((x) => passages.has(x.passage)).map((x) => x.id) };
+}
+
+export const CONFIRMATION_KEY_SQL: Record<string, string> = {
+  passage_confirmations: "id",
+};
+
+// 能否確認或撤銷：有 canReview、那一段看得到（不看目前狀態）
+export function canWriteConfirmation(access: AccessFile, data: Sample, identityId: string | null, passage: string): boolean {
+  const role = access.roles.find((r) => r.id === identityId);
+  return role?.canReview === true && expectedVisible(access, data, identityId).passages.includes(passage);
+}
+
+// 目前已確認的段落 → 確認者：看得到的段落中，最後寫入的一筆是 confirm
+export function expectedConfirmed(access: AccessFile, data: Sample, sample: ConfirmationSample, identityId: string | null): Map<string, string> {
+  const passages = new Set(expectedVisible(access, data, identityId).passages);
+  const last = new Map<string, ConfirmationSample["confirmations"][number]>();
+  for (const x of sample.confirmations) if (passages.has(x.passage)) last.set(x.passage, x);
+  return new Map([...last].filter(([, x]) => x.action === "confirm").map(([p, x]) => [p, x.by]));
+}

@@ -48,4 +48,5 @@ export const KK_TABLES = [
   "interpretations",
   "review_requests",
   "review_request_replies",
+  "passage_confirmations",
 ] as const;

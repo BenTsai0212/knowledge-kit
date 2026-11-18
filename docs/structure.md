@@ -224,6 +224,7 @@
 
 引用跳回原文。
 
+- `confirmations.ts`：經 `withIdentity()` 確認、撤銷確認與讀取段落的目前狀態；失效判斷的純函式 `confirmationStatus()`（ADR 0013；只用 INSERT；規則由 RLS 執行，見 `docs/data-model.md`「來源確認」，測試在 `app/tests/sources/confirmations.test.ts`）
 - `source.ts`：`readSource()` 經 `withIdentity()` 讀取段落所屬文件中看得到的段落；`readCitedSources()` 讀取一題回答引用到的段落的文件標題與段落編號
 
 ### `app/src/db/`

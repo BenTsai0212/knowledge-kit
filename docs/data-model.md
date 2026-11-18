@@ -85,6 +85,7 @@ PGlite 的 session user 固定是 superuser `postgres`。以 `username: "kk_app"
 | `interpretations` | `id` PK（`in-` 開頭）、`passage_a`、`passage_b`（一組說法不同的兩段，`passage_a < passage_b`）、`choice`（選的假設的文字，或 `other`；1～100 字）、`changed_after_challenge`（boolean）、`note`（只在 `choice = 'other'` 時，選填，1～500 字）、`created_by`、`created_at`；`(created_by, passage_a, passage_b)` 不重複 | 人的理解（ADR 0012，0015） |
 | `review_requests` | `id` PK（`rq-` 開頭）、`item_id`（待審實體或關係）、`document_id`（項目所屬的文件）、`requested_by`、`requested_at` | 請上傳者確認（ADR 0011，0016） |
 | `review_request_replies` | `request_id` PK（每個請求回答一次）、`replied_by`、`choice`（`merge`／`new`／`keep`／`reject`／`other`）、`merge_into`（只在 `merge` 時，參照 `entities`）、`note`（只在 `other` 時，選填，1～500 字）、`replied_at` | 上傳者的回答（ADR 0011，0016） |
+| `passage_confirmations` | `id` PK（`cf-` 開頭）、`passage_id`、`action`（`confirm`／`revoke`）、`created_by`、`created_at`、`seq`（`GENERATED ALWAYS AS IDENTITY`） | 來源確認（ADR 0013，0018） |
 
 - id 一律 `text`；`client/` 的名單沿用設定中的 id。
 - `language` 以 CHECK 限制為語言代碼格式；「必須屬於 `client.json` 的 `languages`」由匯入程式檢查。
@@ -302,6 +303,21 @@ policy 中的子查詢同樣受 RLS 限制，所以「段落看得到」已包�
 - **先作答才看得到同事的理解**由畫面控制（ADR 0012 決定 6）：`readInterpretations()` 回傳每筆的 `mine`（作者是目前身分），畫面在自己還沒留下理解或略過前不顯示別人的；畫面只顯示角色與時間。
 - 違反 CHECK、外鍵、沒有身分或被 RLS 拒絕時回傳 `denied`；不顯示資料庫的訊息。
 - `oracle.ts` 的 `expectedInterpretationVisible()`、`canWriteInterpretation()` 是上述規則的獨立實作；`app/tests/conflicts/interpretations.test.ts` 比對每個身分看得到的列與能寫入的組合，並測試偽造的寫入（作者是別人、時間不是現在、順序相反）、欄位的限制、`kk_app` 沒有 `UPDATE`／`DELETE`，以及「忽略身分的資料層」的反向驗證。
+
+## 來源確認
+
+知識負責人確認原文段落，與撤銷確認（ADR 0013，migration 0018）。**只用 INSERT**：確認與撤銷各新增一筆，不修改 `passages`，所以參考情境原有的段落也能確認。寫入與讀取集中在 `app/src/sources/confirmations.ts`（`writeConfirmation()`、`readConfirmations()`，以及在呼叫端交易中讀取的 `readPassageConfirmations()`），一律經 `withIdentity()`。
+
+| 資料表 | 權限 | 寫入（`WITH CHECK`） | 讀取（`USING`） |
+| --- | --- | --- | --- |
+| `passage_confirmations` | `SELECT`、`INSERT` | 有 `canReview`、`created_by` 是自己、`created_at` 是現在、那一段看得到（確認與撤銷同一條） | 那一段看得到（比照 `interpretations`，不看作者） |
+
+- **目前狀態**：一段看得到的紀錄中 `seq` 最大的一筆；`confirm` 為已確認，`revoke` 或沒有紀錄為未確認。以 `seq` 而不是 `created_at` 比較：PGlite 的 `now()` 只到毫秒，連續的交易常常同一時間。`readPassageConfirmations()` 只回傳已確認的段落（確認者與時間）。
+- **不擋重複確認、沒確認就撤銷**：多一筆不影響目前狀態；畫面只在對應狀態顯示按鈕（ADR 0013 決定 3）。
+- **失效**（ADR 0013 決定 6）：`confirmationStatus()` 是純函式，依 `readConflictLinks()` 讀到的、目前身分看得到的說法不同（含尚未處理的，只有 `canReview` 看得到）判斷：「以新的為準」的舊的一段是 `superseded`（連到新的一段），並存或尚未處理的兩端是 `disputed`（連到另一段），其他是 `valid`；屬於多組時取最嚴重的一種。不比較確認與偵測的先後（ADR 0013 決定 7）。
+- **限制**：`seq` 是 `GENERATED ALWAYS`，但有 `INSERT` 權限的人仍可用 `OVERRIDING SYSTEM VALUE` 指定 `seq`，讓自己的一筆一直是最新的。能寫入的只有 `canReview` 的身分，而且身分是角色層級（同角色共用一個身分），所以不另外防範；有多個審核者身分時重新檢討。
+- 違反 CHECK、外鍵、沒有身分或被 RLS 拒絕時回傳 `denied`；不顯示資料庫的訊息。
+- `oracle.ts` 的 `expectedConfirmationVisible()`、`canWriteConfirmation()`、`expectedConfirmed()` 是上述規則的獨立實作；`app/tests/sources/confirmations.test.ts` 比對每個身分看得到的紀錄、已確認的段落與能寫入的組合（並斷言不同身分的結果不同），測試偽造的寫入、同一個交易內的先後、失效只依看得到的說法不同、`kk_app` 沒有 `UPDATE`／`DELETE`，以及「忽略身分的資料層」的反向驗證。
 
 ## 越權測試（滲漏矩陣）
 
