@@ -226,7 +226,7 @@ const uiStrings = {
   qaIndependent: "required", qaHeaderNote: "required", sessionQuestions: "required", sessionQuestionsCount: "required", answerMentions: "required", answerBasis: "required", answerConflict: "required", followUpTitle: "required",
   followUpOutgoing: "required", followUpIncoming: "required", viewInGraph: "required",
   openSource: "required", sourceTitle: "required", sourceHeading: "required", closeSource: "required", sourceStep: "required", sourceSheetStep: "required", sourcePrev: "required", sourceNext: "required", sourceCitedList: "required",
-  sourceConfirm: "required", sourceConfirmRevoke: "required", sourceConfirmGroup: "required", sourceConfirmed: "required", sourceConfirmedSuperseded: "required", sourceConfirmedDisputed: "required", sourceConfirmedBy: "required", sourceConfirmOpenNewer: "required", sourceConfirmOpenOther: "required", sourceConfirmFailed: "required", citationConfirmed: "required",
+  sourceConfirm: "required", sourceConfirmRevoke: "required", sourceConfirmGroup: "required", sourceConfirmed: "required", sourceConfirmedSuperseded: "required", sourceConfirmedDisputed: "required", sourceConfirmedBy: "required", sourceConfirmOpenNewer: "required", sourceConfirmOpenOther: "required", sourceConfirmFailed: "required", citationConfirmed: "required", citationConfirmedHint: "required",
   paragraphNumber: "required", views: "required", tabQa: "required", tabHome: "required",
   tabGraph: "required", legend: "required", graphEmpty: "required", graphEmptyReason: "required", switchIdentity: "required", selectEntity: "required",
   graphExpanded: "required", graphShowAll: "required", graphShowOnly: "required",

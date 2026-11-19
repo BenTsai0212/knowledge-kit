@@ -17,8 +17,18 @@ async function screenshot(page: Page, testInfo: TestInfo, name: string): Promise
   await testInfo.attach(name, { body: await page.screenshot(), contentType: "image/png" });
 }
 
+// 關掉原文。手機的原文是原生 <dialog> 的底部面板：Esc 後先播退場動畫（base）才 close()，這段期間面板仍是 modal、
+// 面板外的元素是 inert。fill() 不檢查點擊目標，焦點進不了 inert 的輸入框，打的字不會進去，「提問」一直停用。
+// 所以等面板收起再往下（與 e2e/support/app.ts 的身分面板相同）。桌機的原文在右側面板，不是 <dialog>，這裡直接通過
+async function closeSource(page: Page): Promise<void> {
+  await page.keyboard.press("Escape");
+  await expect(page.locator("dialog.source-sheet")).toBeHidden();
+}
+
 async function ask(page: Page, question: string): Promise<Locator> {
-  await page.getByPlaceholder(s.questionPlaceholder).fill(question);
+  const input = page.getByPlaceholder(s.questionPlaceholder);
+  await input.fill(question);
+  await expect(input).toHaveValue(question);
   await page.getByRole("button", { name: s.askButton, exact: true }).click();
   const answer = page.locator("section.answer").last();
   await passSameName(answer);
@@ -45,11 +55,12 @@ for (const viewport of VIEWPORTS) {
     const text = page.locator(".source-text");
     await text.locator(".highlight + .source-confirm").getByRole("button", { name: s.sourceConfirm, exact: true }).click();
     await expect(text.locator(".highlight + .source-confirmation")).toContainText(s.sourceConfirmed);
-    await page.keyboard.press("Escape");
+    await closeSource(page);
 
     // 回答中的標號：小圓點與 aria-label
     await expect(first).toHaveClass(/citation--confirmed/);
     await expect(first).toHaveAttribute("aria-label", label(1));
+    await expect(first).toHaveAttribute("title", s.citationConfirmedHint);
     await expect(first.locator(".citation__confirmed")).toBeVisible();
     const dot = await first.locator(".citation__confirmed").boundingBox();
     expect(dot?.width).toBeCloseTo(5, 0);
@@ -64,7 +75,7 @@ for (const viewport of VIEWPORTS) {
     await screenshot(page, testInfo, `citation-confirmed-selected-${tag}.png`);
 
     // 新的一題：回答完成時就有標記
-    await page.keyboard.press("Escape");
+    await closeSource(page);
     const next = await ask(page, question);
     await expect(next.locator("button.citation").first()).toHaveAttribute("aria-label", label(1));
 
@@ -72,8 +83,9 @@ for (const viewport of VIEWPORTS) {
     await next.locator("button.citation").first().click();
     await text.locator(".highlight + .source-confirmation").getByRole("button", { name: s.sourceConfirmRevoke, exact: true }).click();
     await expect(text.locator(".source-confirmation")).toHaveCount(0);
-    await page.keyboard.press("Escape");
+    await closeSource(page);
     await expect(page.locator("section.answer .citation--confirmed")).toHaveCount(0);
     await expect(first).not.toHaveAttribute("aria-label", /./);
+    await expect(first).toHaveAttribute("title", s.openSource);
   });
 }

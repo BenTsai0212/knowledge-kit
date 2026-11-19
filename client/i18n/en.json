@@ -81,6 +81,7 @@
   "sourceConfirmOpenNewer": "See the newer statement",
   "sourceConfirmOpenOther": "See the other statement",
   "citationConfirmed": "Source {n}, this source passage has been confirmed",
+  "citationConfirmedHint": "This source passage has been confirmed",
   "sourceConfirmFailed": "Couldn't save that. Please try again.",
   "paragraphNumber": "¶{n}",
   "views": "Views",

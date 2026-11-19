@@ -227,14 +227,15 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
                 {sentence.map((segment, j) => {
                   if ("text" in segment) return <Fragment key={j}>{segment.text}</Fragment>;
                   const passage = (answer as Extract<Answer, { kind: "answer" }>).numbering[segment.citation - 1];
-                  // 已確認的原文（ADR 0013 決定 8）：右上角的小圓點（文字色，不用 success 綠、不用勾勾），aria-label 說明「這段原文已確認」
+                  // 已確認的原文（ADR 0013 決定 8）：右上角的小圓點（文字色，不用 success 綠、不用勾勾），aria-label 與滑過的提示說明「這段原文已確認」
                   const confirmed = state.confirmed?.includes(passage) === true;
                   return (
                     <button
                       key={j}
                       type="button"
                       className={confirmed ? "citation citation--confirmed" : "citation"}
-                      title={s.openSource}
+                      // 滑過的提示：已確認時說明圓點的意思（與 aria-label 的後半一致），其他照舊是「打開原文」
+                      title={confirmed ? s.citationConfirmedHint : s.openSource}
                       aria-label={confirmed ? fill(s.citationConfirmed, { n: segment.citation }) : undefined}
                       aria-pressed={openPassage === passage}
                       onClick={() => onOpenSource(passage)}

@@ -47,10 +47,14 @@ describe("引用標號的小標記", () => {
     expect(two).toContain('class="citation citation--confirmed"');
     expect(two).toContain(`aria-label="${escape(fill(s.citationConfirmed, { n: 2 }))}"`);
     expect(two).toContain('<span class="citation__confirmed" aria-hidden="true"></span>');
+    // 滑過的提示：說明圓點的意思，與 aria-label 的後半一致
+    expect(two).toContain(`title="${escape(s.citationConfirmedHint)}"`);
+    expect(fill(s.citationConfirmed, { n: 2 }).endsWith(s.citationConfirmedHint)).toBe(true);
     for (const b of [one, three]) {
       expect(b).toContain('class="citation"');
       expect(b).not.toContain("aria-label");
       expect(b).not.toContain("citation__confirmed");
+      expect(b).toContain(`title="${escape(s.openSource)}"`);
     }
   });
 
@@ -59,6 +63,9 @@ describe("引用標號的小標記", () => {
       expect(buttons(html)).toHaveLength(3);
       expect(html).not.toContain("citation--confirmed");
       expect(html).not.toContain(escape(fill(s.citationConfirmed, { n: 1 })));
+      // 提示照舊是「打開原文」，沒有「這段原文已確認」
+      expect(html).not.toContain(escape(s.citationConfirmedHint));
+      for (const b of buttons(html)) expect(b).toContain(`title="${escape(s.openSource)}"`);
     }
   });
 
@@ -71,10 +78,14 @@ describe("引用標號的小標記", () => {
 
   it("措辭（ADR 0013 決定 9）：不說「答案已確認」或「已驗證」，沒有勾勾；各語言都有數字的位置", () => {
     for (const [lang, t] of Object.entries(TRANSLATIONS)) {
-      const text = (t as { citationConfirmed?: string }).citationConfirmed;
+      const { citationConfirmed: text, citationConfirmedHint: hint } = t as { citationConfirmed?: string; citationConfirmedHint?: string };
       if (text === undefined) continue;
       expect(text, lang).toContain("{n}");
       expect(text, lang).not.toMatch(/[✓✔☑]|答案已確認|回答已確認|已驗證|answer|verified/i);
+      // 提示與 aria-label 的後半一致（大小寫不計：英文在句中是小寫）
+      expect(hint, lang).toBeDefined();
+      expect(hint!, lang).not.toMatch(/[✓✔☑]|答案已確認|回答已確認|已驗證|answer|verified/i);
+      expect(text.toLowerCase().endsWith(hint!.toLowerCase()), lang).toBe(true);
     }
     expect(s.citationConfirmed).toContain("這段原文已確認");
   });

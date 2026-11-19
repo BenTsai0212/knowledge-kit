@@ -81,6 +81,7 @@
   "sourceConfirmOpenNewer": "新しい記述を見る",
   "sourceConfirmOpenOther": "もう一方の記述を見る",
   "citationConfirmed": "出典 {n}、この原文は確認済みです",
+  "citationConfirmedHint": "この原文は確認済みです",
   "sourceConfirmFailed": "記録できませんでした。もう一度お試しください。",
   "paragraphNumber": "¶{n}",
   "views": "表示",

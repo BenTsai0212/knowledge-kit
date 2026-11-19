@@ -81,6 +81,7 @@
   "sourceConfirmOpenNewer": "看新的說法",
   "sourceConfirmOpenOther": "看另一種說法",
   "citationConfirmed": "引用 {n}，這段原文已確認",
+  "citationConfirmedHint": "這段原文已確認",
   "sourceConfirmFailed": "沒能記錄下來，請再試一次。",
   "paragraphNumber": "¶{n}",
   "views": "頁面",

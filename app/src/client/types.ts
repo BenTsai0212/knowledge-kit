@@ -427,6 +427,8 @@ export interface UiStrings {
   sourceConfirmFailed: string;
   // 引用標號的 aria-label：引用到已確認而且有效的段落時（ADR 0013 決定 8）
   citationConfirmed: string;
+  // 已確認的引用標號滑過時的提示（title），與 citationConfirmed 的後半一致
+  citationConfirmedHint: string;
   paragraphNumber: string;
   views: string;
   tabQa: string;
