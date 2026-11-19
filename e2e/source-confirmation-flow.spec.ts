@@ -68,7 +68,7 @@ const numberOf = (xml: string, text: string) =>
 const between = (text: string, start: string, end: string) =>
   text.split(start)[1]?.split(end)[0] ?? "";
 
-// openApp() 之後覆寫：比對時回一組說法不同；回答時只引用舊的一段（[N]，所以第 1 個引用標號就是舊的一段）。
+// openApp() 之後覆寫：比對時回一組說法不同；回答時只引用舊的一段（[N]，所以第 1 個引用標號就是舊的一段，編號是 N，不一定是 1）。
 // 檢索結果沒有舊的一段（看不到的身分）時交給 openApp() 的假回應（引用第 1 段）
 async function routeFlow(page: Page): Promise<void> {
   await page.route("**/api/ask", async (route) => {
@@ -201,7 +201,10 @@ for (const viewport of VIEWPORTS) {
     answer = await ask(page);
     const citation = answer.locator("button.citation").first();
     await expect(citation).toHaveClass(/citation--confirmed/);
-    await expect(citation).toHaveAttribute("aria-label", citationLabel(1));
+    // 引用編號依段落編排，不一定是 1：從標號的文字取出 N 再組 aria-label
+    const n = Number((await citation.innerText()).trim());
+    expect(Number.isInteger(n) && n > 0).toBe(true);
+    await expect(citation).toHaveAttribute("aria-label", citationLabel(n));
     await citation.scrollIntoViewIfNeeded();
     expect(await noHorizontalScroll(page)).toBe(true);
     await screenshot(page, testInfo, `flow-1-reader-marker-${tag}.png`);
