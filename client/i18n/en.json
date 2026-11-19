@@ -80,6 +80,7 @@
   "sourceConfirmedBy": "Confirmed by {role} on {date}",
   "sourceConfirmOpenNewer": "See the newer statement",
   "sourceConfirmOpenOther": "See the other statement",
+  "citationConfirmed": "Source {n}, this source passage has been confirmed",
   "sourceConfirmFailed": "Couldn't save that. Please try again.",
   "paragraphNumber": "¶{n}",
   "views": "Views",
@@ -641,6 +642,9 @@
     "dateValue": "{start} – {end}",
     "calls": "API calls",
     "callsValue": "{count}",
+    "confirmed": "Confirmed cited passages",
+    "confirmedValue": "{confirmed} of {total} ({percent}%), counting only passages visible to the identity that produced this report; no threshold",
+    "confirmedNone": "No visible cited passages",
     "scope": "Scope"
   },
   "colon": ": ",

@@ -80,6 +80,7 @@
   "sourceConfirmedBy": "{role}が{date}に確認",
   "sourceConfirmOpenNewer": "新しい記述を見る",
   "sourceConfirmOpenOther": "もう一方の記述を見る",
+  "citationConfirmed": "出典 {n}、この原文は確認済みです",
   "sourceConfirmFailed": "記録できませんでした。もう一度お試しください。",
   "paragraphNumber": "¶{n}",
   "views": "表示",
@@ -641,6 +642,9 @@
     "dateValue": "{start} – {end}",
     "calls": "呼び出し回数",
     "callsValue": "{count} 回",
+    "confirmed": "引用段落のうち確認済み",
+    "confirmedValue": "{total} 段落中 {confirmed} 段落（{percent}%）。レポートを作成した身分が見られる段落のみ。基準値なし",
+    "confirmedNone": "見られる引用段落はありません",
     "scope": "評価範囲"
   },
   "colon": "：",

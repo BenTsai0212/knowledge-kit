@@ -13,7 +13,7 @@
     "retrievalFallbackTitle", "retrievalFallback", "productName", "fictionalData", "demoPermissions", "identity", "language", "accessCodeTitle",
     "accessCodeLabel", "accessCodeHint", "demoAccessCodeHint", "demoQaNotice", "demoUploadNotice", "accessCodeSubmit", "changeAccessCode", "signInTitle", "signInAccount", "signInAccountOption", "signInPassword", "signInNoPassword", "signInSubmit", "signInWithCode", "signInBack", "signInEyebrow", "accessCodeEyebrow", "signInOr", "signInAccountHint", "signOut", "identityBadge", "identityAndLanguage", "userCardScope", "navMore", "presetQuestions", "scenarioRole",
     "questionLabel", "questionPlaceholder", "askButton", "answering", "emptyAnswer", "emptyAnswerReason", "emptyAnswerAction", "qaIndependent", "qaHeaderNote", "sessionQuestions", "sessionQuestionsCount", "answerMentions", "answerBasis", "answerConflict", "followUpTitle", "followUpOutgoing", "followUpIncoming", "viewInGraph", "openSource", "sourceTitle", "sourceHeading",
-    "closeSource", "sourceStep", "sourceSheetStep", "sourcePrev", "sourceNext", "sourceCitedList", "sourceConfirm", "sourceConfirmRevoke", "sourceConfirmGroup", "sourceConfirmed", "sourceConfirmedSuperseded", "sourceConfirmedDisputed", "sourceConfirmedBy", "sourceConfirmOpenNewer", "sourceConfirmOpenOther", "sourceConfirmFailed", "paragraphNumber", "views", "tabQa", "tabHome", "tabGraph", "legend", "graphEmpty", "graphEmptyReason", "switchIdentity", "selectEntity", "graphExpanded", "graphShowAll", "graphShowOnly",
+    "closeSource", "sourceStep", "sourceSheetStep", "sourcePrev", "sourceNext", "sourceCitedList", "sourceConfirm", "sourceConfirmRevoke", "sourceConfirmGroup", "sourceConfirmed", "sourceConfirmedSuperseded", "sourceConfirmedDisputed", "sourceConfirmedBy", "sourceConfirmOpenNewer", "sourceConfirmOpenOther", "sourceConfirmFailed", "citationConfirmed", "paragraphNumber", "views", "tabQa", "tabHome", "tabGraph", "legend", "graphEmpty", "graphEmptyReason", "switchIdentity", "selectEntity", "graphExpanded", "graphShowAll", "graphShowOnly",
     "graphSearch", "graphSearchNone", "graphTopConnected", "graphRelationCount", "graphDocumentCount", "graphSourceCount", "graphAskAbout", "graphFilters", "graphFindPath", "graphZoomIn", "graphZoomOut", "graphLegendNote", "graphCounts", "graphJustExpanded", "graphListMode", "graphKeyboard", "graphZoom", "askAboutEntity", "relatedEntities",
     "entitySources", "graphRetract", "graphRetractWillRemove", "graphRetractNoChange", "graphRetractConfirm", "graphRetractCancel", "tabTimeline", "pathTitle", "pathFrom", "pathTo", "pathChoose", "pathNotFound", "pathNotFoundReason", "pathChangeEnd",
     "timelineFilter", "timelineAll", "timelineEmpty", "timelineEmptyReason", "timelineFilterEmptyReason", "timelineShowAll", "undated", "tabUpload", "uploadNotAllowed", "uploadNotAllowedReason", "uploadEphemeral",
@@ -150,6 +150,7 @@
     "sourceConfirmedBy": { "$ref": "#/definitions/Text" },
     "sourceConfirmOpenNewer": { "$ref": "#/definitions/Text" },
     "sourceConfirmOpenOther": { "$ref": "#/definitions/Text" },
+    "citationConfirmed": { "$ref": "#/definitions/Text" },
     "sourceConfirmFailed": { "$ref": "#/definitions/Text" },
     "paragraphNumber": { "$ref": "#/definitions/Text" },
     "views": { "$ref": "#/definitions/Text" },
@@ -747,7 +748,7 @@
         "category", "restrictedNote", "failuresTitle", "number", "failed", "reason", "action", "noFailures",
         "numberNote", "conditionsTitle", "bank", "bankValue", "unknown", "coverage", "coverageValue", "coverageLevel",
         "settings", "retrieval", "notApplicable", "mode", "modeKeyPoints", "modeModel", "model", "date",
-        "dateValue", "calls", "callsValue", "scope"
+        "dateValue", "calls", "callsValue", "confirmed", "confirmedValue", "confirmedNone", "scope"
       ],
       "properties": {
         "download": { "$ref": "#/definitions/Text" },
@@ -829,6 +830,9 @@
         "dateValue": { "$ref": "#/definitions/Text" },
         "calls": { "$ref": "#/definitions/Text" },
         "callsValue": { "$ref": "#/definitions/Text" },
+        "confirmed": { "$ref": "#/definitions/Text" },
+        "confirmedValue": { "$ref": "#/definitions/Text" },
+        "confirmedNone": { "$ref": "#/definitions/Text" },
         "scope": { "$ref": "#/definitions/Text" }
       }
     },

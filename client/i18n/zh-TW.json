@@ -80,6 +80,7 @@
   "sourceConfirmedBy": "{role}於{date}確認",
   "sourceConfirmOpenNewer": "看新的說法",
   "sourceConfirmOpenOther": "看另一種說法",
+  "citationConfirmed": "引用 {n}，這段原文已確認",
   "sourceConfirmFailed": "沒能記錄下來，請再試一次。",
   "paragraphNumber": "¶{n}",
   "views": "頁面",
@@ -641,6 +642,9 @@
     "dateValue": "{start} – {end}",
     "calls": "呼叫次數",
     "callsValue": "{count} 次",
+    "confirmed": "引用段落中已確認",
+    "confirmedValue": "{confirmed}／{total} 段（{percent}%），只算產生報告的身分看得到的段落；不設門檻",
+    "confirmedNone": "沒有看得到的引用段落",
     "scope": "評測範圍"
   },
   "colon": "：",

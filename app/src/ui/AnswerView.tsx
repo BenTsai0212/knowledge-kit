@@ -39,6 +39,9 @@ export interface AnswerState {
   mentions?: { graph: Graph; entities: GraphEntity[] };
   // 引用到的段落中說法不同（並存）的組合：兩段的引用標號（conflicts/marks.ts 的 citedConflicts()，#335）；只在桌機與手機顯示（#354）
   conflicts?: Array<[number, number]>;
+  // 引用到的段落中，以送出的身分讀到已確認而且有效的段落 id（validConfirmed()，ADR 0013 決定 8）：引用標號加小標記。
+  // 確認、撤銷確認或切換回這個身分時重新讀取；讀取失敗時沒有
+  confirmed?: string[];
   // 說法不同的提問（ADR 0012 決定 1，client.json 的 qa.dialogue）：引用的組合中第一組還沒作答、沒略過的並存，回答結束後在卡片內問一次
   seam?: ConflictItem;
   // seam 是之前已作答過的組合：不再提問，只顯示記錄（ADR 0012 決定 6）
@@ -224,9 +227,20 @@ export function AnswerView({ id, ref, language, state, canUpload, onOpenSource, 
                 {sentence.map((segment, j) => {
                   if ("text" in segment) return <Fragment key={j}>{segment.text}</Fragment>;
                   const passage = (answer as Extract<Answer, { kind: "answer" }>).numbering[segment.citation - 1];
+                  // 已確認的原文（ADR 0013 決定 8）：右上角的小圓點（文字色，不用 success 綠、不用勾勾），aria-label 說明「這段原文已確認」
+                  const confirmed = state.confirmed?.includes(passage) === true;
                   return (
-                    <button key={j} type="button" className="citation" title={s.openSource} aria-pressed={openPassage === passage} onClick={() => onOpenSource(passage)}>
+                    <button
+                      key={j}
+                      type="button"
+                      className={confirmed ? "citation citation--confirmed" : "citation"}
+                      title={s.openSource}
+                      aria-label={confirmed ? fill(s.citationConfirmed, { n: segment.citation }) : undefined}
+                      aria-pressed={openPassage === passage}
+                      onClick={() => onOpenSource(passage)}
+                    >
                       {segment.citation}
+                      {confirmed && <span className="citation__confirmed" aria-hidden="true" />}
                     </button>
                   );
                 })}

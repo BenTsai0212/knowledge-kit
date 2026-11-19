@@ -114,6 +114,17 @@ describe("reportHtml：第一頁與附錄", () => {
     expect(old).not.toContain("0123456789ab");
   });
 
+  it("引用段落中已確認的比例（ADR 0013）：在附錄的測試條件；沒有讀取時不列，沒有看得到的引用段落時註明；不放段落 id", () => {
+    const cited = allPass().map((r, i) => (i < 2 && r.answer.kind === "answer" ? { ...r, answer: { ...r.answer, cited: [`p-secret-${i}`, "p-shared"] } } : r));
+    const page = (confirmation: { visible: string[]; confirmed: string[] } | null) =>
+      reportHtml(qualityReport({ questions, access, data: dataset, thresholds, current: source(cited), set: 0, confirmation }), access, language, CLIENT);
+    expect(page(null)).not.toContain(escapeHtml(t.confirmed));
+    const shown = page({ visible: ["p-secret-0", "p-shared", "p-secret-1"], confirmed: ["p-shared"] });
+    expect(shown).toContain(`<dt>${escapeHtml(t.confirmed)}</dt><dd>${escapeHtml(fill(t.confirmedValue, { confirmed: 1, total: 3, percent: 33.3 }, language))}</dd>`);
+    expect(shown).not.toMatch(/p-secret|p-shared/);
+    expect(page({ visible: [], confirmed: [] })).toContain(`<dd>${escapeHtml(t.confirmedNone)}</dd>`);
+  });
+
   it("沒有跑完時不判定", () => {
     const page = html(source(allPass().slice(0, 5), { status: "stopped", finishedAt: null }));
     expect(page).toContain(escapeHtml(t.headlineIncomplete));

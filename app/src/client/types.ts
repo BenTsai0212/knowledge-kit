@@ -319,7 +319,7 @@ export type EvalReportText =
   | "category" | "restrictedNote" | "failuresTitle" | "number" | "failed" | "reason" | "action" | "noFailures"
   | "numberNote" | "conditionsTitle" | "bank" | "bankValue" | "unknown" | "coverage" | "coverageValue" | "coverageLevel"
   | "settings" | "retrieval" | "notApplicable" | "mode" | "modeKeyPoints" | "modeModel" | "model" | "date"
-  | "dateValue" | "calls" | "callsValue" | "scope";
+  | "dateValue" | "calls" | "callsValue" | "confirmed" | "confirmedValue" | "confirmedNone" | "scope";
 
 // client/i18n/<語言>.json（i18n.schema.json）。帶參數的文字以 {camelCase} 標示，由 i18n.ts 的 fill() 代入
 export interface UiStrings {
@@ -425,6 +425,8 @@ export interface UiStrings {
   sourceConfirmOpenNewer: string;
   sourceConfirmOpenOther: string;
   sourceConfirmFailed: string;
+  // 引用標號的 aria-label：引用到已確認而且有效的段落時（ADR 0013 決定 8）
+  citationConfirmed: string;
   paragraphNumber: string;
   views: string;
   tabQa: string;

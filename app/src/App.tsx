@@ -27,7 +27,7 @@ import { apiTransport } from "./qa/api";
 import { readMyReport, readReports, writeReport } from "./reports/store";
 import { createProvider, preparesModel, PROVIDERS, type ActiveProvider, type ProgressListener } from "./retrieval/providers";
 import { openRetriever, visiblePassagesKey } from "./retrieval/retrieve";
-import { writeConfirmation, type ConfirmationAction } from "./sources/confirmations";
+import { readConfirmationCoverage, readConfirmations, validConfirmed, writeConfirmation, type ConfirmationAction } from "./sources/confirmations";
 import { readCitedSources, readSource, type CitedSource, type SourceDocument } from "./sources/source";
 import { clearAccessCode, loadAccessCode, saveAccessCode } from "./ui/access-code";
 import { crossFade } from "./ui/cross-fade";
@@ -387,6 +387,33 @@ export function App() {
     return marks === null ? undefined : citedConflicts(result.numbering, result.cited, marks);
   }
 
+  // 引用標號的小標記（ADR 0013 決定 8）：以送出的身分讀確認（RLS 只讓看得到的段落的紀錄被讀到，失效也只依看得到的說法不同）；
+  // 讀取失敗或沒有引用時不加
+  async function readCitedConfirmed(result: Answer, owner: string): Promise<AnswerState["confirmed"]> {
+    if (result.kind !== "answer" || result.cited.length === 0 || db === null) return undefined;
+    const confirmations = await readConfirmations(db, owner).catch(() => null);
+    return confirmations === null ? undefined : validConfirmed(result.cited, confirmations);
+  }
+
+  // 確認、撤銷確認或說法不同的處理之後，這個身分已經回答的題目重新讀取小標記（只換有變的題目）；讀取失敗時保留原本的
+  async function refreshConfirmed(owner: string) {
+    if (db === null || !(conversations[owner] ?? NO_TURNS).some((t) => t.answer?.kind === "answer")) return;
+    const confirmations = await readConfirmations(db, owner).catch(() => null);
+    if (confirmations === null) return;
+    setTurnsOf(owner, (all) =>
+      all.map((t) => {
+        if (t.answer?.kind !== "answer" || t.answer.cited.length === 0) return t;
+        const confirmed = validConfirmed(t.answer.cited, confirmations);
+        return confirmed.join("\u0000") === (t.confirmed ?? []).join("\u0000") ? t : { ...t, confirmed };
+      }),
+    );
+  }
+  // 切換身分、切換頁籤（例如在待審處理說法不同後回到問答）時重新讀取
+  useEffect(() => {
+    void refreshConfirmed(identity);
+    // conversations 每次回答都會變，不放進依賴
+  }, [identity, view, db]);
+
   // 說法不同的提問（ADR 0012 決定 1、5，client.json 的 qa.dialogue）：引用的並存組合中，第一組這個身分還沒留下理解、也沒略過的；
   // 以送出的身分讀（RLS：兩段都看得到才讀得到）。一個回答最多問一次；讀取失敗時不問。
   // 都已作答過時，第一組已作答的只顯示記錄（seamAnswered，ADR 0012 決定 6）
@@ -433,7 +460,9 @@ export function App() {
           // 今天用完了：輸入框上方的說明與一般提問相同；這一欄與之後的欄顯示額度訊息（askEach() 不再送出）
           if (result.kind === "error" && errorCategory(result.error) === "dailyLimit") setLimit(result.error);
           change((c) => ({ ...c, finished: index + 1 }));
-          void readMentions(result, roles[index]).then((mentions) => ticket.isCurrent() && setColumn(index, { question, streaming: "", answer: result, mentions }));
+          void Promise.all([readMentions(result, roles[index]), readCitedConfirmed(result, roles[index])]).then(
+            ([mentions, confirmed]) => ticket.isCurrent() && setColumn(index, { question, streaming: "", answer: result, mentions, confirmed }),
+          );
         },
       },
       ticket.signal,
@@ -503,8 +532,9 @@ export function App() {
     const mentions = await readMentions(result, owner);
     const conflicts = await readCitedConflicts(result, owner);
     const seam = await readSeam(result, owner, conflicts);
+    const confirmed = await readCitedConfirmed(result, owner);
     if (!ticket.isCurrent()) return;
-    update({ ...base, streaming: "", answer: result, mentions, conflicts, ...seam });
+    update({ ...base, streaming: "", answer: result, mentions, conflicts, confirmed, ...seam });
   }
 
   // 同名的反問選了之後（ADR 0012 決定 1）：同一題接著送出，問題泡泡保留原問題
@@ -601,6 +631,7 @@ export function App() {
   async function onConfirm(passageId: string, action: ConfirmationAction) {
     if (db === null) throw new Error("no database");
     await writeConfirmation(db, identity, passageId, action);
+    void refreshConfirmed(identity);
     const { source: shown, turn } = shownSource.current;
     if (shown !== null) await onOpenSource(shown.highlight, turn);
   }
@@ -841,6 +872,8 @@ export function App() {
               run={evalRun}
               onRun={setEvalRun}
               onRejectAccessCode={rejectAccessCode}
+              // 品質報告的確認比例（ADR 0013 決定 8）：以產生報告的身分（目前的身分）讀，RLS 決定看得到哪些段落
+              readConfirmation={(passageIds) => (db === null ? Promise.reject(new Error("no database")) : readConfirmationCoverage(db, identity, passageIds))}
             />
           ) : view === "review" ? (
             <ReviewPage

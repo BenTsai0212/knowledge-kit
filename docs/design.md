@@ -56,6 +56,7 @@ Light 來自提案 A「墨與螢光」，Dark 來自提案 B「晶格」。對�
 | 選取（原文已開） | `text`／`mark` | `mark`／`markSoft` |
 
 - 「A 百分比＋B」是 `color-mix(in srgb, var(--color-A) 百分比, var(--color-B))`；不另設 token，證據色只由 `mark`、`markSoft`、`markText`、`markReading` 決定（#225 決定 1）。比例同時寫在 `scripts/check-client.mjs` 的 `CITATION_MIX`，`check:client` 依此檢查對比（[docs/client-config.md](client-config.md)「對比度」）。
+- **已確認的原文**（[ADR 0013](adr/0013-source-confirmation.md) 決定 8，見「來源確認」）：引用到已確認而且有效的段落時，晶片右上角多一個 5px 的實心圓點（內縮 2px，右內距多 4px 不壓到數字），顏色是 `currentColor`：預設與 hover 是 `markText`，選取時 Light 是 `mark`、Dark 是 `markSoft`，對比與三個狀態的字相同；不用 `success` 綠、不用勾勾，不新增 token。
 - 與設計稿的差異：Light 的兩個內框比設計稿（`#E8B800`、`#C9A400`）稍暗；Dark 預設內框用 40%，對 `surface` 3.3:1（設計稿的 `#7A5A20` 只有 2.9:1）；Dark 選取的字用 `markSoft`（設計稿 `#1A1200`），對 `mark` 7.8:1。
 
 原文螢光：Light 用 `mark`；Dark 的原文放在 `reading` 紙面上，用 `markReading`。
@@ -739,6 +740,7 @@ knowledge-kit 的登入頁有兩條路，版面同「入口頁主視覺」（左
   - 焦點：按「確認這段」後移到同一段的「撤銷確認」；按「撤銷確認」後回到同一段的「確認這段」，沒有標示的段落沒有「確認這段」時留在原文紙面上。
   - 寫入中停用，失敗時在同一列顯示「沒能記錄下來，請再試一次。」（紙面文字加粗，不用 `danger`：紙面在 Dark 也是亮色）。
 - 其他身分看不到按鈕，未確認的段落沒有任何痕跡。
+- **回答的引用標號**（#417 PR 4）：引用到已確認而且**有效**的段落時加小圓點（外觀見「引用標號的三個狀態」），`aria-label` 是「引用 N，這段原文已確認」；失效時不加（說法不同已有洋紅的提示，詳細在原文面板）。回答下方不加摘要，不改變回答內容與檢索排序。標記以送出的身分讀取（`App.tsx` 的 `readCitedConfirmed()`），確認或撤銷確認後、切換身分或頁籤（例如在待審處理說法不同後回到問答）時，這個身分已經回答的題目重新讀取（`refreshConfirmed()`）。身分對照的各欄以該欄的身分讀取。驗證：`citation-confirmation.test.ts`、`e2e/citation-confirmation.spec.ts`（1440、390 的截圖）。
 - 桌機的原文欄、平板的滑出面板與手機的底部面板相同；桌機的段落編號欄（¶N）右側對齊段落文字。
 
 ## 尚未設計

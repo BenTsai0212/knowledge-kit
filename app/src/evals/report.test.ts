@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { clientConfig } from "../client/load";
 import { dataset, type Dataset } from "../dataset/load";
 import { evalQuestions } from "./load";
-import { coverage, failedMetrics, qualityReport, questionBank, restrictedRoles, type ReportInput, type ReportSource } from "./report";
+import { citedPassages, coverage, failedMetrics, qualityReport, questionBank, restrictedRoles, type ReportInput, type ReportSource } from "./report";
 import type { QuestionResult } from "./run";
 import { summarize, type AnswerMode, type QuestionScore } from "./score";
 import type { EvalQuestion } from "./types";
@@ -171,6 +171,21 @@ describe("qualityReport：一次", () => {
     const r = qualityReport(input(source(allPass().slice(0, 10), { status: "stopped" })));
     expect(r.metrics.every((m) => m.meets === null)).toBe(true);
     expect(r.headline).toMatchObject({ complete: false, unmet: [] });
+  });
+
+  it("引用段落中已確認的比例（ADR 0013）：引用到的段落不重複，分子與分母都只算報告產生者看得到的；不影響是否達到", () => {
+    const cite = (r: QuestionResult, cited: string[]): QuestionResult => (r.answer.kind === "answer" ? { ...r, answer: { ...r.answer, cited } } : r);
+    const answered = allPass().filter((r) => r.answer.kind === "answer");
+    const results = [cite(answered[0], ["a", "b"]), cite(answered[1], ["b", "c", "hidden"]), cite(answered[2], ["hidden2"]), ...answered.slice(3)];
+    const current = source(results);
+    expect(citedPassages(current, 0)).toEqual(["a", "b", "c", "hidden", "hidden2"]);
+    const base = qualityReport(input(current));
+    expect(base.confirmed).toBeNull();
+    // 看得到 a、b、c；確認紀錄裡的 hidden 看不到（RLS 讀不到，這裡模擬呼叫端傳錯也不算）
+    const r = qualityReport({ ...input(current), confirmation: { visible: ["a", "b", "c", "x"], confirmed: ["b", "hidden"] } });
+    expect(r.confirmed).toEqual({ confirmed: 1, total: 3 });
+    expect({ ...r, confirmed: null }).toEqual(base);
+    expect(qualityReport({ ...input(current), confirmation: { visible: [], confirmed: [] } }).confirmed).toEqual({ confirmed: 0, total: 0 });
   });
 });
 

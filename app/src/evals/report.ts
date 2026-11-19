@@ -94,6 +94,9 @@ export interface QualityReport {
   // 可見等級最高的身分中未通過的題數（只在 matrix 呈現彙總）
   restrictedFailures: number;
   coverage: Coverage;
+  // 引用段落中已確認的比例（ADR 0013 決定 8）：評測引用到的段落（不重複）中，報告產生者看得到的段落數與其中已確認而且有效的段落數。
+  // 只列在附錄，不設門檻、不影響是否達到；沒有讀取（讀取失敗）時為 null
+  confirmed: { confirmed: number; total: number } | null;
   conditions: {
     bank: QuestionBank | null;
     settings: EvalSettings;
@@ -176,6 +179,20 @@ export interface ReportInput {
   set: number;
   // 另一次的下載 JSON：優先用設定相同的那一組，找不到時用第一組
   previous?: ReportSource | null;
+  // 以報告產生者的身分讀出（RLS）的段落：看得到的、其中已確認而且有效的（readConfirmationCoverage()）；沒有時不列確認比例
+  confirmation?: { visible: readonly string[]; confirmed: readonly string[] } | null;
+}
+
+// 這一組設定的回答引用到的段落（不重複，依題目順序）：品質報告的確認比例以此讀取
+export function citedPassages(source: ReportSource, set: number): string[] {
+  return [...new Set(source.sets[set].results.flatMap((r) => (r.answer.kind === "answer" ? r.answer.cited : [])))];
+}
+
+function confirmedShare(cited: readonly string[], confirmation: NonNullable<ReportInput["confirmation"]>): QualityReport["confirmed"] {
+  const visible = new Set(confirmation.visible);
+  const confirmed = new Set(confirmation.confirmed);
+  const seen = cited.filter((id) => visible.has(id));
+  return { confirmed: seen.filter((id) => confirmed.has(id)).length, total: seen.length };
 }
 
 export function qualityReport(input: ReportInput): QualityReport {
@@ -251,6 +268,7 @@ export function qualityReport(input: ReportInput): QualityReport {
     failures: failing.filter((r) => !restricted.has(r.q.role)).map((r) => ({ number: numberOf.get(r.q.id)!, role: r.q.role, category: r.q.category, failed: r.failed })),
     restrictedFailures: failing.filter((r) => restricted.has(r.q.role)).length,
     coverage: coverage(questions, input.data, access),
+    confirmed: input.confirmation == null ? null : confirmedShare(citedPassages(current, input.set), input.confirmation),
     conditions: {
       bank: current.questionBank ?? null,
       settings: set.settings,

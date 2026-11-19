@@ -103,3 +103,17 @@ export async function readPassageConfirmations(tx: Transaction): Promise<Map<str
 export function readConfirmations(db: Database, identityId: string | null): Promise<Map<string, PassageConfirmation>> {
   return db.withIdentity(identityId, readPassageConfirmations);
 }
+
+// 回答的引用標號的小標記（ADR 0013 決定 8）：引用到的段落中，目前已確認而且有效的（失效的不加）。依 cited 的順序、不重複
+export function validConfirmed(cited: readonly string[], confirmations: ReadonlyMap<string, PassageConfirmation>): string[] {
+  return [...new Set(cited)].filter((id) => confirmations.get(id)?.status.kind === "valid");
+}
+
+// 品質報告的確認比例（ADR 0013 決定 8）：passageIds 中目前身分看得到的段落，與其中已確認而且有效的段落（都經 RLS）
+export function readConfirmationCoverage(db: Database, identityId: string | null, passageIds: readonly string[]): Promise<{ visible: string[]; confirmed: string[] }> {
+  return db.withIdentity(identityId, async (tx) => {
+    const ids = [...new Set(passageIds)];
+    const visible = (await tx.query<{ id: string }>(`SELECT id FROM kk.passages WHERE id = ANY($1::text[]) ORDER BY id`, [ids])).rows.map((r) => r.id);
+    return { visible, confirmed: validConfirmed(visible, await readPassageConfirmations(tx)) };
+  });
+}

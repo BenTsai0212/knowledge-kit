@@ -6,11 +6,11 @@ import { decideConflict, writeConflicts } from "../../src/conflicts/store";
 import { dataset } from "../../src/dataset/load";
 import { seedDataset } from "../../src/dataset/seed";
 import { openDatabase, type Database } from "../../src/db/database";
-import { readConfirmations, writeConfirmation, type ConfirmationAction } from "../../src/sources/confirmations";
+import { readConfirmationCoverage, readConfirmations, writeConfirmation, type ConfirmationAction } from "../../src/sources/confirmations";
 import { readSource } from "../../src/sources/source";
 import { uploadDocument } from "../../src/upload/write";
 import { datasetSample } from "../db/dataset-sample";
-import { canWriteConfirmation, CONFIRMATION_KEY_SQL, expectedConfirmationVisible, expectedConfirmed, type ConfirmationSample } from "../db/oracle";
+import { canWriteConfirmation, CONFIRMATION_KEY_SQL, expectedConfirmationVisible, expectedConfirmed, expectedVisible, type ConfirmationSample } from "../db/oracle";
 
 const IDENTITIES = ["guest", "staff", "manager", null, "nobody"];
 const access = clientConfig.access;
@@ -72,6 +72,23 @@ describe("確認紀錄的可見範圍", { timeout: 30_000 }, () => {
       expect(await query(ignoring, id), String(id)).not.toEqual(sorted(expectedConfirmationVisible(access, datasetSample, w.sample, id)));
       expect(await confirmedBy(ignoring, id), String(id)).not.toEqual(Object.fromEntries(expectedConfirmed(access, datasetSample, w.sample, id)));
     }
+    await w.db.close();
+  });
+
+  it("品質報告的確認比例（readConfirmationCoverage()，#417 PR 4）：分母與分子都只有看得到的段落，等於 oracle", async () => {
+    const w = await setup();
+    for (const id of IDENTITIES) {
+      const visible = new Set(expectedVisible(access, datasetSample, id).passages);
+      const confirmed = await readConfirmations(w.db, id);
+      const coverage = await readConfirmationCoverage(w.db, id, [...ALL, "no-such-passage"]);
+      expect(coverage.visible, String(id)).toEqual(ALL.filter((p) => visible.has(p)).sort());
+      expect(coverage.confirmed.sort(), String(id)).toEqual(
+        [...expectedConfirmed(access, datasetSample, w.sample, id).keys()].filter((p) => confirmed.get(p)?.status.kind === "valid").sort(),
+      );
+    }
+    // 防止以全部看不到而通過：主管看得到五段、確認了四段；一般員工三段中兩段；訪客兩段中一段；沒有身分時都沒有
+    const shares = async (id: string | null) => Object.values(await readConfirmationCoverage(w.db, id, ALL)).map((x) => x.length);
+    expect([await shares("manager"), await shares("staff"), await shares("guest"), await shares(null)]).toEqual([[5, 4], [3, 2], [2, 1], [0, 0]]);
     await w.db.close();
   });
 

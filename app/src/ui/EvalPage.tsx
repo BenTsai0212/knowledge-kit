@@ -8,7 +8,7 @@ import { errorMessage, fill, strings, taskErrorMessage } from "../client/i18n";
 import { clientConfig } from "../client/load";
 import { dataset } from "../dataset/load";
 import { evalQuestions, evalQuestionsSource } from "../evals/load";
-import { qualityReport, questionBank, type ReportSource } from "../evals/report";
+import { citedPassages, qualityReport, questionBank, type ReportInput, type ReportSource } from "../evals/report";
 import { reportHtml } from "../evals/report-html";
 import { applies, applicableQuestions, estimateCalls, openEvalDatabase, runEvals, type EvalContext, type EvalRun, type EvalSettings, type QuestionResult } from "../evals/run";
 import { LEAKAGE_LIMIT, type AnswerMode, type Metric, type Summary } from "../evals/score";
@@ -75,6 +75,8 @@ interface Props {
   run: EvalRun | null;
   onRun(run: EvalRun): void;
   onRejectAccessCode(): void;
+  // 品質報告的確認比例（ADR 0013 決定 8）：以產生報告的身分讀出引用段落中看得到的與已確認的；失敗時報告不列這一項
+  readConfirmation(passageIds: readonly string[]): Promise<NonNullable<ReportInput["confirmation"]>>;
 }
 
 type Phase = "idle" | "estimating" | "confirm" | "running";
@@ -89,7 +91,7 @@ function save(blob: Blob, name: string) {
   URL.revokeObjectURL(a.href);
 }
 
-export function EvalPage({ language, accessCode, uploadedCount, provider, status, run, onRun, onRejectAccessCode }: Props) {
+export function EvalPage({ language, accessCode, uploadedCount, provider, status, run, onRun, onRejectAccessCode, readConfirmation }: Props) {
   const s = strings(language);
   const layout = useLayout();
   const desktop = layout === "desktop";
@@ -210,7 +212,8 @@ export function EvalPage({ language, accessCode, uploadedCount, provider, status
     if (run === null) return;
     const current = await report(run);
     const set = Math.min(reportSet, current.sets.length - 1);
-    const html = reportHtml(qualityReport({ questions, access, data: dataset, thresholds, current, set, previous }), access, language, client.displayName[language]);
+    const confirmation = await readConfirmation(citedPassages(current, set)).catch(() => null);
+    const html = reportHtml(qualityReport({ questions, access, data: dataset, thresholds, current, set, previous, confirmation }), access, language, client.displayName[language]);
     save(new Blob([html], { type: "text/html" }), `quality-report-${stamp(run)}.html`);
   }
 

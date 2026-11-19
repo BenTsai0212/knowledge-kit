@@ -226,7 +226,7 @@ const uiStrings = {
   qaIndependent: "required", qaHeaderNote: "required", sessionQuestions: "required", sessionQuestionsCount: "required", answerMentions: "required", answerBasis: "required", answerConflict: "required", followUpTitle: "required",
   followUpOutgoing: "required", followUpIncoming: "required", viewInGraph: "required",
   openSource: "required", sourceTitle: "required", sourceHeading: "required", closeSource: "required", sourceStep: "required", sourceSheetStep: "required", sourcePrev: "required", sourceNext: "required", sourceCitedList: "required",
-  sourceConfirm: "required", sourceConfirmRevoke: "required", sourceConfirmGroup: "required", sourceConfirmed: "required", sourceConfirmedSuperseded: "required", sourceConfirmedDisputed: "required", sourceConfirmedBy: "required", sourceConfirmOpenNewer: "required", sourceConfirmOpenOther: "required", sourceConfirmFailed: "required",
+  sourceConfirm: "required", sourceConfirmRevoke: "required", sourceConfirmGroup: "required", sourceConfirmed: "required", sourceConfirmedSuperseded: "required", sourceConfirmedDisputed: "required", sourceConfirmedBy: "required", sourceConfirmOpenNewer: "required", sourceConfirmOpenOther: "required", sourceConfirmFailed: "required", citationConfirmed: "required",
   paragraphNumber: "required", views: "required", tabQa: "required", tabHome: "required",
   tabGraph: "required", legend: "required", graphEmpty: "required", graphEmptyReason: "required", switchIdentity: "required", selectEntity: "required",
   graphExpanded: "required", graphShowAll: "required", graphShowOnly: "required",
@@ -601,7 +601,7 @@ export const i18nManifests: ManifestEntry[] = [
       category: "required", restrictedNote: "required", failuresTitle: "required", number: "required", failed: "required", reason: "required", action: "required", noFailures: "required",
       numberNote: "required", conditionsTitle: "required", bank: "required", bankValue: "required", unknown: "required", coverage: "required", coverageValue: "required", coverageLevel: "required",
       settings: "required", retrieval: "required", notApplicable: "required", mode: "required", modeKeyPoints: "required", modeModel: "required", model: "required", date: "required",
-      dateValue: "required", calls: "required", callsValue: "required", scope: "required",
+      dateValue: "required", calls: "required", callsValue: "required", confirmed: "required", confirmedValue: "required", confirmedNone: "required", scope: "required",
     } satisfies KeyManifest<UiStrings["evalReport"]>,
   },
   {

@@ -275,6 +275,10 @@ ${footer(1, pages)}
     [t.mode, conditions.mode === "model" ? t.modeModel : t.modeKeyPoints],
     [t.model, conditions.model ?? t.unknown],
     [t.calls, conditions.calls === null ? t.unknown : f(t.callsValue, { count: conditions.calls })],
+    // 引用段落中已確認的比例（ADR 0013 決定 8）：只算報告產生者看得到的段落；不設門檻
+    ...(report.confirmed === null
+      ? []
+      : ([[t.confirmed, report.confirmed.total === 0 ? t.confirmedNone : f(t.confirmedValue, { ...report.confirmed, percent: percent(report.confirmed.confirmed / report.confirmed.total) })]] as [string, string][])),
     [t.date, f(t.dateValue, { start: time(conditions.startedAt), end: conditions.finishedAt === null ? t.unknown : time(conditions.finishedAt) })],
   ];
 

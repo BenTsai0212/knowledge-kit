@@ -1,6 +1,6 @@
 // 已確認段落的失效判斷（ADR 0013 決定 6）：純函式，不讀資料庫
 import { describe, expect, it } from "vitest";
-import { confirmationStatus, type ConflictLink } from "./confirmations";
+import { confirmationStatus, validConfirmed, type ConflictLink, type PassageConfirmation } from "./confirmations";
 
 const link = (newPassage: string, oldPassage: string, decision: ConflictLink["decision"]): ConflictLink => ({ newPassage, oldPassage, decision });
 
@@ -28,5 +28,21 @@ describe("confirmationStatus", () => {
     expect(confirmationStatus("p", links)).toEqual({ kind: "superseded", passageId: "c" });
     expect(confirmationStatus("p", links.slice(0, 3))).toEqual({ kind: "disputed", passageId: "a" });
     expect(confirmationStatus("p", [link("p", "o", "supersede"), link("p", "q", "not_conflict")])).toEqual({ kind: "valid" });
+  });
+});
+
+describe("validConfirmed（引用標號的小標記）", () => {
+  const at = (status: PassageConfirmation["status"]): PassageConfirmation => ({ confirmedBy: "manager", confirmedAt: "2026-11-18T00:00:00Z", status });
+  const confirmations = new Map([
+    ["a", at({ kind: "valid" })],
+    ["b", at({ kind: "disputed", passageId: "x" })],
+    ["c", at({ kind: "superseded", passageId: "y" })],
+    ["d", at({ kind: "valid" })],
+  ]);
+
+  it("只有已確認而且有效的段落；失效與未確認的不加，依引用的順序、不重複", () => {
+    expect(validConfirmed(["d", "b", "a", "c", "e", "d"], confirmations)).toEqual(["d", "a"]);
+    expect(validConfirmed([], confirmations)).toEqual([]);
+    expect(validConfirmed(["a"], new Map())).toEqual([]);
   });
 });

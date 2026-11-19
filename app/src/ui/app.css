@@ -712,6 +712,24 @@ button.citation[aria-pressed="true"] {
   box-shadow: none;
 }
 
+/* 已確認的原文（ADR 0013 決定 8）：晶片右上角 5px 的實心圓點，顏色跟著標號的字（currentColor：預設與 hover 是 markText，
+   選取時 Light 是 mark、Dark 是 markSoft），對比與三個狀態的字相同，由 check:client 涵蓋；不用 success 綠、不用勾勾。
+   右側多留 4px，圓點不壓到數字 */
+button.citation--confirmed {
+  position: relative;
+  padding-right: calc(0.35rem + 4px);
+}
+
+.citation__confirmed {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
 /* 深色的規則寫在 :root[data-scheme="dark"] 內（theme.ts 的 DARK_SELECTOR，依系統設定由 JS 標記，切換時交叉淡換，#246） */
 :root[data-scheme="dark"] {
   button.citation {
@@ -7725,6 +7743,10 @@ main.page:has(> .eval-page--desktop) {
   vertical-align: 2px;
 }
 
+:is(.app--desktop, .app--phone) .answer-text button.citation--confirmed {
+  padding-right: 9px;
+}
+
 /* 回答提到：上方 1px 分隔線、12px／600 的小標、40px 的膠囊 */
 :is(.app--desktop, .app--phone) .answer__body > .mentions {
   gap: 10px;
@@ -8260,6 +8282,10 @@ main.page:has(> .eval-page--desktop) {
   height: 24px;
   padding: 0 6px;
   vertical-align: 1px;
+}
+
+.app--phone .answer-text button.citation--confirmed {
+  padding-right: 10px;
 }
 
 .app--phone .answer-conflict {
